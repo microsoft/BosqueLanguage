@@ -445,24 +445,24 @@ z3::func_decl getFloatValueConstConstructor(z3::context& c)
     return argconsf;
 }
 
-bool SMTParseJSON::checkInvokeOk(const std::string& checkinvoke, z3::expr value) const
+bool SMTParseJSON::checkInvokeOk(const std::string& checkinvoke, z3::expr value)
 {
     xxxx;
 }
 
-bool SMTParseJSON::parseNoneImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) const
+bool SMTParseJSON::parseNoneImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
 {
     //location is aleady zero initialized
     return true;
 }
 
-bool SMTParseJSON::parseNothingImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) const
+bool SMTParseJSON::parseNothingImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
 {
     //location is aleady zero initialized
     return true;
 }
 
-bool SMTParseJSON::parseBoolImpl(const APIModule* apimodule, const IType* itype, bool b, z3::expr value, z3::solver& ctx) const
+bool SMTParseJSON::parseBoolImpl(const APIModule* apimodule, const IType* itype, bool b, z3::expr value, z3::solver& ctx)
 {
     auto bef = getArgContextConstructor(ctx.ctx(), "BBool@UFCons_API", ctx.ctx().bool_sort());
     ctx.add(bef(value) == ctx.ctx().bool_val(b));
@@ -470,7 +470,7 @@ bool SMTParseJSON::parseBoolImpl(const APIModule* apimodule, const IType* itype,
     return true;
 }
 
-bool SMTParseJSON::parseNatImpl(const APIModule* apimodule, const IType* itype, uint64_t n, z3::expr value, z3::solver& ctx) const
+bool SMTParseJSON::parseNatImpl(const APIModule* apimodule, const IType* itype, uint64_t n, z3::expr value, z3::solver& ctx)
 {
     auto bef = getArgContextConstructor(ctx.ctx(), "BNat@UFCons_API", ctx.ctx().int_sort());
     ctx.add(bef(value) == ctx.ctx().int_val(n));
@@ -478,7 +478,7 @@ bool SMTParseJSON::parseNatImpl(const APIModule* apimodule, const IType* itype, 
     return true;
 }
 
-bool SMTParseJSON::parseIntImpl(const APIModule* apimodule, const IType* itype, int64_t i, z3::expr value, z3::solver& ctx) const
+bool SMTParseJSON::parseIntImpl(const APIModule* apimodule, const IType* itype, int64_t i, z3::expr value, z3::solver& ctx)
 {
     auto bef = getArgContextConstructor(ctx.ctx(), "BInt@UFCons_API", ctx.ctx().int_sort());
     ctx.add(bef(value) == ctx.ctx().int_val(i));
@@ -486,7 +486,7 @@ bool SMTParseJSON::parseIntImpl(const APIModule* apimodule, const IType* itype, 
     return true;
 }
 
-bool SMTParseJSON::parseBigNatImpl(const APIModule* apimodule, const IType* itype, std::string n, z3::expr value, z3::solver& ctx) const
+bool SMTParseJSON::parseBigNatImpl(const APIModule* apimodule, const IType* itype, std::string n, z3::expr value, z3::solver& ctx)
 {
     auto bef = getArgContextConstructor(ctx.ctx(), "BBigNat@UFCons_API", ctx.ctx().int_sort());
     ctx.add(bef(value) == ctx.ctx().int_val(n.c_str()));
@@ -494,7 +494,7 @@ bool SMTParseJSON::parseBigNatImpl(const APIModule* apimodule, const IType* ityp
     return true;
 }
 
-bool SMTParseJSON::parseBigIntImpl(const APIModule* apimodule, const IType* itype, std::string i, z3::expr value, z3::solver& ctx) const
+bool SMTParseJSON::parseBigIntImpl(const APIModule* apimodule, const IType* itype, std::string i, z3::expr value, z3::solver& ctx)
 {
     auto bef = getArgContextConstructor(ctx.ctx(), "BBigNat@UFCons_API", ctx.ctx().int_sort());
     ctx.add(bef(value) == ctx.ctx().int_val(i.c_str()));
@@ -502,7 +502,7 @@ bool SMTParseJSON::parseBigIntImpl(const APIModule* apimodule, const IType* ityp
     return true;
 }
 
-bool SMTParseJSON::parseFloatImpl(const APIModule* apimodule, const IType* itype, std::string f, z3::expr value, z3::solver& ctx) const
+bool SMTParseJSON::parseFloatImpl(const APIModule* apimodule, const IType* itype, std::string f, z3::expr value, z3::solver& ctx)
 {
     auto bef = getArgContextConstructor(ctx.ctx(), "BFloat@UFCons_API", ctx.ctx().uninterpreted_sort("FloatValue"));
     auto fcc = getFloatValueConstConstructor(ctx.ctx());
@@ -511,7 +511,7 @@ bool SMTParseJSON::parseFloatImpl(const APIModule* apimodule, const IType* itype
     return true;
 }
 
-bool SMTParseJSON::parseDecimalImpl(const APIModule* apimodule, const IType* itype, std::string d, z3::expr value, z3::solver& ctx) const
+bool SMTParseJSON::parseDecimalImpl(const APIModule* apimodule, const IType* itype, std::string d, z3::expr value, z3::solver& ctx)
 {
     auto bef = getArgContextConstructor(ctx.ctx(), "BDecimal@UFCons_API", ctx.ctx().uninterpreted_sort("FloatValue"));
     auto fcc = getFloatValueConstConstructor(ctx.ctx());
@@ -520,7 +520,7 @@ bool SMTParseJSON::parseDecimalImpl(const APIModule* apimodule, const IType* ity
     return true;
 }
 
-bool SMTParseJSON::parseRationalImpl(const APIModule* apimodule, const IType* itype, std::string n, uint64_t d, z3::expr value, z3::solver& ctx) const
+bool SMTParseJSON::parseRationalImpl(const APIModule* apimodule, const IType* itype, std::string n, uint64_t d, z3::expr value, z3::solver& ctx)
 {
     std::string rstr = "";
     if(n == "0")
@@ -543,7 +543,7 @@ bool SMTParseJSON::parseRationalImpl(const APIModule* apimodule, const IType* it
     return true;
 }
 
-bool SMTParseJSON::parseStringImpl(const APIModule* apimodule, const IType* itype, std::string s, z3::expr value, z3::solver& ctx) const
+bool SMTParseJSON::parseStringImpl(const APIModule* apimodule, const IType* itype, std::string s, z3::expr value, z3::solver& ctx)
 {
     auto bef = getArgContextConstructor(ctx.ctx(), "BString@UFCons_API", ctx.ctx().string_sort());
     ctx.add(bef(value) == ctx.ctx().string_val(s));
@@ -551,7 +551,7 @@ bool SMTParseJSON::parseStringImpl(const APIModule* apimodule, const IType* ityp
     return true;
 }
 
-bool SMTParseJSON::parseByteBufferImpl(const APIModule* apimodule, const IType* itype, uint8_t compress, uint8_t format, std::vector<uint8_t>& data, z3::expr value, z3::solver& ctx) const
+bool SMTParseJSON::parseByteBufferImpl(const APIModule* apimodule, const IType* itype, uint8_t compress, uint8_t format, std::vector<uint8_t>& data, z3::expr value, z3::solver& ctx)
 {
     auto bytesort = ctx.ctx().bv_sort(8);
 
@@ -568,13 +568,13 @@ bool SMTParseJSON::parseByteBufferImpl(const APIModule* apimodule, const IType* 
     ctx.add(bbf(ectxbb).length() == ctx.ctx().int_val(data.size()));
     for(size_t i = 0; i < data.size(); ++i)
     {
-        ctx.add(bbf(ectxbb).at(ctx.ctx().int_val(i)) == ctx.ctx().bv_val(data[i], 8));
+        ctx.add(bbf(ectxbb).at(ctx.ctx().int_val(i)) == ctx.ctx().bv_val((int)data[i], 8));
     }
 
     return true;
 }
 
-bool SMTParseJSON::parseDateTimeImpl(const APIModule* apimodule, const IType* itype, DateTime t, z3::expr value, z3::solver& ctx) const
+bool SMTParseJSON::parseDateTimeImpl(const APIModule* apimodule, const IType* itype, DateTime t, z3::expr value, z3::solver& ctx)
 {
     auto bef = getArgContextConstructor(ctx.ctx(), "BNat@UFCons_API", ctx.ctx().int_sort());
 
@@ -623,7 +623,7 @@ bool SMTParseJSON::parseDateTimeImpl(const APIModule* apimodule, const IType* it
     ctx.add(bes(etzn) == ctx.ctx().string_val(t.tzname));
 }
 
-bool SMTParseJSON::parseTickTimeImpl(const APIModule* apimodule, const IType* itype, uint64_t t, z3::expr value, z3::solver& ctx) const
+bool SMTParseJSON::parseTickTimeImpl(const APIModule* apimodule, const IType* itype, uint64_t t, z3::expr value, z3::solver& ctx)
 {
     auto bef = getArgContextConstructor(ctx.ctx(), "BTickTime@UFCons_API", ctx.ctx().int_sort());
     ctx.add(bef(value) == ctx.ctx().int_val(t));
@@ -631,7 +631,7 @@ bool SMTParseJSON::parseTickTimeImpl(const APIModule* apimodule, const IType* it
     return true;
 }
 
-bool SMTParseJSON::parseLogicalTimeImpl(const APIModule* apimodule, const IType* itype, uint64_t j, z3::expr value, z3::solver& ctx) const
+bool SMTParseJSON::parseLogicalTimeImpl(const APIModule* apimodule, const IType* itype, uint64_t j, z3::expr value, z3::solver& ctx)
 {
     auto bef = getArgContextConstructor(ctx.ctx(), "BLogicalTime@UFCons_API", ctx.ctx().int_sort());
     ctx.add(bef(value) == ctx.ctx().int_val(j));
@@ -639,151 +639,192 @@ bool SMTParseJSON::parseLogicalTimeImpl(const APIModule* apimodule, const IType*
     return true;
 }
 
-bool SMTParseJSON::parseUUIDImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, z3::expr value, z3::solver& ctx) const
+bool SMTParseJSON::parseUUIDImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, z3::expr value, z3::solver& ctx)
 {
-xxxx;
+    auto bytesort = ctx.ctx().bv_sort(8);
+    auto bbf = getArgContextConstructor(ctx.ctx(), "BUUID@UFCons_API", ctx.ctx().seq_sort(bytesort));
+
+    ctx.add(bbf(value).length() == ctx.ctx().int_val(16));
+    for(size_t i = 0; i < 16; ++i)
+    {
+        ctx.add(bbf(value).at(ctx.ctx().int_val(i)) == ctx.ctx().bv_val((int)v[i], 8));
+    }
+
+    return true;
 }
 
-bool SMTParseJSON::parseContentHashImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, z3::expr value, z3::solver& ctx) const
+bool SMTParseJSON::parseContentHashImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, z3::expr value, z3::solver& ctx)
 {
-xxxx;
+    auto hashsort = ctx.ctx().bv_sort(16);
+    auto bbf = getArgContextConstructor(ctx.ctx(), "BContentHash@UFCons_API", hashsort);
+
+    auto hhpos = std::find_if(this->hashhash.cbegin(), this->hashhash.cend(), [&v](const std::vector<uint8_t>& hh) {
+        return std::equal(hh.cbegin(), hh.cend(), v.cbegin());
+    });
+
+    uint16_t hhi = 0;
+    if(hhpos != this->hashhash.cend())
+    {
+        hhi = (uint16_t)std::distance(this->hashhash.cbegin(), hhpos);
+    }
+    else
+    {
+        hhi = this->hashhash.size();
+        this->hashhash.push_back(v);
+    }
+
+    ctx.add(bbf(value) == ctx.ctx().bv_val((int)hhi + 1, 16));
+
+    return true;
 }
     
-z3::expr SMTParseJSON::prepareParseTuple(const APIModule* apimodule, const IType* itype, z3::solver& ctx) const
+z3::expr SMTParseJSON::prepareParseTuple(const APIModule* apimodule, const IType* itype, z3::solver& ctx)
 {
 xxxx;
 }
 
-z3::expr SMTParseJSON::getValueForTupleIndex(const APIModule* apimodule, const IType* itype, z3::expr intoloc, size_t i, z3::solver& ctx) const
+z3::expr SMTParseJSON::getValueForTupleIndex(const APIModule* apimodule, const IType* itype, z3::expr intoloc, size_t i, z3::solver& ctx)
 {
 xxxx;
 }
 
-void SMTParseJSON::completeParseTuple(const APIModule* apimodule, const IType* itype, z3::expr intoloc, z3::expr value, z3::solver& ctx) const
+void SMTParseJSON::completeParseTuple(const APIModule* apimodule, const IType* itype, z3::expr intoloc, z3::expr value, z3::solver& ctx)
 {
 xxxx;
 }
 
-z3::expr SMTParseJSON::prepareParseRecord(const APIModule* apimodule, const IType* itype, z3::solver& ctx) const
+z3::expr SMTParseJSON::prepareParseRecord(const APIModule* apimodule, const IType* itype, z3::solver& ctx)
 {
 xxxx;
 }
 
-z3::expr SMTParseJSON::getValueForRecordProperty(const APIModule* apimodule, const IType* itype, z3::expr intoloc, std::string pname, z3::solver& ctx) const
+z3::expr SMTParseJSON::getValueForRecordProperty(const APIModule* apimodule, const IType* itype, z3::expr intoloc, std::string pname, z3::solver& ctx)
 {
 xxxx;
 }
 
-void SMTParseJSON::completeParseRecord(const APIModule* apimodule, const IType* itype, z3::expr intoloc, z3::expr value, z3::solver& ctx) const
+void SMTParseJSON::completeParseRecord(const APIModule* apimodule, const IType* itype, z3::expr intoloc, z3::expr value, z3::solver& ctx)
 {
 xxxx;
 }
 
-z3::expr SMTParseJSON::prepareParseContainer(const APIModule* apimodule, const IType* itype, z3::expr intoloc, size_t count, z3::solver& ctx) const
+z3::expr SMTParseJSON::prepareParseContainer(const APIModule* apimodule, const IType* itype, z3::expr intoloc, size_t count, z3::solver& ctx)
 {
 xxxx;
 }
 
-z3::expr SMTParseJSON::getValueForContainerElementParse(const APIModule* apimodule, const IType* itype, z3::solver& ctx) const
+z3::expr SMTParseJSON::getValueForContainerElementParse(const APIModule* apimodule, const IType* itype, z3::solver& ctx)
 {
 xxxx;
 }
 
-void SMTParseJSON::completeValueForContainerElementParse(const APIModule* apimodule, const IType* itype, z3::expr intoloc, z3::expr vval, z3::solver& ctx) const
+void SMTParseJSON::completeValueForContainerElementParse(const APIModule* apimodule, const IType* itype, z3::expr intoloc, z3::expr vval, z3::solver& ctx)
 {
 xxxx;
 }
 
-void SMTParseJSON::completeParseContainer(const APIModule* apimodule, const IType* itype, z3::expr intoloc, z3::expr value, z3::solver& ctx) const
+void SMTParseJSON::completeParseContainer(const APIModule* apimodule, const IType* itype, z3::expr intoloc, z3::expr value, z3::solver& ctx)
 {
 xxxx;
 }
 
-z3::expr SMTParseJSON::prepareParseEntity(const APIModule* apimodule, const IType* itype, z3::solver& ctx) const
+z3::expr SMTParseJSON::prepareParseEntity(const APIModule* apimodule, const IType* itype, z3::solver& ctx)
 {
 xxxx;
 }
 
-z3::expr SMTParseJSON::prepareParseEntityMask(const APIModule* apimodule, const IType* itype, z3::solver& ctx) const
+z3::expr SMTParseJSON::prepareParseEntityMask(const APIModule* apimodule, const IType* itype, z3::solver& ctx)
 {
 xxxx;
 }
 
-z3::expr SMTParseJSON::getValueForEntityField(const APIModule* apimodule, const IType* itype, z3::expr intoloc, std::string pname, z3::solver& ctx) const
+z3::expr SMTParseJSON::getValueForEntityField(const APIModule* apimodule, const IType* itype, z3::expr intoloc, std::string pname, z3::solver& ctx)
 {
 xxxx;
 }
 
-void SMTParseJSON::completeParseEntity(const APIModule* apimodule, const IType* itype, z3::expr intoloc, z3::expr value, z3::solver& ctx) const
+void SMTParseJSON::completeParseEntity(const APIModule* apimodule, const IType* itype, z3::expr intoloc, z3::expr value, z3::solver& ctx)
 {
 xxxx;
 }
 
-void SMTParseJSON::setMaskFlag(const APIModule* apimodule, z3::expr flagloc, size_t i, bool flag) const
+void SMTParseJSON::setMaskFlag(const APIModule* apimodule, z3::expr flagloc, size_t i, bool flag)
 {
 xxxx;
 }
 
-z3::expr SMTParseJSON::parseUnionChoice(const APIModule* apimodule, const IType* itype, z3::expr intoloc, size_t pick, z3::solver& ctx) const
+z3::expr SMTParseJSON::parseUnionChoice(const APIModule* apimodule, const IType* itype, z3::expr intoloc, size_t pick, z3::solver& ctx)
 {
 xxxx;
 }
 
-std::optional<bool> SMTParseJSON::extractBoolImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) const
+std::optional<bool> SMTParseJSON::extractBoolImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
 {
     auto bef = getArgContextConstructor(ctx.ctx(), "BBool@UFCons_API", ctx.ctx().bool_sort());
     return expBoolAsBool(ctx, bef(value));
 }
 
-std::optional<uint64_t> SMTParseJSON::extractNatImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) const
+std::optional<uint64_t> SMTParseJSON::extractNatImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
 {
     auto bef = getArgContextConstructor(ctx.ctx(), "BNat@UFCons_API", ctx.ctx().int_sort());
     return expIntAsUIntSmall(ctx, bef(value));
 }
 
-std::optional<int64_t> SMTParseJSON::extractIntImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) const
+std::optional<int64_t> SMTParseJSON::extractIntImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
 {
     auto bef = getArgContextConstructor(ctx.ctx(), "BInt@UFCons_API", ctx.ctx().int_sort());
     return expIntAsIntSmall(ctx, bef(value));
 }
 
-std::optional<std::string> SMTParseJSON::extractBigNatImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) const
+std::optional<std::string> SMTParseJSON::extractBigNatImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
 {
     auto bef = getArgContextConstructor(ctx.ctx(), "BBigNat@UFCons_API", ctx.ctx().int_sort());
     return expIntAsUInt(ctx, bef(value));
 }
 
-std::optional<std::string> SMTParseJSON::extractBigIntImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) const
+std::optional<std::string> SMTParseJSON::extractBigIntImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
 {
     auto bef = getArgContextConstructor(ctx.ctx(), "BBigInt@UFCons_API", ctx.ctx().int_sort());
     return expIntAsInt(ctx, bef(value));
 }
 
-std::optional<std::string> SMTParseJSON::extractFloatImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) const
+std::optional<std::string> SMTParseJSON::extractFloatImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
 {
+    //
+    // TODO: may want to do some analysis on equality and order requirements with other floats here
+    //
+
     auto bef = getArgContextConstructor(ctx.ctx(), "BFloat@UFCons_API", ctx.ctx().uninterpreted_sort("FloatValue"));
     return expFloatAsFloat(ctx, bef(value));
 }
 
-std::optional<std::string> SMTParseJSON::extractDecimalImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) const
+std::optional<std::string> SMTParseJSON::extractDecimalImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
 {
+    //
+    // TODO: may want to do some analysis on equality and order requirements with other floats here
+    //
+
     auto bef = getArgContextConstructor(ctx.ctx(), "BDecimal@UFCons_API", ctx.ctx().uninterpreted_sort("FloatValue"));
     return expFloatAsFloat(ctx, bef(value));
 }
 
-std::optional<std::pair<std::string, uint64_t>> SMTParseJSON::extractRationalImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) const
+std::optional<std::pair<std::string, uint64_t>> SMTParseJSON::extractRationalImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
 {
+    //
+    // TODO: may want to do some analysis on equality and order requirements with other floats here
+    //
+    
     auto bef = getArgContextConstructor(ctx.ctx(), "BRational@UFCons_API", ctx.ctx().uninterpreted_sort("FloatValue"));
     return std::make_optional(std::make_pair("[RationalValue]", 1));
 }
 
-std::optional<std::string> SMTParseJSON::extractStringImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) const
+std::optional<std::string> SMTParseJSON::extractStringImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
 {
     auto bef = getArgContextConstructor(ctx.ctx(), "BString@UFCons_API", ctx.ctx().string_sort());
     return evalStringAsString(ctx, bef(value));
 }
 
-std::optional<std::pair<std::vector<uint8_t>, std::pair<uint8_t, uint8_t>>> SMTParseJSON::extractByteBufferImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) const
+std::optional<std::pair<std::vector<uint8_t>, std::pair<uint8_t, uint8_t>>> SMTParseJSON::extractByteBufferImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
 {
     auto bytesort = ctx.ctx().bv_sort(8);
     
@@ -823,7 +864,7 @@ std::optional<std::pair<std::vector<uint8_t>, std::pair<uint8_t, uint8_t>>> SMTP
     return std::make_optional(std::make_pair(bytes, pprops));
 }
 
-std::optional<DateTime> SMTParseJSON::extractDateTimeImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) const
+std::optional<DateTime> SMTParseJSON::extractDateTimeImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
 {
     DateTime dt;
 
@@ -898,54 +939,92 @@ std::optional<DateTime> SMTParseJSON::extractDateTimeImpl(const APIModule* apimo
     return std::make_optional(dt);
 }
 
-std::optional<uint64_t> SMTParseJSON::extractTickTimeImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) const
+std::optional<uint64_t> SMTParseJSON::extractTickTimeImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
 {
     auto bef = getArgContextConstructor(ctx.ctx(), "BTickTime@UFCons_API", ctx.ctx().int_sort());
     return expIntAsUIntSmall(ctx, bef(value));
 }
 
-std::optional<uint64_t> SMTParseJSON::extractLogicalTimeImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) const
+std::optional<uint64_t> SMTParseJSON::extractLogicalTimeImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
 {
     auto bef = getArgContextConstructor(ctx.ctx(), "BLogicalTime@UFCons_API", ctx.ctx().int_sort());
     return expIntAsUIntSmall(ctx, bef(value));
 }
 
-std::optional<std::vector<uint8_t>> SMTParseJSON::extractUUIDImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) const
+std::optional<std::vector<uint8_t>> SMTParseJSON::extractUUIDImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
+{
+    auto bytesort = ctx.ctx().bv_sort(8);
+    auto bbf = getArgContextConstructor(ctx.ctx(), "BUUID@UFCons_API", ctx.ctx().seq_sort(bytesort));
+
+    std::vector<uint8_t> bytes;
+    for(size_t i = 0; i < 16; ++i)
+    {
+        auto vv = expIntAsUIntSmall(ctx, bbf(value).at(ctx.ctx().int_val(i)));
+        if(!vv.has_value())
+        {
+            return std::nullopt;
+        }
+
+        bytes.push_back((uint8_t)vv.value());
+    }
+
+    return std::make_optional(bytes);
+}
+
+std::optional<std::vector<uint8_t>> SMTParseJSON::extractContentHashImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
+{
+    //
+    // TODO: may want to do some reversing of perfect hash and other analysis here
+    //
+
+    auto hashsort = ctx.ctx().bv_sort(16);
+    auto bbf = getArgContextConstructor(ctx.ctx(), "BContentHash@UFCons_API", hashsort);
+
+    auto bbval = ctx.get_model().eval(bbf(value), true);
+    auto strval = bbval.to_string();
+
+    std::vector<uint8_t> vv = {
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1
+        };
+
+    if(strval.length() == 3)
+    {
+        vv[62] = (uint8_t)strval[1];
+        vv[63] = (uint8_t)strval[2];
+    }
+
+    return std::make_optional(vv);
+}
+
+z3::expr SMTParseJSON::extractValueForTupleIndex(const APIModule* apimodule, const IType* itype, z3::expr intoloc, size_t i, z3::solver& ctx)
 {
 xxxx;
 }
 
-std::optional<std::vector<uint8_t>> SMTParseJSON::extractContentHashImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) const
+z3::expr SMTParseJSON::extractValueForRecordProperty(const APIModule* apimodule, const IType* itype, z3::expr intoloc, std::string pname, z3::solver& ctx)
 {
 xxxx;
 }
 
-z3::expr SMTParseJSON::extractValueForTupleIndex(const APIModule* apimodule, const IType* itype, z3::expr intoloc, size_t i, z3::solver& ctx) const
+z3::expr SMTParseJSON::extractValueForEntityField(const APIModule* apimodule, const IType* itype, z3::expr intoloc, std::string pname, z3::solver& ctx)
 {
 xxxx;
 }
 
-z3::expr SMTParseJSON::extractValueForRecordProperty(const APIModule* apimodule, const IType* itype, z3::expr intoloc, std::string pname, z3::solver& ctx) const
+std::optional<size_t> SMTParseJSON::extractLengthForContainer(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
 {
 xxxx;
 }
 
-z3::expr SMTParseJSON::extractValueForEntityField(const APIModule* apimodule, const IType* itype, z3::expr intoloc, std::string pname, z3::solver& ctx) const
+z3::expr SMTParseJSON::extractValueForContainer(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
 {
 xxxx;
 }
 
-std::optional<size_t> SMTParseJSON::extractLengthForContainer(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) const
-{
-xxxx;
-}
-
-z3::expr SMTParseJSON::extractValueForContainer(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) const
-{
-xxxx;
-}
-
-std::optional<size_t> SMTParseJSON::extractUnionChoice(const APIModule* apimodule, const IType* itype, z3::expr intoloc, z3::solver& ctx) const
+std::optional<size_t> SMTParseJSON::extractUnionChoice(const APIModule* apimodule, const IType* itype, z3::expr intoloc, z3::solver& ctx)
 {
 xxxx;
 }

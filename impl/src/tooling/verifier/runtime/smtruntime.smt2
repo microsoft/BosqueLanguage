@@ -105,7 +105,7 @@
 (define-sort BTickTime () Int)
 (define-sort BLogicalTime () Int)
 (define-sort BUUID (Seq (_ BitVec 8)))
-(define-sort BHASHCODE (_ BitVec 16))
+(define-sort BHashCode (_ BitVec 16))
 
 ;;TODO BHashable and Hash + HashInvert and axioms
 

@@ -2433,42 +2433,42 @@ void LambdaEvalThunk::invoke(const BSQInvokeBodyDecl* call, const std::vector<St
     static_cast<Evaluator*>(this->ctx)->linvoke(call, args, resultsl);
 }
 
-bool ICPPParseJSON::checkInvokeOk(const std::string& checkinvoke, StorageLocationPtr value) const
+bool ICPPParseJSON::checkInvokeOk(const std::string& checkinvoke, StorageLocationPtr value)
 {
     xxxx;
 }
 
-bool ICPPParseJSON::parseNoneImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) const
+bool ICPPParseJSON::parseNoneImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
 {
     //location is aleady zero initialized
     return true;
 }
 
-bool ICPPParseJSON::parseNothingImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) const
+bool ICPPParseJSON::parseNothingImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
 {
     //location is aleady zero initialized
     return true;
 }
 
-bool ICPPParseJSON::parseBoolImpl(const APIModule* apimodule, const IType* itype, bool b, StorageLocationPtr value, Evaluator& ctx) const
+bool ICPPParseJSON::parseBoolImpl(const APIModule* apimodule, const IType* itype, bool b, StorageLocationPtr value, Evaluator& ctx)
 {
     SLPTR_STORE_CONTENTS_AS(BSQBool, value, (BSQBool)(b ? BSQTRUE : BSQFALSE));
     return true;
 }
 
-bool ICPPParseJSON::parseNatImpl(const APIModule* apimodule, const IType* itype, uint64_t n, StorageLocationPtr value, Evaluator& ctx) const
+bool ICPPParseJSON::parseNatImpl(const APIModule* apimodule, const IType* itype, uint64_t n, StorageLocationPtr value, Evaluator& ctx)
 {
     SLPTR_STORE_CONTENTS_AS(BSQNat, value, (BSQNat)n);
     return true;
 }
 
-bool ICPPParseJSON::parseIntImpl(const APIModule* apimodule, const IType* itype, int64_t i, StorageLocationPtr value, Evaluator& ctx) const
+bool ICPPParseJSON::parseIntImpl(const APIModule* apimodule, const IType* itype, int64_t i, StorageLocationPtr value, Evaluator& ctx)
 {
     SLPTR_STORE_CONTENTS_AS(BSQInt, value, (BSQInt)i);
     return true;
 }
 
-bool ICPPParseJSON::parseBigNatImpl(const APIModule* apimodule, const IType* itype, std::string n, StorageLocationPtr value, Evaluator& ctx) const
+bool ICPPParseJSON::parseBigNatImpl(const APIModule* apimodule, const IType* itype, std::string n, StorageLocationPtr value, Evaluator& ctx)
 {
     try
     {
@@ -2483,7 +2483,7 @@ bool ICPPParseJSON::parseBigNatImpl(const APIModule* apimodule, const IType* ity
     return false;
 }
 
-bool ICPPParseJSON::parseBigIntImpl(const APIModule* apimodule, const IType* itype, std::string i, StorageLocationPtr value, Evaluator& ctx) const
+bool ICPPParseJSON::parseBigIntImpl(const APIModule* apimodule, const IType* itype, std::string i, StorageLocationPtr value, Evaluator& ctx)
 {
     try
     {
@@ -2498,7 +2498,7 @@ bool ICPPParseJSON::parseBigIntImpl(const APIModule* apimodule, const IType* ity
     return false;
 }
 
-bool ICPPParseJSON::parseFloatImpl(const APIModule* apimodule, const IType* itype, std::string f, StorageLocationPtr value, Evaluator& ctx) const
+bool ICPPParseJSON::parseFloatImpl(const APIModule* apimodule, const IType* itype, std::string f, StorageLocationPtr value, Evaluator& ctx)
 {
     try
     {
@@ -2513,7 +2513,7 @@ bool ICPPParseJSON::parseFloatImpl(const APIModule* apimodule, const IType* ityp
     return false;
 }
 
-bool ICPPParseJSON::parseDecimalImpl(const APIModule* apimodule, const IType* itype, std::string d, StorageLocationPtr value, Evaluator& ctx) const
+bool ICPPParseJSON::parseDecimalImpl(const APIModule* apimodule, const IType* itype, std::string d, StorageLocationPtr value, Evaluator& ctx)
 {
     try
     {
@@ -2528,7 +2528,7 @@ bool ICPPParseJSON::parseDecimalImpl(const APIModule* apimodule, const IType* it
     return false;
 }
 
-bool ICPPParseJSON::parseRationalImpl(const APIModule* apimodule, const IType* itype, std::string n, uint64_t d, StorageLocationPtr value, Evaluator& ctx) const
+bool ICPPParseJSON::parseRationalImpl(const APIModule* apimodule, const IType* itype, std::string n, uint64_t d, StorageLocationPtr value, Evaluator& ctx)
 {
     try
     {
@@ -2544,7 +2544,7 @@ bool ICPPParseJSON::parseRationalImpl(const APIModule* apimodule, const IType* i
     return false;
 }
 
-bool ICPPParseJSON::parseStringImpl(const APIModule* apimodule, const IType* itype, std::string s, StorageLocationPtr value, Evaluator& ctx) const
+bool ICPPParseJSON::parseStringImpl(const APIModule* apimodule, const IType* itype, std::string s, StorageLocationPtr value, Evaluator& ctx)
 {
     BSQString rstr = g_emptyString;
     if(s.empty())
@@ -2575,7 +2575,7 @@ bool ICPPParseJSON::parseStringImpl(const APIModule* apimodule, const IType* ity
     return true;
 }
 
-bool ICPPParseJSON::parseByteBufferImpl(const APIModule* apimodule, const IType* itype, uint8_t compress, uint8_t format, std::vector<uint8_t>& data, StorageLocationPtr value, Evaluator& ctx) const
+bool ICPPParseJSON::parseByteBufferImpl(const APIModule* apimodule, const IType* itype, uint8_t compress, uint8_t format, std::vector<uint8_t>& data, StorageLocationPtr value, Evaluator& ctx)
 {
     Allocator::GlobalAllocator.ensureSpace(BSQWellKnownType::g_typeByteBufferLeaf->allocinfo.heapsize + BSQWellKnownType::g_typeByteBufferNode->allocinfo.heapsize + (2 * sizeof(GC_META_DATA_WORD)));
     BSQByteBufferNode* cnode = (BSQByteBufferNode*)Allocator::GlobalAllocator.allocateSafe(BSQWellKnownType::g_typeByteBufferNode);
@@ -2587,7 +2587,7 @@ bool ICPPParseJSON::parseByteBufferImpl(const APIModule* apimodule, const IType*
     auto croot = Allocator::GlobalAllocator.registerTempRoot(BSQWellKnownType::g_typeByteBufferNode, cnode);
     while(i < data.size())
     {
-        GC_MEM_COPY(cnode->bytes, &data[i], cnode->bytecount);
+        std::copy(data.cbegin() + i, data.cbegin() + i + cnode->bytecount, cnode->bytes->bytes);
         i += cnode->bytecount;
 
         if(i < data.size())
@@ -2624,7 +2624,7 @@ bool ICPPParseJSON::parseByteBufferImpl(const APIModule* apimodule, const IType*
     return true;
 }
 
-bool ICPPParseJSON::parseDateTimeImpl(const APIModule* apimodule, const IType* itype, DateTime t, StorageLocationPtr value, Evaluator& ctx) const
+bool ICPPParseJSON::parseDateTimeImpl(const APIModule* apimodule, const IType* itype, DateTime t, StorageLocationPtr value, Evaluator& ctx)
 {
     Allocator::GlobalAllocator.ensureSpace(BSQWellKnownType::g_typeDateTime);
     BSQDateTime* dt = (BSQDateTime*)Allocator::GlobalAllocator.allocateSafe(BSQWellKnownType::g_typeDateTime);
@@ -2637,154 +2637,164 @@ bool ICPPParseJSON::parseDateTimeImpl(const APIModule* apimodule, const IType* i
     return true;
 }
 
-bool ICPPParseJSON::parseTickTimeImpl(const APIModule* apimodule, const IType* itype, uint64_t t, StorageLocationPtr value, Evaluator& ctx) const
+bool ICPPParseJSON::parseTickTimeImpl(const APIModule* apimodule, const IType* itype, uint64_t t, StorageLocationPtr value, Evaluator& ctx)
 {
     SLPTR_STORE_CONTENTS_AS(BSQTickTime, value, (BSQTickTime)t);
     return true;
 }
 
-bool ICPPParseJSON::parseLogicalTimeImpl(const APIModule* apimodule, const IType* itype, uint64_t j, StorageLocationPtr value, Evaluator& ctx) const
+bool ICPPParseJSON::parseLogicalTimeImpl(const APIModule* apimodule, const IType* itype, uint64_t j, StorageLocationPtr value, Evaluator& ctx)
 {
     SLPTR_STORE_CONTENTS_AS(BSQLogicalTime, value, (BSQLogicalTime)j);
     return true;
 }
 
-bool ICPPParseJSON::parseUUIDImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, StorageLocationPtr value, Evaluator& ctx) const
+bool ICPPParseJSON::parseUUIDImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, StorageLocationPtr value, Evaluator& ctx)
 {
-xxxx;
+    BSQUUID uuid;
+    std::copy(v.cbegin(), v.cbegin() + 16, uuid.bytes);
+    
+    SLPTR_STORE_CONTENTS_AS(BSQUUID, value, uuid);
+    return true;
 }
 
-bool ICPPParseJSON::parseContentHashImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, StorageLocationPtr value, Evaluator& ctx) const
+bool ICPPParseJSON::parseContentHashImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, StorageLocationPtr value, Evaluator& ctx)
 {
-xxxx;
+    Allocator::GlobalAllocator.ensureSpace(BSQWellKnownType::g_typeContentHash);
+    BSQContentHash* hash = (BSQContentHash*)Allocator::GlobalAllocator.allocateSafe(BSQWellKnownType::g_typeContentHash);
+
+    std::copy(v.cbegin(), v.cbegin() + 64, hash->bytes);
+    
+    SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(value, hash);
+    return true;
 }
     
-StorageLocationPtr ICPPParseJSON::prepareParseTuple(const APIModule* apimodule, const IType* itype, Evaluator& ctx) const
+StorageLocationPtr ICPPParseJSON::prepareParseTuple(const APIModule* apimodule, const IType* itype, Evaluator& ctx)
 {
 xxxx;
 }
 
-StorageLocationPtr ICPPParseJSON::getValueForTupleIndex(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, size_t i, Evaluator& ctx) const
+StorageLocationPtr ICPPParseJSON::getValueForTupleIndex(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, size_t i, Evaluator& ctx)
 {
 xxxx;
 }
 
-void ICPPParseJSON::completeParseTuple(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, StorageLocationPtr value, Evaluator& ctx) const
+void ICPPParseJSON::completeParseTuple(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, StorageLocationPtr value, Evaluator& ctx)
 {
 xxxx;
 }
 
-StorageLocationPtr ICPPParseJSON::prepareParseRecord(const APIModule* apimodule, const IType* itype, Evaluator& ctx) const
+StorageLocationPtr ICPPParseJSON::prepareParseRecord(const APIModule* apimodule, const IType* itype, Evaluator& ctx)
 {
 xxxx;
 }
 
-StorageLocationPtr ICPPParseJSON::getValueForRecordProperty(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, std::string pname, Evaluator& ctx) const
+StorageLocationPtr ICPPParseJSON::getValueForRecordProperty(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, std::string pname, Evaluator& ctx)
 {
 xxxx;
 }
 
-void ICPPParseJSON::completeParseRecord(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, StorageLocationPtr value, Evaluator& ctx) const
+void ICPPParseJSON::completeParseRecord(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, StorageLocationPtr value, Evaluator& ctx)
 {
 xxxx;
 }
 
-StorageLocationPtr ICPPParseJSON::prepareParseContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, size_t count, Evaluator& ctx) const
+StorageLocationPtr ICPPParseJSON::prepareParseContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, size_t count, Evaluator& ctx)
 {
 xxxx;
 }
 
-StorageLocationPtr ICPPParseJSON::getValueForContainerElementParse(const APIModule* apimodule, const IType* itype, Evaluator& ctx) const
+StorageLocationPtr ICPPParseJSON::getValueForContainerElementParse(const APIModule* apimodule, const IType* itype, Evaluator& ctx)
 {
 xxxx;
 }
 
-void ICPPParseJSON::completeValueForContainerElementParse(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, StorageLocationPtr vval, Evaluator& ctx) const
+void ICPPParseJSON::completeValueForContainerElementParse(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, StorageLocationPtr vval, Evaluator& ctx)
 {
 xxxx;
 }
 
-void ICPPParseJSON::completeParseContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, StorageLocationPtr value, Evaluator& ctx) const
+void ICPPParseJSON::completeParseContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, StorageLocationPtr value, Evaluator& ctx)
 {
 xxxx;
 }
 
-StorageLocationPtr ICPPParseJSON::prepareParseEntity(const APIModule* apimodule, const IType* itype, Evaluator& ctx) const
+StorageLocationPtr ICPPParseJSON::prepareParseEntity(const APIModule* apimodule, const IType* itype, Evaluator& ctx)
 {
 xxxx;
 }
 
-StorageLocationPtr ICPPParseJSON::prepareParseEntityMask(const APIModule* apimodule, const IType* itype, Evaluator& ctx) const
+StorageLocationPtr ICPPParseJSON::prepareParseEntityMask(const APIModule* apimodule, const IType* itype, Evaluator& ctx)
 {
 xxxx;
 }
 
-StorageLocationPtr ICPPParseJSON::getValueForEntityField(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, std::string pname, Evaluator& ctx) const
+StorageLocationPtr ICPPParseJSON::getValueForEntityField(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, std::string pname, Evaluator& ctx)
 {
 xxxx;
 }
 
-void ICPPParseJSON::completeParseEntity(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, StorageLocationPtr value, Evaluator& ctx) const
+void ICPPParseJSON::completeParseEntity(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, StorageLocationPtr value, Evaluator& ctx)
 {
 xxxx;
 }
 
-void ICPPParseJSON::setMaskFlag(const APIModule* apimodule, StorageLocationPtr flagloc, size_t i, bool flag) const
+void ICPPParseJSON::setMaskFlag(const APIModule* apimodule, StorageLocationPtr flagloc, size_t i, bool flag)
 {
 xxxx;
 }
 
-StorageLocationPtr ICPPParseJSON::parseUnionChoice(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, size_t pick, Evaluator& ctx) const
+StorageLocationPtr ICPPParseJSON::parseUnionChoice(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, size_t pick, Evaluator& ctx)
 {
 xxxx;
 }
 
-std::optional<bool> ICPPParseJSON::extractBoolImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) const
+std::optional<bool> ICPPParseJSON::extractBoolImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
 {
     return std::make_optional((bool)SLPTR_LOAD_CONTENTS_AS(BSQBool, value));
 }
 
-std::optional<uint64_t> ICPPParseJSON::extractNatImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) const
+std::optional<uint64_t> ICPPParseJSON::extractNatImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
 {
     return std::make_optional((uint64_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, value));
 }
 
-std::optional<int64_t> ICPPParseJSON::extractIntImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) const
+std::optional<int64_t> ICPPParseJSON::extractIntImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
 {
     return std::make_optional((int64_t)SLPTR_LOAD_CONTENTS_AS(BSQInt, value));
 }
 
-std::optional<std::string> ICPPParseJSON::extractBigNatImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) const
+std::optional<std::string> ICPPParseJSON::extractBigNatImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
 {
     auto val = (uint64_t)SLPTR_LOAD_CONTENTS_AS(BSQBigNat, value);
     return std::make_optional(std::to_string(val));
 }
 
-std::optional<std::string> ICPPParseJSON::extractBigIntImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) const
+std::optional<std::string> ICPPParseJSON::extractBigIntImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
 {
     auto val = (int64_t)SLPTR_LOAD_CONTENTS_AS(BSQBigInt, value);
     return std::make_optional(std::to_string(val));
 }
 
-std::optional<std::string> ICPPParseJSON::extractFloatImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) const
+std::optional<std::string> ICPPParseJSON::extractFloatImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
 {
     auto val = (double)SLPTR_LOAD_CONTENTS_AS(BSQFloat, value);
     return std::make_optional(std::to_string(val));
 }
 
-std::optional<std::string> ICPPParseJSON::extractDecimalImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) const
+std::optional<std::string> ICPPParseJSON::extractDecimalImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
 {
     auto val = (double)SLPTR_LOAD_CONTENTS_AS(BSQDecimal, value);
     return std::make_optional(std::to_string(val));
 }
 
-std::optional<std::pair<std::string, uint64_t>> ICPPParseJSON::extractRationalImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) const
+std::optional<std::pair<std::string, uint64_t>> ICPPParseJSON::extractRationalImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
 {
     auto val = SLPTR_LOAD_CONTENTS_AS(BSQRational, value);
     return std::make_optional(std::make_pair(std::to_string(val.numerator), val.denominator));
 }
 
-std::optional<std::string> ICPPParseJSON::extractStringImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) const
+std::optional<std::string> ICPPParseJSON::extractStringImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
 {
     auto val = SLPTR_LOAD_CONTENTS_AS(BSQString, value);
 
@@ -2799,7 +2809,7 @@ std::optional<std::string> ICPPParseJSON::extractStringImpl(const APIModule* api
     }
 }
 
-std::optional<std::pair<std::vector<uint8_t>, std::pair<uint8_t, uint8_t>>> ICPPParseJSON::extractByteBufferImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) const
+std::optional<std::pair<std::vector<uint8_t>, std::pair<uint8_t, uint8_t>>> ICPPParseJSON::extractByteBufferImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
 {
     BSQByteBuffer* bb = (BSQByteBuffer*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(value);
     auto pprops = std::make_pair((uint8_t)bb->compression, (uint8_t)bb->format);
@@ -2817,7 +2827,7 @@ std::optional<std::pair<std::vector<uint8_t>, std::pair<uint8_t, uint8_t>>> ICPP
     return std::make_optional(std::make_pair(bytes, pprops));
 }
 
-std::optional<DateTime> ICPPParseJSON::extractDateTimeImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) const
+std::optional<DateTime> ICPPParseJSON::extractDateTimeImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
 {
     BSQDateTime* t = (BSQDateTime*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(value);
 
@@ -2830,52 +2840,62 @@ std::optional<DateTime> ICPPParseJSON::extractDateTimeImpl(const APIModule* apim
     return std::make_optional(dt);
 }
 
-std::optional<uint64_t> ICPPParseJSON::extractTickTimeImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) const
+std::optional<uint64_t> ICPPParseJSON::extractTickTimeImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
 {
     return std::make_optional((uint64_t)SLPTR_LOAD_CONTENTS_AS(BSQTickTime, value));
 }
 
-std::optional<uint64_t> ICPPParseJSON::extractLogicalTimeImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) const
+std::optional<uint64_t> ICPPParseJSON::extractLogicalTimeImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
 {
     return std::make_optional((uint64_t)SLPTR_LOAD_CONTENTS_AS(BSQLogicalTime, value));
 }
 
-std::optional<std::vector<uint8_t>> ICPPParseJSON::extractUUIDImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) const
+std::optional<std::vector<uint8_t>> ICPPParseJSON::extractUUIDImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
+{
+    auto uuid = SLPTR_LOAD_CONTENTS_AS(BSQUUID, value);
+
+    std::vector<uint8_t> vv;
+    std::copy(uuid.bytes, uuid.bytes + 16, std::back_inserter(vv));
+
+    return std::make_optional(vv);
+}
+
+std::optional<std::vector<uint8_t>> ICPPParseJSON::extractContentHashImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
+{
+    auto hash = (BSQContentHash*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(value);
+
+    std::vector<uint8_t> vv;
+    std::copy(hash->bytes, hash->bytes + 64, std::back_inserter(vv));
+
+    return std::make_optional(vv);
+}
+
+StorageLocationPtr ICPPParseJSON::extractValueForTupleIndex(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, size_t i, Evaluator& ctx)
 {
 xxxx;
 }
 
-std::optional<std::vector<uint8_t>> ICPPParseJSON::extractContentHashImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) const
+StorageLocationPtr ICPPParseJSON::extractValueForRecordProperty(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, std::string pname, Evaluator& ctx)
 {
 xxxx;
 }
 
-StorageLocationPtr ICPPParseJSON::extractValueForTupleIndex(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, size_t i, Evaluator& ctx) const
+StorageLocationPtr ICPPParseJSON::extractValueForEntityField(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, std::string pname, Evaluator& ctx)
 {
 xxxx;
 }
 
-StorageLocationPtr ICPPParseJSON::extractValueForRecordProperty(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, std::string pname, Evaluator& ctx) const
+std::optional<size_t> ICPPParseJSON::extractLengthForContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
 {
 xxxx;
 }
 
-StorageLocationPtr ICPPParseJSON::extractValueForEntityField(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, std::string pname, Evaluator& ctx) const
+StorageLocationPtr ICPPParseJSON::extractValueForContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
 {
 xxxx;
 }
 
-std::optional<size_t> ICPPParseJSON::extractLengthForContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) const
-{
-xxxx;
-}
-
-StorageLocationPtr ICPPParseJSON::extractValueForContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) const
-{
-xxxx;
-}
-
-std::optional<size_t> ICPPParseJSON::extractUnionChoice(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, Evaluator& ctx) const
+std::optional<size_t> ICPPParseJSON::extractUnionChoice(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, Evaluator& ctx)
 {
 xxxx;
 }

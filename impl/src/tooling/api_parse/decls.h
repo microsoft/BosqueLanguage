@@ -108,72 +108,72 @@ template <typename ValueRepr, typename State>
 class ApiManagerJSON
 {
 public:
-    virtual bool checkInvokeOk(const std::string& checkinvoke, ValueRepr value) const = 0;
+    virtual bool checkInvokeOk(const std::string& checkinvoke, ValueRepr value) = 0;
 
-    virtual bool parseNoneImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) const = 0;
-    virtual bool parseNothingImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) const = 0;
-    virtual bool parseBoolImpl(const APIModule* apimodule, const IType* itype, bool b, ValueRepr value, State& ctx) const = 0;
-    virtual bool parseNatImpl(const APIModule* apimodule, const IType* itype, uint64_t n, ValueRepr value, State& ctx) const = 0;
-    virtual bool parseIntImpl(const APIModule* apimodule, const IType* itype, int64_t i, ValueRepr value, State& ctx) const = 0;
-    virtual bool parseBigNatImpl(const APIModule* apimodule, const IType* itype, std::string n, ValueRepr value, State& ctx) const = 0;
-    virtual bool parseBigIntImpl(const APIModule* apimodule, const IType* itype, std::string i, ValueRepr value, State& ctx) const = 0;
-    virtual bool parseFloatImpl(const APIModule* apimodule, const IType* itype, std::string f, ValueRepr value, State& ctx) const = 0;
-    virtual bool parseDecimalImpl(const APIModule* apimodule, const IType* itype, std::string d, ValueRepr value, State& ctx) const = 0;
-    virtual bool parseRationalImpl(const APIModule* apimodule, const IType* itype, std::string n, uint64_t d, ValueRepr value, State& ctx) const = 0;
-    virtual bool parseStringImpl(const APIModule* apimodule, const IType* itype, std::string s, ValueRepr value, State& ctx) const = 0;
-    virtual bool parseByteBufferImpl(const APIModule* apimodule, const IType* itype, uint8_t compress, uint8_t format, std::vector<uint8_t>& data, ValueRepr value, State& ctx) const = 0;
-    virtual bool parseDateTimeImpl(const APIModule* apimodule, const IType* itype, DateTime t, ValueRepr value, State& ctx) const = 0;
-    virtual bool parseTickTimeImpl(const APIModule* apimodule, const IType* itype, uint64_t t, ValueRepr value, State& ctx) const = 0;
-    virtual bool parseLogicalTimeImpl(const APIModule* apimodule, const IType* itype, uint64_t j, ValueRepr value, State& ctx) const = 0;
-    virtual bool parseUUIDImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, ValueRepr value, State& ctx) const = 0;
-    virtual bool parseContentHashImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, ValueRepr value, State& ctx) const = 0;
+    virtual bool parseNoneImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
+    virtual bool parseNothingImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
+    virtual bool parseBoolImpl(const APIModule* apimodule, const IType* itype, bool b, ValueRepr value, State& ctx) = 0;
+    virtual bool parseNatImpl(const APIModule* apimodule, const IType* itype, uint64_t n, ValueRepr value, State& ctx) = 0;
+    virtual bool parseIntImpl(const APIModule* apimodule, const IType* itype, int64_t i, ValueRepr value, State& ctx) = 0;
+    virtual bool parseBigNatImpl(const APIModule* apimodule, const IType* itype, std::string n, ValueRepr value, State& ctx) = 0;
+    virtual bool parseBigIntImpl(const APIModule* apimodule, const IType* itype, std::string i, ValueRepr value, State& ctx) = 0;
+    virtual bool parseFloatImpl(const APIModule* apimodule, const IType* itype, std::string f, ValueRepr value, State& ctx) = 0;
+    virtual bool parseDecimalImpl(const APIModule* apimodule, const IType* itype, std::string d, ValueRepr value, State& ctx) = 0;
+    virtual bool parseRationalImpl(const APIModule* apimodule, const IType* itype, std::string n, uint64_t d, ValueRepr value, State& ctx) = 0;
+    virtual bool parseStringImpl(const APIModule* apimodule, const IType* itype, std::string s, ValueRepr value, State& ctx) = 0;
+    virtual bool parseByteBufferImpl(const APIModule* apimodule, const IType* itype, uint8_t compress, uint8_t format, std::vector<uint8_t>& data, ValueRepr value, State& ctx) = 0;
+    virtual bool parseDateTimeImpl(const APIModule* apimodule, const IType* itype, DateTime t, ValueRepr value, State& ctx) = 0;
+    virtual bool parseTickTimeImpl(const APIModule* apimodule, const IType* itype, uint64_t t, ValueRepr value, State& ctx) = 0;
+    virtual bool parseLogicalTimeImpl(const APIModule* apimodule, const IType* itype, uint64_t j, ValueRepr value, State& ctx) = 0;
+    virtual bool parseUUIDImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, ValueRepr value, State& ctx) = 0;
+    virtual bool parseContentHashImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, ValueRepr value, State& ctx) = 0;
     
-    virtual ValueRepr prepareParseTuple(const APIModule* apimodule, const IType* itype, State& ctx) const = 0;
-    virtual ValueRepr getValueForTupleIndex(const APIModule* apimodule, const IType* itype, ValueRepr intoloc, size_t i, State& ctx) const = 0;
-    virtual void completeParseTuple(const APIModule* apimodule, const IType* itype, ValueRepr intoloc, ValueRepr value, State& ctx) const = 0;
+    virtual ValueRepr prepareParseTuple(const APIModule* apimodule, const IType* itype, State& ctx) = 0;
+    virtual ValueRepr getValueForTupleIndex(const APIModule* apimodule, const IType* itype, ValueRepr intoloc, size_t i, State& ctx) = 0;
+    virtual void completeParseTuple(const APIModule* apimodule, const IType* itype, ValueRepr intoloc, ValueRepr value, State& ctx) = 0;
 
-    virtual ValueRepr prepareParseRecord(const APIModule* apimodule, const IType* itype, State& ctx) const = 0;
-    virtual ValueRepr getValueForRecordProperty(const APIModule* apimodule, const IType* itype, ValueRepr intoloc, std::string pname, State& ctx) const = 0;
-    virtual void completeParseRecord(const APIModule* apimodule, const IType* itype, ValueRepr intoloc, ValueRepr value, State& ctx) const = 0;
+    virtual ValueRepr prepareParseRecord(const APIModule* apimodule, const IType* itype, State& ctx) = 0;
+    virtual ValueRepr getValueForRecordProperty(const APIModule* apimodule, const IType* itype, ValueRepr intoloc, std::string pname, State& ctx) = 0;
+    virtual void completeParseRecord(const APIModule* apimodule, const IType* itype, ValueRepr intoloc, ValueRepr value, State& ctx) = 0;
 
-    virtual ValueRepr prepareParseContainer(const APIModule* apimodule, const IType* itype, ValueRepr intoloc, size_t count, State& ctx) const = 0;
-    virtual ValueRepr getValueForContainerElementParse(const APIModule* apimodule, const IType* itype, State& ctx) const = 0;
-    virtual void completeValueForContainerElementParse(const APIModule* apimodule, const IType* itype, ValueRepr intoloc, ValueRepr vval, State& ctx) const = 0;
-    virtual void completeParseContainer(const APIModule* apimodule, const IType* itype, ValueRepr intoloc, ValueRepr value, State& ctx) const = 0;
+    virtual ValueRepr prepareParseContainer(const APIModule* apimodule, const IType* itype, ValueRepr intoloc, size_t count, State& ctx) = 0;
+    virtual ValueRepr getValueForContainerElementParse(const APIModule* apimodule, const IType* itype, State& ctx) = 0;
+    virtual void completeValueForContainerElementParse(const APIModule* apimodule, const IType* itype, ValueRepr intoloc, ValueRepr vval, State& ctx) = 0;
+    virtual void completeParseContainer(const APIModule* apimodule, const IType* itype, ValueRepr intoloc, ValueRepr value, State& ctx) = 0;
 
-    virtual ValueRepr prepareParseEntity(const APIModule* apimodule, const IType* itype, State& ctx) const = 0;
-    virtual ValueRepr prepareParseEntityMask(const APIModule* apimodule, const IType* itype, State& ctx) const = 0;
-    virtual ValueRepr getValueForEntityField(const APIModule* apimodule, const IType* itype, ValueRepr intoloc, std::string pname, State& ctx) const = 0;
-    virtual void completeParseEntity(const APIModule* apimodule, const IType* itype, ValueRepr intoloc, ValueRepr value, State& ctx) const = 0;
+    virtual ValueRepr prepareParseEntity(const APIModule* apimodule, const IType* itype, State& ctx) = 0;
+    virtual ValueRepr prepareParseEntityMask(const APIModule* apimodule, const IType* itype, State& ctx) = 0;
+    virtual ValueRepr getValueForEntityField(const APIModule* apimodule, const IType* itype, ValueRepr intoloc, std::string pname, State& ctx) = 0;
+    virtual void completeParseEntity(const APIModule* apimodule, const IType* itype, ValueRepr intoloc, ValueRepr value, State& ctx) = 0;
 
-    virtual void setMaskFlag(const APIModule* apimodule, ValueRepr flagloc, size_t i, bool flag) const = 0;
+    virtual void setMaskFlag(const APIModule* apimodule, ValueRepr flagloc, size_t i, bool flag) = 0;
 
-    virtual ValueRepr parseUnionChoice(const APIModule* apimodule, const IType* itype, ValueRepr intoloc, size_t pick, State& ctx) const = 0;
+    virtual ValueRepr parseUnionChoice(const APIModule* apimodule, const IType* itype, ValueRepr intoloc, size_t pick, State& ctx) = 0;
 
-    virtual std::optional<bool> extractBoolImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) const = 0;
-    virtual std::optional<uint64_t> extractNatImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) const = 0;
-    virtual std::optional<int64_t> extractIntImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) const = 0;
-    virtual std::optional<std::string> extractBigNatImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) const = 0;
-    virtual std::optional<std::string> extractBigIntImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) const = 0;
-    virtual std::optional<std::string> extractFloatImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) const = 0;
-    virtual std::optional<std::string> extractDecimalImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) const = 0;
-    virtual std::optional<std::pair<std::string, uint64_t>> extractRationalImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) const = 0;
-    virtual std::optional<std::string> extractStringImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) const = 0;
-    virtual std::optional<std::pair<std::vector<uint8_t>, std::pair<uint8_t, uint8_t>>> extractByteBufferImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) const = 0;
-    virtual std::optional<DateTime> extractDateTimeImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) const = 0;
-    virtual std::optional<uint64_t> extractTickTimeImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) const = 0;
-    virtual std::optional<uint64_t> extractLogicalTimeImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) const = 0;
-    virtual std::optional<std::vector<uint8_t>> extractUUIDImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) const = 0;
-    virtual std::optional<std::vector<uint8_t>> extractContentHashImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) const = 0;
+    virtual std::optional<bool> extractBoolImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
+    virtual std::optional<uint64_t> extractNatImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
+    virtual std::optional<int64_t> extractIntImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
+    virtual std::optional<std::string> extractBigNatImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
+    virtual std::optional<std::string> extractBigIntImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
+    virtual std::optional<std::string> extractFloatImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
+    virtual std::optional<std::string> extractDecimalImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
+    virtual std::optional<std::pair<std::string, uint64_t>> extractRationalImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
+    virtual std::optional<std::string> extractStringImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
+    virtual std::optional<std::pair<std::vector<uint8_t>, std::pair<uint8_t, uint8_t>>> extractByteBufferImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
+    virtual std::optional<DateTime> extractDateTimeImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
+    virtual std::optional<uint64_t> extractTickTimeImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
+    virtual std::optional<uint64_t> extractLogicalTimeImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
+    virtual std::optional<std::vector<uint8_t>> extractUUIDImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
+    virtual std::optional<std::vector<uint8_t>> extractContentHashImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
     
-    virtual ValueRepr extractValueForTupleIndex(const APIModule* apimodule, const IType* itype, ValueRepr intoloc, size_t i, State& ctx) const = 0;
-    virtual ValueRepr extractValueForRecordProperty(const APIModule* apimodule, const IType* itype, ValueRepr intoloc, std::string pname, State& ctx) const = 0;
-    virtual ValueRepr extractValueForEntityField(const APIModule* apimodule, const IType* itype, ValueRepr intoloc, std::string pname, State& ctx) const = 0;
+    virtual ValueRepr extractValueForTupleIndex(const APIModule* apimodule, const IType* itype, ValueRepr intoloc, size_t i, State& ctx) = 0;
+    virtual ValueRepr extractValueForRecordProperty(const APIModule* apimodule, const IType* itype, ValueRepr intoloc, std::string pname, State& ctx) = 0;
+    virtual ValueRepr extractValueForEntityField(const APIModule* apimodule, const IType* itype, ValueRepr intoloc, std::string pname, State& ctx) = 0;
 
-    virtual std::optional<size_t> extractLengthForContainer(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) const = 0;
-    virtual ValueRepr extractValueForContainer(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) const = 0;
+    virtual std::optional<size_t> extractLengthForContainer(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
+    virtual ValueRepr extractValueForContainer(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
 
-    virtual std::optional<size_t> extractUnionChoice(const APIModule* apimodule, const IType* itype, ValueRepr intoloc, State& ctx) const = 0;
+    virtual std::optional<size_t> extractUnionChoice(const APIModule* apimodule, const IType* itype, ValueRepr intoloc, State& ctx) = 0;
 };
 
 class JSONParseHelper
@@ -222,10 +222,10 @@ public:
     virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const = 0;
 
     template <typename ValueRepr, typename State>
-    bool tparse(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx);
+    bool tparse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx);
 
     template <typename ValueRepr, typename State>
-    std::optional<json> textract(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const;
+    std::optional<json> textract(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const;
 };
 
 class IGroundedType : public IType
@@ -252,7 +252,7 @@ public:
     }
 
     template <typename ValueRepr, typename State>
-    bool parse(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
+    bool parse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
     {
         if(!j.is_null())
         {
@@ -263,7 +263,7 @@ public:
     }
 
     template <typename ValueRepr, typename State>
-    std::optional<json> extract(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
+    std::optional<json> extract(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
     {
         return std::make_optional(nullptr);
     }
@@ -286,7 +286,7 @@ public:
     }
 
     template <typename ValueRepr, typename State>
-    bool parse(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
+    bool parse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
     {
         if(!j.is_null())
         {
@@ -297,7 +297,7 @@ public:
     }
 
     template <typename ValueRepr, typename State>
-    std::optional<json> extract(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
+    std::optional<json> extract(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
     {
         return std::make_optional(nullptr);
     }
@@ -321,7 +321,7 @@ public:
     }
 
     template <typename ValueRepr, typename State>
-    bool parse(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
+    bool parse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
     {
         if(!j.is_boolean())
         {
@@ -332,7 +332,7 @@ public:
     }
 
     template <typename ValueRepr, typename State>
-    std::optional<json> extract(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
+    std::optional<json> extract(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
     {
         return apimgr.extractBoolImpl(apimodule, this, value, ctx);
     }
@@ -356,7 +356,7 @@ public:
     }
 
     template <typename ValueRepr, typename State>
-    bool parse(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
+    bool parse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
     {
         std::optional<uint64_t> nval = JSONParseHelper::parseToUnsignedNumber(j);
         if(!nval.has_value())
@@ -368,7 +368,7 @@ public:
     }
 
     template <typename ValueRepr, typename State>
-    std::optional<json> extract(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
+    std::optional<json> extract(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
     {
         auto nval = apimgr.extractNatImpl(apimodule, this, value, ctx);
         if(!nval.has_value())
@@ -398,7 +398,7 @@ public:
     }
 
     template <typename ValueRepr, typename State>
-    bool parse(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
+    bool parse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
     {
         std::optional<int64_t> nval = JSONParseHelper::parseToSignedNumber(j);
         if(!nval.has_value())
@@ -410,7 +410,7 @@ public:
     }
 
     template <typename ValueRepr, typename State>
-    std::optional<json> extract(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
+    std::optional<json> extract(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
     {
         auto nval = apimgr.extractIntImpl(apimodule, this, value, ctx);
         if(!nval.has_value())
@@ -440,7 +440,7 @@ public:
     }
 
     template <typename ValueRepr, typename State>
-    bool parse(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
+    bool parse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
     {
         std::optional<std::string> nval = JSONParseHelper.parseToBigUnsignedNumber(j);
         if(!nval.has_value())
@@ -452,7 +452,7 @@ public:
     }
 
     template <typename ValueRepr, typename State>
-    std::optional<json> extract(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
+    std::optional<json> extract(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
     {
         auto nval = apimgr.extractBigNatImpl(apimodule, this, value, ctx);
         if(!nval.has_value())
@@ -482,7 +482,7 @@ public:
     }
 
     template <typename ValueRepr, typename State>
-    bool parse(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
+    bool parse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
     {
         std::optional<std::string> nval = JSONParseHelper.parseToBigSignedNumber(j);
         if(!nval.has_value())
@@ -494,7 +494,7 @@ public:
     }
 
     template <typename ValueRepr, typename State>
-    std::optional<json> extract(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
+    std::optional<json> extract(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
     {
         auto nval = apimgr.extractBigIntImpl(apimodule, this, value, ctx);
         if(!nval.has_value())
@@ -526,7 +526,7 @@ public:
     }
 
     template <typename ValueRepr, typename State>
-    bool parse(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
+    bool parse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
     {
         std::optional<std::pair<std::string, uint64_t>> nval = JSONParseHelper::parseToRationalNumber(j);
         if(!nval.has_value())
@@ -538,7 +538,7 @@ public:
     }
 
     template <typename ValueRepr, typename State>
-    std::optional<json> extract(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
+    std::optional<json> extract(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
     {
         auto nval = apimgr.extractRationalImpl(apimodule, this, value, ctx);
         if(!nval.has_value())
@@ -569,7 +569,7 @@ public:
     }
 
     template <typename ValueRepr, typename State>
-    bool parse(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
+    bool parse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
     {
         std::optional<std::string> nval = JSONParseHelper::parseToRealNumber(j);
         if(!nval.has_value())
@@ -581,7 +581,7 @@ public:
     }
 
     template <typename ValueRepr, typename State>
-    std::optional<json> extract(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
+    std::optional<json> extract(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
     {
         auto nval = apimgr.extractFloatImpl(apimodule, this, value, ctx);
         if(!nval.has_value())
@@ -612,7 +612,7 @@ public:
     }
 
     template <typename ValueRepr, typename State>
-    bool parse(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
+    bool parse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
     {
         std::optional<std::string> nval = JSONParseHelper::parseToRealNumber(j);
         if(!nval.has_value())
@@ -624,7 +624,7 @@ public:
     }
 
     template <typename ValueRepr, typename State>
-    std::optional<json> extract(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
+    std::optional<json> extract(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
     {
         auto nval = apimgr.extractDecimalImpl(apimodule, this, value, ctx);
         if(!nval.has_value())
@@ -665,7 +665,7 @@ public:
     }
 
     template <typename ValueRepr, typename State>
-    bool parse(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
+    bool parse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
     {
         if(!j.is_string())
         {
@@ -676,7 +676,7 @@ public:
     }
 
     template <typename ValueRepr, typename State>
-    std::optional<json> extract(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
+    std::optional<json> extract(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
     {
         return apimgr.extractStringImpl(apimodule, this, value, ctx);
     }
@@ -708,7 +708,7 @@ public:
     }
 
     template <typename ValueRepr, typename State>
-    bool parse(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
+    bool parse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
     {
         if(!j.is_string())
         {
@@ -728,7 +728,7 @@ public:
     }
 
     template <typename ValueRepr, typename State>
-    std::optional<json> extract(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
+    std::optional<json> extract(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
     {
         return apimgr.extractStringImpl(apimodule, this, value, ctx);
     }
@@ -758,7 +758,7 @@ public:
     }
 
     template <typename ValueRepr, typename State>
-    bool parse(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
+    bool parse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
     {
         bool okparse = apimodule->typemap.find("String")->second->tparse(apimgr, apimodule, j, value, ctx);
         if(!okparse)
@@ -770,7 +770,7 @@ public:
     }
 
     template <typename ValueRepr, typename State>
-    std::optional<json> extract(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
+    std::optional<json> extract(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
     {
         return apimodule->typemap.find("String")->second->textract(apimgr, apimodule, value, ctx);
     }
@@ -805,7 +805,7 @@ public:
     }
 
     template <typename ValueRepr, typename State>
-    bool parse(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
+    bool parse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
     {
         if(!jdata.is())
         {
@@ -843,7 +843,7 @@ public:
     }
 
     template <typename ValueRepr, typename State>
-    std::optional<json> extract(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
+    std::optional<json> extract(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
     {
         auto iiinfo = apimgr.extractByteBufferImpl(apimodule, this, value, ctx);
         if(!iiinfo.has_value())
@@ -897,7 +897,7 @@ public:
     }
 
     template <typename ValueRepr, typename State>
-    bool parse(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
+    bool parse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
     {
         auto t = JSONParseHelper::parseToDateTime(j);
         if(!t.has_value())
@@ -909,7 +909,7 @@ public:
     }
 
     template <typename ValueRepr, typename State>
-    std::optional<json> extract(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
+    std::optional<json> extract(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
     {
         auto tval = apimgr.extractDateTimeImpl(apimodule, this, value, ctx);
         if(!tval.has_value())
@@ -939,7 +939,7 @@ public:
     }
 
     template <typename ValueRepr, typename State>
-    bool parse(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
+    bool parse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
     {
         auto t = JSONParseHelper::parseToTickTime(j);
         if(!t.has_value())
@@ -951,7 +951,7 @@ public:
     }
 
     template <typename ValueRepr, typename State>
-    std::optional<json> extract(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
+    std::optional<json> extract(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
     {
         auto tval = apimgr.extractTickTimeImpl(apimodule, this, value, ctx);
         if(!tval.has_value())
@@ -981,7 +981,7 @@ public:
     }
 
     template <typename ValueRepr, typename State>
-    bool parse(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
+    bool parse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
     {
         auto t = JSONParseHelper::parseToLogicalTime(j);
         if(!t.has_value())
@@ -993,7 +993,7 @@ public:
     }
 
     template <typename ValueRepr, typename State>
-    std::optional<json> extract(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
+    std::optional<json> extract(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
     {
         auto tval = apimgr.extractLogicalTimeImpl(apimodule, this, value, ctx);
         if(!tval.has_value())
@@ -1036,7 +1036,7 @@ public:
     }
 
     template <typename ValueRepr, typename State>
-    bool parse(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
+    bool parse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
     {
         auto uuid = JSONParseHelper::parseUUID(j);
         if(!uuid.has_value())
@@ -1048,7 +1048,7 @@ public:
     }
 
     template <typename ValueRepr, typename State>
-    std::optional<json> extract(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
+    std::optional<json> extract(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
     {
         auto uval = apimgr.extractUUIDImpl(apimodule, this, value, ctx);
         if(!uval.has_value())
@@ -1091,7 +1091,7 @@ public:
     }
 
     template <typename ValueRepr, typename State>
-    bool parse(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
+    bool parse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
     {
         auto hash = JSONParseHelper::parseContentHash(j);
         if(!hash.has_value())
@@ -1103,7 +1103,7 @@ public:
     }
 
     template <typename ValueRepr, typename State>
-    std::optional<json> extract(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
+    std::optional<json> extract(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
     {
         auto hash = apimgr.extractContentHashImpl(apimodule, this, value, ctx);
         if(!hash.has_value())
@@ -1139,7 +1139,7 @@ public:
     }
 
     template <typename ValueRepr, typename State>
-    bool parse(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
+    bool parse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
     {
         bool okparse = apimodule->typemap.find(this->oftype)->second->tparse(apimgr, apimodule, j, value, ctx);
         if(!okparse)
@@ -1151,7 +1151,7 @@ public:
     }
 
     template <typename ValueRepr, typename State>
-    std::optional<json> extract(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
+    std::optional<json> extract(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
     {
         return apimodule->typemap.find(this->oftype)->second->textract(apimgr, apimodule, value, ctx);
     }
@@ -1193,7 +1193,7 @@ public:
     }
 
     template <typename ValueRepr, typename State>
-    bool parse(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
+    bool parse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
     {
         if(!j.is_array() || this->ttypes.size() != j.size())
         {
@@ -1218,7 +1218,7 @@ public:
     }
 
     template <typename ValueRepr, typename State>
-    std::optional<json> extract(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
+    std::optional<json> extract(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
     {
         auto jres = json::array();
         for(size_t i = 0; i < this->ttypes.size(); ++i)
@@ -1282,7 +1282,7 @@ public:
     }
 
     template <typename ValueRepr, typename State>
-    bool parse(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
+    bool parse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
     {
         if(!j.is_object() || this->props.size() != j.size())
         {
@@ -1315,7 +1315,7 @@ public:
     }
 
     template <typename ValueRepr, typename State>
-    std::optional<json> extract(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
+    std::optional<json> extract(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
     {
         auto jres = json::object();
         for(size_t i = 0; i < this->ttypes.size(); ++i)
@@ -1380,7 +1380,7 @@ xxxx;
     }
 
     template <typename ValueRepr, typename State>
-    bool parse(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
+    bool parse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
     {
         if(!j.is_array())
         {
@@ -1407,7 +1407,7 @@ xxxx;
     }
 
     template <typename ValueRepr, typename State>
-    std::optional<json> extract(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
+    std::optional<json> extract(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
     {
         auto clen = apimgr.extractLengthForContainer(apimodule, this, value, ctx);
         if(!clen.has_value())
@@ -1460,7 +1460,7 @@ public:
     }
 
     template <typename ValueRepr, typename State>
-    bool parse(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
+    bool parse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
     {
         auto nstrinfo = JSONParseHelper::checkEnumName(j);
         if(!nstrinfo.has_value())
@@ -1487,7 +1487,7 @@ public:
     }
 
     template <typename ValueRepr, typename State>
-    std::optional<json> extract(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
+    std::optional<json> extract(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
     {
         auto nval = apimgr.extractNatImpl(apimodule, this, value, ctx);
         if(!nval.has_value())
@@ -1552,7 +1552,7 @@ public:
     }
 
     template <typename ValueRepr, typename State>
-    bool parse(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
+    bool parse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
     {
         if(j.is_array() && j.size() == 2 && j[0].is_string())
         {
@@ -1621,7 +1621,7 @@ public:
     }
 
     template <typename ValueRepr, typename State>
-    std::optional<json> extract(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
+    std::optional<json> extract(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
     {
         auto jres = json::object();
         for(size_t i = 0; i < this->ttypes.size(); ++i)
@@ -1675,7 +1675,7 @@ public:
     }
 
     template <typename ValueRepr, typename State>
-    bool parse(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
+    bool parse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
     {
         if(j.is_object())
         {
@@ -1728,7 +1728,7 @@ public:
     } 
 
     template <typename ValueRepr, typename State>
-    std::optional<json> extract(const ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
+    std::optional<json> extract(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
     {
         auto nval = apimgr.extractUnionChoice(apimodule, this, value, ctx);
         if(!nval.has_value())
