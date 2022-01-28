@@ -391,7 +391,6 @@
 (declare-fun BContentHash@UFCons_API (HavocSequence) BHash)
 
 (declare-fun ContainerSize@UFCons_API (HavocSequence) BNat)
-(declare-fun EnumChoice@UFCons_API (HavocSequence) BNat)
 (declare-fun UnionChoice@UFCons_API (HavocSequence) BNat)
 
 ;;GLOBAL_DECLS;;

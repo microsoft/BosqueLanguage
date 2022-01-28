@@ -122,27 +122,26 @@ public:
     virtual bool parseUUIDImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, ValueRepr value, State& ctx) = 0;
     virtual bool parseContentHashImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, ValueRepr value, State& ctx) = 0;
     
-    virtual ValueRepr prepareParseTuple(const APIModule* apimodule, const IType* itype, State& ctx) = 0;
-    virtual ValueRepr getValueForTupleIndex(const APIModule* apimodule, const IType* itype, ValueRepr intoloc, size_t i, State& ctx) = 0;
-    virtual void completeParseTuple(const APIModule* apimodule, const IType* itype, ValueRepr intoloc, ValueRepr value, State& ctx) = 0;
+    virtual void prepareParseTuple(const APIModule* apimodule, const IType* itype, State& ctx) = 0;
+    virtual ValueRepr getValueForTupleIndex(const APIModule* apimodule, const IType* itype, ValueRepr value, size_t i, State& ctx) = 0;
+    virtual void completeParseTuple(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
 
-    virtual ValueRepr prepareParseRecord(const APIModule* apimodule, const IType* itype, State& ctx) = 0;
-    virtual ValueRepr getValueForRecordProperty(const APIModule* apimodule, const IType* itype, ValueRepr intoloc, std::string pname, State& ctx) = 0;
-    virtual void completeParseRecord(const APIModule* apimodule, const IType* itype, ValueRepr intoloc, ValueRepr value, State& ctx) = 0;
+    virtual void prepareParseRecord(const APIModule* apimodule, const IType* itype, State& ctx) = 0;
+    virtual ValueRepr getValueForRecordProperty(const APIModule* apimodule, const IType* itype, ValueRepr value, std::string pname, State& ctx) = 0;
+    virtual void completeParseRecord(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
 
-    virtual ValueRepr prepareParseContainer(const APIModule* apimodule, const IType* itype, ValueRepr intoloc, size_t count, State& ctx) = 0;
-    virtual ValueRepr getValueForContainerElementParse(const APIModule* apimodule, const IType* itype, State& ctx) = 0;
-    virtual void completeValueForContainerElementParse(const APIModule* apimodule, const IType* itype, ValueRepr intoloc, ValueRepr vval, State& ctx) = 0;
-    virtual void completeParseContainer(const APIModule* apimodule, const IType* itype, ValueRepr intoloc, ValueRepr value, State& ctx) = 0;
+    virtual void prepareParseContainer(const APIModule* apimodule, const IType* itype, ValueRepr value, size_t count, State& ctx) = 0;
+    virtual ValueRepr getValueForContainerElementParse(const APIModule* apimodule, const IType* itype, ValueRepr value, size_t i, State& ctx) = 0;
+    virtual void completeParseContainer(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
 
     virtual ValueRepr prepareParseEntity(const APIModule* apimodule, const IType* itype, State& ctx) = 0;
     virtual ValueRepr prepareParseEntityMask(const APIModule* apimodule, const IType* itype, State& ctx) = 0;
-    virtual ValueRepr getValueForEntityField(const APIModule* apimodule, const IType* itype, ValueRepr intoloc, std::string pname, State& ctx) = 0;
-    virtual void completeParseEntity(const APIModule* apimodule, const IType* itype, ValueRepr intoloc, ValueRepr value, State& ctx) = 0;
+    virtual ValueRepr getValueForEntityField(const APIModule* apimodule, const IType* itype, ValueRepr value, std::string fname, State& ctx) = 0;
+    virtual void completeParseEntity(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
 
     virtual void setMaskFlag(const APIModule* apimodule, ValueRepr flagloc, size_t i, bool flag) = 0;
 
-    virtual ValueRepr parseUnionChoice(const APIModule* apimodule, const IType* itype, ValueRepr intoloc, size_t pick, State& ctx) = 0;
+    virtual ValueRepr parseUnionChoice(const APIModule* apimodule, const IType* itype, ValueRepr value, size_t pick, State& ctx) = 0;
 
     virtual std::optional<bool> extractBoolImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
     virtual std::optional<uint64_t> extractNatImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
@@ -160,12 +159,14 @@ public:
     virtual std::optional<std::vector<uint8_t>> extractUUIDImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
     virtual std::optional<std::vector<uint8_t>> extractContentHashImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
     
-    virtual ValueRepr extractValueForTupleIndex(const APIModule* apimodule, const IType* itype, ValueRepr intoloc, size_t i, State& ctx) = 0;
-    virtual ValueRepr extractValueForRecordProperty(const APIModule* apimodule, const IType* itype, ValueRepr intoloc, std::string pname, State& ctx) = 0;
-    virtual ValueRepr extractValueForEntityField(const APIModule* apimodule, const IType* itype, ValueRepr intoloc, std::string pname, State& ctx) = 0;
+    virtual ValueRepr extractValueForTupleIndex(const APIModule* apimodule, const IType* itype, ValueRepr value, size_t i, State& ctx) = 0;
+    virtual ValueRepr extractValueForRecordProperty(const APIModule* apimodule, const IType* itype, ValueRepr value, std::string pname, State& ctx) = 0;
+    virtual ValueRepr extractValueForEntityField(const APIModule* apimodule, const IType* itype, ValueRepr value, std::string pname, State& ctx) = 0;
 
+    virtual void prepareExtractContainer(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
     virtual std::optional<size_t> extractLengthForContainer(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
-    virtual ValueRepr extractValueForContainer(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
+    virtual ValueRepr extractValueForContainer(const APIModule* apimodule, const IType* itype, ValueRepr value, size_t i, State& ctx) = 0;
+    virtual void completeExtractContainer(const APIModule* apimodule, const IType* itype, State& ctx) = 0;
 
     virtual std::optional<size_t> extractUnionChoice(const APIModule* apimodule, const IType* itype, ValueRepr intoloc, State& ctx) = 0;
 };
@@ -1194,19 +1195,19 @@ public:
             return false;
         }
 
-        ValueRepr intoloc = apimgr.prepareParseTuple(apimodule, this, ctx);
+        apimgr.prepareParseTuple(apimodule, this, ctx);
         for(size_t i = 0; i < this->ttypes.size(); ++i)
         {
             auto tt = apimodule->typemap.find(this->ttypes[i])->second;
 
-            ValueRepr vval = apimgr.getValueForTupleIndex(apimodule, this, intoloc, i, ctx);
+            ValueRepr vval = apimgr.getValueForTupleIndex(apimodule, this, value, i, ctx);
             bool ok = tt->tparse(apimgr, apimodule, j[i], vval, ctx);
             if(!ok)
             {
                 return false;
             }
         }
-        apimgr.completeParseTuple(apimodule, this, intoloc, value, ctx);
+        apimgr.completeParseTuple(apimodule, this, value, ctx);
 
         return true;
     }
@@ -1291,19 +1292,19 @@ public:
             return false;
         }
 
-        ValueRepr intoloc = apimgr.prepareParseRecord(apimodule, this, ctx);
+        apimgr.prepareParseRecord(apimodule, this, ctx);
         for(size_t i = 0; i < this->ttypes.size(); ++i)
         {
             auto tt = apimodule->typemap.find(this->ttypes[i])->second;
 
-            ValueRepr vval = apimgr.getValueForRecordProperty(apimodule, this, intoloc, this->props[i], ctx);
+            ValueRepr vval = apimgr.getValueForRecordProperty(apimodule, this, value, this->props[i], ctx);
             bool ok = tt->tparse(apimgr, apimodule, j[this->props[i]], vval, ctx);
             if(!ok)
             {
                 return false;
             }
         }
-        apimgr.completeParseRecord(apimodule, this, intoloc, value, ctx);
+        apimgr.completeParseRecord(apimodule, this, value, ctx);
 
         return true;
     }
@@ -1342,7 +1343,6 @@ enum class ContainerCategory
 class ContainerType : public IGroundedType
 {
 public:
-xxxx;
     const ContainerCategory category;
     const std::string elemtype;
 
@@ -1381,21 +1381,19 @@ xxxx;
             return false;
         }
 
-        ValueRepr intoloc = apimgr.prepareParseContainer(apimodule, this, value, j.size(), ctx);
+        apimgr.prepareParseContainer(apimodule, this, value, j.size(), ctx);
         for(size_t i = 0; i < this->ttypes.size(); ++i)
         {
             auto tt = apimodule->typemap.find(this->elemtype)->second;
 
-            ValueRepr vval = apimgr.getValueForContainerElementParse(apimodule, this, ctx);
+            ValueRepr vval = apimgr.getValueForContainerElementParse(apimodule, this, value, i, ctx);
             bool ok = tt->tparse(apimgr, apimodule, j[i], vval, ctx);
             if(!ok)
             {
                 return false;
             }
-
-            apimgr.completeValueForContainerElementParse(apimodule, tt, intoloc, vval, ctx);
         }
-        apimgr.completeParseContainer(apimodule, this, intoloc, value, ctx);
+        apimgr.completeParseContainer(apimodule, this, value, ctx);
 
         return true;
     }
@@ -1403,6 +1401,7 @@ xxxx;
     template <typename ValueRepr, typename State>
     std::optional<json> extract(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
     {
+        apimgr.prepareExtractContainer(apimodule, this, value, ctx);
         auto clen = apimgr.extractLengthForContainer(apimodule, this, value, ctx);
         if(!clen.has_value())
         {
@@ -1424,6 +1423,7 @@ xxxx;
             jres.push_back(rr.value());
         }
         
+        apimgr.completeExtractContainer(apimodule, this, ctx);
         return std::make_optional(jres);
     }
 };
@@ -1693,8 +1693,8 @@ public:
 
             auto ofidx = std::distance(this->opts.cbegin(), ofidxref);
 
-            apimgr.parseUnionChoice(apimodule, this, value, ofidx, ctx);
-            return oftyperef->second->tparse(apimgr, apimodule, j, value);
+            auto vval = apimgr.parseUnionChoice(apimodule, oftyperef->second, value, ofidx, ctx);
+            return oftyperef->second->tparse(apimgr, apimodule, j, vval);
         }
         else{
             if(!j.is_array() || j.size() != 2 || !j[0].is_string())
@@ -1716,8 +1716,8 @@ public:
 
             auto ofidx = std::distance(this->opts.cbegin(), ofidxref);
 
-            apimgr.parseUnionChoice(apimodule, this, value, ofidx, ctx);
-            return oftyperef->second->tparse(apimgr, apimodule, j[1], value);
+            auto vval = apimgr.parseUnionChoice(apimodule, oftyperef->second, value, ofidx, ctx);
+            return oftyperef->second->tparse(apimgr, apimodule, j[1], vval);
         }
     } 
 
@@ -1730,7 +1730,26 @@ public:
             return std::nullopt;
         }
 
-        return std::make_optional(this->enums[nval.value()].first);
+        auto choicetype = apimodule->typemap.find(this->opts[nval.value()])->second;
+        auto cval = choicetype->textract(apimgr, apimodule, value, ctx);
+        if(!cval.has_value())
+        {
+            return std::nullopt;
+        }
+
+        json rj = cval.value();
+        if(rj.is_object())
+        {
+            rj["__type_tag__"] = choicetype->name;
+        }
+        else
+        {
+            rj = json::array();
+            rj[0] = choicetype->name;
+            rj[1] = cval.value();
+        }
+
+        return std::make_optional(rj);
     }
 };
 

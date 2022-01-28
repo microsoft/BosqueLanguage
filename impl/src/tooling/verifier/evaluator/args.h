@@ -33,27 +33,26 @@ public:
     virtual bool parseUUIDImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, z3::expr value, z3::solver& ctx) override final;
     virtual bool parseContentHashImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, z3::expr value, z3::solver& ctx) override final;
     
-    virtual z3::expr prepareParseTuple(const APIModule* apimodule, const IType* itype, z3::solver& ctx) override final;
-    virtual z3::expr getValueForTupleIndex(const APIModule* apimodule, const IType* itype, z3::expr intoloc, size_t i, z3::solver& ctx) override final;
-    virtual void completeParseTuple(const APIModule* apimodule, const IType* itype, z3::expr intoloc, z3::expr value, z3::solver& ctx) override final;
+    virtual void prepareParseTuple(const APIModule* apimodule, const IType* itype, z3::solver& ctx) override final;
+    virtual z3::expr getValueForTupleIndex(const APIModule* apimodule, const IType* itype, z3::expr value, size_t i, z3::solver& ctx) override final;
+    virtual void completeParseTuple(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
 
-    virtual z3::expr prepareParseRecord(const APIModule* apimodule, const IType* itype, z3::solver& ctx) override final;
-    virtual z3::expr getValueForRecordProperty(const APIModule* apimodule, const IType* itype, z3::expr intoloc, std::string pname, z3::solver& ctx) override final;
-    virtual void completeParseRecord(const APIModule* apimodule, const IType* itype, z3::expr intoloc, z3::expr value, z3::solver& ctx) override final;
+    virtual void prepareParseRecord(const APIModule* apimodule, const IType* itype, z3::solver& ctx) override final;
+    virtual z3::expr getValueForRecordProperty(const APIModule* apimodule, const IType* itype, z3::expr value, std::string pname, z3::solver& ctx) override final;
+    virtual void completeParseRecord(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
 
-    virtual z3::expr prepareParseContainer(const APIModule* apimodule, const IType* itype, z3::expr intoloc, size_t count, z3::solver& ctx) override final;
-    virtual z3::expr getValueForContainerElementParse(const APIModule* apimodule, const IType* itype, z3::solver& ctx) override final;
-    virtual void completeValueForContainerElementParse(const APIModule* apimodule, const IType* itype, z3::expr intoloc, z3::expr vval, z3::solver& ctx) override final;
-    virtual void completeParseContainer(const APIModule* apimodule, const IType* itype, z3::expr intoloc, z3::expr value, z3::solver& ctx) override final;
+    virtual void prepareParseContainer(const APIModule* apimodule, const IType* itype, z3::expr value, size_t count, z3::solver& ctx) override final;
+    virtual z3::expr getValueForContainerElementParse(const APIModule* apimodule, const IType* itype, z3::expr value, size_t i, z3::solver& ctx) override final;
+    virtual void completeParseContainer(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
 
     virtual z3::expr prepareParseEntity(const APIModule* apimodule, const IType* itype, z3::solver& ctx) override final;
     virtual z3::expr prepareParseEntityMask(const APIModule* apimodule, const IType* itype, z3::solver& ctx) override final;
-    virtual z3::expr getValueForEntityField(const APIModule* apimodule, const IType* itype, z3::expr intoloc, std::string pname, z3::solver& ctx) override final;
-    virtual void completeParseEntity(const APIModule* apimodule, const IType* itype, z3::expr intoloc, z3::expr value, z3::solver& ctx) override final;
+    virtual z3::expr getValueForEntityField(const APIModule* apimodule, const IType* itype, z3::expr value, std::string fname, z3::solver& ctx) override final;
+    virtual void completeParseEntity(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
 
     virtual void setMaskFlag(const APIModule* apimodule, z3::expr flagloc, size_t i, bool flag) override final;
 
-    virtual z3::expr parseUnionChoice(const APIModule* apimodule, const IType* itype, z3::expr intoloc, size_t pick, z3::solver& ctx) override final;
+    virtual z3::expr parseUnionChoice(const APIModule* apimodule, const IType* itype, z3::expr value, size_t pick, z3::solver& ctx) override final;
 
     virtual std::optional<bool> extractBoolImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
     virtual std::optional<uint64_t> extractNatImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
@@ -71,12 +70,14 @@ public:
     virtual std::optional<std::vector<uint8_t>> extractUUIDImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
     virtual std::optional<std::vector<uint8_t>> extractContentHashImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
     
-    virtual z3::expr extractValueForTupleIndex(const APIModule* apimodule, const IType* itype, z3::expr intoloc, size_t i, z3::solver& ctx) override final;
-    virtual z3::expr extractValueForRecordProperty(const APIModule* apimodule, const IType* itype, z3::expr intoloc, std::string pname, z3::solver& ctx) override final;
-    virtual z3::expr extractValueForEntityField(const APIModule* apimodule, const IType* itype, z3::expr intoloc, std::string pname, z3::solver& ctx) override final;
+    virtual z3::expr extractValueForTupleIndex(const APIModule* apimodule, const IType* itype, z3::expr value, size_t i, z3::solver& ctx) override final;
+    virtual z3::expr extractValueForRecordProperty(const APIModule* apimodule, const IType* itype, z3::expr value, std::string pname, z3::solver& ctx) override final;
+    virtual z3::expr extractValueForEntityField(const APIModule* apimodule, const IType* itype, z3::expr value, std::string pname, z3::solver& ctx) override final;
 
+    virtual void prepareExtractContainer(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
     virtual std::optional<size_t> extractLengthForContainer(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
-    virtual z3::expr extractValueForContainer(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
+    virtual z3::expr extractValueForContainer(const APIModule* apimodule, const IType* itype, z3::expr value, size_t i, z3::solver& ctx) override final;
+    virtual void completeParseContainer(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
 
     virtual std::optional<size_t> extractUnionChoice(const APIModule* apimodule, const IType* itype, z3::expr intoloc, z3::solver& ctx) override final;
 };

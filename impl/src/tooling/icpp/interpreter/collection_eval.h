@@ -182,6 +182,24 @@ public:
         return res;
     }
 
+    static void s_enumerate_for_extract(const BSQListTypeFlavor& lflavor, void* tn, std::list<StorageLocationPtr>& ll)
+    {
+        auto reprtype = static_cast<const BSQListReprType*>(GET_TYPE_META_DATA(tn));
+        if(reprtype->lkind != ListReprKind::TreeElement)
+        {
+            auto pvtype = static_cast<const BSQPartialVectorType*>(reprtype);
+            for(size_t i = 0; i < BSQPartialVectorType::getPVCount(tn); ++i)
+            {
+                ll.push_back(pvtype->get(tn, i));
+            }
+        }
+        else
+        {
+            s_enumerate_for_extract(lflavor, static_cast<BSQListTreeRepr*>(tn)->l, ll);
+            s_enumerate_for_extract(lflavor, static_cast<BSQListTreeRepr*>(tn)->r, ll);
+        }
+    }
+
     template <typename T>
     static std::pair<void*, T> s_range_ne_rec(const BSQListTypeFlavor& lflavor, T start, BSQNat count)
     {
@@ -516,6 +534,21 @@ public:
             static_cast<BSQMapTreeRepr*>(rootitem->root)->r = rrres->repr;
         }
         return res;
+    }
+
+    static void s_enumerate_for_extract(const BSQMapTypeFlavor& mflavor, void* tn, std::list<StorageLocationPtr>& ll)
+    {
+        if(BSQMapTreeType::getLeft(tn) != nullptr)
+        {
+            s_enumerate_for_extract(mflavor, BSQMapTreeType::getLeft(tn), ll);
+        }
+
+        ll.push_back(mflavor.treetype->getKeyLocation(tn));
+
+        if(BSQMapTreeType::getRight(tn) != nullptr)
+        {
+            s_enumerate_for_extract(mflavor, BSQMapTreeType::getRight(tn), ll);
+        }
     }
 
     static void* s_union_ne(const BSQMapTypeFlavor& mflavor, void* t1, const BSQMapTreeType* ttype1, void* t2, const BSQMapTreeType* ttype2, uint64_t ccount);

@@ -2433,6 +2433,11 @@ void LambdaEvalThunk::invoke(const BSQInvokeBodyDecl* call, const std::vector<St
     static_cast<Evaluator*>(this->ctx)->linvoke(call, args, resultsl);
 }
 
+std::map<std::string, BSQTypeID> MarshalEnvironment::g_typenameToIdMap;
+
+std::map<std::string, BSQFieldID> MarshalEnvironment::g_propertyToIdMap;
+std::map<std::string, BSQFieldID> MarshalEnvironment::g_fieldToIdMap;
+
 bool ICPPParseJSON::checkInvokeOk(const std::string& checkinvoke, StorageLocationPtr value)
 {
     xxxx;
@@ -2674,9 +2679,9 @@ bool ICPPParseJSON::parseContentHashImpl(const APIModule* apimodule, const IType
     return true;
 }
     
-StorageLocationPtr ICPPParseJSON::prepareParseTuple(const APIModule* apimodule, const IType* itype, Evaluator& ctx)
+void ICPPParseJSON::prepareParseTuple(const APIModule* apimodule, const IType* itype, Evaluator& ctx)
 {
-    BSQTypeID tupid = Environment::g_typenameToIdMap.find(itype->name)->second;
+    BSQTypeID tupid = MarshalEnvironment::g_typenameToIdMap.find(itype->name)->second;
     const BSQType* tuptype = BSQType::g_typetable[tupid];
 
     void* tupmem = nullptr;
@@ -2696,7 +2701,7 @@ StorageLocationPtr ICPPParseJSON::prepareParseTuple(const APIModule* apimodule, 
     this->tuplestack.push_back(std::make_pair(tupmem, tuptype));
 }
 
-StorageLocationPtr ICPPParseJSON::getValueForTupleIndex(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, size_t i, Evaluator& ctx)
+StorageLocationPtr ICPPParseJSON::getValueForTupleIndex(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t i, Evaluator& ctx)
 {
     void* tupmem = this->tuplestack.back().first;
     const BSQType* tuptype = this->tuplestack.back().second;
@@ -2704,7 +2709,7 @@ StorageLocationPtr ICPPParseJSON::getValueForTupleIndex(const APIModule* apimodu
     return SLPTR_INDEX_DATAPTR(tupmem, dynamic_cast<const BSQTupleInfo*>(tuptype)->idxoffsets[i]);
 }
 
-void ICPPParseJSON::completeParseTuple(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, StorageLocationPtr value, Evaluator& ctx)
+void ICPPParseJSON::completeParseTuple(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
 {
     void* tupmem = this->tuplestack.back().first;
     const BSQType* tuptype = this->tuplestack.back().second;
@@ -2725,15 +2730,16 @@ void ICPPParseJSON::completeParseTuple(const APIModule* apimodule, const IType* 
     }
 
     GC_MEM_COPY(trgt, tupmem, bytes);
+    mi_free(tupmem);
 
     GCStack::popFrame();
     this->tuplestack.pop_back();
 }
 
-StorageLocationPtr ICPPParseJSON::prepareParseRecord(const APIModule* apimodule, const IType* itype, Evaluator& ctx)
+void ICPPParseJSON::prepareParseRecord(const APIModule* apimodule, const IType* itype, Evaluator& ctx)
 {
-    BSQTypeID tupid = Environment::g_typenameToIdMap.find(itype->name)->second;
-    const BSQType* rectype = BSQType::g_typetable[tupid];
+    BSQTypeID recid = MarshalEnvironment::g_typenameToIdMap.find(itype->name)->second;
+    const BSQType* rectype = BSQType::g_typetable[recid];
 
     void* recmem = nullptr;
     RefMask recmask = nullptr;
@@ -2752,16 +2758,16 @@ StorageLocationPtr ICPPParseJSON::prepareParseRecord(const APIModule* apimodule,
     this->recordstack.push_back(std::make_pair(recmem, rectype));
 }
 
-StorageLocationPtr ICPPParseJSON::getValueForRecordProperty(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, std::string pname, Evaluator& ctx)
+StorageLocationPtr ICPPParseJSON::getValueForRecordProperty(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, std::string pname, Evaluator& ctx)
 {
     void* recmem = this->recordstack.back().first;
     const BSQType* rectype = this->recordstack.back().second;
 
-    BSQRecordPropertyID pid = Environment::g_propertyToIdMap.find(itype->name)->second;
+    BSQRecordPropertyID pid = MarshalEnvironment::g_propertyToIdMap.find(pname)->second;
     return SLPTR_INDEX_DATAPTR(recmem, dynamic_cast<const BSQRecordInfo*>(rectype)->propertyoffsets[pid]);
 }
 
-void ICPPParseJSON::completeParseRecord(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, StorageLocationPtr value, Evaluator& ctx)
+void ICPPParseJSON::completeParseRecord(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
 {
     void* recmem = this->recordstack.back().first;
     const BSQType* rectype = this->recordstack.back().second;
@@ -2782,34 +2788,148 @@ void ICPPParseJSON::completeParseRecord(const APIModule* apimodule, const IType*
     }
 
     GC_MEM_COPY(trgt, recmem, bytes);
+    mi_free(recmem);
 
     GCStack::popFrame();
     this->tuplestack.pop_back();
 }
 
-StorageLocationPtr ICPPParseJSON::prepareParseContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, size_t count, Evaluator& ctx)
+void ICPPParseJSON::prepareParseContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t count, Evaluator& ctx)
 {
-xxxx;
+    auto ctype = dynamic_cast<const ContainerType*>(itype);
+    BSQTypeID containertypeid = MarshalEnvironment::g_typenameToIdMap.find(ctype->name)->second;
+    const BSQType* collectiontype = BSQType::g_typetable[containertypeid];
+
+    this->containerstack.push_back(std::make_pair(collectiontype, (uint64_t)count));
+    Allocator::GlobalAllocator.pushTempRootScope();
 }
 
-StorageLocationPtr ICPPParseJSON::getValueForContainerElementParse(const APIModule* apimodule, const IType* itype, Evaluator& ctx)
+StorageLocationPtr ICPPParseJSON::getValueForContainerElementParse(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t i, Evaluator& ctx)
 {
-xxxx;
+    const ContainerType* ctype = dynamic_cast<const ContainerType*>(itype);
+    
+    if(ctype->category == ContainerCategory::List)
+    {
+        const BSQListType* listtype = dynamic_cast<const BSQListType*>(this->containerstack.back().first);
+        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap[listtype->etype];
+
+        auto rr = Allocator::GlobalAllocator.registerTempRoot(lflavor.entrytype);
+        return rr->root;
+    }
+    else if(ctype->category == ContainerCategory::Stack)
+    {
+        BSQ_INTERNAL_ASSERT(false);
+    }
+    else if(ctype->category == ContainerCategory::Queue)
+    {
+        BSQ_INTERNAL_ASSERT(false);
+    }
+    else if(ctype->category == ContainerCategory::Set)
+    {
+        BSQ_INTERNAL_ASSERT(false);
+    }
+    else
+    {
+        const BSQMapType* maptype = dynamic_cast<const BSQMapType*>(this->containerstack.back().first);
+        const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap[std::make_pair(maptype->ktype, maptype->vtype)];
+
+        //We are very creative here and use the fact that the kv layout in the tree is identical to the kv layout in the tuple!
+        auto rr = Allocator::GlobalAllocator.registerTempRoot(mflavor.treetype);
+        return (void*)((uint8_t*)rr->root + mflavor.treetype->keyoffset);
+    }
 }
 
-void ICPPParseJSON::completeValueForContainerElementParse(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, StorageLocationPtr vval, Evaluator& ctx)
+void ICPPParseJSON::completeParseContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
 {
-xxxx;
-}
+    const ContainerType* ctype = dynamic_cast<const ContainerType*>(itype);
 
-void ICPPParseJSON::completeParseContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, StorageLocationPtr value, Evaluator& ctx)
-{
-xxxx;
+    if(ctype->category == ContainerCategory::List)
+    {
+        const BSQListType* listtype = dynamic_cast<const BSQListType*>(this->containerstack.back().first);
+        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap[listtype->etype];
+
+        if(this->containerstack.back().second == 0)
+        {
+            LIST_STORE_RESULT_EMPTY(value);
+        }
+        else
+        {
+            auto lstart = Allocator::GlobalAllocator.getTempRootCurrScope().begin();
+            void* rres = BSQListOps::s_temp_root_to_list_rec(lflavor, lstart, this->containerstack.back().second);
+
+            LIST_STORE_RESULT_REPR(rres, value);
+        }
+    }
+    else if(ctype->category == ContainerCategory::Stack)
+    {
+        BSQ_INTERNAL_ASSERT(false);
+    }
+    else if(ctype->category == ContainerCategory::Queue)
+    {
+        BSQ_INTERNAL_ASSERT(false);
+    }
+    else if(ctype->category == ContainerCategory::Set)
+    {
+        BSQ_INTERNAL_ASSERT(false);
+    }
+    else
+    {
+        const BSQMapType* maptype = dynamic_cast<const BSQMapType*>(this->containerstack.back().first);
+        const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap[std::make_pair(maptype->ktype, maptype->vtype)];
+
+        if(this->containerstack.back().second == 0)
+        {
+            MAP_STORE_RESULT_EMPTY(value);
+        }
+        else
+        {
+            std::list<BSQTempRootNode>& roots = Allocator::GlobalAllocator.getTempRootCurrScope();
+            std::stable_sort(roots.begin(), roots.end(), [&](const BSQTempRootNode& ln, const BSQTempRootNode& rn) {
+                BSQBool bb;
+                mflavor.keytype->fpkeycmp(mflavor.keytype, mflavor.treetype->getKeyLocation(ln.root), mflavor.treetype->getKeyLocation(rn.root));
+                return (bool)bb;
+            });
+
+            //check for dups in the input
+            auto fl = std::adjacent_find(roots.begin(), roots.end(), [&](const BSQTempRootNode& ln, const BSQTempRootNode& rn) {
+                BSQBool bb;
+                mflavor.keytype->fpkeycmp(mflavor.keytype, mflavor.treetype->getKeyLocation(ln.root), mflavor.treetype->getKeyLocation(rn.root));
+                return !((bool)bb);
+            });
+            std::string fname("[JSON_PARSE]");
+            BSQ_LANGUAGE_ASSERT(fl != roots.end(), (&fname), -1, "Duplicate keys in map");
+
+            auto lstart = Allocator::GlobalAllocator.getTempRootCurrScope().begin();
+            void* rres = BSQMapOps::s_temp_root_to_map_rec(mflavor, lstart, this->containerstack.back().second);
+
+            MAP_STORE_RESULT_REPR(rres, this->containerstack.back().second, value);
+        }
+    }
+    
+    this->containerstack.pop_back();
+    Allocator::GlobalAllocator.popTempRootScope();
 }
 
 StorageLocationPtr ICPPParseJSON::prepareParseEntity(const APIModule* apimodule, const IType* itype, Evaluator& ctx)
 {
-xxxx;
+    BSQTypeID ooid = MarshalEnvironment::g_typenameToIdMap.find(itype->name)->second;
+    const BSQType* ootype = BSQType::g_typetable[ooid];
+
+    void* oomem = nullptr;
+    RefMask oomask = nullptr;
+    if(ootype->tkind == BSQTypeLayoutKind::Struct)
+    {
+        oomem = mi_zalloc(ootype->allocinfo.heapsize);
+        oomask = ootype->allocinfo.heapmask;
+    }
+    else
+    {
+        oomem = mi_zalloc(ootype->allocinfo.inlinedatasize);
+        oomask = ootype->allocinfo.inlinedmask;
+    }
+    
+    GCStack::pushFrame((void**)oomem, oomask);
+    this->entitystack.push_back(std::make_pair(oomem, ootype));
 }
 
 StorageLocationPtr ICPPParseJSON::prepareParseEntityMask(const APIModule* apimodule, const IType* itype, Evaluator& ctx)
@@ -2817,12 +2937,16 @@ StorageLocationPtr ICPPParseJSON::prepareParseEntityMask(const APIModule* apimod
 xxxx;
 }
 
-StorageLocationPtr ICPPParseJSON::getValueForEntityField(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, std::string pname, Evaluator& ctx)
+StorageLocationPtr ICPPParseJSON::getValueForEntityField(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, std::string fname, Evaluator& ctx)
 {
-xxxx;
+    void* oomem = this->entitystack.back().first;
+    const BSQType* ootype = this->entitystack.back().second;
+
+    BSQFieldID fid = MarshalEnvironment::g_fieldToIdMap.find(fname)->second;
+    return SLPTR_INDEX_DATAPTR(oomem, dynamic_cast<const BSQEntityInfo*>(ootype)->fieldoffsets[fid]);
 }
 
-void ICPPParseJSON::completeParseEntity(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, StorageLocationPtr value, Evaluator& ctx)
+void ICPPParseJSON::completeParseEntity(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
 {
 xxxx;
 }
@@ -2832,9 +2956,25 @@ void ICPPParseJSON::setMaskFlag(const APIModule* apimodule, StorageLocationPtr f
 xxxx;
 }
 
-StorageLocationPtr ICPPParseJSON::parseUnionChoice(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, size_t pick, Evaluator& ctx)
+StorageLocationPtr ICPPParseJSON::parseUnionChoice(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t pick, Evaluator& ctx)
 {
-xxxx;
+    auto utype = dynamic_cast<const UnionType*>(itype);
+    auto oftype = utype->opts[pick];
+
+    auto bsqutypeid = MarshalEnvironment::g_typenameToIdMap.find(itype->name)->second;
+    auto bsqutype = dynamic_cast<const BSQUnionType*>(BSQType::g_typetable[bsqutypeid]);
+    if(bsqutype->tkind == BSQTypeLayoutKind::UnionRef)
+    {
+        return value;
+    }
+    else
+    {
+        auto ttypeid = MarshalEnvironment::g_typenameToIdMap.find(oftype)->second;
+        auto ttype = BSQType::g_typetable[ttypeid];
+
+        SLPTR_STORE_UNION_INLINE_TYPE(ttype, value);
+        return SLPTR_LOAD_UNION_INLINE_DATAPTR(value);
+    }
 }
 
 std::optional<bool> ICPPParseJSON::extractBoolImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
@@ -2961,271 +3101,137 @@ std::optional<std::vector<uint8_t>> ICPPParseJSON::extractContentHashImpl(const 
     return std::make_optional(vv);
 }
 
-StorageLocationPtr ICPPParseJSON::extractValueForTupleIndex(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, size_t i, Evaluator& ctx)
+StorageLocationPtr ICPPParseJSON::extractValueForTupleIndex(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t i, Evaluator& ctx)
+{
+    BSQTypeID tupid = MarshalEnvironment::g_typenameToIdMap.find(itype->name)->second;
+    const BSQType* tuptype = BSQType::g_typetable[tupid];
+
+    tuptype->indexStorageLocationOffset(value, dynamic_cast<const BSQTupleInfo*>(tuptype)->idxoffsets[i]);
+}
+
+StorageLocationPtr ICPPParseJSON::extractValueForRecordProperty(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, std::string pname, Evaluator& ctx)
+{
+    BSQTypeID recid = MarshalEnvironment::g_typenameToIdMap.find(itype->name)->second;
+    const BSQType* rectype = BSQType::g_typetable[recid];
+
+    BSQRecordPropertyID pid = MarshalEnvironment::g_propertyToIdMap.find(itype->name)->second;
+    return rectype->indexStorageLocationOffset(value, dynamic_cast<const BSQRecordInfo*>(rectype)->propertyoffsets[pid]);
+}
+
+StorageLocationPtr ICPPParseJSON::extractValueForEntityField(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, std::string pname, Evaluator& ctx)
 {
 xxxx;
 }
 
-StorageLocationPtr ICPPParseJSON::extractValueForRecordProperty(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, std::string pname, Evaluator& ctx)
+void ICPPParseJSON::prepareExtractContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
 {
-xxxx;
-}
+    auto ctype = dynamic_cast<const ContainerType*>(itype);
+    BSQTypeID containertypeid = MarshalEnvironment::g_typenameToIdMap.find(ctype->name)->second;
+    const BSQType* collectiontype = BSQType::g_typetable[containertypeid];
 
-StorageLocationPtr ICPPParseJSON::extractValueForEntityField(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, std::string pname, Evaluator& ctx)
-{
-xxxx;
+    this->parsecontainerstack.push_back({});
+
+    if(ctype->category == ContainerCategory::List)
+    {
+        if(LIST_LOAD_TYPE_INFO(value)->tid != BSQ_TYPE_ID_NONE)
+        {
+            const BSQListType* listtype = dynamic_cast<const BSQListType*>(collectiontype);
+            const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap[listtype->etype];
+
+            BSQListOps::s_enumerate_for_extract(lflavor, LIST_LOAD_DATA(value), this->parsecontainerstack.back());
+        }
+    }
+    else if(ctype->category == ContainerCategory::Stack)
+    {
+        BSQ_INTERNAL_ASSERT(false);
+    }
+    else if(ctype->category == ContainerCategory::Queue)
+    {
+        BSQ_INTERNAL_ASSERT(false);
+    }
+    else if(ctype->category == ContainerCategory::Set)
+    {
+        BSQ_INTERNAL_ASSERT(false);
+    }
+    else
+    {
+        if(MAP_LOAD_TYPE_INFO(value)->tid != BSQ_TYPE_ID_NONE)
+        {
+            const BSQMapType* maptype = dynamic_cast<const BSQMapType*>(this->containerstack.back().first);
+            const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap[std::make_pair(maptype->ktype, maptype->vtype)];
+
+            BSQMapOps::s_enumerate_for_extract(mflavor, MAP_LOAD_REPR(value), this->parsecontainerstack.back());
+        }
+    }
+
+    this->parsecontainerstackiter.push_back(this->parsecontainerstack.back().begin());
 }
 
 std::optional<size_t> ICPPParseJSON::extractLengthForContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
 {
-xxxx;
-}
+    const ContainerType* ctype = dynamic_cast<const ContainerType*>(itype);
 
-StorageLocationPtr ICPPParseJSON::extractValueForContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
-{
-xxxx;
-}
-
-std::optional<size_t> ICPPParseJSON::extractUnionChoice(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, Evaluator& ctx)
-{
-xxxx;
-}
-
-/*
-
-
-bool entityLogicalTimeJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
-{
-    std::optional<std::string> nval = parseToBigUnsignedNumber(j);
-    if(!nval.has_value())
+    if(ctype->category == ContainerCategory::List)
     {
-        return false;
+        auto ttype = LIST_LOAD_TYPE_INFO(value);
+        if(ttype->tid == BSQ_TYPE_ID_NONE)
+        {
+            return 0;
+        }
+        else
+        {
+            return std::make_optional((size_t) dynamic_cast<const BSQListReprType*>(ttype)->getCount(LIST_LOAD_DATA(value)));
+        }
     }
-
-    dynamic_cast<const BSQLogicalTimeType*>(BSQType::g_typeLogicalTime)->storeValueDirect(sl, std::stoull(nval.value()));
-    return true;
-}
-
-
-bool enumJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
-{
-    if(!j.is_string())
+    else if(ctype->category == ContainerCategory::Stack)
     {
-        return false;
+        BSQ_INTERNAL_ASSERT(false);
+    }
+    else if(ctype->category == ContainerCategory::Queue)
+    {
+        BSQ_INTERNAL_ASSERT(false);
+    }
+    else if(ctype->category == ContainerCategory::Set)
+    {
+        BSQ_INTERNAL_ASSERT(false);
     }
     else
     {
-        auto ename = j.get<std::string>();
-
-        auto etype = dynamic_cast<const BSQEnumType*>(btype);
-        auto cpos = std::find_if(etype->enuminvs.cbegin(), etype->enuminvs.cend(), [&ename](const std::pair<std::string, uint32_t>& entry) {
-            return entry.first == ename;
-        })->second;
-    
-        etype->underlying->storeValue(sl, Environment::g_constantbuffer + cpos);
-        return true;
+        return std::make_optional((size_t) MAP_LOAD_COUNT(value));
     }
 }
 
-bool tupleJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
+StorageLocationPtr ICPPParseJSON::extractValueForContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t i, Evaluator& ctx)
 {
-    auto tupinfo = dynamic_cast<const BSQTupleInfo*>(btype);
-    if(!j.is_array() || tupinfo->ttypes.size() != j.size())
-    {
-        return false;
-    }
+    auto loc = *(this->parsecontainerstackiter.back());
+    this->parsecontainerstackiter.back()++;
 
-    if(btype->tkind == BSQTypeLayoutKind::Struct)
-    {
-        for(size_t i = 0; i < tupinfo->idxoffsets.size(); ++i)
-        {
-            assert(i < j.size());
+    return loc;
+}
 
-            auto etype = BSQType::g_typetable[tupinfo->ttypes[i]];
-            bool ok = etype->consops.fpJSONParse(etype, j[i], SLPTR_INDEX_DATAPTR(sl, tupinfo->idxoffsets[i]));
-            if(!ok)
-            {
-                return false;
-            }
-        }
+void ICPPParseJSON::completeParseContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
+{
+    this->parsecontainerstackiter.pop_back();
+    this->parsecontainerstack.pop_back();
+}
+
+std::optional<size_t> ICPPParseJSON::extractUnionChoice(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
+{
+    auto utype = dynamic_cast<const UnionType*>(itype);
+
+    auto bsqutypeid = MarshalEnvironment::g_typenameToIdMap.find(itype->name)->second;
+    auto bsqutype = dynamic_cast<const BSQUnionType*>(BSQType::g_typetable[bsqutypeid]);
+
+    std::string oname;
+    if(bsqutype->tkind == BSQTypeLayoutKind::UnionRef)
+    {
+        oname = SLPTR_LOAD_HEAP_TYPE(value)->name;
     }
     else
     {
-        auto vbuff = BSQ_STACK_SPACE_ALLOC(btype->allocinfo.assigndatasize);
-        GCStack::pushFrame(&vbuff, btype->allocinfo.heapmask);
-
-        for(size_t i = 0; i < tupinfo->idxoffsets.size(); ++i)
-        {
-            assert(i < j.size());
-
-            auto etype = BSQType::g_typetable[tupinfo->ttypes[i]];
-            bool ok = etype->consops.fpJSONParse(etype, j[i], SLPTR_INDEX_DATAPTR(vbuff, tupinfo->idxoffsets[i]));
-            if(!ok)
-            {
-                return false;
-            }
-        }
-
-        auto tt = Allocator::GlobalAllocator.allocateDynamic(btype);
-        GC_MEM_COPY(tt, vbuff, btype->allocinfo.assigndatasize);
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(sl, tt);
-
-        GCStack::popFrame();
+        oname = SLPTR_LOAD_UNION_INLINE_TYPE(value)->name;
     }
 
-    return true;
+    auto ppos = std::find(utype->opts.cbegin(), utype->opts.cend(), oname);
+    return std::make_optional(std::distance(utype->opts.cbegin(), ppos));
 }
-
-bool recordJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
-{
-    auto recinfo = dynamic_cast<const BSQRecordInfo*>(btype);
-    if(!j.is_object() || recinfo->rtypes.size() != j.size())
-    {
-        return false;
-    }
-
-    auto allprops = std::all_of(recinfo->properties.cbegin(), recinfo->properties.cend(), [&j](const BSQRecordPropertyID prop){
-                return j.contains(BSQType::g_propertynamemap[prop]);
-            });
-    if(!allprops)
-    {
-        return false;
-    }
-
-    if(btype->tkind == BSQTypeLayoutKind::Struct)
-    {
-        for(size_t i = 0; i < recinfo->properties.size(); ++i)
-        {
-            auto etype = BSQType::g_typetable[recinfo->rtypes[i]];
-            auto pname = BSQType::g_propertynamemap[recinfo->properties[i]];
-
-            bool ok = etype->consops.fpJSONParse(etype, j[pname], SLPTR_INDEX_DATAPTR(sl, recinfo->propertyoffsets[i]));
-            if(!ok)
-            {
-                return false;
-            }
-        }
-    }
-    else
-    {
-        auto vbuff = BSQ_STACK_SPACE_ALLOC(btype->allocinfo.inlinedatasize);
-        GCStack::pushFrame(&vbuff, btype->allocinfo.heapmask);
-
-        for(size_t i = 0; i < recinfo->properties.size(); ++i)
-        {
-            auto etype = BSQType::g_typetable[recinfo->rtypes[i]];
-            auto pname = BSQType::g_propertynamemap[recinfo->properties[i]];
-
-            bool ok = etype->consops.fpJSONParse(etype, j[pname], SLPTR_INDEX_DATAPTR(vbuff, recinfo->propertyoffsets[i]));
-            if(!ok)
-            {
-                return false;
-            }
-        }
-
-        auto tt = Allocator::GlobalAllocator.allocateDynamic(btype);
-        GC_MEM_COPY(tt, vbuff, btype->allocinfo.assigndatasize);
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(sl, tt);
-
-        GCStack::popFrame();
-    }
-
-    return true;
-}
-
-const BSQType* unionJSONParse_impl_select(const BSQUnionType* utype, json j, StorageLocationPtr sl)
-{
-    std::vector<const BSQType*> opts;
-    std::transform(utype->subtypes.cbegin(), utype->subtypes.cend(), std::back_inserter(opts), [](const BSQTypeID tid) {
-        return BSQType::g_typetable[tid];
-    });
-
-    if(j.is_object())
-    {
-        //TODO: map option once we have map type
-        auto mapopt = opts.cend();
-        //std::find_if(opts.cbegin(), opts.cend(), [](const BSQType* opt) {
-        //    return dynamic_cast<const BSQListType*>(opt) != nullptr;
-        //});
-
-        auto recordopt = std::find_if(opts.cbegin(), opts.cend(), [&j](const BSQType* opt) {
-            const BSQRecordInfo* ropt = dynamic_cast<const BSQRecordInfo*>(opt);
-            if(ropt == nullptr || ropt->properties.size() != j.size())
-            {
-                return false;
-            }
-            else
-            {
-                return std::all_of(ropt->properties.cbegin(), ropt->properties.cend(), [&j](const BSQRecordPropertyID prop){
-                    return j.contains(BSQType::g_propertymap[prop]);
-                });
-            }
-        });
-
-        auto oftype = (mapopt != opts.cend()) ? *mapopt : *recordopt;
-        oftype->consops.fpJSONParse(oftype, j, sl);
-        return oftype;
-    }
-    else if(j.is_array())
-    {
-        auto listopt = std::find_if(opts.cbegin(), opts.cend(), [](const BSQType* opt) {
-            return dynamic_cast<const BSQListType*>(opt) != nullptr;
-        });
-
-        auto tupleopt = std::find_if(opts.cbegin(), opts.cend(), [](const BSQType* opt) {
-            return dynamic_cast<const BSQTupleInfo*>(opt) != nullptr;
-        });
-
-        auto oftype = (listopt != opts.cend()) ? *listopt : *tupleopt;
-        oftype->consops.fpJSONParse(oftype, j, sl);
-        return oftype;
-    }
-    else
-    {
-        for(size_t i = 0; i < opts.size(); ++i)
-        {
-            auto opt = opts[i];
-
-            auto ismap = false;
-            auto islist = dynamic_cast<const BSQListType*>(opt) != nullptr;
-            auto isrecord = dynamic_cast<const BSQRecordInfo*>(opt) != nullptr;
-            auto istuple = dynamic_cast<const BSQTupleInfo*>(opt) != nullptr;
-            if(!ismap && !islist && !isrecord && !istuple)
-            {
-                auto okparse = opt->consops.fpJSONParse(opt, j, sl);
-                if(okparse)
-                {
-                    return opt;
-                }
-            }
-        }
-
-        return nullptr;
-    }
-}
-
-
-bool unionJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
-{
-    auto utype = dynamic_cast<const BSQUnionType*>(btype);
-
-    auto rsl = sl;
-    if(utype->isInline())
-    {
-        rsl = SLPTR_LOAD_UNION_INLINE_DATAPTR(sl);
-    }
-
-    auto ptype = unionJSONParse_impl_select(utype, j, rsl);
-    if(ptype == nullptr)
-    {
-        return false;
-    }
-
-    if(utype->isInline())
-    {
-        SLPTR_STORE_UNION_INLINE_TYPE(ptype, sl);
-    }
-
-    return true;
-}
-*/
