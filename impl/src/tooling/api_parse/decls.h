@@ -72,6 +72,7 @@ enum class TypeTag
     StringOfTag,
     DataStringTag,
     ByteBufferTag,
+    DataBufferTag,
     DateTimeTag,
     TickTimeTag,
     LogicalTimeTag,
@@ -102,7 +103,7 @@ template <typename ValueRepr, typename State>
 class ApiManagerJSON
 {
 public:
-    virtual bool checkInvokeOk(const std::string& checkinvoke, ValueRepr value) = 0;
+    virtual bool checkInvokeOk(const std::string& checkinvoke, ValueRepr value, State& ctx) = 0;
 
     virtual bool parseNoneImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
     virtual bool parseNothingImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
@@ -134,12 +135,12 @@ public:
     virtual ValueRepr getValueForContainerElementParse(const APIModule* apimodule, const IType* itype, ValueRepr value, size_t i, State& ctx) = 0;
     virtual void completeParseContainer(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
 
-    virtual ValueRepr prepareParseEntity(const APIModule* apimodule, const IType* itype, State& ctx) = 0;
-    virtual ValueRepr prepareParseEntityMask(const APIModule* apimodule, const IType* itype, State& ctx) = 0;
-    virtual ValueRepr getValueForEntityField(const APIModule* apimodule, const IType* itype, ValueRepr value, std::string fname, State& ctx) = 0;
+    virtual void prepareParseEntity(const APIModule* apimodule, const IType* itype, State& ctx) = 0;
+    virtual void prepareParseEntityMask(const APIModule* apimodule, const IType* itype, State& ctx) = 0;
+    virtual ValueRepr getValueForEntityField(const APIModule* apimodule, const IType* itype, ValueRepr value, std::pair<std::string, std::string> fnamefkey, State& ctx) = 0;
     virtual void completeParseEntity(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
 
-    virtual void setMaskFlag(const APIModule* apimodule, ValueRepr flagloc, size_t i, bool flag) = 0;
+    virtual void setMaskFlag(const APIModule* apimodule, ValueRepr flagloc, size_t i, bool flag, State& ctx) = 0;
 
     virtual ValueRepr parseUnionChoice(const APIModule* apimodule, const IType* itype, ValueRepr value, size_t pick, State& ctx) = 0;
 
@@ -161,7 +162,7 @@ public:
     
     virtual ValueRepr extractValueForTupleIndex(const APIModule* apimodule, const IType* itype, ValueRepr value, size_t i, State& ctx) = 0;
     virtual ValueRepr extractValueForRecordProperty(const APIModule* apimodule, const IType* itype, ValueRepr value, std::string pname, State& ctx) = 0;
-    virtual ValueRepr extractValueForEntityField(const APIModule* apimodule, const IType* itype, ValueRepr value, std::string pname, State& ctx) = 0;
+    virtual ValueRepr extractValueForEntityField(const APIModule* apimodule, const IType* itype, ValueRepr value, std::pair<std::string, std::string> fnamefkey, State& ctx) = 0;
 
     virtual void prepareExtractContainer(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
     virtual std::optional<size_t> extractLengthForContainer(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
@@ -733,16 +734,16 @@ class DataStringType : public IGroundedType
 {
 public:
     const std::string oftype;
-    const std::optional<std::string> chkinv;
+    const std::string chkinv;
 
-    DataStringType(std::string name, std::string oftype, std::optional<std::string> chkinv) : IGroundedType(TypeTag::DataStringTag, name), oftype(oftype), chkinv(chkinv) {;}
+    DataStringType(std::string name, std::string oftype, std::string chkinv) : IGroundedType(TypeTag::DataStringTag, name), oftype(oftype), chkinv(chkinv) {;}
     virtual ~DataStringType() {;}
 
     static DataStringType* jparse(json j)
     {
         auto name = j["name"].get<std::string>();
         auto oftype = j["oftype"].get<std::string>();
-        auto chkinv = (j["chkinv"] != nullptr ? std::make_optional(j["chkinv"].get<std::string>()) : std::nullopt);
+        auto chkinv = j["chkinv"].get<std::string>();
 
         return new DataStringType(name, oftype, chkinv);
     }
@@ -761,7 +762,7 @@ public:
             return false;
         }
 
-        return !this->chkinv.has_value() || apimgr.checkInvokeOk(this->chkinv.value(), value);
+        return apimgr.checkInvokeOk(this->chkinv, value, ctx);
     }
 
     template <typename ValueRepr, typename State>
@@ -852,6 +853,48 @@ public:
         rr["data"] = iiinfo->first;
 
         return std::make_optional(rr);
+    }
+};
+
+class DataBufferType : public IGroundedType
+{
+public:
+    const std::string oftype;
+    const std::string chkinv;
+
+    DataBufferType(std::string name, std::string oftype, std::string chkinv) : IGroundedType(TypeTag::DataBufferTag, name), oftype(oftype), chkinv(chkinv) {;}
+    virtual ~DataBufferType() {;}
+
+    static DataBufferType* jparse(json j)
+    {
+        auto name = j["name"].get<std::string>();
+        auto oftype = j["oftype"].get<std::string>();
+        auto chkinv = j["chkinv"].get<std::string>();
+
+        return new DataBufferType(name, oftype, chkinv);
+    }
+
+    virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
+    {
+        return apimodule->typemap.find("ByteBuffer")->second->jfuzz(apimodule, rnd);
+    }
+
+    template <typename ValueRepr, typename State>
+    bool parse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
+    {
+        bool okparse = apimodule->typemap.find("ByteBuffer")->second->tparse(apimgr, apimodule, j, value, ctx);
+        if(!okparse)
+        {
+            return false;
+        }
+
+        return apimgr.checkInvokeOk(this->chkinv, value, ctx);
+    }
+
+    template <typename ValueRepr, typename State>
+    std::optional<json> extract(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
+    {
+        return apimodule->typemap.find("ByteBuffer")->second->textract(apimgr, apimodule, value, ctx);
     }
 };
 
@@ -1142,7 +1185,7 @@ public:
             return false;
         }
 
-        return !this->validatefunc.has_value() || apimgr.checkInvokeOk(this->validatefunc.value(), value);
+        return !this->validatefunc.has_value() || apimgr.checkInvokeOk(this->validatefunc.value(), value, ctx);
     }
 
     template <typename ValueRepr, typename State>
@@ -1496,23 +1539,22 @@ public:
 class EntityType : public IGroundedType
 {
 public:
-    const std::vector<std::pair<std::string, std::string>> fields;
+    const std::vector<std::pair<std::string, std::string>> consfields; //name, fkey
     const std::vector<std::pair<std::string, bool>> ttypes;
 
-    const std::vector<std::string> consfields;
-    const std::optional<std::string> validatefunc;
-    const std::optional<std::string> consinv;
+    const std::optional<std::string> validatefunc; //key
+    const std::optional<std::string> consfunc; //key
 
-    EntityType(std::string name, std::vector<std::pair<std::string, std::string>> fields, std::vector<std::pair<std::string, bool>> ttypes, std::vector<std::string> consfields, std::optional<std::string> validatefunc, std::optional<std::string> consinv) : IGroundedType(TypeTag::EntityTag, name), fields(fields), ttypes(ttypes), consfields(consfields), validatefunc(validatefunc), consinv(consinv) {;}
+    EntityType(std::string name, std::vector<std::pair<std::string, std::string>> consfields, std::vector<std::pair<std::string, bool>> ttypes, std::optional<std::string> validatefunc, std::optional<std::string> consfunc) : IGroundedType(TypeTag::EntityTag, name), consfields(consfields), ttypes(ttypes), validatefunc(validatefunc), consfunc(consfunc) {;}
     virtual ~EntityType() {;}
 
     static EntityType* jparse(json j)
     {
         auto name = j["name"].get<std::string>();
 
-        std::vector<std::pair<std::string, std::string>> fields;
-        auto jprops = j["fields"];
-        std::transform(jprops.cbegin(), jprops.cend(), std::back_inserter(fields), [](const json& jv) {
+        std::vector<std::pair<std::string, std::string>> consfields;
+        auto jprops = j["consfields"];
+        std::transform(jprops.cbegin(), jprops.cend(), std::back_inserter(consfields), [](const json& jv) {
             return std::make_pair(jv["fkey"].get<std::string>(), jv["fname"].get<std::string>());
         });
 
@@ -1522,24 +1564,18 @@ public:
             return std::make_pair(jv["declaredType"].get<std::string>(), jv["isOptional"].get<bool>());
         });
 
-        std::vector<std::string> consfields;
-        auto jprops = j["consfields"];
-        std::transform(jprops.cbegin(), jprops.cend(), std::back_inserter(fields), [](const json& jv) {
-            return jv.get<std::string>();
-        });
-
         auto validatefunc = (j["validatefunc"] != nullptr ? std::make_optional(j["validatefunc"].get<std::string>()) : std::nullopt);
-        auto chkcons = (j["chkcons"] != nullptr ? std::make_optional(j["chkcons"].get<std::string>()) : std::nullopt);
+        auto consfunc = (j["consfunc"] != nullptr ? std::make_optional(j["consfunc"].get<std::string>()) : std::nullopt);
 
-        return new EntityType(name, fields, ttypes, consfields, validatefunc, chkcons);
+        return new EntityType(name, consfields, ttypes, validatefunc, consfunc);
     }
 
     virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
     {
         auto jres = json::object();
-        for(size_t i = 0; i < this->fields.size(); ++i)
+        for(size_t i = 0; i < this->consfields.size(); ++i)
         {
-            jres[this->fields[i].second] = apimodule->typemap.find(this->ttypes[i].first)->second->jfuzz(apimodule, rnd);
+            jres[this->consfields[i].first] = apimodule->typemap.find(this->ttypes[i].first)->second->jfuzz(apimodule, rnd);
         }
 
         return jres;
@@ -1569,22 +1605,22 @@ public:
                 continue;
             }
 
-            auto fpos = std::find_if(this->fields.cbegin(), this->fields.cend() [&fkey](const std::pair<std::string, std::string>& fentry) {
-                return fentry.second == fkey;
+            auto fpos = std::find_if(this->consfields.cbegin(), this->consfields.cend() [&fkey](const std::string& fname) {
+                return fname == fkey;
             });
 
-            if(fpos == this->fields.cend())
+            if(fpos == this->consfields.cend())
             {
                 return false;
             }
         }
 
-        ValueRepr intoloc = apimgr.prepareParseEntity(apimodule, this, ctx);
-        ValueRepr flagloc = apimgr.prepareParseEntityFlag(apimodule, this, ctx);
-        for(size_t i = 0; i < this->ttypes.size(); ++i)
+        apimgr.prepareParseEntity(apimodule, this, ctx);
+        apimgr.prepareParseEntityMask(apimodule, this, ctx);
+        for(size_t i = 0; i < this->consfields.size(); ++i)
         {
-            auto fname = this->fields[i].second;
-            auto tt = apimodule->typemap.find(this->ttypes[i])->second;
+            auto fname = this->consfields[i].first;
+        
             if(j.find(fname) == j.cend())
             {
                 if(!this->ttypes[i].second)
@@ -1592,12 +1628,14 @@ public:
                     return false;
                 }
 
-                apimgr.setMaskFlag(apimodule, flagloc, i, true);
+                apimgr.setMaskFlag(apimodule, flagloc, i, true, ctx);
             }
             else
             {
-                ValueRepr vval = apimgr.getValueForEntityField(apimodule, this, intoloc, this->fields[i].first, ctx);
-                bool ok = tt->tparse(apimgr, apimodule, j[this->fields[i].second], vval, ctx);
+                auto tt = apimodule->typemap.find(this->ttypes[i])->second;
+
+                ValueRepr vval = apimgr.getValueForEntityField(apimodule, this, value, this->consfields[i], ctx);
+                bool ok = tt->tparse(apimgr, apimodule, j[fname], vval, ctx);
                 if(!ok)
                 {
                     return false;
@@ -1605,11 +1643,11 @@ public:
 
                 if(this->ttypes[i].second)
                 {
-                    apimgr.setMaskFlag(apimodule, flagloc, i, false);
+                    apimgr.setMaskFlag(apimodule, i, false, ctx);
                 }
             }
         }
-        apimgr.completeParseEntity(apimodule, this, intoloc, value, ctx);
+        apimgr.completeParseEntity(apimodule, this, value, ctx);
 
         return true;
     }
@@ -1622,14 +1660,14 @@ public:
         {
             auto tt = apimodule->typemap.find(this->ttypes[i].first)->second;
 
-            ValueRepr vval = apimgr.extractValueForEntityField(apimodule, this, value, this->fields[i].first, ctx);
+            ValueRepr vval = apimgr.extractValueForEntityField(apimodule, this, value, this->consfields[i], ctx);
             auto rr = tt->textract(apimgr, apimodule, value, ctx);
             if(!rr.has_value())
             {
                 return std::nullopt;
             }
 
-            jres[this->props[i]] = rr.value();
+            jres[this->consfields[i].first] = rr.value();
         }
         
         return std::make_optional(jres);

@@ -388,6 +388,8 @@ public:
     void invokeMain(const BSQInvokeBodyDecl* invk, const std::vector<StorageLocationPtr>& argslocs, StorageLocationPtr resultsl, const BSQType* restype, Argument resarg);
 
     void linvoke(const BSQInvokeBodyDecl* call, const std::vector<StorageLocationPtr>& args, StorageLocationPtr resultsl);
+    bool iinvoke(const BSQInvokeBodyDecl* call, const std::vector<StorageLocationPtr>& args, BSQBool* optmask);
+    void cinvoke(const BSQInvokeBodyDecl* call, const std::vector<StorageLocationPtr>& args, BSQBool* optmask, StorageLocationPtr resultsl);
 };
 
 class MarshalEnvironment
@@ -397,6 +399,8 @@ public:
 
     static std::map<std::string, BSQFieldID> g_propertyToIdMap;
     static std::map<std::string, BSQFieldID> g_fieldToIdMap;
+
+    static std::map<std::string, BSQInvokeID> g_invokeToIdMap;
 };
 
 class ICPPParseJSON : public ApiManagerJSON<StorageLocationPtr, Evaluator>
@@ -405,13 +409,15 @@ private:
     std::vector<std::pair<void*, const BSQType*>> tuplestack;
     std::vector<std::pair<void*, const BSQType*>> recordstack;
     std::vector<std::pair<void*, const BSQType*>> entitystack;
+    std::vector<BSQBool*> entitymaskstack;
 
     std::vector<std::pair<const BSQType*, uint64_t>> containerstack;
 
     std::vector<std::list<StorageLocationPtr>> parsecontainerstack;
     std::vector<std::list<StorageLocationPtr>::iterator> parsecontainerstackiter;
+
 public:
-    virtual bool checkInvokeOk(const std::string& checkinvoke, StorageLocationPtr value) override final;
+    virtual bool checkInvokeOk(const std::string& checkinvoke, StorageLocationPtr value, Evaluator& ctx) = 0;
 
     virtual bool parseNoneImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
     virtual bool parseNothingImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
@@ -443,12 +449,12 @@ public:
     virtual StorageLocationPtr getValueForContainerElementParse(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t i, Evaluator& ctx) override final;
     virtual void completeParseContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
 
-    virtual StorageLocationPtr prepareParseEntity(const APIModule* apimodule, const IType* itype, Evaluator& ctx) override final;
-    virtual StorageLocationPtr prepareParseEntityMask(const APIModule* apimodule, const IType* itype, Evaluator& ctx) override final;
-    virtual StorageLocationPtr getValueForEntityField(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, std::string fname, Evaluator& ctx) override final;
+    virtual void prepareParseEntity(const APIModule* apimodule, const IType* itype, Evaluator& ctx) override final;
+    virtual void prepareParseEntityMask(const APIModule* apimodule, const IType* itype, Evaluator& ctx) override final;
+    virtual StorageLocationPtr getValueForEntityField(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, std::pair<std::string, std::string> fnamefkey, Evaluator& ctx) override final;
     virtual void completeParseEntity(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
 
-    virtual void setMaskFlag(const APIModule* apimodule, StorageLocationPtr flagloc, size_t i, bool flag) override final;
+    virtual void setMaskFlag(const APIModule* apimodule, StorageLocationPtr flagloc, size_t i, bool flag, Evaluator& ctx) override final;
 
     virtual StorageLocationPtr parseUnionChoice(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t pick, Evaluator& ctx) override final;
 
@@ -470,7 +476,7 @@ public:
     
     virtual StorageLocationPtr extractValueForTupleIndex(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t i, Evaluator& ctx) override final;
     virtual StorageLocationPtr extractValueForRecordProperty(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, std::string pname, Evaluator& ctx) override final;
-    virtual StorageLocationPtr extractValueForEntityField(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, std::string pname, Evaluator& ctx) override final;
+    virtual StorageLocationPtr extractValueForEntityField(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, std::pair<std::string, std::string> fnamefkey, Evaluator& ctx) override final;
 
     virtual void prepareExtractContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
     virtual std::optional<size_t> extractLengthForContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;

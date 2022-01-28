@@ -445,9 +445,9 @@ z3::func_decl getFloatValueConstConstructor(z3::context& c)
     return argconsf;
 }
 
-bool SMTParseJSON::checkInvokeOk(const std::string& checkinvoke, z3::expr value)
+bool SMTParseJSON::checkInvokeOk(const std::string& checkinvoke, z3::expr value, z3::solver& ctx)
 {
-    xxxx;
+    ; //the call to the check is already set by the Havoc initializer
 }
 
 bool SMTParseJSON::parseNoneImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
@@ -709,29 +709,32 @@ void SMTParseJSON::completeParseContainer(const APIModule* apimodule, const ITyp
     ;
 }
 
-z3::expr SMTParseJSON::prepareParseEntity(const APIModule* apimodule, const IType* itype, z3::solver& ctx)
+void SMTParseJSON::prepareParseEntity(const APIModule* apimodule, const IType* itype, z3::solver& ctx)
 {
     ;
 }
 
-z3::expr SMTParseJSON::prepareParseEntityMask(const APIModule* apimodule, const IType* itype, z3::solver& ctx)
+void SMTParseJSON::prepareParseEntityMask(const APIModule* apimodule, const IType* itype, z3::solver& ctx)
 {
     ;
 }
 
-z3::expr SMTParseJSON::getValueForEntityField(const APIModule* apimodule, const IType* itype, z3::expr value, std::string fname, z3::solver& ctx)
+z3::expr SMTParseJSON::getValueForEntityField(const APIModule* apimodule, const IType* itype, z3::expr value, std::pair<std::string, std::string> fnamefkey, z3::solver& ctx)
 {
-xxxx;
+    auto ootype = dynamic_cast<const EntityType*>(itype);
+    auto ppos = std::find(ootype->consfields.cbegin(), ootype->consfields.cend(), fnamefkey);
+
+    return extendContext(ctx.ctx(), extendContext(ctx.ctx(), value, 0), std::distance(ootype->consfields.cbegin(), ppos));
 }
 
 void SMTParseJSON::completeParseEntity(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
 {
-xxxx;
+    ; //check calls are automatically introduced in the havoc call
 }
 
-void SMTParseJSON::setMaskFlag(const APIModule* apimodule, z3::expr flagloc, size_t i, bool flag)
+void SMTParseJSON::setMaskFlag(const APIModule* apimodule, z3::expr flagloc, size_t i, bool flag, z3::solver& ctx)
 {
-xxxx;
+    return ctx.add(extendContext(ctx.ctx(), extendContext(ctx.ctx(), flagloc, 1), i) == ctx.ctx().bool_val(flag));
 }
 
 z3::expr SMTParseJSON::parseUnionChoice(const APIModule* apimodule, const IType* itype, z3::expr value, size_t pick, z3::solver& ctx)
@@ -973,9 +976,12 @@ z3::expr SMTParseJSON::extractValueForRecordProperty(const APIModule* apimodule,
     return extendContext(ctx.ctx(), value, std::distance(rtype->props.cbegin(), ppos));
 }
 
-z3::expr SMTParseJSON::extractValueForEntityField(const APIModule* apimodule, const IType* itype, z3::expr value, std::string pname, z3::solver& ctx)
+z3::expr SMTParseJSON::extractValueForEntityField(const APIModule* apimodule, const IType* itype, z3::expr value, std::pair<std::string, std::string> fnamefkey, z3::solver& ctx)
 {
-xxxx;
+    auto ootype = dynamic_cast<const EntityType*>(itype);
+    auto ppos = std::find(ootype->consfields.cbegin(), ootype->consfields.cend(), fnamefkey);
+
+    return extendContext(ctx.ctx(), extendContext(ctx.ctx(), value, 0), std::distance(ootype->consfields.cbegin(), ppos));
 }
 
 void SMTParseJSON::prepareExtractContainer(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)

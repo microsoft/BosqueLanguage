@@ -2409,23 +2409,68 @@ void Evaluator::invokeMain(const BSQInvokeBodyDecl* invk, const std::vector<Stor
 
 void Evaluator::linvoke(const BSQInvokeBodyDecl* call, const std::vector<StorageLocationPtr>& args, StorageLocationPtr resultsl)
 {
-        size_t cssize = call->scalarstackBytes + call->mixedstackBytes;
-        uint8_t* cstack = (uint8_t*)BSQ_STACK_SPACE_ALLOC(cssize);
-        GC_MEM_ZERO(cstack, cssize);
+    size_t cssize = call->scalarstackBytes + call->mixedstackBytes;
+    uint8_t* cstack = (uint8_t*)BSQ_STACK_SPACE_ALLOC(cssize);
+    GC_MEM_ZERO(cstack, cssize);
 
-        for(size_t i = 0; i < args.size(); ++i)
-        {
-            StorageLocationPtr pv = Evaluator::evalParameterInfo(call->paraminfo[i], cstack, cstack + call->scalarstackBytes);
-            call->params[i].ptype->storeValue(pv, args[i]);
-        }
+    for(size_t i = 0; i < args.size(); ++i)
+    {
+        StorageLocationPtr pv = Evaluator::evalParameterInfo(call->paraminfo[i], cstack, cstack + call->scalarstackBytes);
+        call->params[i].ptype->storeValue(pv, args[i]);
+    }
 
-        size_t maskslotbytes = call->maskSlots * sizeof(BSQBool);
-        BSQBool* maskslots = (BSQBool*)BSQ_STACK_SPACE_ALLOC(maskslotbytes);
-        GC_MEM_ZERO(maskslots, maskslotbytes);
+    size_t maskslotbytes = call->maskSlots * sizeof(BSQBool);
+    BSQBool* maskslots = (BSQBool*)BSQ_STACK_SPACE_ALLOC(maskslotbytes);
+    GC_MEM_ZERO(maskslots, maskslotbytes);
 
-        this->invokePrelude(call, cstack, maskslots, nullptr);
-        this->evaluateBody(resultsl, call->resultType, call->resultArg);
-        this->invokePostlude();
+    this->invokePrelude(call, cstack, maskslots, nullptr);
+    this->evaluateBody(resultsl, call->resultType, call->resultArg);
+    this->invokePostlude();
+}
+
+bool Evaluator::iinvoke(const BSQInvokeBodyDecl* call, const std::vector<StorageLocationPtr>& args, BSQBool* optmask)
+{
+    size_t cssize = call->scalarstackBytes + call->mixedstackBytes;
+    uint8_t* cstack = (uint8_t*)BSQ_STACK_SPACE_ALLOC(cssize);
+    GC_MEM_ZERO(cstack, cssize);
+
+    for(size_t i = 0; i < args.size(); ++i)
+    {
+        StorageLocationPtr pv = Evaluator::evalParameterInfo(call->paraminfo[i], cstack, cstack + call->scalarstackBytes);
+        call->params[i].ptype->storeValue(pv, args[i]);
+    }
+
+    size_t maskslotbytes = call->maskSlots * sizeof(BSQBool);
+    BSQBool* maskslots = (BSQBool*)BSQ_STACK_SPACE_ALLOC(maskslotbytes);
+    GC_MEM_ZERO(maskslots, maskslotbytes);
+
+    BSQBool ok = BSQFALSE;
+    this->invokePrelude(call, cstack, maskslots, optmask);
+    this->evaluateBody(&ok, call->resultType, call->resultArg);
+    this->invokePostlude();
+
+    return (bool)ok;
+}
+
+void Evaluator::cinvoke(const BSQInvokeBodyDecl* call, const std::vector<StorageLocationPtr>& args, BSQBool* optmask, StorageLocationPtr resultsl)
+{
+    size_t cssize = call->scalarstackBytes + call->mixedstackBytes;
+    uint8_t* cstack = (uint8_t*)BSQ_STACK_SPACE_ALLOC(cssize);
+    GC_MEM_ZERO(cstack, cssize);
+
+    for(size_t i = 0; i < args.size(); ++i)
+    {
+        StorageLocationPtr pv = Evaluator::evalParameterInfo(call->paraminfo[i], cstack, cstack + call->scalarstackBytes);
+        call->params[i].ptype->storeValue(pv, args[i]);
+    }
+
+    size_t maskslotbytes = call->maskSlots * sizeof(BSQBool);
+    BSQBool* maskslots = (BSQBool*)BSQ_STACK_SPACE_ALLOC(maskslotbytes);
+    GC_MEM_ZERO(maskslots, maskslotbytes);
+
+    this->invokePrelude(call, cstack, maskslots, optmask);
+    this->evaluateBody(resultsl, call->resultType, call->resultArg);
+    this->invokePostlude();
 }
 
 void LambdaEvalThunk::invoke(const BSQInvokeBodyDecl* call, const std::vector<StorageLocationPtr>& args, StorageLocationPtr resultsl)
@@ -2438,9 +2483,18 @@ std::map<std::string, BSQTypeID> MarshalEnvironment::g_typenameToIdMap;
 std::map<std::string, BSQFieldID> MarshalEnvironment::g_propertyToIdMap;
 std::map<std::string, BSQFieldID> MarshalEnvironment::g_fieldToIdMap;
 
-bool ICPPParseJSON::checkInvokeOk(const std::string& checkinvoke, StorageLocationPtr value)
+std::map<std::string, BSQInvokeID> MarshalEnvironment::g_invokeToIdMap;
+
+bool ICPPParseJSON::checkInvokeOk(const std::string& checkinvoke, StorageLocationPtr value, Evaluator& ctx)
 {
-    xxxx;
+    auto invkid = MarshalEnvironment::g_invokeToIdMap.find(checkinvoke)->second;
+    auto invk = dynamic_cast<const BSQInvokeBodyDecl*>(BSQInvokeDecl::g_invokes[invkid]);
+
+    std::vector<StorageLocationPtr> args = {value};
+    BSQBool bb = BSQFALSE;
+    ctx.linvoke(invk, args, &bb);
+
+    return bb;
 }
 
 bool ICPPParseJSON::parseNoneImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
@@ -2910,7 +2964,7 @@ void ICPPParseJSON::completeParseContainer(const APIModule* apimodule, const ITy
     Allocator::GlobalAllocator.popTempRootScope();
 }
 
-StorageLocationPtr ICPPParseJSON::prepareParseEntity(const APIModule* apimodule, const IType* itype, Evaluator& ctx)
+void ICPPParseJSON::prepareParseEntity(const APIModule* apimodule, const IType* itype, Evaluator& ctx)
 {
     BSQTypeID ooid = MarshalEnvironment::g_typenameToIdMap.find(itype->name)->second;
     const BSQType* ootype = BSQType::g_typetable[ooid];
@@ -2932,28 +2986,92 @@ StorageLocationPtr ICPPParseJSON::prepareParseEntity(const APIModule* apimodule,
     this->entitystack.push_back(std::make_pair(oomem, ootype));
 }
 
-StorageLocationPtr ICPPParseJSON::prepareParseEntityMask(const APIModule* apimodule, const IType* itype, Evaluator& ctx)
+void ICPPParseJSON::prepareParseEntityMask(const APIModule* apimodule, const IType* itype, Evaluator& ctx)
 {
-xxxx;
+    BSQTypeID ooid = MarshalEnvironment::g_typenameToIdMap.find(itype->name)->second;
+    const BSQEntityInfo* ootype = dynamic_cast<const BSQEntityInfo*>(BSQType::g_typetable[ooid]);
+
+    auto mcount = std::count_if(ootype->fields.cbegin(), ootype->fields.cend(), [](BSQFieldID fid) {
+        auto fdecl = BSQField::g_fieldtable[fid];
+        return fdecl->isOptional;
+    });
+
+    BSQBool* mask = (BSQBool*)mi_zalloc(mcount * sizeof(BSQBool));
+    this->entitymaskstack.push_back(mask);
 }
 
-StorageLocationPtr ICPPParseJSON::getValueForEntityField(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, std::string fname, Evaluator& ctx)
+StorageLocationPtr ICPPParseJSON::getValueForEntityField(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, std::pair<std::string, std::string> fnamefkey, Evaluator& ctx)
 {
     void* oomem = this->entitystack.back().first;
     const BSQType* ootype = this->entitystack.back().second;
 
-    BSQFieldID fid = MarshalEnvironment::g_fieldToIdMap.find(fname)->second;
+    BSQFieldID fid = MarshalEnvironment::g_fieldToIdMap.find(fnamefkey.second)->second;
     return SLPTR_INDEX_DATAPTR(oomem, dynamic_cast<const BSQEntityInfo*>(ootype)->fieldoffsets[fid]);
 }
 
 void ICPPParseJSON::completeParseEntity(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
 {
-xxxx;
+    const EntityType* etype = dynamic_cast<const EntityType*>(itype);
+
+    void* oomem = this->entitystack.back().first;
+    const BSQType* ootype = this->entitystack.back().second;
+
+    std::vector<StorageLocationPtr> cargs;
+    std::transform(etype->consfields.cbegin(), etype->consfields.cend(), std::back_inserter(cargs), [&](const std::pair<std::string, std::string>& fnamefkey) {
+        BSQFieldID fid = MarshalEnvironment::g_fieldToIdMap.find(fnamefkey.second)->second;
+        return SLPTR_INDEX_DATAPTR(oomem, dynamic_cast<const BSQEntityInfo*>(ootype)->fieldoffsets[fid]);
+    });
+
+    BSQBool* mask = this->entitymaskstack.back();
+
+    if(etype->validatefunc.has_value())
+    {
+        auto chkid = MarshalEnvironment::g_invokeToIdMap.find(etype->validatefunc.value())->second;
+        auto chkcall = dynamic_cast<const BSQInvokeBodyDecl*>(BSQInvokeDecl::g_invokes[chkid]);
+
+        std::string pfile = "[INPUT PARSE]";
+        bool checkok = ctx.iinvoke(chkcall, cargs, mask);
+        BSQ_LANGUAGE_ASSERT(checkok, (&pfile), -1, "Input Data Validation Failed");
+    }
+
+    if(etype->consfunc.has_value())
+    {
+        auto consid = MarshalEnvironment::g_invokeToIdMap.find(etype->consfunc.value())->second;
+        auto conscall = dynamic_cast<const BSQInvokeBodyDecl*>(BSQInvokeDecl::g_invokes[consid]);
+
+        std::string pfile = "[INPUT PARSE]";
+        ctx.cinvoke(conscall, cargs, mask, value);
+    }
+    else
+    {
+        void* trgt = nullptr;
+        uint64_t bytes = 0;
+        if(ootype->tkind == BSQTypeLayoutKind::Struct)
+        {
+            trgt = (void*)value;
+            bytes = ootype->allocinfo.inlinedatasize;
+        }
+        else
+        {
+            trgt = Allocator::GlobalAllocator.allocateDynamic(ootype);
+            bytes = ootype->allocinfo.heapsize;
+
+            SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(value, trgt);
+        }
+
+        GC_MEM_COPY(trgt, oomem, bytes);
+    }
+
+    mi_free(oomem);
+    mi_free(mask);
+
+    GCStack::popFrame();
+    this->tuplestack.pop_back();
 }
 
-void ICPPParseJSON::setMaskFlag(const APIModule* apimodule, StorageLocationPtr flagloc, size_t i, bool flag)
+void ICPPParseJSON::setMaskFlag(const APIModule* apimodule, StorageLocationPtr flagloc, size_t i, bool flag, Evaluator& ctx)
 {
-xxxx;
+    *(((BSQBool*)flagloc) + i) = (BSQBool)flag;
 }
 
 StorageLocationPtr ICPPParseJSON::parseUnionChoice(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t pick, Evaluator& ctx)
@@ -3118,9 +3236,13 @@ StorageLocationPtr ICPPParseJSON::extractValueForRecordProperty(const APIModule*
     return rectype->indexStorageLocationOffset(value, dynamic_cast<const BSQRecordInfo*>(rectype)->propertyoffsets[pid]);
 }
 
-StorageLocationPtr ICPPParseJSON::extractValueForEntityField(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, std::string pname, Evaluator& ctx)
+StorageLocationPtr ICPPParseJSON::extractValueForEntityField(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, std::pair<std::string, std::string> fnamefkey, Evaluator& ctx)
 {
-xxxx;
+    BSQTypeID ooid = MarshalEnvironment::g_typenameToIdMap.find(itype->name)->second;
+    const BSQType* ootype = BSQType::g_typetable[ooid];
+
+    BSQFieldID fid = MarshalEnvironment::g_fieldToIdMap.find(fnamefkey.second)->second;
+    return SLPTR_INDEX_DATAPTR(value, dynamic_cast<const BSQEntityInfo*>(ootype)->fieldoffsets[fid]);
 }
 
 void ICPPParseJSON::prepareExtractContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
