@@ -5,6 +5,14 @@
 
 #include "bsqop.h"
 
+std::map<std::string, BSQTypeID> MarshalEnvironment::g_typenameToIdMap;
+
+std::map<std::string, BSQFieldID> MarshalEnvironment::g_propertyToIdMap;
+std::map<std::string, BSQFieldID> MarshalEnvironment::g_fieldToIdMap;
+
+std::map<std::string, BSQInvokeID> MarshalEnvironment::g_invokeToIdMap;
+std::map<std::string, BSQVirtualInvokeID> MarshalEnvironment::g_vinvokeToIdMap;
+
 Argument jsonParse_Argument(json j)
 {
     return Argument{ j["kind"].get<ArgumentTag>(), j["location"].get<uint32_t>() };
@@ -38,20 +46,20 @@ BSQStatementGuard jsonParse_BSQStatementGuard(json j)
 const BSQType* jsonParse_BSQType(json j)
 {
     auto tname = j.get<std::string>();
-    auto tid = Environment::g_typenameToIDMap[tname].first;
+    auto tid = MarshalEnvironment::g_typenameToIdMap[tname];
     return BSQType::g_typetable[tid];
 }
 
 BSQRecordPropertyID jsonParse_BSQRecordPropertyID(json j)
 {
     auto tname = j.get<std::string>();
-    return Environment::g_propertynameToIDMap[tname];
+    return MarshalEnvironment::g_propertyToIdMap[tname];
 }
 
 BSQFieldID jsonParse_BSQFieldID(json j)
 {
     auto tname = j.get<std::string>();
-    return Environment::g_fieldnameToIDMap[tname];
+    return MarshalEnvironment::g_fieldToIdMap[tname];
 }
 
 SourceInfo j_sinfo(json j)
@@ -354,7 +362,7 @@ InvokeFixedFunctionOp* InvokeFixedFunctionOp::jparse(json v)
     std::vector<Argument> args;
     j_args(v, args);
 
-    return new InvokeFixedFunctionOp(j_sinfo(v), j_trgt(v), j_trgttype(v), Environment::g_invokenameToIDMap[v["invokeId"].get<std::string>()], args, j_sguard(v), v["optmaskoffset"].get<int32_t>());
+    return new InvokeFixedFunctionOp(j_sinfo(v), j_trgt(v), j_trgttype(v), MarshalEnvironment::g_invokeToIdMap[v["invokeId"].get<std::string>()], args, j_sguard(v), v["optmaskoffset"].get<int32_t>());
 }
 
 InvokeVirtualFunctionOp* InvokeVirtualFunctionOp::jparse(json v)
@@ -362,7 +370,7 @@ InvokeVirtualFunctionOp* InvokeVirtualFunctionOp::jparse(json v)
     std::vector<Argument> args;
     j_args(v, args);
 
-    return new InvokeVirtualFunctionOp(j_sinfo(v), j_trgt(v), j_trgttype(v), Environment::g_vinvokenameToIDMap[v["invokeId"].get<std::string>()], jsonParse_BSQType(v["rcvrlayouttype"]), args, v["optmaskoffset"].get<int32_t>());
+    return new InvokeVirtualFunctionOp(j_sinfo(v), j_trgt(v), j_trgttype(v), MarshalEnvironment::g_vinvokeToIdMap[v["invokeId"].get<std::string>()], dynamic_cast<const BSQUnionType*>(jsonParse_BSQType(v["rcvrlayouttype"])), args, v["optmaskoffset"].get<int32_t>());
 }
 
 InvokeVirtualOperatorOp* InvokeVirtualOperatorOp::jparse(json v)
@@ -370,7 +378,7 @@ InvokeVirtualOperatorOp* InvokeVirtualOperatorOp::jparse(json v)
     std::vector<Argument> args;
     j_args(v, args);
 
-    return new InvokeVirtualOperatorOp(j_sinfo(v), j_trgt(v), j_trgttype(v), Environment::g_vinvokenameToIDMap[v["invokeId"].get<std::string>()], args);
+    return new InvokeVirtualOperatorOp(j_sinfo(v), j_trgt(v), j_trgttype(v), MarshalEnvironment::g_vinvokeToIdMap[v["invokeId"].get<std::string>()], args);
 }
 
 ConstructorTupleOp* ConstructorTupleOp::jparse(json v)

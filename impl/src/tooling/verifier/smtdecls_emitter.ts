@@ -12,7 +12,7 @@ import { MIRInvokeKey } from "../../compiler/mir_ops";
 import { SMTBodyEmitter } from "./smtbody_emitter";
 import { SMTTypeEmitter } from "./smttype_emitter";
 import { SMTAssembly, SMTConstantDecl, SMTEntityDecl, SMTEphemeralListDecl, SMTFunction, SMTFunctionUninterpreted, SMTListDecl, SMTModelState, SMTRecordDecl, SMTTupleDecl } from "./smt_assembly";
-import { BVEmitter, SMTCallGeneral, SMTCallSimple, SMTConst, SMTExp, SMTIf, SMTLet, SMTLetMulti, SMTTypeInfo, SMTVar, VerifierOptions } from "./smt_exp";
+import { SMTCallGeneral, SMTCallSimple, SMTConst, SMTExp, SMTIf, SMTLet, SMTLetMulti, SMTTypeInfo, SMTVar, VerifierOptions } from "./smt_exp";
 
 type APIModuleInfo = {
     apitypes: object[],
@@ -46,74 +46,10 @@ class SMTEmitter {
         this.havocPathType = this.temitter.getSMTTypeFor(this.temitter.getMIRType("HavocSequence"));
     }
 
-    private generateAPITypeConstructorFunction_BigNat(havocfuncs: Set<String>) {
-        const bntype = this.temitter.getMIRType("BigNat");
-
-        const fbody = new SMTLet("@vval", new SMTCallSimple("BBigNat@UFCons_API", [new SMTVar("path")]),
-            new SMTIf(new SMTCallSimple("<", [new SMTVar("@vval"), new SMTConst("0")]), 
-                this.temitter.generateErrorResultAssert(bntype), 
-                this.temitter.generateResultTypeConstructorSuccess(bntype, new SMTVar("@vval")))
-            );
-        
-        havocfuncs.add(this.temitter.generateHavocConstructorName(bntype));
-        this.assembly.functions.push(SMTFunction.create(this.temitter.generateHavocConstructorName(bntype), [{ vname: "path", vtype: this.havocPathType }], this.temitter.generateResultType(bntype), fbody));
-    }
-
-    private generateAPITypeConstructorFunction_String(havocfuncs: Set<String>) {
-        const bcreate = new SMTCallSimple("BString@UFCons_API", [new SMTVar("path")]);
-
-        let fbody: SMTExp = new SMTConst("[UNDEFINED]");
-        if (this.bemitter.vopts.StringOpt === "ASCII") {
-            fbody = new SMTLet("str", bcreate,
-                new SMTIf(new SMTCallSimple("<=", [new SMTCallSimple("str.len", [new SMTVar("str")]), new SMTConst(this.bemitter.numgen.int.natmax.toString(10))]),
-                    this.temitter.generateResultTypeConstructorSuccess(this.temitter.getMIRType("String"), new SMTVar("str")),
-                    this.temitter.generateErrorResultAssert(this.temitter.getMIRType("String"))
-                )
-            );
-        }
-        else {
-            fbody = new SMTLet("str", bcreate,
-                new SMTIf(new SMTCallSimple("<=", [new SMTCallSimple("seq.len", [new SMTVar("str")]), new SMTConst(this.bemitter.numgen.int.natmax.toString(10))]),
-                    this.temitter.generateResultTypeConstructorSuccess(this.temitter.getMIRType("String"), new SMTVar("str")),
-                    this.temitter.generateErrorResultAssert(this.temitter.getMIRType("String"))
-                )
-            );
-        }
-
-        havocfuncs.add(this.temitter.generateHavocConstructorName(this.temitter.getMIRType("String")));
-        this.assembly.functions.push(SMTFunction.create(this.temitter.generateHavocConstructorName(this.temitter.getMIRType("String")), [{ vname: "path", vtype: this.havocPathType }], this.temitter.generateResultType(this.temitter.getMIRType("String")), fbody));
-    }
-
-
-    private generateAPITypeConstructorFunction_ISOTime(havocfuncs: Set<String>) {
-        const bntype = this.temitter.getMIRType("ISOTime");
-
-        const fbody = new SMTLet("@vval", new SMTCallSimple("BISOTime@UFCons_API", [new SMTVar("path")]),
-            new SMTIf(new SMTCallSimple("<", [new SMTVar("@vval"), new SMTConst("0")]), 
-                this.temitter.generateErrorResultAssert(bntype), 
-                this.temitter.generateResultTypeConstructorSuccess(bntype, new SMTVar("@vval")))
-            );
-
-        havocfuncs.add(this.temitter.generateHavocConstructorName(bntype));
-        this.assembly.functions.push(SMTFunction.create(this.temitter.generateHavocConstructorName(bntype), [{ vname: "path", vtype: this.havocPathType }], this.temitter.generateResultType(bntype), fbody));
-    }
-
-    private generateAPITypeConstructorFunction_LogicalTime(havocfuncs: Set<String>) {
-        const bntype = this.temitter.getMIRType("LogicalTime");
-
-        const fbody = new SMTLet("@vval", new SMTCallSimple("BLogicalTime@UFCons_API", [new SMTVar("path")]),
-            new SMTIf(new SMTCallSimple("<", [new SMTVar("@vval"), new SMTConst("0")]), 
-                this.temitter.generateErrorResultAssert(bntype), 
-                this.temitter.generateResultTypeConstructorSuccess(bntype, new SMTVar("@vval")))
-            );
-
-        havocfuncs.add(this.temitter.generateHavocConstructorName(bntype));
-        this.assembly.functions.push(SMTFunction.create(this.temitter.generateHavocConstructorName(bntype), [{ vname: "path", vtype: this.havocPathType }], this.temitter.generateResultType(bntype), fbody));
-    }
-
     private generateAPITypeConstructorFunction_UUID(havocfuncs: Set<String>) {
         const bcreate = new SMTCallSimple("BUUID@UFCons_API", [new SMTVar("path")]);
 
+        xxxx;
         const fbody: SMTExp = new SMTLet("bb", bcreate,
             new SMTIf(SMTCallSimple.makeEq(new SMTCallSimple("seq.len", [new SMTVar("bb")]), new SMTConst("16")),
                 this.temitter.generateResultTypeConstructorSuccess(this.temitter.getMIRType("UUID"), new SMTVar("bb")),

@@ -2478,13 +2478,6 @@ void LambdaEvalThunk::invoke(const BSQInvokeBodyDecl* call, const std::vector<St
     static_cast<Evaluator*>(this->ctx)->linvoke(call, args, resultsl);
 }
 
-std::map<std::string, BSQTypeID> MarshalEnvironment::g_typenameToIdMap;
-
-std::map<std::string, BSQFieldID> MarshalEnvironment::g_propertyToIdMap;
-std::map<std::string, BSQFieldID> MarshalEnvironment::g_fieldToIdMap;
-
-std::map<std::string, BSQInvokeID> MarshalEnvironment::g_invokeToIdMap;
-
 bool ICPPParseJSON::checkInvokeOk(const std::string& checkinvoke, StorageLocationPtr value, Evaluator& ctx)
 {
     auto invkid = MarshalEnvironment::g_invokeToIdMap.find(checkinvoke)->second;

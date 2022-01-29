@@ -8,6 +8,18 @@
 #include "../common.h"
 #include "bsqvalue.h"
 
+class MarshalEnvironment
+{
+public:
+    static std::map<std::string, BSQTypeID> g_typenameToIdMap;
+
+    static std::map<std::string, BSQFieldID> g_propertyToIdMap;
+    static std::map<std::string, BSQFieldID> g_fieldToIdMap;
+
+    static std::map<std::string, BSQInvokeID> g_invokeToIdMap;
+    static std::map<std::string, BSQVirtualInvokeID> g_vinvokeToIdMap;
+};
+
 enum class ArgumentTag
 {
     InvalidOp = 0x0,

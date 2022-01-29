@@ -608,42 +608,8 @@ class SMTTypeEmitter {
         return new SMTCallSimple(`$GuardResult_${this.getSMTTypeFor(ttype).smttypename}@flag`, [exp]);
     }
 
-    private havocTypeInfoGen(tt: MIRType): [string, boolean] {
-        if (this.isType(tt, "None")) {
-            return ["BNone@UFCons_API", false];
-        }
-        else if (this.isType(tt, "Nothing")) {
-            return ["BNothing@UFCons_API", false];
-        }
-        else if (this.isType(tt, "Bool")) {
-            return ["BBool@UFCons_API", false];
-        }
-        else if (this.isType(tt, "Int")) {
-            return ["BInt@UFCons_API", false];
-        }
-        else if (this.isType(tt, "Nat")) {
-            return ["BNat@UFCons_API", false];
-        }
-        else if (this.isType(tt, "BigInt")) {
-            return ["BBigInt@UFCons_API", false];
-        }
-        else if (this.isType(tt, "Float")) {
-            return ["BFloat@UFCons_API", false];
-        }
-        else if (this.isType(tt, "Decimal")) {
-            return ["BDecimal@UFCons_API", false];
-        }
-        else {
-            return [`_@@cons_${this.lookupTypeName(tt.typeID)}_entrypoint`, true];
-        }
-    }
-
-    isKnownSafeHavocConstructorType(tt: MIRType): boolean {
-        return !this.havocTypeInfoGen(tt)[1];
-    }
-
     generateHavocConstructorName(tt: MIRType): string {
-        return this.havocTypeInfoGen(tt)[0];
+        return `_@@cons_${this.lookupTypeName(tt.typeID)}_entrypoint`;
     }
 
     generateHavocConstructorPathExtend(path: SMTExp, step: SMTExp): SMTExp {
@@ -651,12 +617,7 @@ class SMTTypeEmitter {
     }
 
     generateHavocConstructorCall(tt: MIRType, path: SMTExp, step: SMTExp): SMTExp {
-        if(this.isKnownSafeHavocConstructorType(tt)) {
-            return this.generateResultTypeConstructorSuccess(tt, new SMTCallSimple(this.generateHavocConstructorName(tt), [this.generateHavocConstructorPathExtend(path, step)]));
-        }
-        else {
-            return new SMTCallGeneral(this.generateHavocConstructorName(tt), [this.generateHavocConstructorPathExtend(path, step)]);
-        }
+        return new SMTCallGeneral(this.generateHavocConstructorName(tt), [this.generateHavocConstructorPathExtend(path, step)]);
     }
 }
 

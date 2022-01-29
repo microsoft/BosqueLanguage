@@ -367,14 +367,6 @@
 ;;
 ;;Free constructors for entrypoint initialization
 ;;
-(define-fun BNone@UFCons_API ((hs (Seq BNat))) bsq_none
-  bsq_none@literal
-)
-
-(define-fun BNothing@UFCons_API ((hs (Seq BNat))) bsq_nothing
-  bsq_nothing@literal
-)
-
 (declare-fun BBool@UFCons_API (HavocSequence) Bool)
 (declare-fun BInt@UFCons_API (HavocSequence) BInt)
 (declare-fun BNat@UFCons_API (HavocSequence) BNat)
@@ -385,6 +377,7 @@
 (declare-fun BRational@UFCons_API (HavocSequence) BRational)
 (declare-fun BString@UFCons_API (HavocSequence) BString)
 (declare-fun BByteBuffer@UFCons_API (HavocSequence) (Seq (_ BitVec 8)))
+(declare-fun BDateTime@UFCons_API (HavocSequence) BDateTime)
 (declare-fun BTickTime@UFCons_API (HavocSequence) BTickTime)
 (declare-fun BLogicalTime@UFCons_API (HavocSequence) BLogicalTime)
 (declare-fun BUUID@UFCons_API (HavocSequence) BUUID)
@@ -392,6 +385,117 @@
 
 (declare-fun ContainerSize@UFCons_API (HavocSequence) BNat)
 (declare-fun UnionChoice@UFCons_API (HavocSequence) BNat)
+
+(define-fun _@@cons_bsq_none_entrypoint ((ctx HavocSequence)) $Result_bsq_none
+  ($Result_bsq_none@success bsq_none@literal)
+)
+
+(define-fun _@@cons_bsq_nothing_entrypoint ((ctx HavocSequence)) $Result_bsq_nothing
+  ($Result_bsq_nothing@success bsq_nothing@literal)
+)
+
+;;BINT_MIN, BINT_MAX, SLEN_MAX, BLEN_MAX
+;;I_MIN_MAX;;
+
+(define-fun _@@cons_Bool_entrypoint ((ctx HavocSequence)) $Result_Bool
+  ($Result_Bool@success (BBool@UFCons_API ctx))
+)
+
+(define-fun _@@cons_BInt_entrypoint ((ctx HavocSequence)) $Result_BInt
+  (let ((iv (BBInt@UFCons_API ctx)))
+    (ite (and (<= @BINT_MIN iv) (<= iv @BINT_MAX))
+      ($Result_BInt@success iv)
+      ($Result_BInt@error ErrorID_AssumeCheck) 
+    )
+  )
+)
+
+(define-fun _@@cons_BNat_entrypoint ((ctx HavocSequence)) $Result_BNat
+  (let ((iv (BBNat@UFCons_API ctx)))
+    (ite (and (<= 0 iv) (<= iv @BINT_MAX))
+      ($Result_BNat@success iv)
+      ($Result_BNat@error ErrorID_AssumeCheck) 
+    )
+  )
+)
+
+(define-fun _@@cons_BBigInt_entrypoint ((ctx HavocSequence)) $Result_BBigInt
+  (let ((iv (BBigInt@UFCons_API ctx)))
+    (ite (and (<= (+ @BINT_MIN @BINT_MIN) iv) (<= iv (+ @BINT_MAX @BINT_MAX)))
+      ($Result_BBigInt@success iv)
+      ($Result_BBigInt@error ErrorID_AssumeCheck) 
+    )
+  )
+)
+
+(define-fun _@@cons_BBigNat_entrypoint ((ctx HavocSequence)) $Result_BBigNat
+  (let ((iv (BBigNat@UFCons_API ctx)))
+    (ite (and (<= 0 iv) (<= iv (+ @BINT_MAX @BINT_MAX)))
+      ($Result_BBigNat@success iv)
+      ($Result_BBigNat@error ErrorID_AssumeCheck) 
+    )
+  )
+)
+
+(define-fun _@@cons_BFloat_entrypoint ((ctx HavocSequence)) $Result_BFloat
+  ($Result_BFloat@success (BFloat@UFCons_API ctx))
+)
+
+(define-fun _@@cons_BDecimal_entrypoint ((ctx HavocSequence)) $Result_BDecimal
+  ($Result_BDecimal@success (BDecimal@UFCons_API ctx))
+)
+
+(define-fun _@@cons_BRational_entrypoint ((ctx HavocSequence)) $Result_BRational
+  ($Result_BRational@success (BRational@UFCons_API ctx))
+)
+
+(define-fun _@@cons_BString_entrypoint ((ctx HavocSequence)) $Result_BString
+  (let ((sv (BString@UFCons_API ctx)))
+    (ite (<= (str.len sv) SLEN_MAX)
+      ($Result_BString@success sv)
+      ($Result_BString@error ErrorID_AssumeCheck) 
+    )
+  )
+)
+
+(define-fun _@@cons_BByteBuffer_entrypoint ((ctx HavocSequence)) $Result_BByteBuffer
+  (let ((compress (BNat@UFCons_API (seq.++ ctx (seq.unit 0)))) (format (BNat@UFCons_API (seq.++ ctx (seq.unit 1)))) (buff (BByteBuffer@UFCons_API (seq.++ ctx (seq.unit 2)))))
+    (ite (and (< compress 2) (< format 4) (<= (seq.len bv) BLEN_MAX))
+      ($Result_BByteBuffer@success (BByteBuffer@cons bv compress format))
+      ($Result_BByteBuffer@error ErrorID_AssumeCheck) 
+    )
+  )
+)
+
+(define-fun _@@cons_BDateTime_entrypoint ((ctx HavocSequence)) $Result_BTickTime
+  (let ((tv (BTickTime@UFCons_API ctx)))
+  xxx
+  xxx
+  xxx
+    (ite (and (<= 0 tv) (<= iv 1048576))
+      ($Result_BTickTime@success iv)
+      ($Result_BTickTime@error ErrorID_AssumeCheck) 
+    )
+  )
+)
+
+(define-fun _@@cons_BTickTime_entrypoint ((ctx HavocSequence)) $Result_BTickTime
+  (let ((tv (BTickTime@UFCons_API ctx)))
+    (ite (and (<= 0 tv) (<= iv 1048576))
+      ($Result_BTickTime@success iv)
+      ($Result_BTickTime@error ErrorID_AssumeCheck) 
+    )
+  )
+)
+
+(define-fun _@@cons_BLogicalTime_entrypoint ((ctx HavocSequence)) $Result_BLogicalTime
+  (let ((lv (BLogicalTime@UFCons_API ctx)))
+    (ite (and (<= 0 lv) (<= lv 64))
+      ($Result_BLogicalTime@success lv)
+      ($Result_BLogicalTime@error ErrorID_AssumeCheck) 
+    )
+  )
+)
 
 ;;GLOBAL_DECLS;;
 

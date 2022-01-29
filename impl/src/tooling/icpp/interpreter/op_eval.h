@@ -392,17 +392,6 @@ public:
     void cinvoke(const BSQInvokeBodyDecl* call, const std::vector<StorageLocationPtr>& args, BSQBool* optmask, StorageLocationPtr resultsl);
 };
 
-class MarshalEnvironment
-{
-public:
-    static std::map<std::string, BSQTypeID> g_typenameToIdMap;
-
-    static std::map<std::string, BSQFieldID> g_propertyToIdMap;
-    static std::map<std::string, BSQFieldID> g_fieldToIdMap;
-
-    static std::map<std::string, BSQInvokeID> g_invokeToIdMap;
-};
-
 class ICPPParseJSON : public ApiManagerJSON<StorageLocationPtr, Evaluator>
 {
 private:
