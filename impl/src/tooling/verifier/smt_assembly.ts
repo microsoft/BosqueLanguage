@@ -5,7 +5,7 @@
 
 import { BSQRegex } from "../../ast/bsqregex";
 import { MIRResolvedTypeKey } from "../../compiler/mir_ops";
-import { BVEmitter, SMTConst, SMTExp, SMTType, VerifierOptions } from "./smt_exp";
+import { SMTConst, SMTExp, SMTTypeInfo, VerifierOptions } from "./smt_exp";
 
 type SMT2FileInfo = {
     TYPE_TAG_DECLS: string[],
@@ -38,14 +38,14 @@ type SMT2FileInfo = {
 
 class SMTFunction {
     readonly fname: string;
-    readonly args: { vname: string, vtype: SMTType }[];
+    readonly args: { vname: string, vtype: SMTTypeInfo }[];
     readonly maskname: string | undefined;
     readonly masksize: number;
-    readonly result: SMTType;
+    readonly result: SMTTypeInfo;
 
     readonly body: SMTExp;
 
-    constructor(fname: string, args: { vname: string, vtype: SMTType }[], maskname: string | undefined, masksize: number, result: SMTType, body: SMTExp) {
+    constructor(fname: string, args: { vname: string, vtype: SMTTypeInfo }[], maskname: string | undefined, masksize: number, result: SMTTypeInfo, body: SMTExp) {
         this.fname = fname;
         this.args = args;
         this.maskname = maskname;
@@ -55,62 +55,62 @@ class SMTFunction {
         this.body = body;
     }
 
-    static create(fname: string, args: { vname: string, vtype: SMTType }[], result: SMTType, body: SMTExp): SMTFunction {
+    static create(fname: string, args: { vname: string, vtype: SMTTypeInfo }[], result: SMTTypeInfo, body: SMTExp): SMTFunction {
         return new SMTFunction(fname, args, undefined, 0, result, body);
     }
 
-    static createWithMask(fname: string, args: { vname: string, vtype: SMTType }[], maskname: string, masksize: number, result: SMTType, body: SMTExp): SMTFunction {
+    static createWithMask(fname: string, args: { vname: string, vtype: SMTTypeInfo }[], maskname: string, masksize: number, result: SMTTypeInfo, body: SMTExp): SMTFunction {
         return new SMTFunction(fname, args, maskname, masksize, result, body);
     }
 
     emitSMT2(): string {
-        const args = this.args.map((arg) => `(${arg.vname} ${arg.vtype.name})`);
+        const args = this.args.map((arg) => `(${arg.vname} ${arg.vtype.smttypename})`);
         const body = this.body.emitSMT2("  ");
 
         if(this.maskname === undefined) {
-            return `(define-fun ${this.fname} (${args.join(" ")}) ${this.result.name}\n${body}\n)`;
+            return `(define-fun ${this.fname} (${args.join(" ")}) ${this.result.smttypename}\n${body}\n)`;
         }
         else {
-            return `(define-fun ${this.fname} (${args.join(" ")} (${this.maskname} $Mask_${this.masksize})) ${this.result.name}\n${body}\n)`;
+            return `(define-fun ${this.fname} (${args.join(" ")} (${this.maskname} $Mask_${this.masksize})) ${this.result.smttypename}\n${body}\n)`;
         }
     }
 
     emitSMT2_DeclOnly(): string {
-        const args = this.args.map((arg) => `(${arg.vname} ${arg.vtype.name})`);
+        const args = this.args.map((arg) => `(${arg.vname} ${arg.vtype.smttypename})`);
 
         if(this.maskname === undefined) {
-            return `(${this.fname} (${args.join(" ")}) ${this.result.name})`;
+            return `(${this.fname} (${args.join(" ")}) ${this.result.smttypename})`;
         }
         else {
-            return `(${this.fname} (${args.join(" ")} (${this.maskname} $Mask_${this.masksize})) ${this.result.name})`;
+            return `(${this.fname} (${args.join(" ")} (${this.maskname} $Mask_${this.masksize})) ${this.result.smttypename})`;
         }
     }
 
     emitSMT2_SingleDeclOnly(): string {
-        const args = this.args.map((arg) => `(${arg.vname} ${arg.vtype.name})`);
+        const args = this.args.map((arg) => `(${arg.vname} ${arg.vtype.smttypename})`);
 
         if(this.maskname === undefined) {
-            return `${this.fname} (${args.join(" ")}) ${this.result.name}`;
+            return `${this.fname} (${args.join(" ")}) ${this.result.smttypename}`;
         }
         else {
-            return `${this.fname} (${args.join(" ")} (${this.maskname} $Mask_${this.masksize})) ${this.result.name}`;
+            return `${this.fname} (${args.join(" ")} (${this.maskname} $Mask_${this.masksize})) ${this.result.smttypename}`;
         }
     }
 }
 
 class SMTFunctionUninterpreted {
     readonly fname: string;
-    readonly args: SMTType[];
-    readonly result: SMTType;
+    readonly args: SMTTypeInfo[];
+    readonly result: SMTTypeInfo;
 
-    constructor(fname: string, args: SMTType[], result: SMTType) {
+    constructor(fname: string, args: SMTTypeInfo[], result: SMTTypeInfo) {
         this.fname = fname;
         this.args = args;
         this.result = result;
     }
 
     emitSMT2(): string {
-        return `(declare-fun ${this.fname} (${this.args.map((arg) => arg.name).join(" ")}) ${this.result.name})`;
+        return `(declare-fun ${this.fname} (${this.args.map((arg) => arg.smttypename).join(" ")}) ${this.result.smttypename})`;
     }
 
     static areDuplicates(f1: SMTFunctionUninterpreted, f2: SMTFunctionUninterpreted): boolean {
@@ -118,12 +118,12 @@ class SMTFunctionUninterpreted {
             return false;
         }
 
-        if (f1.result.name !== f2.result.name) {
+        if (f1.result.smttypename !== f2.result.smttypename) {
             return false;
         }
 
         for (let i = 0; i < f1.args.length; ++i) {
-            if (f1.args[i].name !== f2.args[i].name) {
+            if (f1.args[i].smttypename !== f2.args[i].smttypename) {
                 return false;
             }
         }
@@ -136,11 +136,11 @@ class SMTEntityDecl {
     readonly smtname: string;
     readonly typetag: string;
 
-    readonly consf: { cname: string, cargs: { fname: string, ftype: SMTType }[] } | undefined;
+    readonly consf: { cname: string, cargs: { fname: string, ftype: SMTTypeInfo }[] } | undefined;
     readonly boxf: string;
     readonly ubf: string;
 
-    constructor(smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: SMTType }[] } | undefined, boxf: string, ubf: string) {
+    constructor(smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: SMTTypeInfo }[] } | undefined, boxf: string, ubf: string) {
         this.smtname = smtname;
         this.typetag = typetag;
         this.consf = consf;
@@ -153,11 +153,11 @@ class SMTTupleDecl {
     readonly smtname: string;
     readonly typetag: string;
 
-    readonly consf: { cname: string, cargs: { fname: string, ftype: SMTType }[] };
+    readonly consf: { cname: string, cargs: { fname: string, ftype: SMTTypeInfo }[] };
     readonly boxf: string;
     readonly ubf: string;
 
-    constructor(smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: SMTType }[] }, boxf: string, ubf: string) {
+    constructor(smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: SMTTypeInfo }[] }, boxf: string, ubf: string) {
         this.smtname = smtname;
         this.typetag = typetag;
         this.consf = consf;
@@ -170,11 +170,11 @@ class SMTRecordDecl {
     readonly smtname: string;
     readonly typetag: string;
 
-    readonly consf: { cname: string, cargs: { fname: string, ftype: SMTType }[] };
+    readonly consf: { cname: string, cargs: { fname: string, ftype: SMTTypeInfo }[] };
     readonly boxf: string;
     readonly ubf: string;
 
-    constructor(smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: SMTType }[] }, boxf: string, ubf: string) {
+    constructor(smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: SMTTypeInfo }[] }, boxf: string, ubf: string) {
         this.smtname = smtname;
         this.typetag = typetag;
         this.consf = consf;
@@ -186,9 +186,9 @@ class SMTRecordDecl {
 class SMTEphemeralListDecl {
     readonly smtname: string;
 
-    readonly consf: { cname: string, cargs: { fname: string, ftype: SMTType }[] };
+    readonly consf: { cname: string, cargs: { fname: string, ftype: SMTTypeInfo }[] };
 
-    constructor(smtname: string, consf: { cname: string, cargs: { fname: string, ftype: SMTType }[] }) {
+    constructor(smtname: string, consf: { cname: string, cargs: { fname: string, ftype: SMTTypeInfo }[] }) {
         this.smtname = smtname;
         this.consf = consf;
     }
@@ -197,14 +197,15 @@ class SMTEphemeralListDecl {
 class SMTConstantDecl {
     readonly gkey: string;
     readonly optenumname: [MIRResolvedTypeKey, string] | undefined;
-    readonly ctype: SMTType;
+    readonly ctype: SMTTypeInfo;
 
+    xxxx;
     readonly consfinv: string;
 
     readonly consfexp: SMTExp;
     readonly checkf: SMTExp | undefined;
 
-    constructor(gkey: string, optenumname: [MIRResolvedTypeKey, string] | undefined, ctype: SMTType, consfinv: string, consfexp: SMTExp, checkf: SMTExp | undefined) {
+    constructor(gkey: string, optenumname: [MIRResolvedTypeKey, string] | undefined, ctype: SMTTypeInfo, consfinv: string, consfexp: SMTExp, checkf: SMTExp | undefined) {
         this.gkey = gkey;
         this.optenumname = optenumname;
         this.ctype = ctype;
@@ -263,6 +264,7 @@ class SMTAssembly {
 
     typeTags: string[] = [
         "TypeTag_None",
+        "TypeTag_Nothing",
         "TypeTag_Bool",
         "TypeTag_Int",
         "TypeTag_Nat",
@@ -273,7 +275,8 @@ class SMTAssembly {
         "TypeTag_Rational",
         "TypeTag_String",
         "TypeTag_ByteBuffer",
-        "TypeTag_ISOTime",
+        "TypeTag_DateTime",
+        "TypeTag_TickTime",
         "TypeTag_LogicalTime",
         "TypeTag_UUID",
         "TypeTag_ContentHash",
@@ -287,7 +290,7 @@ class SMTAssembly {
         "TypeTag_BigInt",
         "TypeTag_BigNat",
         "TypeTag_String",
-        "TypeTag_ISOTime",
+        "TypeTag_DateTime",
         "TypeTag_LogicalTime",
         "TypeTag_UUID",
         "TypeTag_ContentHash"
@@ -309,21 +312,16 @@ class SMTAssembly {
     uninterpfunctions: SMTFunctionUninterpreted[] = [];
 
     maskSizes: Set<number> = new Set<number>();
-    resultTypes: { hasFlag: boolean, rtname: string, ctype: SMTType }[] = [];
+    resultTypes: { hasFlag: boolean, rtname: string, ctype: SMTTypeInfo }[] = [];
     functions: SMTFunction[] = [];
 
     entrypoint: string;
     havocfuncs: Set<string> = new Set<string>();
     model: SMTModelState = new SMTModelState([], { vname: "[EMPTY]", vtype: new SMTType("[UNINIT_VTYPE]", "[UNINIT_VTYPE]", "[UNINIT_VTYPE]"), vinit: new SMTConst("[UNINT_VINIT]"), vchk: undefined, callexp: new SMTConst("[UNINT_CALLEXP]") }, undefined, new SMTType("[UNINIT_CHK_TYPE]", "[UNINIT_CHK_TYPE]", "[UNINIT_CHK_TYPE]"), new SMTConst("[UNINT_ECHK]"), new SMTConst("[UNINIT_ERR_CHK]"), new SMTConst("[UNINIT_VLAUE_CHK]"));
 
-    numgen: BVEmitter;
-    hashsize: number;
-
-    constructor(vopts: VerifierOptions, numgen: BVEmitter, hashsize: number, entrypoint: string) {
+    constructor(vopts: VerifierOptions, entrypoint: string) {
         this.vopts = vopts;
         this.entrypoint = entrypoint;
-        this.numgen = numgen;
-        this.hashsize = hashsize;
     }
 
     private static sccVisit(cn: SMTCallGNode, scc: Set<string>, marked: Set<string>, invokes: Map<string, SMTCallGNode>) {
@@ -721,7 +719,7 @@ class SMTAssembly {
 }
 
 export {
-    SMTEntityDecl, SMTListDecl, SMTTupleDecl, SMTRecordDecl, SMTEphemeralListDecl,
+    SMTEntityDecl, SMTTupleDecl, SMTRecordDecl, SMTEphemeralListDecl,
     SMTConstantDecl,
     SMTFunction, SMTFunctionUninterpreted,
     SMTAssembly, SMTModelState,

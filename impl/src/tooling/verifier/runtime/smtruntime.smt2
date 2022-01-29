@@ -26,6 +26,7 @@
 (assert (= (TypeTag_OrdinalOf TypeTag_BigNat) 5))
 (assert (= (TypeTag_OrdinalOf TypeTag_BigInt) 6))
 (assert (= (TypeTag_OrdinalOf TypeTag_String) 10))
+(assert (= (TypeTag_OrdinalOf TypeTag_DateTime) 15))
 (assert (= (TypeTag_OrdinalOf TypeTag_LogicalTime) 16))
 (assert (= (TypeTag_OrdinalOf TypeTag_UUID) 17))
 (assert (= (TypeTag_OrdinalOf TypeTag_ContentHash) 18))
@@ -151,8 +152,6 @@
 
 (declare-const BRational@zero BRational) (assert (= BRational@zero FloatValue@zero))
 (declare-const BRational@one BRational) (assert (= BRational@one FloatValue@one))
-
-(declare-fun BByteBuffer@expandstr ((BByteBuffer)) BString)
 
 (define-sort HavocSequence (Seq Int))
 

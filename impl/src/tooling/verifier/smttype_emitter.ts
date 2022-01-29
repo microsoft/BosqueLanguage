@@ -314,6 +314,9 @@ class SMTTypeEmitter {
                 else if (entity instanceof MIRDataStringInternalEntityTypeDecl) {
                     oftypetag = this.getSMTTypeFor(this.getMIRType("String")).smttypetag;
                 }
+                else if (entity instanceof MIRDataBufferInternalEntityTypeDecl) {
+                    oftypetag = this.getSMTTypeFor(this.getMIRType("String")).smttypetag;
+                }
                 else if (entity instanceof MIRConstructableInternalEntityTypeDecl) {
                     oftypetag = this.getSMTTypeFor(this.getMIRType(entity.fromtype)).smttypetag;
                 }
@@ -618,6 +621,10 @@ class SMTTypeEmitter {
 
     generateHavocConstructorCall(tt: MIRType, path: SMTExp, step: SMTExp): SMTExp {
         return new SMTCallGeneral(this.generateHavocConstructorName(tt), [this.generateHavocConstructorPathExtend(path, step)]);
+    }
+
+    generateHavocConstructorCall_PassThrough(tt: MIRType, path: SMTExp): SMTExp {
+        return new SMTCallGeneral(this.generateHavocConstructorName(tt), [path]);
     }
 }
 

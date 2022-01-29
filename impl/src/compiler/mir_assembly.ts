@@ -466,11 +466,11 @@ class MIRDataBufferInternalEntityTypeDecl extends MIRInternalEntityTypeDecl {
     }
 
     jemit(): object {
-        return { tag: "constructableinternal", ...this.jemitbase(), fromtype: this.fromtype, accepts: this.accepts };
+        return { tag: "databufferinternal", ...this.jemitbase(), fromtype: this.fromtype, accepts: this.accepts };
     }
 
-    static jparse(jobj: any): MIRDataStringInternalEntityTypeDecl {
-        return new MIRDataStringInternalEntityTypeDecl(...MIROOTypeDecl.jparsebase(jobj), jobj.fromtype, jobj.accepts);
+    static jparse(jobj: any): MIRDataBufferInternalEntityTypeDecl {
+        return new MIRDataBufferInternalEntityTypeDecl(...MIROOTypeDecl.jparsebase(jobj), jobj.fromtype, jobj.accepts);
     }
 }
 
