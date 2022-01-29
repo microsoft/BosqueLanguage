@@ -468,13 +468,12 @@
 )
 
 (define-fun _@@cons_BDateTime_entrypoint ((ctx HavocSequence)) $Result_BTickTime
-  (let ((tv (BTickTime@UFCons_API ctx)))
-  xxx
-  xxx
-  xxx
-    (ite (and (<= 0 tv) (<= iv 1048576))
-      ($Result_BTickTime@success iv)
-      ($Result_BTickTime@error ErrorID_AssumeCheck) 
+  (let ((tctx (seq.++ ctx (seq.unit 0))))
+    (let ((y (BNat@UFCons_API (seq.++ tctx (seq.unit 0)))) (m (BNat@UFCons_API (seq.++ tctx (seq.unit 1)))) (d (BNat@UFCons_API (seq.++ tctx (seq.unit 2)))) (hh (BNat@UFCons_API (seq.++ tctx (seq.unit 3)))) (mm (BNat@UFCons_API (seq.++ tctx (seq.unit 4)))) (tzo (BNat@UFCons_API (seq.++ ctx (seq.unit 1)))) (tzn (BString@UFCons_API (seq.++ ctx (seq.unit 2)))))
+      (ite (and (<= 0 y) (<= y 300) (<= 0 m) (<= m 11) (<= 1 d) (<= d 31) (<= 0 hh) (<= hh 23) (<= 0 mm) (<= mm 59) (<= -720 tzo) (<= tzo 840) (<= (str.len tzn) 32))
+        ($Result_BDateTime@success iv)
+        ($Result_BDateTime@error ErrorID_AssumeCheck) 
+      )
     )
   )
 )
@@ -495,6 +494,19 @@
       ($Result_BLogicalTime@error ErrorID_AssumeCheck) 
     )
   )
+)
+
+(define-fun _@@cons_BUUID_entrypoint ((ctx HavocSequence)) $Result_BUUID
+  (let ((uuv (BUUID@UFCons_API ctx)))
+    (ite (= (seq.len uuv) 16)
+      ($Result_BUUID@success lv)
+      ($Result_BUUID@error ErrorID_AssumeCheck) 
+    )
+  )
+)
+
+(define-fun _@@cons_BContentHash_entrypoint ((ctx HavocSequence)) $Result_BContentHash
+  ($Result_BContentHash@success (BContentHash@UFCons_API ctx))
 )
 
 ;;GLOBAL_DECLS;;
