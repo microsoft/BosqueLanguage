@@ -327,12 +327,12 @@ abstract class MIREntityTypeDecl extends MIROOTypeDecl {
 class MIRObjectEntityTypeDecl extends MIREntityTypeDecl {
     readonly validatefunc: MIRInvokeKey | undefined;
     readonly consfunc: MIRInvokeKey;
-    readonly consfuncfields: MIRFieldKey[];
+    readonly consfuncfields: {cfkey: MIRFieldKey, isoptional: boolean}[];
 
     readonly fields: MIRFieldDecl[];
     readonly vcallMap: Map<MIRVirtualMethodKey, MIRInvokeKey> = new Map<string, MIRInvokeKey>();
 
-    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], validatefunc: MIRInvokeKey | undefined, consfunc: MIRInvokeKey, consfuncfields: MIRFieldKey[], fields: MIRFieldDecl[]) {
+    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], validatefunc: MIRInvokeKey | undefined, consfunc: MIRInvokeKey, consfuncfields: {cfkey: MIRFieldKey, isoptional: boolean}[], fields: MIRFieldDecl[]) {
         super(srcInfo, srcFile, tkey, attributes, ns, name, terms, provides);
 
         this.validatefunc = validatefunc;

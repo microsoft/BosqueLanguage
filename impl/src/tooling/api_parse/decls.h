@@ -1615,6 +1615,11 @@ public:
             }
         }
 
+        auto firstoptpos = std::find_if(this->ttypes.cbegin(), this->ttypes.cend(), [](const std::pair<std::string, bool>& tentry) {
+            return tentry.second;
+        });
+        auto maskoffset = this->consfields - std::distance(this->ttypes.cbegin(), firstoptpos);
+
         apimgr.prepareParseEntity(apimodule, this, ctx);
         apimgr.prepareParseEntityMask(apimodule, this, ctx);
         for(size_t i = 0; i < this->consfields.size(); ++i)
@@ -1628,7 +1633,7 @@ public:
                     return false;
                 }
 
-                apimgr.setMaskFlag(apimodule, flagloc, i, true, ctx);
+                apimgr.setMaskFlag(apimodule, value, i - firstoptpos, false, ctx);
             }
             else
             {
@@ -1643,7 +1648,7 @@ public:
 
                 if(this->ttypes[i].second)
                 {
-                    apimgr.setMaskFlag(apimodule, i, false, ctx);
+                    apimgr.setMaskFlag(apimodule, value, i - firstoptpos, true, ctx);
                 }
             }
         }

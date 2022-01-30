@@ -6806,7 +6806,14 @@ class TypeChecker {
                         invenvargs.set(`$${fdi[1].name}`, new VarInfo(ftype, fdi[1].value === undefined, false, true, ftype));
                         consenvargs.set(`$${fdi[1].name}`, new VarInfo(ftype, fdi[1].value === undefined, false, true, ftype));
                     });
-                    const consfuncfields = [...ccfields.req, ...ccfields.opt].map((ccf) => MIRKeyGenerator.generateFieldKey(this.resolveOOTypeFromDecls(ccf[1][0], ccf[1][2]), ccf[1][1].name));
+                    const consfuncfields = [
+                        ...[...ccfields.req].map((ccf) => {
+                           return {cfkey: MIRKeyGenerator.generateFieldKey(this.resolveOOTypeFromDecls(ccf[1][0], ccf[1][2]), ccf[1][1].name), isoptional: false}
+                        }), 
+                        ...[...ccfields.opt].map((ccf) => {
+                            return {cfkey: MIRKeyGenerator.generateFieldKey(this.resolveOOTypeFromDecls(ccf[1][0], ccf[1][2]), ccf[1][1].name), isoptional: true}
+                         })
+                    ];
 
                     let validatekey: string | undefined = undefined;
                     if(initinfo.validateclauses.length !== 0) {

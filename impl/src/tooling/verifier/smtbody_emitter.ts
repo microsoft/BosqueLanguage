@@ -561,7 +561,7 @@ class SMTBodyEmitter {
         let ops = tentities.map((tt) => {
             const mtt = this.typegen.getMIRType(tt.tkey);
             const consfunc = (this.assembly.entityDecls.get(tt.tkey) as MIRObjectEntityTypeDecl).consfunc;
-            const consfields = (this.assembly.entityDecls.get(tt.tkey) as MIRObjectEntityTypeDecl).consfuncfields.map((ccf) => this.assembly.fieldDecls.get(ccf) as MIRFieldDecl);
+            const consfields = (this.assembly.entityDecls.get(tt.tkey) as MIRObjectEntityTypeDecl).consfuncfields.map((ccf) => this.assembly.fieldDecls.get(ccf.cfkey) as MIRFieldDecl);
 
             const test = new SMTCallSimple(this.registerRequiredTypeCheck(geninfo.argflowtype, mtt), [new SMTVar("arg")]);
 
@@ -1392,7 +1392,7 @@ class SMTBodyEmitter {
             const ttype = argflowtype.options[0] as MIREntityType;
             const ttdecl = this.assembly.entityDecls.get(ttype.typeID) as MIRObjectEntityTypeDecl;
             const consfunc = ttdecl.consfunc;
-            const consfields = ttdecl.consfuncfields.map((ccf) => this.assembly.fieldDecls.get(ccf) as MIRFieldDecl);
+            const consfields = ttdecl.consfuncfields.map((ccf) => this.assembly.fieldDecls.get(ccf.cfkey) as MIRFieldDecl);
 
             const argpp = this.typegen.coerce(this.argToSMT(op.arg), arglayouttype, argflowtype);
             let cargs: SMTExp[] = [];

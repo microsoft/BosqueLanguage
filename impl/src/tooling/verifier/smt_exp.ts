@@ -5,7 +5,22 @@
 
 import { MIRResolvedTypeKey } from "../../compiler/mir_ops";
 
+enum SMTInputOutputMode
+{
+    ModelCheckErrOnly,
+    ModelCheckWExtract,
+    Evaluate
+}
+
 type VerifierOptions = {
+    INT_MIN: number,
+    INT_MAX: number,
+    SLEN_MAX: number,
+    BLEN_MAX: number,
+
+    CONTAINER_MAX: number,
+
+    IOMode: SMTInputOutputMode
 };
 
 class SMTMaskConstruct {
@@ -124,11 +139,21 @@ class SMTCallSimple extends SMTExp {
     }
 
     static makeAndOf(...exps: SMTExp[]): SMTExp {
-        return new SMTCallSimple("and", exps);
+        if(exps.length === 1) {
+            return exps[0];
+        }
+        else {
+            return new SMTCallSimple("and", exps);
+        }
     }
 
     static makeOrOf(...exps: SMTExp[]): SMTExp {
-        return new SMTCallSimple("or", exps);
+        if(exps.length === 1) {
+            return exps[0];
+        }
+        else {
+            return new SMTCallSimple("or", exps);
+        }
     }
 }
 
@@ -326,7 +351,7 @@ class SMTCond extends SMTExp {
 }
 
 export {
-    VerifierOptions,
+    SMTInputOutputMode, VerifierOptions,
     SMTMaskConstruct,
     SMTTypeInfo, SMTExp, SMTVar, SMTConst, 
     SMTCallSimple, SMTCallGeneral, SMTCallGeneralWOptMask, SMTCallGeneralWPassThroughMask,

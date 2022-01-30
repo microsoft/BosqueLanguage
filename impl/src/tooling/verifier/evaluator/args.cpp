@@ -734,13 +734,16 @@ void SMTParseJSON::completeParseEntity(const APIModule* apimodule, const IType* 
 
 void SMTParseJSON::setMaskFlag(const APIModule* apimodule, z3::expr flagloc, size_t i, bool flag, z3::solver& ctx)
 {
-    return ctx.add(extendContext(ctx.ctx(), extendContext(ctx.ctx(), flagloc, 1), i) == ctx.ctx().bool_val(flag));
+    auto bef = getArgContextConstructor(ctx.ctx(), "BBool@UFCons_API", ctx.ctx().bool_sort());
+    return ctx.add(bef(extendContext(ctx.ctx(), extendContext(ctx.ctx(), flagloc, 1), i)) == ctx.ctx().bool_val(flag));
 }
 
 z3::expr SMTParseJSON::parseUnionChoice(const APIModule* apimodule, const IType* itype, z3::expr value, size_t pick, z3::solver& ctx)
 {
     auto bef = getArgContextConstructor(ctx.ctx(), "UnionChoice@UFCons_API", ctx.ctx().int_sort());
     ctx.add(bef(value) == ctx.ctx().int_val(pick));
+
+    return extendContext(ctx.ctx(), value, pick);
 }
 
 std::optional<bool> SMTParseJSON::extractBoolImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
