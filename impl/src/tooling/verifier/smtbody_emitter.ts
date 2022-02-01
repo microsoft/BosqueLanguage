@@ -1683,48 +1683,50 @@ class SMTBodyEmitter {
         return new SMTLet(this.varToSMTName(op.trgt).vname, gop, continuation);
     }
 
-    processBinKeyLess(op: MIRBinKeyLess, continuation: SMTExp): SMTExp {
-        const mirlhslayout = this.typegen.getMIRType(op.lhslayouttype);
-        const mirrhslayout = this.typegen.getMIRType(op.rhslayouttype);
-
-        let ltcmp: SMTExp = new SMTConst("false");
-        if(mirlhslayout.typeID === mirrhslayout.typeID && this.typegen.isUniqueType(mirlhslayout) && this.typegen.isUniqueType(mirrhslayout)) {
-            const etype = this.typegen.assembly.entityDecls.get(op.cmptype) as MIREntityTypeDecl;
+    generateBinKeyCmpFor(cmptype: MIRType, lhstype: MIRType, lhsexp: SMTExp, rhstype: MIRType, rhsexp: SMTExp): SMTExp {
+        if(lhstype.typeID === cmptype.typeID && rhstype.typeID === cmptype.typeID && this.typegen.isUniqueType(cmptype)) {
+            const etype = this.typegen.assembly.entityDecls.get(cmptype.typeID) as MIREntityTypeDecl;
 
             if(etype instanceof MIRPrimitiveInternalEntityTypeDecl) {
-                const oftype = this.typegen.getSMTTypeFor(this.typegen.getMIRType(op.cmptype));
-                ltcmp = new SMTCallSimple(`${oftype.smttypename}@less`, [this.argToSMT(op.lhs), this.argToSMT(op.rhs)]);
+                const oftype = this.typegen.getSMTTypeFor(cmptype);
+                return new SMTCallSimple(`${oftype.smttypename}@less`, [lhsexp, rhsexp]);
             }
             else if(etype instanceof MIRStringOfInternalEntityTypeDecl) {
                 const oftype = this.typegen.getSMTTypeFor(this.typegen.getMIRType("String"));
-                ltcmp = new SMTCallSimple(`${oftype.smttypename}@less`, [this.argToSMT(op.lhs), this.argToSMT(op.rhs)]);
+                return new SMTCallSimple(`${oftype.smttypename}@less`, [lhsexp, rhsexp]);
             }
             else if(etype instanceof MIRDataStringInternalEntityTypeDecl) {
                 const oftype = this.typegen.getSMTTypeFor(this.typegen.getMIRType("String"));
-                ltcmp = new SMTCallSimple(`${oftype.smttypename}@less`, [this.argToSMT(op.lhs), this.argToSMT(op.rhs)]);
+                return new SMTCallSimple(`${oftype.smttypename}@less`, [lhsexp, rhsexp]);
             }
             else if(etype instanceof MIRDataBufferInternalEntityTypeDecl) {
                 const oftype = this.typegen.getSMTTypeFor(this.typegen.getMIRType("String"));
-                ltcmp = new SMTCallSimple(`${oftype.smttypename}@less`, [this.argToSMT(op.lhs), this.argToSMT(op.rhs)]);
+                return new SMTCallSimple(`${oftype.smttypename}@less`, [lhsexp, rhsexp]);
             }
             else if(etype instanceof MIREnumEntityTypeDecl) {
                 const oftype = this.typegen.getSMTTypeFor(this.typegen.getMIRType("Nat"));
-                ltcmp = new SMTCallSimple(`${oftype.smttypename}@less`, [this.argToSMT(op.lhs), this.argToSMT(op.rhs)]);
+                return new SMTCallSimple(`${oftype.smttypename}@less`, [lhsexp, rhsexp]);
             }
             else {
                 const ttval = etype as MIRConstructableEntityTypeDecl;
 
                 const oftype = this.typegen.getSMTTypeFor(this.typegen.getMIRType(ttval.fromtype));
-                ltcmp = new SMTCallSimple(`${oftype.smttypename}@less`, [this.argToSMT(op.lhs), this.argToSMT(op.rhs)]);
+                return new SMTCallSimple(`${oftype.smttypename}@less`, [lhsexp, rhsexp]);
             }
         }
         else {
-            const lhs = this.typegen.coerceToKey(this.argToSMT(op.lhs), mirlhslayout);
-            const rhs = this.typegen.coerceToKey(this.argToSMT(op.rhs), mirrhslayout);
+            const lhs = this.typegen.coerceToKey(lhsexp, lhstype);
+            const rhs = this.typegen.coerceToKey(rhsexp, rhstype);
 
-            ltcmp = new SMTCallSimple("BKey@less", [lhs, rhs]);
+            return new SMTCallSimple("BKey@less", [lhs, rhs]);
         }
+    }
 
+    processBinKeyLess(op: MIRBinKeyLess, continuation: SMTExp): SMTExp {
+        const mirlhslayout = this.typegen.getMIRType(op.lhslayouttype);
+        const mirrhslayout = this.typegen.getMIRType(op.rhslayouttype);
+
+        const ltcmp = this.generateBinKeyCmpFor(this.typegen.getMIRType(op.cmptype), mirlhslayout, this.argToSMT(op.lhs), mirrhslayout, this.argToSMT(op.rhs));
         return new SMTLet(this.varToSMTName(op.trgt).vname, ltcmp, continuation);
     }
 

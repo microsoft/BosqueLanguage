@@ -136,16 +136,38 @@ class SMTEntityDecl {
     readonly smtname: string;
     readonly typetag: string;
 
-    readonly consf: { cname: string, cargs: { fname: string, ftype: SMTTypeInfo }[] } | undefined;
     readonly boxf: string;
     readonly ubf: string;
 
-    constructor(smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: SMTTypeInfo }[] } | undefined, boxf: string, ubf: string) {
+    constructor(smtname: string, typetag: string, boxf: string, ubf: string) {
         this.smtname = smtname;
         this.typetag = typetag;
-        this.consf = consf;
         this.boxf = boxf;
         this.ubf = ubf;
+    }
+}
+
+class SMTEntityWellKnownDecl extends SMTEntityDecl {
+    constructor(smtname: string, typetag: string, boxf: string, ubf: string) {
+        super(smtname, typetag, boxf, ubf);
+    }
+}
+
+class SMTEntityOfTypeDecl extends SMTEntityDecl {
+    readonly ofsmttype: string;
+
+    constructor(smtname: string, typetag: string, boxf: string, ubf: string, ofsmttype: string) {
+        super(smtname, typetag, boxf, ubf);
+        this.ofsmttype = ofsmttype;
+    }
+}
+
+class SMTEntityStdDecl extends SMTEntityDecl {
+    readonly consf: { cname: string, cargs: { fname: string, ftype: SMTTypeInfo }[] };
+    
+    constructor(smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: SMTTypeInfo }[] }, boxf: string, ubf: string) {
+        super(smtname, typetag, boxf, ubf);
+        this.consf = consf;
     }
 }
 
@@ -199,7 +221,6 @@ class SMTConstantDecl {
     readonly optenumname: [MIRResolvedTypeKey, string] | undefined;
     readonly ctype: SMTTypeInfo;
 
-    xxxx;
     readonly consfinv: string;
 
     readonly consfexp: SMTExp;
@@ -218,16 +239,16 @@ class SMTConstantDecl {
 }
 
 class SMTModelState {
-    readonly arginits: { vname: string, vtype: SMTType, vchk: SMTExp | undefined, vinit: SMTExp, callexp: SMTExp }[];
-    readonly resinit: { vname: string, vtype: SMTType, vchk: SMTExp | undefined, vinit: SMTExp, callexp: SMTExp };
+    readonly arginits: { vname: string, vtype: SMTTypeInfo, vchk: SMTExp | undefined, vinit: SMTExp, callexp: SMTExp }[];
+    readonly resinit: { vname: string, vtype: SMTTypeInfo, vchk: SMTExp | undefined, vinit: SMTExp, callexp: SMTExp } | undefined;
     readonly argchk: SMTExp[] | undefined;
-    readonly checktype: SMTType;
+    readonly checktype: SMTTypeInfo;
     readonly fcheck: SMTExp;
 
     readonly targeterrorcheck: SMTExp;
     readonly isvaluecheck: SMTExp;
 
-    constructor(arginits: { vname: string, vtype: SMTType, vchk: SMTExp | undefined, vinit: SMTExp, callexp: SMTExp }[], resinit: { vname: string, vtype: SMTType, vchk: SMTExp | undefined, vinit: SMTExp, callexp: SMTExp }, argchk: SMTExp[] | undefined, checktype: SMTType, echeck: SMTExp, targeterrorcheck: SMTExp, isvaluecheck: SMTExp) {
+    constructor(arginits: { vname: string, vtype: SMTTypeInfo, vchk: SMTExp | undefined, vinit: SMTExp, callexp: SMTExp }[], resinit: { vname: string, vtype: SMTTypeInfo, vchk: SMTExp | undefined, vinit: SMTExp, callexp: SMTExp }, argchk: SMTExp[] | undefined, checktype: SMTTypeInfo, echeck: SMTExp, targeterrorcheck: SMTExp, isvaluecheck: SMTExp) {
         this.arginits = arginits;
         this.resinit = resinit;
         this.argchk = argchk;
@@ -317,7 +338,7 @@ class SMTAssembly {
 
     entrypoint: string;
     havocfuncs: Set<string> = new Set<string>();
-    model: SMTModelState = new SMTModelState([], { vname: "[EMPTY]", vtype: new SMTType("[UNINIT_VTYPE]", "[UNINIT_VTYPE]", "[UNINIT_VTYPE]"), vinit: new SMTConst("[UNINT_VINIT]"), vchk: undefined, callexp: new SMTConst("[UNINT_CALLEXP]") }, undefined, new SMTType("[UNINIT_CHK_TYPE]", "[UNINIT_CHK_TYPE]", "[UNINIT_CHK_TYPE]"), new SMTConst("[UNINT_ECHK]"), new SMTConst("[UNINIT_ERR_CHK]"), new SMTConst("[UNINIT_VLAUE_CHK]"));
+    model: SMTModelState | undefined = undefined;
 
     constructor(vopts: VerifierOptions, entrypoint: string) {
         this.vopts = vopts;
@@ -375,6 +396,8 @@ class SMTAssembly {
             roots.push(invokes.get(ivk) as SMTCallGNode);
             SMTAssembly.topoVisit(invokes.get(ivk) as SMTCallGNode, [], tordered, invokes);
         });
+
+        xxxx;
 
         assembly.constantDecls.forEach((cdecl) => {
             roots.push(invokes.get(cdecl.consfinv) as SMTCallGNode);
@@ -719,7 +742,8 @@ class SMTAssembly {
 }
 
 export {
-    SMTEntityDecl, SMTTupleDecl, SMTRecordDecl, SMTEphemeralListDecl,
+    SMTEntityDecl, SMTEntityWellKnownDecl, SMTEntityOfTypeDecl, SMTEntityStdDecl,
+    SMTTupleDecl, SMTRecordDecl, SMTEphemeralListDecl,
     SMTConstantDecl,
     SMTFunction, SMTFunctionUninterpreted,
     SMTAssembly, SMTModelState,
