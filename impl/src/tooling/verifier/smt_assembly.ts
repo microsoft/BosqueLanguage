@@ -5,30 +5,27 @@
 
 import { BSQRegex } from "../../ast/bsqregex";
 import { MIRResolvedTypeKey } from "../../compiler/mir_ops";
-import { SMTConst, SMTExp, SMTTypeInfo, VerifierOptions } from "./smt_exp";
+import { SMTExp, SMTTypeInfo, VerifierOptions } from "./smt_exp";
 
 type SMT2FileInfo = {
     TYPE_TAG_DECLS: string[],
+    ORDINAL_TYPE_TAG_DECLS: string[],
     ABSTRACT_TYPE_TAG_DECLS: string[],
     INDEX_TAG_DECLS: string[],
     PROPERTY_TAG_DECLS: string[],
     SUBTYPE_DECLS: string[],
     TUPLE_HAS_INDEX_DECLS: string[],
     RECORD_HAS_PROPERTY_DECLS: string[],
-    KEY_TYPE_TAG_RANK: string[],
-    BINTEGRAL_TYPE_ALIAS: string[],
-    BINTEGRAL_CONSTANTS: string[],
     STRING_TYPE_ALIAS: string,
-    BHASHCODE_TYPE_ALIAS: string,
-    KEY_TYPE_INFO: { decls: string[], constructors: string[], boxing: string[] },
+    OF_TYPE_DECLS: { decls: string[], constructors: string[], boxing: string[] },
+    KEY_BOX_OPS: string[],
     TUPLE_INFO: { decls: string[], constructors: string[], boxing: string[] },
     RECORD_INFO: { decls: string[], constructors: string[], boxing: string[] },
-    TYPE_COLLECTION_INTERNAL_INFO: { decls: string[], constructors: string[] },
-    TYPE_COLLECTION_CONSTS: string[],
     TYPE_INFO: { decls: string[], constructors: string[], boxing: string[] }
     EPHEMERAL_DECLS: { decls: string[], constructors: string[] },
     RESULT_INFO: { decls: string[], constructors: string[] },
     MASK_INFO: { decls: string[], constructors: string[] },
+    V_MIN_MAX: string,
     GLOBAL_DECLS: string[],
     UF_DECLS: string[],
     FUNCTION_DECLS: string[],
@@ -133,13 +130,15 @@ class SMTFunctionUninterpreted {
 }
 
 class SMTEntityDecl {
+    readonly iskeytype: boolean;
     readonly smtname: string;
     readonly typetag: string;
 
     readonly boxf: string;
     readonly ubf: string;
 
-    constructor(smtname: string, typetag: string, boxf: string, ubf: string) {
+    constructor(iskeytype: boolean, smtname: string, typetag: string, boxf: string, ubf: string) {
+        this.iskeytype = iskeytype;
         this.smtname = smtname;
         this.typetag = typetag;
         this.boxf = boxf;
@@ -147,17 +146,11 @@ class SMTEntityDecl {
     }
 }
 
-class SMTEntityWellKnownDecl extends SMTEntityDecl {
-    constructor(smtname: string, typetag: string, boxf: string, ubf: string) {
-        super(smtname, typetag, boxf, ubf);
-    }
-}
-
 class SMTEntityOfTypeDecl extends SMTEntityDecl {
     readonly ofsmttype: string;
 
-    constructor(smtname: string, typetag: string, boxf: string, ubf: string, ofsmttype: string) {
-        super(smtname, typetag, boxf, ubf);
+    constructor(iskeytype: boolean, smtname: string, typetag: string, boxf: string, ubf: string, ofsmttype: string) {
+        super(iskeytype, smtname, typetag, boxf, ubf);
         this.ofsmttype = ofsmttype;
     }
 }
@@ -166,7 +159,7 @@ class SMTEntityStdDecl extends SMTEntityDecl {
     readonly consf: { cname: string, cargs: { fname: string, ftype: SMTTypeInfo }[] };
     
     constructor(smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: SMTTypeInfo }[] }, boxf: string, ubf: string) {
-        super(smtname, typetag, boxf, ubf);
+        super(false, smtname, typetag, boxf, ubf);
         this.consf = consf;
     }
 }
@@ -248,7 +241,7 @@ class SMTModelState {
     readonly targeterrorcheck: SMTExp;
     readonly isvaluecheck: SMTExp;
 
-    constructor(arginits: { vname: string, vtype: SMTTypeInfo, vchk: SMTExp | undefined, vinit: SMTExp, callexp: SMTExp }[], resinit: { vname: string, vtype: SMTTypeInfo, vchk: SMTExp | undefined, vinit: SMTExp, callexp: SMTExp }, argchk: SMTExp[] | undefined, checktype: SMTTypeInfo, echeck: SMTExp, targeterrorcheck: SMTExp, isvaluecheck: SMTExp) {
+    constructor(arginits: { vname: string, vtype: SMTTypeInfo, vchk: SMTExp | undefined, vinit: SMTExp, callexp: SMTExp }[], resinit: { vname: string, vtype: SMTTypeInfo, vchk: SMTExp | undefined, vinit: SMTExp, callexp: SMTExp } | undefined, argchk: SMTExp[] | undefined, checktype: SMTTypeInfo, echeck: SMTExp, targeterrorcheck: SMTExp, isvaluecheck: SMTExp) {
         this.arginits = arginits;
         this.resinit = resinit;
         this.argchk = argchk;
@@ -397,8 +390,6 @@ class SMTAssembly {
             SMTAssembly.topoVisit(invokes.get(ivk) as SMTCallGNode, [], tordered, invokes);
         });
 
-        xxxx;
-
         assembly.constantDecls.forEach((cdecl) => {
             roots.push(invokes.get(cdecl.consfinv) as SMTCallGNode);
             SMTAssembly.topoVisit(invokes.get(cdecl.consfinv) as SMTCallGNode, [], tordered, invokes);
@@ -420,91 +411,69 @@ class SMTAssembly {
         return { invokes: invokes, topologicalOrder: tordered, roots: roots, recursive: recursive };
     }
 
-    generateSMT2AssemblyInfo(mode: "unreachable" | "witness" | "evaluate" | "invert"): SMT2FileInfo {
+    generateSMT2AssemblyInfo(): SMT2FileInfo {
         const subtypeasserts = this.subtypeRelation.map((tc) => tc.value ? `(assert (SubtypeOf@ ${tc.ttype} ${tc.atype}))` : `(assert (not (SubtypeOf@ ${tc.ttype} ${tc.atype})))`).sort();
         const indexasserts = this.hasIndexRelation.map((hi) => hi.value ? `(assert (HasIndex@ ${hi.idxtag} ${hi.atype}))` : `(assert (not (HasIndex@ ${hi.idxtag} ${hi.atype})))`).sort();
         const propertyasserts = this.hasPropertyRelation.map((hp) => hp.value ? `(assert (HasProperty@ ${hp.pnametag} ${hp.atype}))` : `(assert (not (HasProperty@ ${hp.pnametag} ${hp.atype})))`).sort();
 
-        const keytypeorder: string[] = [...this.keytypeTags].sort().map((ktt, i) => `(assert (= (TypeTagRank@ ${ktt}) ${i}))`);
+        const keytypeorder: string[] = [...this.keytypeTags].sort().map((ktt, i) => `(assert (= (TypeTag_OrdinalOf ${ktt}) ${i}))`);
 
-        let integral_type_alias: string[] = [
-            `(define-sort BInt () (_ BitVec ${this.vopts.ISize}))`,
-            `(define-sort BNat () (_ BitVec ${this.vopts.ISize}))`,
-        ];
-        let integral_constants: string[] = [
-            `(declare-const BInt@zero BInt) (assert (= BInt@zero (_ bv0 ${this.vopts.ISize})))`,
-            `(declare-const BInt@one BInt) (assert (= BInt@one ${this.numgen.emitSimpleInt(1).emitSMT2(undefined)}))`,
-            `(declare-const BInt@min BInt) (assert (= BInt@min ${this.numgen.emitIntGeneral(this.numgen.intmin).emitSMT2(undefined)}))`,
-            `(declare-const BInt@max BInt) (assert (= BInt@max ${this.numgen.emitIntGeneral(this.numgen.intmax).emitSMT2(undefined)}))`,
-
-            `(declare-const BNat@zero BNat) (assert (= BNat@zero (_ bv0 ${this.vopts.ISize})))`,
-            `(declare-const BNat@one BNat) (assert (= BNat@one ${this.numgen.emitSimpleNat(1).emitSMT2(undefined)}))`,
-            `(declare-const BNat@min BNat) (assert (= BNat@min BNat@zero))`,
-            `(declare-const BNat@max BNat) (assert (= BNat@max ${this.numgen.emitNatGeneral(this.numgen.natmax).emitSMT2(undefined)}))`
+        const v_min_max: string[] = [
+            `(declare-const BINT_MIN () Int) (assert BINT_MIN -256)`,
+            `(declare-const BINT_MAX () Int) (assert BINT_MAX 256)`,
+            `(declare-const SLEN_MAX () Int) (assert SLEN_MAX 64)`,
+            `(declare-const BLEN_MAX () Int) (assert BLEN_MAX 64)`
         ];
 
         const termtupleinfo = this.tupleDecls
-            .filter((tt) => !tt.iskeytype)
             .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
             .map((kt) => {
                 return {
                     decl: `(${kt.smtname} 0)`,
-                    consf: `( (${kt.consf.cname} ${kt.consf.cargs.map((ke) => `(${ke.fname} ${ke.ftype.name})`).join(" ")}) )`,
+                    consf: `( (${kt.consf.cname} ${kt.consf.cargs.map((ke) => `(${ke.fname} ${ke.ftype.smttypename})`).join(" ")}) )`,
                     boxf: `(${kt.boxf} (${kt.ubf} ${kt.smtname}))`
                 };
             });
 
         const termrecordinfo = this.recordDecls
-            .filter((rt) => !rt.iskeytype)
             .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
             .map((kt) => {
                 return {
                     decl: `(${kt.smtname} 0)`,
-                    consf: `( (${kt.consf.cname} ${kt.consf.cargs.map((ke) => `(${ke.fname} ${ke.ftype.name})`).join(" ")}) )`,
+                    consf: `( (${kt.consf.cname} ${kt.consf.cargs.map((ke) => `(${ke.fname} ${ke.ftype.smttypename})`).join(" ")}) )`,
                     boxf: `(${kt.boxf} (${kt.ubf} ${kt.smtname}))`
                 };
             });
 
         const keytypeinfo = this.entityDecls
-            .filter((et) => et.iskeytype)
+            .filter((et) => (et instanceof SMTEntityOfTypeDecl) && et.iskeytype)
             .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
             .map((kt) => {
                 return {
-                    decl: kt.consf !== undefined ? `(${kt.smtname} 0)` : undefined,
-                    consf:  kt.consf !== undefined ? `( (${kt.consf.cname} ${kt.consf.cargs.map((ke) => `(${ke.fname} ${ke.ftype.name})`).join(" ")}) )` : undefined,
+                    decl: `(define-sort ${kt.smtname} () ${(kt as SMTEntityOfTypeDecl).ofsmttype})`,
+                    boxf: `(${kt.boxf} (${kt.ubf} ${kt.smtname}))`
+                };
+            });
+
+        const oftypeinfo = this.entityDecls
+            .filter((et) => (et instanceof SMTEntityOfTypeDecl) && !et.iskeytype)
+            .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
+            .map((kt) => {
+                return {
+                    decl: `(define-sort ${kt.smtname} () ${(kt as SMTEntityOfTypeDecl).ofsmttype})`,
                     boxf: `(${kt.boxf} (${kt.ubf} ${kt.smtname}))`
                 };
             });
 
         const termtypeinfo = this.entityDecls
-            .filter((et) => !et.iskeytype)
+            .filter((et) => et instanceof SMTEntityStdDecl)
             .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
             .map((tt) => {
                 return {
-                    decl: tt.consf !== undefined ? `(${tt.smtname} 0)` : undefined,
-                    consf: tt.consf !== undefined ? `( (${tt.consf.cname} ${tt.consf.cargs.map((te) => `(${te.fname} ${te.ftype.name})`).join(" ")}) )` : undefined,
+                    decl: `(${tt.smtname} 0)`,
+                    consf: `( (${(tt as SMTEntityStdDecl).consf.cname} ${(tt as SMTEntityStdDecl).consf.cargs.map((te) => `(${te.fname} ${te.ftype.smttypename})`).join(" ")}) )`,
                     boxf: `(${tt.boxf} (${tt.ubf} ${tt.smtname}))`
                 };
-            });
-
-        let generalcollectioninternaldecls: {decl: string, consf: string}[] = [];
-        let constcollectiondecls: string[] = [];
-        this.listDecls
-            .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
-            .forEach((kt) => {
-                const iconsopts = kt.listtypeconsf.map((cf) => `(${cf.cname} ${cf.cargs.map((ke) => `(${ke.fname} ${ke.ftype.name})`).join(" ")})`)
-                generalcollectioninternaldecls.push({
-                    decl: `(${kt.smtllisttype} 0)`,
-                    consf: `( ${iconsopts.join(" ")} )`
-                });
-
-                termtypeinfo.push({
-                    decl: `(${kt.smtname} 0)`,
-                    consf: `( (${kt.consf.cname} ${kt.consf.cargs.map((ke) => `(${ke.fname} ${ke.ftype.name})`).join(" ")}) )`,
-                    boxf: `(${kt.boxf} (${kt.ubf} ${kt.smtname}))`
-                });
-
-                constcollectiondecls.push(kt.emptyconst)
             });
 
         const etypeinfo = this.ephemeralDecls
@@ -512,7 +481,7 @@ class SMTAssembly {
             .map((et) => {
                 return {
                     decl: `(${et.smtname} 0)`,
-                    consf: `( (${et.consf.cname} ${et.consf.cargs.map((ke) => `(${ke.fname} ${ke.ftype.name})`).join(" ")}) )`
+                    consf: `( (${et.consf.cname} ${et.consf.cargs.map((ke) => `(${ke.fname} ${ke.ftype.smttypename})`).join(" ")}) )`
                 };
             });
 
@@ -521,14 +490,14 @@ class SMTAssembly {
             .map((rt) => {
                 if (rt.hasFlag) {
                     return {
-                        decl: `($GuardResult_${rt.ctype.name} 0)`,
-                        consf: `( ($GuardResult_${rt.ctype.name}@cons ($GuardResult_${rt.ctype.name}@result ${rt.ctype.name}) ($GuardResult_${rt.ctype.name}@flag Bool)) )`
+                        decl: `($GuardResult_${rt.ctype.smttypename} 0)`,
+                        consf: `( ($GuardResult_${rt.ctype.smttypename}@cons ($GuardResult_${rt.ctype.smttypename}@result ${rt.ctype.smttypename}) ($GuardResult_${rt.ctype.smttypename}@flag Bool)) )`
                     };
                 }
                 else {
                     return {
-                        decl: `($Result_${rt.ctype.name} 0)`,
-                        consf: `( ($Result_${rt.ctype.name}@success ($Result_${rt.ctype.name}@success_value ${rt.ctype.name})) ($Result_${rt.ctype.name}@error ($Result_${rt.ctype.name}@error_value ErrorID)) )`
+                        decl: `($Result_${rt.ctype.smttypename} 0)`,
+                        consf: `( ($Result_${rt.ctype.smttypename}@success ($Result_${rt.ctype.smttypename}@success_value ${rt.ctype.smttypename})) ($Result_${rt.ctype.smttypename}@error ($Result_${rt.ctype.smttypename}@error_value ErrorID)) )`
                     };
                 }
             });
@@ -549,7 +518,7 @@ class SMTAssembly {
 
         const gdecls = this.constantDecls
             .sort((c1, c2) => c1.gkey.localeCompare(c2.gkey))
-            .map((c) => `(declare-const ${c.gkey} ${c.ctype.name})`);
+            .map((c) => `(declare-const ${c.gkey} ${c.ctype.smttypename})`);
 
         const ufdecls = this.uninterpfunctions
             .sort((uf1, uf2) => uf1.fname.localeCompare(uf2.fname))
@@ -566,9 +535,10 @@ class SMTAssembly {
                 }
             });
 
+        const mmodel = this.model as SMTModelState;
         let action: string[] = [];
-        this.model.arginits.map((iarg) => {
-            action.push(`(declare-const ${iarg.vname} ${iarg.vtype.name})`);
+        mmodel.arginits.map((iarg) => {
+            action.push(`(declare-const ${iarg.vname} ${iarg.vtype.smttypename})`);
 
             action.push(`(assert (= ${iarg.vname} ${iarg.vinit.emitSMT2(undefined)}))`);
 
@@ -577,12 +547,12 @@ class SMTAssembly {
             }
         });
 
-        if(this.model.argchk !== undefined) {
-            action.push(...this.model.argchk.map((chk) => `(assert ${chk.emitSMT2(undefined)})`));
+        if(mmodel.argchk !== undefined) {
+            action.push(...mmodel.argchk.map((chk) => `(assert ${chk.emitSMT2(undefined)})`));
         }
 
-        action.push(`(declare-const _@smtres@ ${this.model.checktype.name})`);
-        action.push(`(assert (= _@smtres@ ${this.model.fcheck.emitSMT2(undefined)}))`);
+        action.push(`(declare-const _@smtres@ ${mmodel.checktype.smttypename})`);
+        action.push(`(assert (= _@smtres@ ${mmodel.fcheck.emitSMT2(undefined)}))`);
 
         if (mode === "unreachable" || mode === "witness") {
             action.push(`(assert ${this.model.targeterrorcheck.emitSMT2(undefined)})`);
@@ -685,8 +655,8 @@ class SMTAssembly {
         };
     }
 
-    buildSMT2file(mode: "unreachable" | "witness" | "evaluate" | "invert", smtruntime: string): string {
-        const sfileinfo = this.generateSMT2AssemblyInfo(mode);
+    buildSMT2file(smtruntime: string): string {
+        const sfileinfo = this.generateSMT2AssemblyInfo();
     
         function joinWithIndent(data: string[], indent: string): string {
             if (data.length === 0) {

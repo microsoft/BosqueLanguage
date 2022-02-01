@@ -18,7 +18,7 @@
     )
 ))
 
-(declare-fun TypeTag_OrdinalOf () Int)
+(declare-fun TypeTag_OrdinalOf (TypeTag) Int)
 (assert (= (TypeTag_OrdinalOf TypeTag_None) 0))
 (assert (= (TypeTag_OrdinalOf TypeTag_Bool) 2))
 (assert (= (TypeTag_OrdinalOf TypeTag_Nat) 3))
@@ -67,9 +67,6 @@
 
 (declare-fun HasProperty@ (TypeTag RecordPropertyTag) Bool)
 ;;RECORD_HAS_PROPERTY_DECLS;;
-
-(declare-fun TypeTagRank@ (TypeTag) Int)
-;;KEY_TYPE_TAG_RANK;;
 
 (declare-sort FloatValue)
 
@@ -181,6 +178,8 @@
       ( (bsq_nothing@literal) )
 ))
 
+;;OF_TYPE_DECLS;;
+
 ;;
 ;; KeyType Concept datatypes
 ;;
@@ -199,6 +198,7 @@
       (bsqkey_logicaltime@box (bsqkey_logicaltime_value BLogicalTime))
       (bsqkey_uuid@box (bsqkey_uuid_value BUUID))
       (bsqkey_contenthash@box (bsqkey_contenthash_value BHash))
+      ;;KEY_BOX_OPS;;
     )
     ( (BKey@box (BKey_type TypeTag) (BKey_oftype TypeTag) (BKey_value bsq_keyobject)) )
 ))
@@ -394,7 +394,7 @@
 )
 
 ;;BINT_MIN, BINT_MAX, SLEN_MAX, BLEN_MAX
-;;I_MIN_MAX;;
+;;V_MIN_MAX;;
 
 (define-fun _@@cons_Bool_entrypoint ((ctx HavocSequence)) $Result_Bool
   ($Result_Bool@success (BBool@UFCons_API ctx))

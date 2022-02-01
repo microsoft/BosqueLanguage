@@ -527,7 +527,7 @@ class SMTEmitter {
 
         const consfuncs = this.temitter.getSMTConstructorName(mirtype);
 
-        const smtdecl = new SMTEntityOfTypeDecl(smttype.smttypename, smttype.smttypetag, consfuncs.box, consfuncs.bfield, "BString");
+        const smtdecl = new SMTEntityOfTypeDecl(true, smttype.smttypename, smttype.smttypetag, consfuncs.box, consfuncs.bfield, "BString");
         this.assembly.entityDecls.push(smtdecl);
     }
             
@@ -537,7 +537,7 @@ class SMTEmitter {
 
         const consfuncs = this.temitter.getSMTConstructorName(mirtype);
 
-        const smtdecl = new SMTEntityOfTypeDecl(smttype.smttypename, smttype.smttypetag, consfuncs.box, consfuncs.bfield, "BString");
+        const smtdecl = new SMTEntityOfTypeDecl(true, smttype.smttypename, smttype.smttypetag, consfuncs.box, consfuncs.bfield, "BString");
         this.assembly.entityDecls.push(smtdecl);
     }
             
@@ -547,7 +547,7 @@ class SMTEmitter {
 
         const consfuncs = this.temitter.getSMTConstructorName(mirtype);
 
-        const smtdecl = new SMTEntityOfTypeDecl(smttype.smttypename, smttype.smttypetag, consfuncs.box, consfuncs.bfield, "BByteBuffer");
+        const smtdecl = new SMTEntityOfTypeDecl(false, smttype.smttypename, smttype.smttypetag, consfuncs.box, consfuncs.bfield, "BByteBuffer");
         this.assembly.entityDecls.push(smtdecl);
     }
 
@@ -557,8 +557,9 @@ class SMTEmitter {
 
         const consfuncs = this.temitter.getSMTConstructorName(mirtype);
         const oftype = this.temitter.getSMTTypeFor(this.temitter.getMIRType(edecl.fromtype));
+        const iskey = this.bemitter.assembly.subtypeOf(this.temitter.getMIRType(edecl.fromtype), this.temitter.getMIRType("KeyType"));
 
-        const smtdecl = new SMTEntityOfTypeDecl(smttype.smttypename, smttype.smttypetag, consfuncs.box, consfuncs.bfield, oftype.smttypename);
+        const smtdecl = new SMTEntityOfTypeDecl(iskey, smttype.smttypename, smttype.smttypetag, consfuncs.box, consfuncs.bfield, oftype.smttypename);
         this.assembly.entityDecls.push(smtdecl);
     }
 
@@ -568,7 +569,7 @@ class SMTEmitter {
 
         const consfuncs = this.temitter.getSMTConstructorName(mirtype);
 
-        const smtdecl = new SMTEntityOfTypeDecl(smttype.smttypename, smttype.smttypetag, consfuncs.box, consfuncs.bfield, "BNat");
+        const smtdecl = new SMTEntityOfTypeDecl(true, smttype.smttypename, smttype.smttypetag, consfuncs.box, consfuncs.bfield, "BNat");
         this.assembly.entityDecls.push(smtdecl);
     }
 
@@ -579,7 +580,7 @@ class SMTEmitter {
         const consfuncs = this.temitter.getSMTConstructorName(mirtype);
         const oftype = this.temitter.getSMTTypeFor(this.temitter.getMIRType(edecl.fromtype));
 
-        const smtdecl = new SMTEntityOfTypeDecl(smttype.smttypename, smttype.smttypetag, consfuncs.box, consfuncs.bfield, oftype.smttypename);
+        const smtdecl = new SMTEntityOfTypeDecl(false, smttype.smttypename, smttype.smttypetag, consfuncs.box, consfuncs.bfield, oftype.smttypename);
         this.assembly.entityDecls.push(smtdecl);
     }
 
@@ -589,7 +590,7 @@ class SMTEmitter {
 
         const consfuncs = this.temitter.getSMTConstructorName(mirtype);
 
-        const smtdecl = new SMTEntityOfTypeDecl(smttype.smttypename, smttype.smttypetag, consfuncs.box, consfuncs.bfield, "BTerm");
+        const smtdecl = new SMTEntityOfTypeDecl(false, smttype.smttypename, smttype.smttypetag, consfuncs.box, consfuncs.bfield, "BTerm");
         this.assembly.entityDecls.push(smtdecl);
     }
 
@@ -611,7 +612,7 @@ class SMTEmitter {
 
         const consfuncs = this.temitter.getSMTConstructorName(mirtype);
 
-        const smtdecl = new SMTEntityOfTypeDecl(smttype.smttypename, smttype.smttypetag, consfuncs.box, consfuncs.bfield, "BTerm");
+        const smtdecl = new SMTEntityOfTypeDecl(false, smttype.smttypename, smttype.smttypetag, consfuncs.box, consfuncs.bfield, "BTerm");
         this.assembly.entityDecls.push(smtdecl);
     }
 
@@ -1052,21 +1053,20 @@ class SMTEmitter {
         const smtassembly = new SMTAssembly(vopts, temitter.lookupFunctionName(entrypoint));
 
         let smtemit = new SMTEmitter(temitter, bemitter, smtassembly, vopts);
-        smtemit.initializeSMTAssembly(assembly, entrypoint, callsafety);
+        smtemit.initializeSMTAssembly(assembly, istestbuild, entrypoint, callsafety);
 
         ////////////
-        const smtinfo = smtemit.assembly.buildSMT2file(mode, runtime);
+        const smtinfo = smtemit.assembly.buildSMT2file(runtime);
 
         return smtinfo;
     }
 
-    static generateSMTAssemblyAllErrors(assembly: MIRAssembly, vopts: VerifierOptions, numgen: { int: BVEmitter, hash: BVEmitter }, entrypoint: MIRInvokeKey): { file: string, line: number, pos: number, msg: string }[] {
-        const allivks = [...assembly.invokeDecls].map((idecl) => idecl[1].ikey);
-        const callsafety = markSafeCalls([...allivks], assembly, {file: "[]", line: -1, pos: -1});
+    static generateSMTAssemblyAllErrors(assembly: MIRAssembly, istestbuild: boolean, vopts: VerifierOptions, entrypoint: MIRInvokeKey): { file: string, line: number, pos: number, msg: string }[] {
+        const callsafety = markSafeCalls([entrypoint], assembly, istestbuild, undefined);
 
         const temitter = new SMTTypeEmitter(assembly, vopts);
         assembly.typeMap.forEach((tt) => {
-            temitter.internTypeName(tt.typeID, tt.shortname);
+            temitter.internTypeName(tt.typeID);
         });
         assembly.invokeDecls.forEach((idcl) => {
             temitter.internFunctionName(idcl.ikey, idcl.shortname);
@@ -1078,11 +1078,11 @@ class SMTEmitter {
             temitter.internGlobalName(cdecl.gkey, cdecl.shortname);
         });
 
-        const bemitter = new SMTBodyEmitter(assembly, temitter, numgen, vopts, callsafety, {file: "[]", line: -1, pos: -1});
-        const smtassembly = new SMTAssembly(vopts, numgen.int, Number(numgen.hash.bvsize), temitter.lookupFunctionName(entrypoint));
+        const bemitter = new SMTBodyEmitter(assembly, temitter, vopts, callsafety, {file: "[]", line: -1, pos: -1});
+        const smtassembly = new SMTAssembly(vopts, temitter.lookupFunctionName(entrypoint));
 
-        let smtemit = new SMTEmitter(temitter, bemitter, smtassembly);
-        smtemit.initializeSMTAssembly(assembly, entrypoint, callsafety);
+        let smtemit = new SMTEmitter(temitter, bemitter, smtassembly, vopts);
+        smtemit.initializeSMTAssembly(assembly, istestbuild, entrypoint, callsafety);
 
         return smtemit.assembly.allErrors;
     }
