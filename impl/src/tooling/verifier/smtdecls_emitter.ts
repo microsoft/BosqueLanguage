@@ -756,7 +756,8 @@ class SMTEmitter {
         this.bemitter.requiredProjectVirtualRecordProperty.forEach((rvpr) => this.assembly.functions.push(this.bemitter.generateProjectRecordPropertyVirtual(rvpr)));
         this.bemitter.requiredProjectVirtualEntityField.forEach((rvpe) => this.assembly.functions.push(this.bemitter.generateProjectEntityFieldVirtual(rvpe)));
     
-        xxxx; //TODO: the list and map constructors
+        this.bemitter.requiredSingletonConstructorsList.forEach((scl) => this.assembly.functions.push(this.bemitter.generateSingletonConstructorList(scl)));
+        this.bemitter.requiredSingletonConstructorsMap.forEach((scm) => this.assembly.functions.push(this.bemitter.generateSingletonConstructorMap(scm)));
 
         this.bemitter.requiredUpdateVirtualTuple.forEach((rvut) => this.assembly.functions.push(this.bemitter.generateUpdateTupleIndexVirtual(rvut)));
         this.bemitter.requiredUpdateVirtualRecord.forEach((rvur) => this.assembly.functions.push(this.bemitter.generateUpdateRecordPropertyVirtual(rvur)));
@@ -781,7 +782,7 @@ class SMTEmitter {
 
         const restype = this.temitter.getMIRType(mirep.resultType);
         let rarg:  { vname: string, vtype: SMTTypeInfo, vchk: SMTExp | undefined, vinit: SMTExp, callexp: SMTExp } | undefined = undefined;
-        if (this.vopts.IOMode !== SMTInputOutputMode.ModelCheckErrOnly) {
+        if (this.vopts.IOMode === SMTInputOutputMode.Evaluate) {
             let ufuncs: SMTFunctionUninterpreted[] = [];
             this.walkAndGenerateHavocType(restype, this.assembly.havocfuncs, ufuncs);
             ufuncs.forEach((uf) => {

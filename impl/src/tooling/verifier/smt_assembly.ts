@@ -5,7 +5,7 @@
 
 import { BSQRegex } from "../../ast/bsqregex";
 import { MIRResolvedTypeKey } from "../../compiler/mir_ops";
-import { SMTExp, SMTTypeInfo, VerifierOptions } from "./smt_exp";
+import { SMTExp, SMTInputOutputMode, SMTTypeInfo, VerifierOptions } from "./smt_exp";
 
 type SMT2FileInfo = {
     TYPE_TAG_DECLS: string[],
@@ -17,7 +17,7 @@ type SMT2FileInfo = {
     TUPLE_HAS_INDEX_DECLS: string[],
     RECORD_HAS_PROPERTY_DECLS: string[],
     STRING_TYPE_ALIAS: string,
-    OF_TYPE_DECLS: { decls: string[], constructors: string[], boxing: string[] },
+    OF_TYPE_DECLS: string[],
     KEY_BOX_OPS: string[],
     TUPLE_INFO: { decls: string[], constructors: string[], boxing: string[] },
     RECORD_INFO: { decls: string[], constructors: string[], boxing: string[] },
@@ -25,7 +25,7 @@ type SMT2FileInfo = {
     EPHEMERAL_DECLS: { decls: string[], constructors: string[] },
     RESULT_INFO: { decls: string[], constructors: string[] },
     MASK_INFO: { decls: string[], constructors: string[] },
-    V_MIN_MAX: string,
+    V_MIN_MAX: string[],
     GLOBAL_DECLS: string[],
     UF_DECLS: string[],
     FUNCTION_DECLS: string[],
@@ -554,23 +554,20 @@ class SMTAssembly {
         action.push(`(declare-const _@smtres@ ${mmodel.checktype.smttypename})`);
         action.push(`(assert (= _@smtres@ ${mmodel.fcheck.emitSMT2(undefined)}))`);
 
-        if (mode === "unreachable" || mode === "witness") {
-            action.push(`(assert ${this.model.targeterrorcheck.emitSMT2(undefined)})`);
-        }
-        else if (mode === "evaluate") {
-            action.push(`(assert ${this.model.isvaluecheck.emitSMT2(undefined)})`);
-        
-            action.push(`(declare-const ${this.model.resinit.vname} ${this.model.resinit.vtype.name})`);
-            action.push(`(assert (= ${this.model.resinit.vname} ${this.model.resinit.vinit.emitSMT2(undefined)}))`);
-            if(this.model.resinit.vchk !== undefined) {
-                action.push(`(assert ${this.model.resinit.vchk.emitSMT2(undefined)})`);
-            }
-
-            action.push(`(assert (= ${this.model.resinit.vname} _@smtres@))`);
+        if (this.vopts.IOMode === SMTInputOutputMode.ModelCheck) {
+            action.push(`(assert ${mmodel.targeterrorcheck.emitSMT2(undefined)})`);
         }
         else {
-            action.push(`(assert ${this.model.isvaluecheck.emitSMT2(undefined)})`);
-            action.push(`(assert (= ${this.model.resinit.vname} _@smtres@))`);
+            action.push(`(assert ${mmodel.isvaluecheck.emitSMT2(undefined)})`);
+        
+            const resi = mmodel.resinit as { vname: string, vtype: SMTTypeInfo, vchk: SMTExp | undefined, vinit: SMTExp, callexp: SMTExp };
+            action.push(`(declare-const ${resi.vname} ${resi.vtype.smttypename})`);
+            action.push(`(assert (= ${resi.vname} ${resi.vinit.emitSMT2(undefined)}))`);
+            if(resi.vchk !== undefined) {
+                action.push(`(assert ${resi.vchk.emitSMT2(undefined)})`);
+            }
+
+            action.push(`(assert (= ${resi.vname} _@smtres@))`);
         }
 
         let foutput: string[] = [];
@@ -627,26 +624,23 @@ class SMTAssembly {
 
         return {
             TYPE_TAG_DECLS: this.typeTags.sort().map((tt) => `(${tt})`),
+            ORDINAL_TYPE_TAG_DECLS: keytypeorder,
             ABSTRACT_TYPE_TAG_DECLS: this.abstractTypes.sort().map((tt) => `(${tt})`),
             INDEX_TAG_DECLS: this.indexTags.sort().map((tt) => `(${tt})`),
             PROPERTY_TAG_DECLS: this.propertyTags.sort().map((tt) => `(${tt})`),
             SUBTYPE_DECLS: subtypeasserts,
             TUPLE_HAS_INDEX_DECLS: indexasserts,
             RECORD_HAS_PROPERTY_DECLS: propertyasserts,
-            KEY_TYPE_TAG_RANK: keytypeorder,
-            BINTEGRAL_TYPE_ALIAS: integral_type_alias,
-            BINTEGRAL_CONSTANTS: integral_constants,
-            STRING_TYPE_ALIAS: (this.vopts.StringOpt === "UNICODE" ? "(define-sort BString () (Seq (_ BitVec 32)))" : "(define-sort BString () String)"),
-            BHASHCODE_TYPE_ALIAS: `(define-sort BHash () (_ BitVec ${this.hashsize}))`,
-            KEY_TYPE_INFO: { decls: keytypeinfo.filter((kti) => kti.decl !== undefined).map((kti) => kti.decl as string), constructors: keytypeinfo.filter((kti) => kti.consf !== undefined).map((kti) => kti.consf as string), boxing: keytypeinfo.map((kti) => kti.boxf) },
+            STRING_TYPE_ALIAS: "(define-sort BString () String)",
+            OF_TYPE_DECLS: [...keytypeinfo.map((kd) => kd.decl), ...oftypeinfo.map((td) => td.decl)],
+            KEY_BOX_OPS: oftypeinfo.map((td) => td.boxf),
             TUPLE_INFO: { decls: termtupleinfo.map((kti) => kti.decl), constructors: termtupleinfo.map((kti) => kti.consf), boxing: termtupleinfo.map((kti) => kti.boxf) },
             RECORD_INFO: { decls: termrecordinfo.map((kti) => kti.decl), constructors: termrecordinfo.map((kti) => kti.consf), boxing: termrecordinfo.map((kti) => kti.boxf) },
-            TYPE_COLLECTION_INTERNAL_INFO: { decls: generalcollectioninternaldecls.map((kti) => kti.decl), constructors: generalcollectioninternaldecls.map((kti) => kti.consf) },
-            TYPE_COLLECTION_CONSTS: constcollectiondecls,
             TYPE_INFO: { decls: termtypeinfo.filter((tti) => tti.decl !== undefined).map((tti) => tti.decl as string), constructors: termtypeinfo.filter((tti) => tti.consf !== undefined).map((tti) => tti.consf as string), boxing: termtypeinfo.map((tti) => tti.boxf) },
             EPHEMERAL_DECLS: { decls: etypeinfo.map((kti) => kti.decl), constructors: etypeinfo.map((kti) => kti.consf) },
             RESULT_INFO: { decls: rtypeinfo.map((kti) => kti.decl), constructors: rtypeinfo.map((kti) => kti.consf) },
             MASK_INFO: { decls: maskinfo.map((mi) => mi.decl), constructors: maskinfo.map((mi) => mi.consf) },
+            V_MIN_MAX: v_min_max,
             GLOBAL_DECLS: gdecls,
             UF_DECLS: ufdecls,
             FUNCTION_DECLS: foutput.reverse(),
@@ -666,31 +660,24 @@ class SMTAssembly {
                 return data.map((d, i) => (i === 0 ? "" : indent) + d).join("\n");
             }
         }
-    
+
         const contents = smtruntime
             .replace(";;TYPE_TAG_DECLS;;", joinWithIndent(sfileinfo.TYPE_TAG_DECLS, "      "))
+            .replace(";;ORDINAL_TAG_DECLS;;", joinWithIndent(sfileinfo.ORDINAL_TYPE_TAG_DECLS, ""))
             .replace(";;ABSTRACT_TYPE_TAG_DECLS;;", joinWithIndent(sfileinfo.ABSTRACT_TYPE_TAG_DECLS, "      "))
             .replace(";;INDEX_TAG_DECLS;;", joinWithIndent(sfileinfo.INDEX_TAG_DECLS, "      "))
             .replace(";;PROPERTY_TAG_DECLS;;", joinWithIndent(sfileinfo.PROPERTY_TAG_DECLS, "      "))
             .replace(";;SUBTYPE_DECLS;;", joinWithIndent(sfileinfo.SUBTYPE_DECLS, ""))
             .replace(";;TUPLE_HAS_INDEX_DECLS;;", joinWithIndent(sfileinfo.TUPLE_HAS_INDEX_DECLS, ""))
             .replace(";;RECORD_HAS_PROPERTY_DECLS;;", joinWithIndent(sfileinfo.RECORD_HAS_PROPERTY_DECLS, ""))
-            .replace(";;KEY_TYPE_TAG_RANK;;", joinWithIndent(sfileinfo.KEY_TYPE_TAG_RANK, ""))
-            .replace(";;BINTEGRAL_TYPE_ALIAS;;", joinWithIndent(sfileinfo.BINTEGRAL_TYPE_ALIAS, ""))
             .replace(";;BSTRING_TYPE_ALIAS;;", sfileinfo.STRING_TYPE_ALIAS)
-            .replace(";;BHASHCODE_TYPE_ALIAS;;", sfileinfo.BHASHCODE_TYPE_ALIAS)
-            .replace(";;BINT_CONSTANTS;;", joinWithIndent(sfileinfo.BINTEGRAL_CONSTANTS, ""))
-            .replace(";;KEY_TYPE_DECLS;;", joinWithIndent(sfileinfo.KEY_TYPE_INFO.decls, "      "))
-            .replace(";;KEY_TYPE_CONSTRUCTORS;;", joinWithIndent(sfileinfo.KEY_TYPE_INFO.constructors, "    "))
-            .replace(";;KEY_TYPE_BOXING;;", joinWithIndent(sfileinfo.KEY_TYPE_INFO.boxing, "      "))
+            .replace(";;OF_TYPE_DECLS;;", joinWithIndent(sfileinfo.OF_TYPE_DECLS, ""))
+            .replace(";;KEY_BOX_OPS;;", joinWithIndent(sfileinfo.KEY_BOX_OPS, "      "))
             .replace(";;TUPLE_DECLS;;", joinWithIndent(sfileinfo.TUPLE_INFO.decls, "    "))
             .replace(";;RECORD_DECLS;;", joinWithIndent(sfileinfo.RECORD_INFO.decls, "    "))
-            .replace(";;TYPE_COLLECTION_INTERNAL_INFO_DECLS;;", joinWithIndent(sfileinfo.TYPE_COLLECTION_INTERNAL_INFO.decls, "    "))
-            .replace(";;TYPE_COLLECTION_EMPTY_DECLS;;", joinWithIndent(sfileinfo.TYPE_COLLECTION_CONSTS, ""))
             .replace(";;TYPE_DECLS;;", joinWithIndent(sfileinfo.TYPE_INFO.decls, "    "))
             .replace(";;TUPLE_TYPE_CONSTRUCTORS;;", joinWithIndent(sfileinfo.TUPLE_INFO.constructors, "    "))
             .replace(";;RECORD_TYPE_CONSTRUCTORS;;", joinWithIndent(sfileinfo.RECORD_INFO.constructors, "    "))
-            .replace(";;TYPE_COLLECTION_INTERNAL_INFO_CONSTRUCTORS;;", joinWithIndent(sfileinfo.TYPE_COLLECTION_INTERNAL_INFO.constructors, "    "))
             .replace(";;TYPE_CONSTRUCTORS;;", joinWithIndent(sfileinfo.TYPE_INFO.constructors, "    "))
             .replace(";;TUPLE_TYPE_BOXING;;", joinWithIndent(sfileinfo.TUPLE_INFO.boxing, "      "))
             .replace(";;RECORD_TYPE_BOXING;;", joinWithIndent(sfileinfo.RECORD_INFO.boxing, "      "))
@@ -701,6 +688,7 @@ class SMTAssembly {
             .replace(";;MASK_DECLS;;", joinWithIndent(sfileinfo.MASK_INFO.decls, "      "))
             .replace(";;RESULTS;;", joinWithIndent(sfileinfo.RESULT_INFO.constructors, "    "))
             .replace(";;MASKS;;", joinWithIndent(sfileinfo.MASK_INFO.constructors, "    "))
+            .replace("V_MIN_MAX", joinWithIndent(sfileinfo.V_MIN_MAX, ""))
             .replace(";;GLOBAL_DECLS;;", joinWithIndent(sfileinfo.GLOBAL_DECLS, ""))
             .replace(";;UF_DECLS;;", joinWithIndent(sfileinfo.UF_DECLS, "\n"))
             .replace(";;FUNCTION_DECLS;;", joinWithIndent(sfileinfo.FUNCTION_DECLS, "\n"))
@@ -712,7 +700,7 @@ class SMTAssembly {
 }
 
 export {
-    SMTEntityDecl, SMTEntityWellKnownDecl, SMTEntityOfTypeDecl, SMTEntityStdDecl,
+    SMTEntityDecl, SMTEntityOfTypeDecl, SMTEntityStdDecl,
     SMTTupleDecl, SMTRecordDecl, SMTEphemeralListDecl,
     SMTConstantDecl,
     SMTFunction, SMTFunctionUninterpreted,

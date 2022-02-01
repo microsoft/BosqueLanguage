@@ -7,8 +7,7 @@ import { MIRResolvedTypeKey } from "../../compiler/mir_ops";
 
 enum SMTInputOutputMode
 {
-    ModelCheckErrOnly,
-    ModelCheckWExtract,
+    ModelCheck,
     Evaluate
 }
 

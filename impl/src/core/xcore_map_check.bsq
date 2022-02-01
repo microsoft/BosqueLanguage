@@ -282,7 +282,7 @@ internal entity MapOps provides Some {
                 return Vector3<[K, V]>>{m.v0, [k, v], m.v1};
             }
             else {
-                return Vector2<[K, V]>>{m.v0, m.v1, [k, v]};
+                return Vector3<[K, V]>>{m.v0, m.v1, [k, v]};
             }
         }
         elif(m.is<Vector3<[K, V]>>()) {
