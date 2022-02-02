@@ -73,7 +73,7 @@ EvaluatorFrame Evaluator::g_callstack[BSQ_MAX_STACK];
 uint8_t* Evaluator::g_constantbuffer = nullptr;
 
 std::map<BSQTypeID, const BSQRegex*> Evaluator::g_validators;
-std::vector<const BSQRegex*> Evaluator::g_regexs;
+std::map<std::string, const BSQRegex*> Evaluator::g_regexs;
 
 void Evaluator::evalDeadFlowOp()
 {

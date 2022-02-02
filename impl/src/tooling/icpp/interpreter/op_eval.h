@@ -42,7 +42,7 @@ public:
     static uint8_t* g_constantbuffer;
 
     static std::map<BSQTypeID, const BSQRegex*> g_validators;
-    static std::vector<const BSQRegex*> g_regexs;
+    static std::map<std::string, const BSQRegex*> g_regexs;
 
 private:
     EvaluatorFrame* cframe = nullptr;

@@ -18,6 +18,42 @@ const BSQType* jsonLoadBoxedStructType(json v)
     return new BSQBoxedStructType(tid, oftype, name);
 }
 
+const BSQField* jsonLoadFieldDecl(json v)
+{
+    auto fkey = MarshalEnvironment::g_fieldToIdMap.find(v["fkey"].get<std::string>())->second;
+    auto fname = v["fname"].get<std::string>();
+    auto declaredType = v["declaredType"].get<BSQTypeID>();
+    auto isOptional = v["isOptional"].get<bool>();
+
+    return new BSQField(fkey, fname, declaredType, isOptional);
+}
+
+BSQListTypeFlavor jsonLoadListFlavor(json v)
+{
+    auto ltype = v["ltype"].get<BSQTypeID>();
+
+    const BSQType* entrytype = BSQType::g_typetable[MarshalEnvironment::g_typenameToIdMap.find(v["entrytype"].get<std::string>())->second];
+
+    const BSQPartialVectorType* pv4type = dynamic_cast<const BSQPartialVectorType*>(BSQType::g_typetable[MarshalEnvironment::g_typenameToIdMap.find(v["pv4type"].get<std::string>())->second]);
+    const BSQPartialVectorType* pv8type = dynamic_cast<const BSQPartialVectorType*>(BSQType::g_typetable[MarshalEnvironment::g_typenameToIdMap.find(v["pv8type"].get<std::string>())->second]);
+    const BSQListTreeType* treetype = dynamic_cast<const BSQListTreeType*>(BSQType::g_typetable[MarshalEnvironment::g_typenameToIdMap.find(v["treetype"].get<std::string>())->second]);
+   
+    return BSQListTypeFlavor{ltype, entrytype, pv4type, pv8type, treetype};
+}
+
+BSQMapTypeFlavor jsonLoadMapFlavor(json v)
+{
+    auto ltype = v["ltype"].get<BSQTypeID>();
+
+    const BSQType* keytype = BSQType::g_typetable[MarshalEnvironment::g_typenameToIdMap.find(v["keytype"].get<std::string>())->second];
+    const BSQType* valuetype = BSQType::g_typetable[MarshalEnvironment::g_typenameToIdMap.find(v["valuetype"].get<std::string>())->second];
+    const BSQType* tupletype = BSQType::g_typetable[MarshalEnvironment::g_typenameToIdMap.find(v["tupletype"].get<std::string>())->second];
+
+    const BSQMapTreeType* treetype = dynamic_cast<const BSQMapTreeType*>(BSQType::g_typetable[MarshalEnvironment::g_typenameToIdMap.find(v["treetype"].get<std::string>())->second]);
+
+    return BSQMapTypeFlavor{ltype, keytype, valuetype, tupletype, treetype};   
+}
+
 void initialize(size_t cbuffsize, const RefMask cmask)
 {
     MarshalEnvironment::g_typenameToIdMap["None"] = BSQ_TYPE_ID_NONE;
@@ -133,7 +169,8 @@ void initializeLiteral(size_t storageOffset, const BSQType* gtype, std::string& 
         break;
     }
     case BSQ_TYPE_ID_REGEX: {
-        assert(false);
+        auto reptr = Evaluator::g_regexs.find(lval)->second;
+        dynamic_cast<const BSQRegisterType<void*>*>(BSQWellKnownType::g_typeRegex)->storeValueDirect(sl, (void*)reptr);
         break;
     }
     default:
@@ -185,8 +222,9 @@ void loadAssembly(json j, Evaluator& ee)
     });
 
     auto fdecls = j["fielddecls"];
-    std::for_each(fdecls.cbegin(), fdecls.cend(), [](json fdecl) {
-        xxxx;
+    std::for_each(fdecls.cbegin(), fdecls.cend(), [](json jfdecl) {
+        auto fdecl = jsonLoadFieldDecl(jfdecl);
+        BSQField::g_fieldtable[fdecl->fkey] = fdecl;
     });
 
     auto inlist = j["invokenames"];
@@ -243,18 +281,20 @@ void loadAssembly(json j, Evaluator& ee)
     });
 
     auto lflavoflist = j["listflavors"];
-    std::for_each(lflavoflist.cbegin(), lflavoflist.cend(), [](json tdecl) {
-        xxxx;
+    std::for_each(lflavoflist.cbegin(), lflavoflist.cend(), [](json fdecl) {
+        auto lflavor = jsonLoadListFlavor(fdecl);
+        BSQListOps::g_flavormap.emplace(lflavor.entrytype->tid, lflavor);
     });
 
     auto mflavorlist = j["mapflavors"];
-    std::for_each(mflavorlist.cbegin(), mflavorlist.cend(), [](json tdecl) {
-        xxxx;
+    std::for_each(mflavorlist.cbegin(), mflavorlist.cend(), [](json fdecl) {
+        auto mflavor = jsonLoadMapFlavor(fdecl);
+        BSQMapOps::g_flavormap.emplace(std::make_pair(mflavor.keytype->tid, mflavor.valuetype->tid), mflavor);
     });
 
     ////
     //Load Functions
-    Environment::g_invokes.resize(Environment::g_invokenameToIDMap.size());
+    BSQInvokeDecl::g_invokes.resize(MarshalEnvironment::g_invokeToIdMap.size());
     auto idlist = j["invdecls"];
     std::for_each(idlist.cbegin(), idlist.cend(), [](json idecl) {
         BSQInvokeDecl::jsonLoad(idecl);
@@ -273,17 +313,29 @@ void loadAssembly(json j, Evaluator& ee)
     });
 
     ////
+    //Load regex info
+    auto jvalidators = j["validators"];
+    std::for_each(jvalidators.cbegin(), jvalidators.cend(), [](json vdecl) {
+        auto vtype = MarshalEnvironment::g_typenameToIdMap.find(vdecl["vtype"].get<std::string>())->second;
+        const BSQRegex* rr = BSQRegex::jparse(vdecl["regex"]);
+        Evaluator::g_validators.emplace(vtype, rr);
+    });
+
+    auto jregexes = j["regexes"];
+    std::for_each(jregexes.cbegin(), jregexes.cend(), [](json redecl) {
+        const BSQRegex* rr = BSQRegex::jparse(redecl["regex"]);
+        Evaluator::g_regexs.emplace(rr->restr, rr);
+    });
+
+    ////
     //Load Constants
     auto cdlist = j["constdecls"];
-    std::for_each(cdlist.cbegin(), cdlist.cend(), [&runner](json ldecl) {
+    std::for_each(cdlist.cbegin(), cdlist.cend(), [&ee](json ldecl) {
         size_t storageOffset;
         BSQInvokeID ikey;
         const BSQType* gtype; 
         
         jsonLoadBSQConstantDecl(ldecl, storageOffset, ikey, gtype);
-        initializeConst(runner, storageOffset, ikey, gtype);
+        initializeConst(ee, storageOffset, ikey, gtype);
     });
-
-    auto entrypoint = j["entrypoint"].get<std::string>();
-    return entrypoint;
 }
