@@ -31,7 +31,7 @@ const BSQType* BSQWellKnownType::g_typeString = CONS_BSQ_STRING_TYPE(BSQ_TYPE_ID
 
 const BSQType* BSQWellKnownType::g_typeByteBufferLeaf = CONS_BSQ_BYTE_BUFFER_LEAF_TYPE();
 const BSQType* BSQWellKnownType::g_typeByteBufferNode = CONS_BSQ_BYTE_BUFFER_NODE_TYPE();
-const BSQType* BSQWellKnownType::g_typeByteBuffer = CONS_BSQ_BYTE_BUFFER_TYPE();
+const BSQType* BSQWellKnownType::g_typeByteBuffer = CONS_BSQ_BYTE_BUFFER_TYPE(BSQ_TYPE_ID_BYTEBUFFER, "BytBuffer");
 const BSQType* BSQWellKnownType::g_typeDateTime = CONS_BSQ_DATE_TIME_TYPE(BSQ_TYPE_ID_DATETIME, "DateTime");
 const BSQType* BSQWellKnownType::g_typeTickTime = CONS_BSQ_TICK_TIME_TYPE(BSQ_TYPE_ID_TICKTIME, "TickTime");
 const BSQType* BSQWellKnownType::g_typeLogicalTime = CONS_BSQ_LOGICAL_TIME_TYPE(BSQ_TYPE_ID_LOGICALTIME, "LogicalTime");
@@ -103,6 +103,13 @@ std::string entityDisplay_impl(const BSQType* btype, StorageLocationPtr data)
     res += "}";
 
     return res;
+}
+
+std::string constructableEntityDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+{
+    const BSQType* oftype = BSQType::g_typetable[dynamic_cast<const BSQConstructableEntityInfo*>(btype)->oftype];
+
+    return btype->name + "{" + oftype->fpDisplay(oftype, data) + "}";
 }
 
 std::string ephemeralDisplay_impl(const BSQType* btype, StorageLocationPtr data)
@@ -1000,6 +1007,6 @@ std::string entityValidatorDisplay_impl(const BSQType* btype, StorageLocationPtr
 std::string entityEnumDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
     auto val = SLPTR_LOAD_CONTENTS_AS(uint64_t, data);
-    return static_cast<const BSQEnumType*>(btype)->enumnames[val];
+    return btype->name + "::" + static_cast<const BSQEnumType*>(btype)->enumnames[val];
 }
 

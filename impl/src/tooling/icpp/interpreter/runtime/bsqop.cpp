@@ -13,6 +13,86 @@ std::map<std::string, BSQFieldID> MarshalEnvironment::g_fieldToIdMap;
 std::map<std::string, BSQInvokeID> MarshalEnvironment::g_invokeToIdMap;
 std::map<std::string, BSQVirtualInvokeID> MarshalEnvironment::g_vinvokeToIdMap;
 
+std::map<std::string, RefMask> MarshalEnvironment::g_stringmaskToDeclMap;
+
+std::map<std::string, BSQPrimitiveImplTag> g_primitiveinvokenameToIDMap = {
+    {"validator_accepts", BSQPrimitiveImplTag::validator_accepts},
+    
+    {"number_nattoint", BSQPrimitiveImplTag::number_nattoint},
+    {"number_inttonat", BSQPrimitiveImplTag::number_inttonat},
+    {"number_nattobignat", BSQPrimitiveImplTag::number_nattobignat},
+    {"number_inttobigint", BSQPrimitiveImplTag::number_inttobigint},
+    {"number_bignattonat", BSQPrimitiveImplTag::number_bignattonat},
+    {"number_biginttoint", BSQPrimitiveImplTag::number_biginttoint},
+    {"number_bignattobigint", BSQPrimitiveImplTag::number_bignattobigint},
+    {"number_biginttobignat", BSQPrimitiveImplTag::number_biginttobignat},
+    {"number_bignattofloat", BSQPrimitiveImplTag::number_bignattofloat},
+    {"number_bignattodecimal", BSQPrimitiveImplTag::number_bignattodecimal},
+    {"number_bignattorational", BSQPrimitiveImplTag::number_bignattorational},
+    {"number_biginttofloat", BSQPrimitiveImplTag::number_biginttofloat},
+    {"number_biginttodecimal", BSQPrimitiveImplTag::number_biginttodecimal},
+    {"number_biginttorational", BSQPrimitiveImplTag::number_biginttorational},
+    {"number_floattobigint", BSQPrimitiveImplTag::number_floattobigint},
+    {"number_decimaltobigint", BSQPrimitiveImplTag::number_decimaltobigint},
+    {"number_rationaltobigint", BSQPrimitiveImplTag::number_rationaltobigint},
+    {"number_floattodecimal", BSQPrimitiveImplTag::number_floattodecimal},
+    {"number_floattorational", BSQPrimitiveImplTag::number_floattorational},
+    {"number_decimaltofloat", BSQPrimitiveImplTag::number_decimaltofloat},
+    {"number_decimaltorational", BSQPrimitiveImplTag::number_decimaltorational},
+    {"number_rationaltofloat", BSQPrimitiveImplTag::number_rationaltofloat},
+    {"number_rationaltodecimal", BSQPrimitiveImplTag::number_rationaltodecimal},
+
+    {"float_floor", BSQPrimitiveImplTag::float_floor},
+    {"decimal_floor", BSQPrimitiveImplTag::decimal_floor},
+    {"float_ceil", BSQPrimitiveImplTag::float_ceil},
+    {"decimal_ceil", BSQPrimitiveImplTag::decimal_ceil},
+    {"float_truncate", BSQPrimitiveImplTag::float_truncate},
+    {"decimal_truncate", BSQPrimitiveImplTag::decimal_truncate},
+
+    {"float_power", BSQPrimitiveImplTag::float_power},
+    {"decimal_power", BSQPrimitiveImplTag::decimal_power},
+
+    {"string_empty", BSQPrimitiveImplTag::string_empty},
+    {"string_append", BSQPrimitiveImplTag::string_append},
+
+    {"bytebuffer_getformat", BSQPrimitiveImplTag::bytebuffer_getformat},
+    {"bytebuffer_getcompression", BSQPrimitiveImplTag::bytebuffer_getcompression},
+
+    {"s_list_size_ne", BSQPrimitiveImplTag::s_list_size_ne},
+    {"s_list_reduce_ne", BSQPrimitiveImplTag::s_list_reduce_ne},
+    {"s_list_reduce_idx_ne", BSQPrimitiveImplTag::s_list_reduce_idx_ne},
+    {"s_list_transduce_ne", BSQPrimitiveImplTag::s_list_transduce_ne},
+    {"s_list_transduce_idx_ne", BSQPrimitiveImplTag::s_list_transduce_idx_ne},
+    {"s_list_range_ne", BSQPrimitiveImplTag::s_list_range_ne},
+    {"s_list_fill_ne", BSQPrimitiveImplTag::s_list_fill_ne},
+    {"s_list_reverse_ne", BSQPrimitiveImplTag::s_list_reverse_ne},
+    {"s_list_append_ne", BSQPrimitiveImplTag::s_list_append_ne},
+    {"s_list_slice_start", BSQPrimitiveImplTag::s_list_slice_start},
+    {"s_list_slice_end", BSQPrimitiveImplTag::s_list_slice_end},
+    {"s_list_safe_get", BSQPrimitiveImplTag::s_list_safe_get},
+    {"s_list_find_pred_ne", BSQPrimitiveImplTag::s_list_find_pred_ne},
+    {"s_list_find_pred_idx_ne", BSQPrimitiveImplTag::s_list_find_pred_idx_ne},
+    {"s_list_find_pred_last_ne", BSQPrimitiveImplTag::s_list_find_pred_last_ne},
+    {"s_list_find_pred_last_idx_ne", BSQPrimitiveImplTag::s_list_find_pred_last_idx_ne},
+    {"s_list_filter_pred_ne", BSQPrimitiveImplTag::s_list_filter_pred_ne},
+    {"s_list_filter_pred_idx_ne", BSQPrimitiveImplTag::s_list_filter_pred_idx_ne},
+    {"s_list_map_ne", BSQPrimitiveImplTag::s_list_map_ne},
+    {"s_list_map_idx_ne", BSQPrimitiveImplTag::s_list_map_idx_ne},
+    {"s_list_map_sync_ne", BSQPrimitiveImplTag::s_list_map_sync_ne},
+    {"s_list_sort_ne", BSQPrimitiveImplTag::s_list_sort_ne},
+    {"s_list_unique_from_sorted_ne", BSQPrimitiveImplTag::s_list_unique_from_sorted_ne},
+
+    {"s_map_size_ne", BSQPrimitiveImplTag::s_map_size_ne},
+    {"s_map_has_ne", BSQPrimitiveImplTag::s_map_has_ne},
+    {"s_map_find_ne", BSQPrimitiveImplTag::s_map_find_ne},
+    {"s_map_union_ne", BSQPrimitiveImplTag::s_map_union_ne},
+    {"s_map_submap_ne", BSQPrimitiveImplTag::s_map_submap_ne},
+    {"s_map_remap_ne", BSQPrimitiveImplTag::s_map_remap_ne},
+    {"s_map_add_ne", BSQPrimitiveImplTag::s_map_add_ne},
+    {"s_map_set_ne", BSQPrimitiveImplTag::s_map_set_ne},
+    {"s_map_remove_ne", BSQPrimitiveImplTag::s_map_remove_ne}
+};
+
 Argument jsonParse_Argument(json j)
 {
     return Argument{ j["kind"].get<ArgumentTag>(), j["location"].get<uint32_t>() };

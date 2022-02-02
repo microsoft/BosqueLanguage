@@ -2609,10 +2609,9 @@ bool ICPPParseJSON::parseStringImpl(const APIModule* apimodule, const IType* ity
     }
     else if(s.size() <= 128)
     {
-        auto stp = std::find_if(BSQWellKnownType::g_typeStringKCons, BSQWellKnownType::g_typeStringKCons + sizeof(BSQWellKnownType::g_typeStringKCons), [&s](const std::pair<size_t, const BSQType*>& cc) {
-            return cc.first > s.size();
-        });
-        rstr.u_data = Allocator::GlobalAllocator.allocateDynamic(stp->second);
+        auto stp = BSQStringKReprTypeAbstract::selectKReprForSize(s.size());
+
+        rstr.u_data = Allocator::GlobalAllocator.allocateDynamic(stp);
         BSQ_MEM_COPY(rstr.u_data, s.c_str(), s.size());
     }
     else

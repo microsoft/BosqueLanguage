@@ -500,7 +500,7 @@ class SMTBodyEmitter {
             bbody = this.typegen.coerce(bbody, lrecl, geninfo.resulttype);
         }
 
-        return SMTFunction.create(this.typegen.lookupFunctionName(geninfo.inv), args, this.typegen.getSMTTypeFor(geninfo.resulttype), this.typegen.generateResultTypeConstructorSuccess(geninfo.resulttype, bbody));
+        return SMTFunction.create(this.typegen.lookupFunctionName(geninfo.inv), args, this.typegen.getSMTTypeFor(geninfo.resulttype), bbody);
     }
 
     generateSingletonConstructorMap(geninfo: { srcFile: string, sinfo: SourceInfo, inv: string, argc: number, resulttype: MIRType }): SMTFunction {
@@ -539,7 +539,7 @@ class SMTBodyEmitter {
             assert(false, "generateSingletonConstructorMap -- only implemented for size 1 and 2")
         }
 
-        return SMTFunction.create(this.typegen.lookupFunctionName(geninfo.inv), args, this.typegen.getSMTTypeFor(geninfo.resulttype), bbody);
+        return SMTFunction.create(this.typegen.lookupFunctionName(geninfo.inv), args, this.typegen.generateResultType(geninfo.resulttype), bbody);
     }
 
     generateUpdateTupleIndexVirtual(geninfo: { inv: string, argflowtype: MIRType, updates: [number, MIRResolvedTypeKey][], resulttype: MIRType }): SMTFunction {

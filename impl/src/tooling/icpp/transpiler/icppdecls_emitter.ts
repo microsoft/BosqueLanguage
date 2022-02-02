@@ -3,9 +3,9 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { MIRAssembly, MIRConceptType, MIREntityTypeDecl, MIRInvokeDecl, MIRInvokePrimitiveDecl } from "../../../compiler/mir_assembly";
+import { MIRAssembly, MIRConceptType, MIREntityTypeDecl, MIRInvokeDecl, MIRInvokePrimitiveDecl, MIRObjectEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl } from "../../../compiler/mir_assembly";
 import { MIRFieldKey, MIRInvokeKey, MIRResolvedTypeKey, MIRVirtualMethodKey } from "../../../compiler/mir_ops";
-import { ICPPAssembly, ICPPConstDecl, ICPPParseTag, ICPPTypeEntity, ICPPTypeInlineUnion, ICPPTypeRecord, ICPPTypeRefUnion, TranspilerOptions } from "./icpp_assembly";
+import { ICPPAssembly, ICPPConstDecl, ICPPEntityLayoutInfo, ICPPLayoutCategory, ICPPRecordLayoutInfo, TranspilerOptions } from "./icpp_assembly";
 import { ICPPTypeEmitter } from "./icpptype_emitter";
 import { ICPPBodyEmitter } from "./iccpbody_emitter";
 import { constructCallGraphInfo } from "../../../compiler/mir_callg";
@@ -14,24 +14,30 @@ import { SourceInfo } from "../../../ast/parser";
 enum ICPPParseTag {
     BuiltinTag = 0x0,
     ValidatorTag,
-    RegexTag,
+    BoxedStructTag,
+    EnumTag,
+    StringOfTag,
+    DataStringTag,
+    DataBufferTag,
     TupleStructTag,
     TupleRefTag,
     RecordStruct,
     RecordRefTag,
     EntityObjectStructTag,
     EntityObjectRefTag,
-    EntityConstructableTag,
-    EntityConstructableInternal,
-    MaskTag,
-    PartialVectorTag,
+    EntityConstructableStructTag,
+    EntityConstructableRefTag,
+    EphemeralListTag,
+    EntityDeclOfTag,
     ListTag,
     StackTag,
     QueueTag,
     SetTag,
     MapTag,
-    EphemeralListTag,
-    BoxedStructTag,
+    PartialVector4Tag,
+    PartialVector8Tag,
+    ListTreeTag,
+    MapTreeTag,
     RefUnionTag,
     InlineUnionTag,
     UniversalUnionTag
@@ -51,18 +57,17 @@ class ICPPEmitter {
     }
 
     private static initializeICPPAssembly(assembly: MIRAssembly, temitter: ICPPTypeEmitter, entrypoint: MIRInvokeKey): ICPPAssembly {
-        const alltypes = [...assembly.typeMap].map((v) => temitter.getICPPTypeData(temitter.getMIRType(v[1].trkey)));
-        const decltypes = alltypes.filter((tt) => tt.ptag !== ICPPParseTag.BuiltinTag);
+        const decltypes = [...assembly.typeMap].filter((v) => !(assembly.entityDecls.get(v[0]) instanceof MIRPrimitiveInternalEntityTypeDecl)).map((v) => temitter.getICPPLayoutInfo(temitter.getMIRType(v[1].typeID)));
 
-        const alltypenames = alltypes.map((tt) =>tt.tkey);
-        const allproperties = new Set<string>(([] as string[]).concat(...decltypes.filter((tt) => tt instanceof ICPPTypeRecord).map((rt) => (rt as ICPPTypeRecord).propertynames)));
-        const allfields = new Set<MIRFieldKey>(([] as string[]).concat(...decltypes.filter((tt) => tt instanceof ICPPTypeEntity).map((rt) => (rt as ICPPTypeEntity).fieldnames)));
+        const alltypenames = [...assembly.typeMap].map((tt) => tt[0]);
+        const allproperties = new Set<string>(([] as string[]).concat(...decltypes.filter((tt) => tt instanceof ICPPRecordLayoutInfo).map((rt) => (rt as ICPPRecordLayoutInfo).propertynames)));
+        const allfields = new Set<MIRFieldKey>(([] as string[]).concat(...decltypes.filter((tt) => tt instanceof ICPPEntityLayoutInfo).map((rt) => (rt as ICPPEntityLayoutInfo).fieldnames)));
         
         const allinvokes = new Set([...assembly.invokeDecls, ...assembly.primitiveInvokeDecls]
             .filter((iiv) => !(iiv[1] instanceof MIRInvokePrimitiveDecl) || (iiv[1] as MIRInvokePrimitiveDecl).implkey !== "default")
             .map((iiv) => iiv[0]));
 
-        const vcallarray = [...assembly.entityDecls].map((edcl) => [...edcl[1].vcallMap].map((ee) => ee[0]));
+        const vcallarray = [...assembly.entityDecls].filter((edcl) => edcl[1] instanceof MIRObjectEntityTypeDecl).map((edcl) => [...(edcl[1] as MIRObjectEntityTypeDecl).vcallMap].map((ee) => ee[0]));
         const allvinvokes = new Set(...(([] as MIRVirtualMethodKey[]).concat(...vcallarray)));
 
         return new ICPPAssembly(decltypes.length, alltypenames, [...allproperties].sort(), [...allfields].sort(), [...allinvokes].sort(), [...allvinvokes].sort(), entrypoint);

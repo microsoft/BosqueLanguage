@@ -467,10 +467,10 @@ class ICPPAssembly
     vtable: {oftype: MIRResolvedTypeKey, vtable: {vcall: MIRVirtualMethodKey, inv: MIRInvokeKey}[]}[] = [];
     subtypes: Map<MIRResolvedTypeKey, Set<MIRResolvedTypeKey>> = new Map<MIRResolvedTypeKey, Set<MIRResolvedTypeKey>>();
 
-    typedecls: ICPPType[] = [];
+    typedecls: ICPPTypeSizeInfo[] = [];
     invdecls: ICPPInvokeDecl[] = [];
 
-    litdecls: { offset: number, storage: ICPPType, value: string }[] = [];
+    litdecls: { offset: number, storage: ICPPTypeSizeInfo, value: string }[] = [];
     constdecls: ICPPConstDecl[] = [];
 
     readonly entrypoint: MIRInvokeKey;
@@ -529,7 +529,7 @@ class ICPPAssembly
 
                     switch(edecl.ptag) {
                         case ICPPParseTag.ValidatorTag: {
-                            return edecl.jemitValidator((edecl.extradata as BSQRegex).jemit());
+                            return edecl.jemitValidator();
                         }
                         case ICPPParseTag.StringOfTag: {
                             return edecl.jemitStringOf(edecl.extradata as MIRResolvedTypeKey);

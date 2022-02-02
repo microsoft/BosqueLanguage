@@ -18,6 +18,10 @@ public:
 
     static std::map<std::string, BSQInvokeID> g_invokeToIdMap;
     static std::map<std::string, BSQVirtualInvokeID> g_vinvokeToIdMap;
+
+    static std::map<std::string, RefMask> g_stringmaskToDeclMap;
+
+    static std::map<std::string, BSQPrimitiveImplTag> g_primitiveinvokenameToIDMap;
 };
 
 enum class ArgumentTag
