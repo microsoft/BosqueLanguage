@@ -3,10 +3,13 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
+import { MIRAssembly, MIRConceptType, MIRConstructableEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIRDataBufferInternalEntityTypeDecl, MIRDataStringInternalEntityTypeDecl, MIREnumEntityTypeDecl, MIRFieldDecl, MIRObjectEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRRecordType, MIRStringOfInternalEntityTypeDecl, MIRTupleType, MIRType } from "../../../compiler/mir_assembly";
 import { MIRFieldKey, MIRGlobalKey, MIRInvokeKey, MIRResolvedTypeKey, MIRVirtualMethodKey } from "../../../compiler/mir_ops";
+import { ICPPParseTag } from "./icppdecls_emitter";
+import { ICPPTypeEmitter } from "./icpptype_emitter";
 import { Argument, ICPPOp, ParameterInfo } from "./icpp_exp";
 
-import { BSQRegex } from "../../../ast/bsqregex";
+import * as assert from "assert";
 
 type TranspilerOptions = {
 };
@@ -268,6 +271,20 @@ class ICPPEntityLayoutInfo extends ICPPLayoutInfo {
     }
 }
 
+class ICPPCollectionInternalsLayoutInfo extends ICPPLayoutInfo {
+    readonly xinfo: {name: string, type: MIRResolvedTypeKey, size: number, offset: number}[];
+
+    constructor(tkey: MIRResolvedTypeKey, allocinfo: ICPPTypeSizeInfo, xinfo: {name: string, type: MIRResolvedTypeKey, size: number, offset: number}[]) {
+        super(tkey, allocinfo, ICPPLayoutCategory.Ref);
+
+        this.xinfo = xinfo;
+    }
+
+    createFromLayoutInfo(tkey: MIRResolvedTypeKey): ICPPLayoutInfo {
+        return new ICPPLayoutInfoFixed(tkey, this.allocinfo.createFromSizeInfo(tkey), this.layout);
+    }
+}
+
 class ICPPEphemeralListLayoutInfo extends ICPPLayoutInfo {
     readonly etypes: MIRResolvedTypeKey[];
     readonly eoffsets: number[];
@@ -453,13 +470,12 @@ class ICPPConstDecl
 
 class ICPPAssembly
 {
-    readonly typecount: number;
     cbuffsize: number = 0;
     cmask: RefMask = "";
 
     readonly typenames: MIRResolvedTypeKey[];
     readonly propertynames: string[];
-    readonly fieldnames: MIRFieldKey[];
+    readonly fields: MIRFieldDecl[];
 
     readonly invokenames: MIRInvokeKey[];
     readonly vinvokenames: MIRVirtualMethodKey[];
@@ -467,118 +483,318 @@ class ICPPAssembly
     vtable: {oftype: MIRResolvedTypeKey, vtable: {vcall: MIRVirtualMethodKey, inv: MIRInvokeKey}[]}[] = [];
     subtypes: Map<MIRResolvedTypeKey, Set<MIRResolvedTypeKey>> = new Map<MIRResolvedTypeKey, Set<MIRResolvedTypeKey>>();
 
-    typedecls: ICPPTypeSizeInfo[] = [];
+    typedecls: ICPPLayoutInfo[] = [];
     invdecls: ICPPInvokeDecl[] = [];
 
     litdecls: { offset: number, storage: ICPPTypeSizeInfo, value: string }[] = [];
     constdecls: ICPPConstDecl[] = [];
 
-    readonly entrypoint: MIRInvokeKey;
-
-    constructor(typecount: number, typenames: MIRResolvedTypeKey[], propertynames: string[], fieldnames: MIRFieldKey[], invokenames: MIRInvokeKey[], vinvokenames: MIRVirtualMethodKey[], entrypoint: MIRInvokeKey) {
-        this.typecount = typecount;
-
+    constructor(typenames: MIRResolvedTypeKey[], propertynames: string[], fields: MIRFieldDecl[], invokenames: MIRInvokeKey[], vinvokenames: MIRVirtualMethodKey[]) {
         this.typenames = typenames;
         this.propertynames = propertynames;
-        this.fieldnames = fieldnames;
+        this.fields = fields;
 
         this.invokenames = invokenames;
         this.vinvokenames = vinvokenames;
-
-        this.entrypoint = entrypoint;
     }
 
-    jsonEmit(): object {
-        return {
-            typecount: this.typecount,
-            cbuffsize: this.cbuffsize,
-            cmask: this.cmask,
+    private generateBoxedTypeName(tkey: MIRResolvedTypeKey): string {
+        return tkey + "@boxed";
+    }
 
+    private processValidatorEntityDecl(edecl: MIRObjectEntityTypeDecl, icpptype: ICPPLayoutInfo): object  {
+        return {
+            ptag: ICPPParseTag.ValidatorTag,
+            tkey: icpptype.tkey,
+            name: edecl.tkey
+        };
+    }
+    
+    private processStringOfEntityDecl(edecl: MIRStringOfInternalEntityTypeDecl, icpptype: ICPPLayoutInfo): object {
+        return {
+            ptag: ICPPParseTag.StringOfTag,
+            tkey: icpptype.tkey,
+            name: edecl.tkey
+        };
+    }
+            
+    private processDataStringStringOfEntityDecl(edecl: MIRDataStringInternalEntityTypeDecl, icpptype: ICPPLayoutInfo): object {
+        return {
+            ptag: ICPPParseTag.DataStringTag,
+            tkey: icpptype.tkey,
+            name: edecl.tkey
+        };
+    }
+            
+    private processDataBufferStringOfEntityDecl(edecl: MIRDataBufferInternalEntityTypeDecl, icpptype: ICPPLayoutInfo): object {
+        return {
+            ptag: ICPPParseTag.DataBufferTag,
+            tkey: icpptype.tkey,
+            name: edecl.tkey
+        };
+    }
+
+    private processConstructableEntityDecl(edecl: MIRConstructableEntityTypeDecl, icpptype: ICPPLayoutInfo): object {
+        return {
+            ptag: ICPPParseTag.EntityDeclOfTag,
+            tkey: icpptype.tkey,
+            name: edecl.tkey,
+            oftype: edecl.fromtype
+        };
+    }
+    
+    private processEnumEntityDecl(edecl: MIREnumEntityTypeDecl, icpptype: ICPPLayoutInfo): object  {
+        const enumnames = edecl.enums.map((en) => edecl.tkey + "::" + en);
+
+        return {
+            ptag: ICPPParseTag.EnumTag,
+            tkey: icpptype.tkey,
+            name: edecl.tkey,
+            enumnames: enumnames
+        };
+    }
+
+    private processConstructableInternalEntityDecl(edecl: MIRConstructableInternalEntityTypeDecl, icpptype: ICPPLayoutInfo): object {
+        if(icpptype.layout === ICPPLayoutCategory.Ref) {
+            return {
+                ptag: ICPPParseTag.EntityConstructableRefTag,
+                tkey: icpptype.tkey,
+                name: edecl.tkey,
+                allocinfo: icpptype.allocinfo.jemit(),
+                oftype: edecl.fromtype
+            };
+        }
+        else {
+            return {
+                ptag: ICPPParseTag.EntityConstructableStructTag,
+                tkey: icpptype.tkey,
+                name: edecl.tkey,
+                allocinfo: icpptype.allocinfo.jemit(),
+                oftype: edecl.fromtype,
+                norefs: icpptype.canScalarStackAllocate(),
+                boxedtype: this.generateBoxedTypeName(icpptype.tkey)
+            };
+        }
+    }
+
+    private processPrimitiveListEntityDecl(edecl: MIRPrimitiveListEntityTypeDecl, icpptype: ICPPLayoutInfo): object {
+        return {
+            ptag: ICPPParseTag.ListTag,
+            tkey: icpptype.tkey,
+            name: edecl.tkey,
+            etype: edecl.oftype
+        };
+    }
+
+    private processPrimitiveStackEntityDecl(edecl: MIRPrimitiveStackEntityTypeDecl, icpptype: ICPPLayoutInfo): object {
+        assert(false, "MIRPrimitiveStackEntityTypeDecl");
+        return {};
+    }
+
+    private processPrimitiveQueueEntityDecl(edecl: MIRPrimitiveQueueEntityTypeDecl, icpptype: ICPPLayoutInfo): object {
+        assert(false, "MIRPrimitiveQueueEntityTypeDecl");
+        return {};
+    }
+
+    private processPrimitiveSetEntityDecl(edecl: MIRPrimitiveSetEntityTypeDecl, icpptype: ICPPLayoutInfo): object {
+        assert(false, "MIRPrimitiveSetEntityTypeDecl");
+        return {};
+    }
+
+    private processPrimitiveMapEntityDecl(edecl: MIRPrimitiveMapEntityTypeDecl, icpptype: ICPPLayoutInfo): object {
+        return {
+            ptag: ICPPParseTag.ListTag,
+            tkey: icpptype.tkey,
+            name: edecl.tkey,
+            ktype: edecl.getTypeK(),
+            vtype: edecl.getTypeV(),
+            etype: edecl.oftype
+        };
+    }
+
+    private processPartialVector4EntityDecl(edecl: MIRPrimitiveInternalEntityTypeDecl, icpptype: ICPPCollectionInternalsLayoutInfo): object {
+        const etype = edecl.terms.get("T") as MIRType;
+
+        return {
+            ptag: ICPPParseTag.PartialVector4Tag,
+            tkey: edecl.tkey,
+            name: edecl.tkey,
+            heapsize: icpptype.allocinfo.heapsize,
+            heapmask: icpptype.allocinfo.heapmask,
+            etype: etype.typeID,
+            esize: icpptype.xinfo[0].size
+        };
+    }
+
+    private processPartialVector8EntityDecl(edecl: MIRPrimitiveInternalEntityTypeDecl, icpptype: ICPPCollectionInternalsLayoutInfo): object {
+        return {
+            ptag: ICPPParseTag.PartialVector4Tag,
+            tkey: edecl.tkey,
+            name: edecl.tkey,
+            heapsize: icpptype.allocinfo.heapsize,
+            heapmask: icpptype.allocinfo.heapmask,
+            etype: icpptype.xinfo[0].type,
+            esize: icpptype.xinfo[0].size
+        };
+    }
+
+    private processListTreeEntityDecl(edecl: MIRPrimitiveInternalEntityTypeDecl, icpptype: ICPPCollectionInternalsLayoutInfo): object {
+        return {
+            ptag: ICPPParseTag.PartialVector4Tag,
+            tkey: edecl.tkey,
+            name: edecl.tkey,
+            etype: icpptype.xinfo[0].type,
+        };
+    }
+
+    private processMapTreeEntityDecl(edecl: MIRPrimitiveInternalEntityTypeDecl, icpptype: ICPPCollectionInternalsLayoutInfo): object {
+        return {
+            ptag: ICPPParseTag.PartialVector4Tag,
+            tkey: edecl.tkey,
+            name: edecl.tkey,
+            heapsize: icpptype.allocinfo.heapsize,
+            heapmask: icpptype.allocinfo.heapmask,
+            ktype: icpptype.xinfo[0].type,
+            vtype: icpptype.xinfo[1].type,
+            koffset: icpptype.xinfo[0].offset,
+            voffset: icpptype.xinfo[1].offset
+        };
+    }
+
+    jsonEmit(assembly: MIRAssembly, entrypoints: MIRInvokeKey[]): object {
+        const entitydecls = [...assembly.entityDecls].sort((a, b) => a[0].localeCompare(b[0])).map((dclp) => dclp[1]).map((edcl) => {
+            const icpplayout = this.typedecls.find((dd) => dd.tkey === edcl.tkey) as ICPPLayoutInfo;
+
+            if (edcl.attributes.includes("__stringof_type")) {
+                return this.processStringOfEntityDecl(edcl as MIRStringOfInternalEntityTypeDecl, icpplayout);
+            }
+            else if (edcl.attributes.includes("__datastring_type")) {
+                return this.processDataStringStringOfEntityDecl(edcl as MIRDataStringInternalEntityTypeDecl, icpplayout);
+            }
+            else if (edcl.attributes.includes("__databuffer_type")) {
+                return this.processDataBufferStringOfEntityDecl(edcl as MIRDataBufferInternalEntityTypeDecl, icpplayout);
+            }
+            else if (edcl.attributes.includes("__typedprimitive")) {
+                return this.processConstructableEntityDecl(edcl as MIRConstructableEntityTypeDecl, icpplayout);
+            }
+            else if (edcl.attributes.includes("__enum_type")) {
+                return this.processEnumEntityDecl(edcl as MIREnumEntityTypeDecl, icpplayout);
+            }
+            else if (edcl.attributes.includes("__ok_type")) {
+                return this.processConstructableInternalEntityDecl(edcl as MIRConstructableInternalEntityTypeDecl, icpplayout);
+            }
+            else if (edcl.attributes.includes("__err_type")) {
+                return this.processConstructableInternalEntityDecl(edcl as MIRConstructableInternalEntityTypeDecl, icpplayout);
+            }
+            else if (edcl.attributes.includes("__something_type")) {
+                return this.processConstructableInternalEntityDecl(edcl as MIRConstructableInternalEntityTypeDecl, icpplayout);
+            }
+            else if (edcl.attributes.includes("__list_type")) {
+                return this.processPrimitiveListEntityDecl(edcl as MIRPrimitiveListEntityTypeDecl, icpplayout);
+            }
+            else if (edcl.attributes.includes("__stack_type")) {
+                return this.processPrimitiveStackEntityDecl(edcl as MIRPrimitiveStackEntityTypeDecl, icpplayout);
+            }
+            else if (edcl.attributes.includes("__queue_type")) {
+                return this.processPrimitiveQueueEntityDecl(edcl as MIRPrimitiveQueueEntityTypeDecl, icpplayout);
+            }
+            else if (edcl.attributes.includes("__set_type")) {
+                return this.processPrimitiveSetEntityDecl(edcl as MIRPrimitiveSetEntityTypeDecl, icpplayout);
+            }
+            else if (edcl.attributes.includes("__map_type")) {
+                return this.processPrimitiveMapEntityDecl(edcl as MIRPrimitiveMapEntityTypeDecl, icpplayout);
+            }
+            else if (edcl.attributes.includes("__partial_vector4_type")) {
+                return this.processPartialVector4EntityDecl(edcl as MIRPrimitiveInternalEntityTypeDecl, icpplayout as ICPPCollectionInternalsLayoutInfo);
+            }
+            else if (edcl.attributes.includes("__partial_vector8_type")) {
+                return this.processPartialVector8EntityDecl(edcl as MIRPrimitiveInternalEntityTypeDecl, icpplayout as ICPPCollectionInternalsLayoutInfo);
+            }
+            else if (edcl.attributes.includes("__map_type")) {
+                return this.processListTreeEntityDecl(edcl as MIRPrimitiveInternalEntityTypeDecl, icpplayout as ICPPCollectionInternalsLayoutInfo);
+            }
+            else if (edcl.attributes.includes("__map_type")) {
+                return this.processMapTreeEntityDecl(edcl as MIRPrimitiveInternalEntityTypeDecl, icpplayout as ICPPCollectionInternalsLayoutInfo);
+            }
+            else if (edcl instanceof MIRObjectEntityTypeDecl) {
+                return this.processEntityDecl(edcl, icpplayout);
+            }
+            else {
+                return undefined;
+            }
+        }).filter((icppt) => icppt !== undefined);
+
+        const conceptdecls = [...assembly.conceptDecls].sort((a, b) => a[0].localeCompare(b[0])).map((dclp) => dclp[1]).map((tdcl) => {
+            const icpplayout = this.typedecls.find((dd) => dd.tkey === tdcl.tkey) as ICPPLayoutInfo;
+
+            return this.processConceptDecl(tdcl, icpplayout);
+        });
+
+        const tupledecls = [...assembly.tupleDecls].sort((a, b) => a[0].localeCompare(b[0])).map((dclp) => dclp[1]).map((tdcl) => {
+            const icpplayout = this.typedecls.find((dd) => dd.tkey === tdcl.typeID) as ICPPLayoutInfo;
+
+            return this.processTupleDecl(tdcl, icpplayout);
+        });
+
+        const recorddecls = [...assembly.recordDecls].sort((a, b) => a[0].localeCompare(b[0])).map((dclp) => dclp[1]).map((rdcl) => {
+            const icpplayout = this.typedecls.find((dd) => dd.tkey === rdcl.typeID) as ICPPLayoutInfo;
+
+            return this.processRecordDecl(rdcl, icpplayout);
+        });
+
+        const elistdecls = [...assembly.ephemeralListDecls].sort((a, b) => a[0].localeCompare(b[0])).map((dclp) => dclp[1]).map((eldcl) => {
+            const icpplayout = this.typedecls.find((dd) => dd.tkey === eldcl.typeID) as ICPPLayoutInfo;
+
+            return this.processEphemeralListDecl(eldcl, icpplayout);
+        });
+
+        const uniondecls = [...assembly.typeMap].filter((td) => td[1].options.length > 1).sort((a, b) => a[0].localeCompare(b[0])).map((td) => td[1]).map((ud) => {
+            const icpplayout = this.typedecls.find((dd) => dd.tkey === ud.typeID) as ICPPLayoutInfo;
+
+            return this.processUnionDecl(eldcl, icpplayout);
+        });
+
+        const boxedtypes = ;
+
+        const lflavors = ;
+
+        const mflavors = ;
+
+        const validators = if (edcl.attributes.includes("__validator_type")) {
+            return this.processValidatorEntityDecl(edcl as MIRObjectEntityTypeDecl, icpplayout);
+        };
+
+        const regexes = ;
+
+        return {
+            cmask: this.cmask,
+            cbuffsize: this.cbuffsize,
+            
             typenames: this.typenames.sort(),
             propertynames: this.propertynames.sort(),
-            fieldnames: this.fieldnames.sort(),
+            fieldnames: this.fields.map((ff) => ff.fkey).sort(),
+
+            fielddecls: this.fields.sort((a, b) => a.fkey.localeCompare(b.fkey)).map((ff) => {
+                return {
+                    fkey: ff.fkey,
+                    fname: ff.fname,
+                    declaredType: ff.declaredType,
+                    isOptional: ff.isOptional
+                }
+            }),
 
             invokenames: this.invokenames.sort(),
             vinvokenames: this.vinvokenames.sort(),
 
             vtable: this.vtable.sort((a, b) => a.oftype.localeCompare(b.oftype)),
 
-            typedecls: this.typedecls.sort((a, b) => a.tkey.localeCompare(b.tkey)).map((tdecl) => {
-                const vtbl = this.vtable.find((vte) => vte.oftype === tdecl.tkey) as {oftype: MIRResolvedTypeKey, vtable: {vcall: MIRVirtualMethodKey, inv: MIRInvokeKey}[]};
+            typedecls: [...entitydecls, ...conceptdecls, ...tupledecls, ...recorddecls, ...elistdecls, ...uniondecls],
 
-                if(tdecl instanceof ICPPTypeRegister) {
-                    return tdecl.jemitRegister(vtbl.vtable);
-                }
-                else if (tdecl instanceof ICPPTypeTuple) {
-                    return tdecl.jemitTupleType(vtbl.vtable);
-                }
-                else if (tdecl instanceof ICPPTypeRecord) {
-                    return tdecl.jemitRecord(vtbl.vtable);
-                }
-                else if (tdecl instanceof ICPPTypeEphemeralList) {
-                    return tdecl.jemitEphemeralList();
-                }
-                else if(tdecl instanceof ICPPTypeInlineUnion) {
-                    return tdecl.jemitInlineUnion([...(this.subtypes.get(tdecl.tkey) as Set<MIRResolvedTypeKey>)].sort());
-                }
-                else if (tdecl instanceof ICPPTypeRefUnion) {
-                    return tdecl.jemitRefUnion([...(this.subtypes.get(tdecl.tkey) as Set<MIRResolvedTypeKey>)].sort());
-                }
-                else {
-                    const edecl = tdecl as ICPPTypeEntity;
+            boxeddecls: boxedtypes,
 
-                    switch(edecl.ptag) {
-                        case ICPPParseTag.ValidatorTag: {
-                            return edecl.jemitValidator();
-                        }
-                        case ICPPParseTag.StringOfTag: {
-                            return edecl.jemitStringOf(edecl.extradata as MIRResolvedTypeKey);
-                        }
-                        case ICPPParseTag.DataStringTag: {
-                            return edecl.jemitDataString(edecl.extradata as MIRResolvedTypeKey);
-                        }
-                        case ICPPParseTag.TypedNumberTag: {
-                            //
-                            //TODO: we need to switch this to encode the underlying and primitive types in the type decl really -- not as
-                            //         the funky v field -- we probably want to add some extra access (and maybe constructor) magic too 
-                            //
-                            return edecl.jemitTypedNumber(edecl.extradata as MIRResolvedTypeKey, edecl.extradata as MIRResolvedTypeKey);
-                        }
-                        case ICPPParseTag.EnumTag: {
-                            const ddcls = this.constdecls.filter((cdcl) => cdcl.optenumname !== undefined && cdcl.optenumname[0] === tdecl.tkey);
-                            const enuminvs = ddcls.map((ddcl) => [`${(ddcl.optenumname as [string, string])[0]}::${(ddcl.optenumname as [string, string])[1]}`, ddcl.storageOffset] as [string, number]);
-                            return edecl.jemitEnum(edecl.extradata as MIRResolvedTypeKey, enuminvs);
-                        }
-                        case ICPPParseTag.VectorTag: {
-                            const sdata = edecl.extradata as ICPPTypeSizeInfoSimple;
-                            return edecl.jemitVector(sdata.tkey, sdata.inlinedatasize, sdata.inlinedmask);
-                        }
-                        case ICPPParseTag.ListTag: {
-                            const sdata = edecl.extradata as ICPPTypeSizeInfoSimple;
-                            return edecl.jemitList(sdata.tkey, sdata.inlinedatasize, sdata.inlinedmask);
-                        }
-                        case ICPPParseTag.StackTag: {
-                            const sdata = edecl.extradata as ICPPTypeSizeInfoSimple;
-                            return edecl.jemitStack(sdata.tkey, sdata.inlinedatasize, sdata.inlinedmask);
-                        }
-                        case ICPPParseTag.QueueTag: {
-                            const sdata = edecl.extradata as ICPPTypeSizeInfoSimple;
-                            return edecl.jemitQueue(sdata.tkey, sdata.inlinedatasize, sdata.inlinedmask);
-                        }
-                        case ICPPParseTag.SetTag: {
-                            const sdata = edecl.extradata as ICPPTypeSizeInfoSimple;
-                            return edecl.jemitSet(sdata.tkey, sdata.inlinedatasize, sdata.inlinedmask);
-                        }
-                        case ICPPParseTag.MapTag: {
-                            const keysdata = edecl.extradata[0] as ICPPTypeSizeInfoSimple;
-                            const valsdata = edecl.extradata[1] as ICPPTypeSizeInfoSimple;
-                            return edecl.jemitMap(keysdata.tkey, keysdata.inlinedatasize, keysdata.inlinedmask, valsdata.tkey, valsdata.inlinedatasize, valsdata.inlinedmask);
-                        }
-                        default:
-                            return edecl.jemitEntity(vtbl.vtable);
-                    }
-                }
-            }),
+            listflavors: lflavors,
+
+            mapflavors: mflavors,
 
             invdecls: this.invdecls.sort((a, b) => a.ikey.localeCompare(b.ikey)).map((inv) => inv.jsonEmit()),
 
@@ -586,9 +802,11 @@ class ICPPAssembly
                 return {offset: lv.offset, storage: lv.storage.tkey, value: lv.value};
             }),
 
-            constdecls: this.constdecls.sort((a, b) => a.gkey.localeCompare(b.gkey)).map((cd) => cd.jsonEmit()),
+            validators: validators,
 
-            entrypoint: this.entrypoint
+            regexes: regexes,
+
+            constdecls: this.constdecls.sort((a, b) => a.gkey.localeCompare(b.gkey)).map((cd) => cd.jsonEmit())
         };
     }
 }
@@ -596,7 +814,7 @@ class ICPPAssembly
 export {
     TranspilerOptions, SourceInfo, ICPP_WORD_SIZE, UNIVERSAL_CONTENT_SIZE, UNIVERSAL_TOTAL_SIZE, UNIVERSAL_MASK,
     ICPPTypeSizeInfoSimple, ICPPTypeSizeInfo, RefMask,
-    ICPPLayoutCategory, ICPPLayoutInfo, ICPPLayoutInfoFixed, ICPPTupleLayoutInfo, ICPPRecordLayoutInfo, ICPPEntityLayoutInfo, ICPPEphemeralListLayoutInfo, 
+    ICPPLayoutCategory, ICPPLayoutInfo, ICPPLayoutInfoFixed, ICPPTupleLayoutInfo, ICPPRecordLayoutInfo, ICPPEntityLayoutInfo, ICPPCollectionInternalsLayoutInfo, ICPPEphemeralListLayoutInfo, 
     ICPPLayoutInlineUnion, ICPPLayoutRefUnion, ICPPLayoutUniversalUnion,
     ICPPInvokeDecl, ICPPFunctionParameter, ICPPPCode, ICPPInvokeBodyDecl, ICPPInvokePrimitiveDecl,
     ICPPConstDecl,

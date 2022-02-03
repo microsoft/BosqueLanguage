@@ -6,7 +6,7 @@
 import { MIRAssembly, MIRConceptType, MIRConceptTypeDecl, MIRConstructableEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIRDataBufferInternalEntityTypeDecl, MIRDataStringInternalEntityTypeDecl, MIREntityType, MIREntityTypeDecl, MIREnumEntityTypeDecl, MIREphemeralListType, MIRInternalEntityTypeDecl, MIRObjectEntityTypeDecl, MIRPrimitiveCollectionEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRRecordType, MIRStringOfInternalEntityTypeDecl, MIRTupleType, MIRType } from "../../../compiler/mir_assembly";
 import { MIRFieldKey, MIRGlobalKey, MIRInvokeKey, MIRResolvedTypeKey } from "../../../compiler/mir_ops";
 
-import { ICPPTypeSizeInfoSimple, RefMask, TranspilerOptions, ICPP_WORD_SIZE, ICPPLayoutInfo, UNIVERSAL_MASK, UNIVERSAL_TOTAL_SIZE, ICPPLayoutCategory, ICPPLayoutUniversalUnion, ICPPLayoutRefUnion, ICPPLayoutInlineUnion, ICPPTupleLayoutInfo, ICPPRecordLayoutInfo, ICPPEntityLayoutInfo, ICPPLayoutInfoFixed, ICPPEphemeralListLayoutInfo,  } from "./icpp_assembly";
+import { ICPPTypeSizeInfoSimple, RefMask, TranspilerOptions, ICPP_WORD_SIZE, ICPPLayoutInfo, UNIVERSAL_MASK, UNIVERSAL_TOTAL_SIZE, ICPPLayoutCategory, ICPPLayoutUniversalUnion, ICPPLayoutRefUnion, ICPPLayoutInlineUnion, ICPPTupleLayoutInfo, ICPPRecordLayoutInfo, ICPPEntityLayoutInfo, ICPPLayoutInfoFixed, ICPPEphemeralListLayoutInfo, ICPPCollectionInternalsLayoutInfo, ICPPTypeSizeInfo,  } from "./icpp_assembly";
 
 import { ArgumentTag, Argument, ICPPOp, ICPPOpEmitter, ICPPStatementGuard, TargetVar, NONE_VALUE_POSITION } from "./icpp_exp";
 import { SourceInfo } from "../../../ast/parser";
@@ -519,9 +519,40 @@ class ICPPTypeEmitter {
                     return ICPPLayoutInfoFixed.createByRegisterLayout(entity.tkey, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1");
                 }
                 else {
-                    assert(false, "Unknown primitive internal entity");
+                    if(entity.name === "PartialVector4") {
+                        const etype = entity.terms.get("T") as MIRType;
+                        const elayout = this.getICPPTypeInfoShallow(etype);
+                        const allocinfo = ICPPTypeSizeInfo.createByRefSizeInfo(entity.tkey, elayout.inlinedatasize * 4, (elayout.inlinedmask + elayout.inlinedmask + elayout.inlinedmask + elayout.inlinedmask));
 
-                    return ICPPLayoutInfoFixed.createByRefLayout(entity.tkey, ICPP_WORD_SIZE, undefined);
+                        return new ICPPCollectionInternalsLayoutInfo(entity.tkey, allocinfo, [{name: "T", type: etype.typeID, size: elayout.inlinedatasize, offset: 0}]);
+                    }
+                    else if (entity.name === "PartialVector8") {
+                        const etype = entity.terms.get("T") as MIRType;
+                        const elayout = this.getICPPTypeInfoShallow(etype);
+                        const allocinfo = ICPPTypeSizeInfo.createByRefSizeInfo(entity.tkey, elayout.inlinedatasize * 8, (elayout.inlinedmask + elayout.inlinedmask + elayout.inlinedmask + elayout.inlinedmask + elayout.inlinedmask + elayout.inlinedmask + elayout.inlinedmask + elayout.inlinedmask));
+
+                        return new ICPPCollectionInternalsLayoutInfo(entity.tkey, allocinfo, [{name: "T", type: etype.typeID, size: elayout.inlinedatasize, offset: 0}]);
+                    }
+                    else if (entity.name === "ListTree") {
+                        const allocinfo = ICPPTypeSizeInfo.createByRefSizeInfo(entity.tkey, ICPP_WORD_SIZE * 3, "221");
+
+                        return new ICPPCollectionInternalsLayoutInfo(entity.tkey, allocinfo, []);
+                    }
+                    else if (entity.name === "MapTree") {
+                        const ktype = entity.terms.get("K") as MIRType;
+                        const klayout = this.getICPPTypeInfoShallow(ktype);
+                
+                        const vtype = entity.terms.get("V") as MIRType;
+                        const vlayout = this.getICPPTypeInfoShallow(vtype);
+
+                        const allocinfo = ICPPTypeSizeInfo.createByRefSizeInfo(entity.tkey, (ICPP_WORD_SIZE * 2) + klayout.inlinedatasize + vlayout.inlinedatasize, ("22" + klayout.inlinedmask + vlayout.inlinedmask));
+
+                        return new ICPPCollectionInternalsLayoutInfo(entity.tkey, allocinfo, [{name: "K", type: ktype.typeID, size: klayout.inlinedatasize, offset: 16}, {name: "V", type: vtype.typeID, size: vlayout.inlinedatasize, offset: 16 + klayout.inlinedatasize}]);
+                    }
+                    else {
+                        assert(false, "Unknown primitive internal entity");
+                        return ICPPLayoutInfoFixed.createByRefLayout(entity.tkey, ICPP_WORD_SIZE, undefined);
+                    }
                 }
             }
             else if (entity instanceof MIRStringOfInternalEntityTypeDecl) {

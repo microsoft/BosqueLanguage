@@ -207,9 +207,10 @@ class MIRFieldDecl {
     readonly sourceLocation: SourceInfo;
     readonly srcFile: string;
 
+    readonly isOptional: boolean;
     readonly declaredType: MIRResolvedTypeKey;
 
-    constructor(enclosingDecl: MIRResolvedTypeKey, attributes: string[], srcInfo: SourceInfo, srcFile: string, fkey: MIRFieldKey, fname: string, dtype: MIRResolvedTypeKey) {
+    constructor(enclosingDecl: MIRResolvedTypeKey, attributes: string[], srcInfo: SourceInfo, srcFile: string, fkey: MIRFieldKey, fname: string, isOptional: boolean, dtype: MIRResolvedTypeKey) {
         this.enclosingDecl = enclosingDecl;
         this.attributes = attributes;
 
@@ -219,15 +220,16 @@ class MIRFieldDecl {
         this.sourceLocation = srcInfo;
         this.srcFile = srcFile;
 
+        this.isOptional = isOptional;
         this.declaredType = dtype;
     }
 
     jemit(): object {
-        return { enclosingDecl: this.enclosingDecl, attributes: this.attributes, fkey: this.fkey, fname: this.fname, sinfo: jemitsinfo(this.sourceLocation), file: this.srcFile, declaredType: this.declaredType };
+        return { enclosingDecl: this.enclosingDecl, attributes: this.attributes, fkey: this.fkey, fname: this.fname, sinfo: jemitsinfo(this.sourceLocation), file: this.srcFile, isOptional: this.isOptional, declaredType: this.declaredType };
     }
 
     static jparse(jobj: any): MIRFieldDecl {
-        return new MIRFieldDecl(jobj.enclosingDecl, jobj.attributes, jparsesinfo(jobj.sinfo), jobj.file, jobj.fkey, jobj.fname, jobj.declaredType);
+        return new MIRFieldDecl(jobj.enclosingDecl, jobj.attributes, jparsesinfo(jobj.sinfo), jobj.file, jobj.fkey, jobj.fname, jobj.isOptional, jobj.declaredType);
     }
 }
 

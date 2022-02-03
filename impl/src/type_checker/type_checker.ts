@@ -6842,7 +6842,7 @@ class TypeChecker {
                             const dtypeResolved = this.resolveAndEnsureTypeOnly(f.sourceLocation, f.declaredType, binds);
                             const dtype = this.m_emitter.registerResolvedTypeReference(dtypeResolved);
 
-                            const mfield = new MIRFieldDecl(tkey, f.attributes, f.sourceLocation, f.srcFile, fkey, f.name, dtype.typeID);
+                            const mfield = new MIRFieldDecl(tkey, f.attributes, f.sourceLocation, f.srcFile, fkey, f.name, f.value !== undefined, dtype.typeID);
                             this.m_emitter.masm.fieldDecls.set(fkey, mfield);
                         }
 

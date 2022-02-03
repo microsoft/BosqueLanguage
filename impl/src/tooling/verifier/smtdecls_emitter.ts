@@ -653,11 +653,8 @@ class SMTEmitter {
             else if (this.temitter.isUniqueEntityType(tt)) {
                 const etype = tt.options[0] as MIREntityType;
                 const edecl = this.temitter.assembly.entityDecls.get(etype.typeID) as MIREntityTypeDecl;
-
-                if (edecl instanceof MIRObjectEntityTypeDecl) {
-                    this.generateAPITypeConstructorFunction_Object(tt, havocfuncs, ufuncs);
-                }
-                else if (edecl.attributes.includes("__stringof_type")) {
+ 
+                if (edecl.attributes.includes("__stringof_type")) {
                     this.generateAPITypeConstructorFunction_StringOf(tt, havocfuncs, ufuncs);
                 }
                 else if (edecl.attributes.includes("__datastring_type")) {
@@ -695,6 +692,9 @@ class SMTEmitter {
                 }
                 else if (edecl.attributes.includes("__map_type")) {
                     this.generateAPITypeConstructorFunction_Map(tt, havocfuncs, ufuncs);
+                }
+                else if (edecl instanceof MIRObjectEntityTypeDecl) {
+                    this.generateAPITypeConstructorFunction_Object(tt, havocfuncs, ufuncs);
                 }
                 else {
                     //Don't need to do anything
