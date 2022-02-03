@@ -308,6 +308,7 @@ enum class BSQPrimitiveImplTag
     bytebuffer_getformat,
     bytebuffer_getcompression,
 
+    s_list_build_k,
     s_list_size_ne,
     s_list_reduce_ne,
     s_list_reduce_idx_ne,
@@ -331,6 +332,8 @@ enum class BSQPrimitiveImplTag
     s_list_map_sync_ne,
     s_list_sort_ne,
     s_list_unique_from_sorted_ne,
+
+    s_map_build_k,
     s_map_size_ne,
     s_map_has_ne,
     s_map_find_ne,

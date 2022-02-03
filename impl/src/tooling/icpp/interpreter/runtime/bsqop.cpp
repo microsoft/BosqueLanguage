@@ -58,6 +58,7 @@ std::map<std::string, BSQPrimitiveImplTag> g_primitiveinvokenameToIDMap = {
     {"bytebuffer_getformat", BSQPrimitiveImplTag::bytebuffer_getformat},
     {"bytebuffer_getcompression", BSQPrimitiveImplTag::bytebuffer_getcompression},
 
+    {"s_list_build_k", BSQPrimitiveImplTag::s_list_build_k},
     {"s_list_size_ne", BSQPrimitiveImplTag::s_list_size_ne},
     {"s_list_reduce_ne", BSQPrimitiveImplTag::s_list_reduce_ne},
     {"s_list_reduce_idx_ne", BSQPrimitiveImplTag::s_list_reduce_idx_ne},
@@ -82,6 +83,7 @@ std::map<std::string, BSQPrimitiveImplTag> g_primitiveinvokenameToIDMap = {
     {"s_list_sort_ne", BSQPrimitiveImplTag::s_list_sort_ne},
     {"s_list_unique_from_sorted_ne", BSQPrimitiveImplTag::s_list_unique_from_sorted_ne},
 
+    {"s_map_build_k", BSQPrimitiveImplTag::s_map_build_k},
     {"s_map_size_ne", BSQPrimitiveImplTag::s_map_size_ne},
     {"s_map_has_ne", BSQPrimitiveImplTag::s_map_has_ne},
     {"s_map_find_ne", BSQPrimitiveImplTag::s_map_find_ne},

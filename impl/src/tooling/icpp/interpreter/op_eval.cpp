@@ -2130,6 +2130,13 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         SLPTR_STORE_CONTENTS_AS(BSQNat, resultsl, (BSQNat)bb.compression);
         break;
     }
+     case BSQPrimitiveImplTag::s_list_build_k: {
+        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
+        auto rres = BSQListOps::list_cons(lflavor, params);
+        
+        LIST_STORE_RESULT_REPR(rres, resultsl);
+        break;
+    }
     case BSQPrimitiveImplTag::s_list_size_ne: {
         auto count = LIST_LOAD_TYPE_INFO_REPR(params[0])->getCount(LIST_LOAD_DATA(params[0]));
         
@@ -2291,6 +2298,13 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
 
         auto rr = BSQListOps::s_unique_from_sorted_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), invk->pcodes.find("eq")->second, params);
         LIST_STORE_RESULT_REPR(rr, resultsl);
+        break;
+    }
+     case BSQPrimitiveImplTag::s_map_build_k: {
+        const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.find(std::make_pair(invk->binds.find("K")->second->tid, invk->binds.find("V")->second->tid))->second;
+        
+        auto rr = BSQMapOps::map_cons(mflavor, params);
+        MAP_STORE_RESULT_REPR(rr, params.size(), resultsl);
         break;
     }
     case BSQPrimitiveImplTag::s_map_size_ne: {

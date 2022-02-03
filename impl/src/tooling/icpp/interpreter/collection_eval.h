@@ -23,12 +23,24 @@ public:
 
     inline static void* list_consk(const BSQListTypeFlavor& lflavor, const std::vector<StorageLocationPtr>& params)
     {
-         Allocator::GlobalAllocator.ensureSpace(sizeof(GC_META_DATA_WORD) + lflavor.pv8type->allocinfo.heapsize);
+        Allocator::GlobalAllocator.ensureSpace(sizeof(GC_META_DATA_WORD) + lflavor.pv8type->allocinfo.heapsize);
 
         auto res = Allocator::GlobalAllocator.allocateSafe((params.size() <= 4) ? lflavor.pv4type : lflavor.pv8type);
         BSQPartialVectorType::initializePVData(res, params, lflavor.entrytype->allocinfo.inlinedatasize);
 
         return res;
+    }
+
+    static void* list_cons(const BSQListTypeFlavor& lflavor, const std::vector<StorageLocationPtr>& params)
+    {
+        if(params.size() <= 8)
+        {
+            return list_consk(lflavor, params);
+        }
+        else
+        {
+            assert(false, "list_cons -- not implemented");
+        }
     }
 
     static void* list_append(const BSQListTypeFlavor& lflavor, void* l, void* r)
@@ -429,6 +441,22 @@ class BSQMapOps
 {
 public:
     static std::map<std::pair<BSQTypeID, BSQTypeID>, BSQMapTypeFlavor> g_flavormap; //map from entry type to the flavors of the repr
+
+    static void* map_cons(const BSQMapTypeFlavor& mflavor, const std::vector<StorageLocationPtr>& params)
+    {
+        if(params.size() == 1)
+        {
+            void* repr = Allocator::GlobalAllocator.allocateDynamic(mflavor.treetype);
+            const BSQTupleInfo* tupinfo = dynamic_cast<const BSQTupleInfo*>(mflavor.tupletype);
+
+            mflavor.treetype->initializeLeaf(repr, mflavor.tupletype->indexStorageLocationOffset(params[0], tupinfo->idxoffsets[0]), mflavor.keytype, mflavor.tupletype->indexStorageLocationOffset(params[0], tupinfo->idxoffsets[1]), mflavor.valuetype);
+            return repr;
+        }
+        else
+        {
+            assert(false, "map_cons -- not implemented");
+        }
+    }
 
     static void* s_lookup_ne(void* t, const BSQMapTreeType* ttype, StorageLocationPtr kl, const BSQType* ktype)
     {

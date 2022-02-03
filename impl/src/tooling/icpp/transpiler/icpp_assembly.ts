@@ -3,10 +3,9 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { MIRAssembly, MIRConceptType, MIRConstructableEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIRDataBufferInternalEntityTypeDecl, MIRDataStringInternalEntityTypeDecl, MIREnumEntityTypeDecl, MIRFieldDecl, MIRObjectEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRRecordType, MIRStringOfInternalEntityTypeDecl, MIRTupleType, MIRType } from "../../../compiler/mir_assembly";
+import { MIRAssembly, MIRConceptTypeDecl, MIRConstructableEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIRDataBufferInternalEntityTypeDecl, MIRDataStringInternalEntityTypeDecl, MIREnumEntityTypeDecl, MIREphemeralListType, MIRFieldDecl, MIRObjectEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRRecordType, MIRStringOfInternalEntityTypeDecl, MIRTupleType, MIRType } from "../../../compiler/mir_assembly";
 import { MIRFieldKey, MIRGlobalKey, MIRInvokeKey, MIRResolvedTypeKey, MIRVirtualMethodKey } from "../../../compiler/mir_ops";
 import { ICPPParseTag } from "./icppdecls_emitter";
-import { ICPPTypeEmitter } from "./icpptype_emitter";
 import { Argument, ICPPOp, ParameterInfo } from "./icpp_exp";
 
 import * as assert from "assert";
@@ -501,14 +500,6 @@ class ICPPAssembly
     private generateBoxedTypeName(tkey: MIRResolvedTypeKey): string {
         return tkey + "@boxed";
     }
-
-    private processValidatorEntityDecl(edecl: MIRObjectEntityTypeDecl, icpptype: ICPPLayoutInfo): object  {
-        return {
-            ptag: ICPPParseTag.ValidatorTag,
-            tkey: icpptype.tkey,
-            name: edecl.tkey
-        };
-    }
     
     private processStringOfEntityDecl(edecl: MIRStringOfInternalEntityTypeDecl, icpptype: ICPPLayoutInfo): object {
         return {
@@ -661,6 +652,170 @@ class ICPPAssembly
         };
     }
 
+    private processEntityDecl(edcl: MIRObjectEntityTypeDecl, icpplayout: ICPPEntityLayoutInfo): object {
+        const vtbl = this.vtable.find((vte) => vte.oftype === edcl.tkey) as {oftype: MIRResolvedTypeKey, vtable: {vcall: MIRVirtualMethodKey, inv: MIRInvokeKey}[]};
+
+        if(icpplayout.layout === ICPPLayoutCategory.Ref) {
+            return {
+                ptag: ICPPParseTag.EntityObjectRefTag,
+                tkey: edcl.tkey,
+                allocinfo: icpplayout.allocinfo.jemit(),
+                name: edcl.tkey,
+                vtable: vtbl,
+                fieldnames: icpplayout.fieldnames,
+                fieldtypes: icpplayout.fieldtypes,
+                fieldoffsets: icpplayout.fieldoffsets
+            };
+        }
+        else {
+            return {
+                ptag: ICPPParseTag.EntityObjectRefTag,
+                tkey: edcl.tkey,
+                allocinfo: icpplayout.allocinfo.jemit(),
+                name: edcl.tkey,
+                vtable: vtbl,
+                norefs: icpplayout.canScalarStackAllocate(),
+                boxedtype: this.generateBoxedTypeName(edcl.tkey),
+                fieldnames: icpplayout.fieldnames,
+                fieldtypes: icpplayout.fieldtypes,
+                fieldoffsets: icpplayout.fieldoffsets
+            };
+        }
+    }
+
+    private processConceptDecl(cdcl: MIRConceptTypeDecl, icpplayout: ICPPLayoutInfo, subtypes: MIRResolvedTypeKey[]): object {
+        if(icpplayout.layout === ICPPLayoutCategory.UnionRef) {
+            return {
+                ptag: ICPPParseTag.RefUnionTag,
+                tkey: cdcl.tkey,
+                name: cdcl.tkey,
+                subtypes: subtypes
+            };
+        }
+        else if (icpplayout.layout === ICPPLayoutCategory.UnionInline) {
+            return {
+                ptag: ICPPParseTag.InlineUnionTag,
+                tkey: cdcl.tkey,
+                allocinfo: icpplayout.allocinfo.jemit(),
+                name: cdcl.tkey,
+                subtypes: subtypes
+            };
+        }
+        else {
+            return {
+                ptag: ICPPParseTag.UniversalUnionTag,
+                tkey: cdcl.tkey,
+                allocinfo: icpplayout.allocinfo.jemit(),
+                name: cdcl.tkey,
+                subtypes: subtypes
+            };
+        }
+    }
+
+    private processTupleDecl(cdcl: MIRTupleType, icpplayout: ICPPTupleLayoutInfo): object {
+        const vtbl = this.vtable.find((vte) => vte.oftype === cdcl.typeID) as {oftype: MIRResolvedTypeKey, vtable: {vcall: MIRVirtualMethodKey, inv: MIRInvokeKey}[]};
+
+        if(icpplayout.layout === ICPPLayoutCategory.Ref) {
+            return {
+                ptag: ICPPParseTag.TupleRefTag,
+                tkey: cdcl.typeID,
+                allocinfo: icpplayout.allocinfo.jemit(),
+                name: cdcl.typeID,
+                vtable: vtbl,
+                maxIndex: icpplayout.maxIndex,
+                ttypes: icpplayout.ttypes,
+                idxoffsets: icpplayout.idxoffsets
+            };
+        }
+        else {
+            return {
+                ptag: ICPPParseTag.TupleStructTag,
+                tkey: cdcl.typeID,
+                allocinfo: icpplayout.allocinfo.jemit(),
+                name: cdcl.typeID,
+                vtable: vtbl,
+                norefs: icpplayout.canScalarStackAllocate(),
+                boxedtype: this.generateBoxedTypeName(cdcl.typeID),
+                maxIndex: icpplayout.maxIndex,
+                ttypes: icpplayout.ttypes,
+                idxoffsets: icpplayout.idxoffsets
+            };
+        }
+    }
+
+    private processRecordDecl(cdcl: MIRRecordType, icpplayout: ICPPRecordLayoutInfo): object {
+        const vtbl = this.vtable.find((vte) => vte.oftype === cdcl.typeID) as {oftype: MIRResolvedTypeKey, vtable: {vcall: MIRVirtualMethodKey, inv: MIRInvokeKey}[]};
+
+        if(icpplayout.layout === ICPPLayoutCategory.Ref) {
+            return {
+                ptag: ICPPParseTag.RecordRefTag,
+                tkey: cdcl.typeID,
+                allocinfo: icpplayout.allocinfo.jemit(),
+                name: cdcl.typeID,
+                vtable: vtbl,
+                propertynames: icpplayout.propertynames,
+                propertytypes: icpplayout.propertytypes,
+                propertyoffsets: icpplayout.propertyoffsets
+            };
+        }
+        else {
+            return {
+                ptag: ICPPParseTag.RecordStructTag,
+                tkey: cdcl.typeID,
+                allocinfo: icpplayout.allocinfo.jemit(),
+                name: cdcl.typeID,
+                vtable: vtbl,
+                norefs: icpplayout.canScalarStackAllocate(),
+                boxedtype: this.generateBoxedTypeName(cdcl.typeID),
+                propertynames: icpplayout.propertynames,
+                propertytypes: icpplayout.propertytypes,
+                propertyoffsets: icpplayout.propertyoffsets
+            };
+        }
+    }
+
+    private processEphemeralListDecl(cdcl: MIREphemeralListType, icpplayout: ICPPEphemeralListLayoutInfo): object {
+        return {
+            ptag: ICPPParseTag.EphemeralListTag,
+            tkey: cdcl.typeID,
+            allocinfo: icpplayout.allocinfo.jemit(),
+            name: cdcl.typeID,
+            norefs: icpplayout.canScalarStackAllocate(),
+            boxedtype: this.generateBoxedTypeName(cdcl.typeID),
+            etypes: icpplayout.etypes,
+            idxoffsets: icpplayout.eoffsets
+        };
+    }
+
+    private processUnionDecl(ud: MIRType, icpplayout: ICPPLayoutInfo, subtypes: MIRResolvedTypeKey[]): object {
+        if(icpplayout.layout === ICPPLayoutCategory.UnionRef) {
+            return {
+                ptag: ICPPParseTag.RefUnionTag,
+                tkey: ud.typeID,
+                name: ud.typeID,
+                subtypes: subtypes
+            };
+        }
+        else if (icpplayout.layout === ICPPLayoutCategory.UnionInline) {
+            return {
+                ptag: ICPPParseTag.InlineUnionTag,
+                tkey: ud.typeID,
+                allocinfo: icpplayout.allocinfo.jemit(),
+                name: ud.typeID,
+                subtypes: subtypes
+            };
+        }
+        else {
+            return {
+                ptag: ICPPParseTag.UniversalUnionTag,
+                tkey: ud.typeID,
+                allocinfo: icpplayout.allocinfo.jemit(),
+                name: ud.typeID,
+                subtypes: subtypes
+            };
+        }
+    }
+
     jsonEmit(assembly: MIRAssembly, entrypoints: MIRInvokeKey[]): object {
         const entitydecls = [...assembly.entityDecls].sort((a, b) => a[0].localeCompare(b[0])).map((dclp) => dclp[1]).map((edcl) => {
             const icpplayout = this.typedecls.find((dd) => dd.tkey === edcl.tkey) as ICPPLayoutInfo;
@@ -717,7 +872,7 @@ class ICPPAssembly
                 return this.processMapTreeEntityDecl(edcl as MIRPrimitiveInternalEntityTypeDecl, icpplayout as ICPPCollectionInternalsLayoutInfo);
             }
             else if (edcl instanceof MIRObjectEntityTypeDecl) {
-                return this.processEntityDecl(edcl, icpplayout);
+                return this.processEntityDecl(edcl, icpplayout as ICPPEntityLayoutInfo);
             }
             else {
                 return undefined;
@@ -726,45 +881,94 @@ class ICPPAssembly
 
         const conceptdecls = [...assembly.conceptDecls].sort((a, b) => a[0].localeCompare(b[0])).map((dclp) => dclp[1]).map((tdcl) => {
             const icpplayout = this.typedecls.find((dd) => dd.tkey === tdcl.tkey) as ICPPLayoutInfo;
+            const ctype = assembly.typeMap.get(tdcl.tkey) as MIRType;
+            const subtypes = [...assembly.typeMap].filter((tt) => assembly.subtypeOf(tt[1], ctype)).map((subt) => subt[0]);
 
-            return this.processConceptDecl(tdcl, icpplayout);
+            return this.processConceptDecl(tdcl, icpplayout, subtypes);
         });
 
         const tupledecls = [...assembly.tupleDecls].sort((a, b) => a[0].localeCompare(b[0])).map((dclp) => dclp[1]).map((tdcl) => {
             const icpplayout = this.typedecls.find((dd) => dd.tkey === tdcl.typeID) as ICPPLayoutInfo;
 
-            return this.processTupleDecl(tdcl, icpplayout);
+            return this.processTupleDecl(tdcl, icpplayout as ICPPTupleLayoutInfo);
         });
 
         const recorddecls = [...assembly.recordDecls].sort((a, b) => a[0].localeCompare(b[0])).map((dclp) => dclp[1]).map((rdcl) => {
             const icpplayout = this.typedecls.find((dd) => dd.tkey === rdcl.typeID) as ICPPLayoutInfo;
 
-            return this.processRecordDecl(rdcl, icpplayout);
+            return this.processRecordDecl(rdcl, icpplayout as ICPPRecordLayoutInfo);
         });
 
         const elistdecls = [...assembly.ephemeralListDecls].sort((a, b) => a[0].localeCompare(b[0])).map((dclp) => dclp[1]).map((eldcl) => {
             const icpplayout = this.typedecls.find((dd) => dd.tkey === eldcl.typeID) as ICPPLayoutInfo;
 
-            return this.processEphemeralListDecl(eldcl, icpplayout);
+            return this.processEphemeralListDecl(eldcl, icpplayout as ICPPEphemeralListLayoutInfo);
         });
 
         const uniondecls = [...assembly.typeMap].filter((td) => td[1].options.length > 1).sort((a, b) => a[0].localeCompare(b[0])).map((td) => td[1]).map((ud) => {
             const icpplayout = this.typedecls.find((dd) => dd.tkey === ud.typeID) as ICPPLayoutInfo;
+            const subtypes = [...assembly.typeMap].filter((tt) => assembly.subtypeOf(tt[1], ud)).map((subt) => subt[0]);
 
-            return this.processUnionDecl(eldcl, icpplayout);
+            return this.processUnionDecl(ud, icpplayout, subtypes);
         });
 
-        const boxedtypes = ;
+        const boxedtypes = [...assembly.typeMap]
+            .filter((td) => {
+                const icppinfo = (this.typedecls.find((dd) => dd.tkey === td[0]) as ICPPLayoutInfo);
+                return icppinfo.layout === ICPPLayoutCategory.Inline && icppinfo.allocinfo.inlinedatasize > UNIVERSAL_CONTENT_SIZE
+            })
+            .sort((a, b) => a[0].localeCompare(b[0])).map((td) => td[1])
+            .map((ud) => {
+                return {
+                    ptag: ICPPParseTag.BoxedStructTag,
+                    tkey: this.generateBoxedTypeName(ud.typeID),
+                    name: this.generateBoxedTypeName(ud.typeID),
+                    oftype: ud.typeID
+                }
+        });
 
-        const lflavors = ;
+        const lflavors = [...assembly.entityDecls].sort((a, b) => a[0].localeCompare(b[0])).map((dclp) => dclp[1]).map((edcl) => {
+            if (edcl.attributes.includes("__list_type")) {
+                const ldcl = edcl as MIRPrimitiveListEntityTypeDecl;
+                return {
+                    ltype: ldcl.tkey,
+                    entrytype: ldcl.oftype,
+                    pv4type: `PartialVector4<${ldcl.getTypeT().typeID}>`,
+                    pv8type: `PartialVector8<${ldcl.getTypeT().typeID}>`,
+                    treetype: `ListTree<${ldcl.getTypeT().typeID}>`
+                };
+            }
+            else {
+                return undefined;
+            }
+        }).filter((icppt) => icppt !== undefined);
 
-        const mflavors = ;
+        const mflavors = [...assembly.entityDecls].sort((a, b) => a[0].localeCompare(b[0])).map((dclp) => dclp[1]).map((edcl) => {
+            if (edcl.attributes.includes("__map_type")) {
+                const mdcl = edcl as MIRPrimitiveMapEntityTypeDecl;
+                return {
+                    ltype: mdcl.tkey,
+                    keytype: mdcl.getTypeK().typeID,
+                    valuetype: mdcl.getTypeV().typeID,
+                    tupletype: mdcl.oftype,
+                    treetype: `MapTree<${mdcl.getTypeK().typeID}, ${mdcl.getTypeV().typeID}>`
+                };
+            }
+            else {
+                return undefined;
+            }
+        }).filter((icppt) => icppt !== undefined);
 
-        const validators = if (edcl.attributes.includes("__validator_type")) {
-            return this.processValidatorEntityDecl(edcl as MIRObjectEntityTypeDecl, icpplayout);
-        };
+        const validators = [...assembly.validatorRegexs].sort((a, b) => a[0].localeCompare(b[0])).map((vdcl) => {
+            return {
+                vtype: vdcl[0],
+                regex: vdcl[1].jemit()
+            };
+        });
 
-        const regexes = ;
+        const regexes = assembly.literalRegexs.sort((a, b) => a.restr.localeCompare(b.restr)).map((redcl) => {
+            return redcl.jemit();
+        });
 
         return {
             cmask: this.cmask,

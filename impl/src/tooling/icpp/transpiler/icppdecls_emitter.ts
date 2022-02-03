@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { MIRAssembly, MIRConceptType, MIREntityTypeDecl, MIRFieldDecl, MIRInvokeDecl, MIRInvokePrimitiveDecl, MIRObjectEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl } from "../../../compiler/mir_assembly";
+import { MIRAssembly, MIRConceptType, MIRFieldDecl, MIRInvokeDecl, MIRInvokePrimitiveDecl, MIRObjectEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl } from "../../../compiler/mir_assembly";
 import { MIRFieldKey, MIRInvokeKey, MIRResolvedTypeKey, MIRVirtualMethodKey } from "../../../compiler/mir_ops";
 import { ICPPAssembly, ICPPConstDecl, ICPPEntityLayoutInfo, ICPPLayoutCategory, ICPPRecordLayoutInfo, TranspilerOptions } from "./icpp_assembly";
 import { ICPPTypeEmitter } from "./icpptype_emitter";
@@ -21,7 +21,7 @@ enum ICPPParseTag {
     DataBufferTag,
     TupleStructTag,
     TupleRefTag,
-    RecordStruct,
+    RecordStructTag,
     RecordRefTag,
     EntityObjectStructTag,
     EntityObjectRefTag,
@@ -161,13 +161,12 @@ class ICPPEmitter {
         });
 
         this.bemitter.requiredSingletonConstructorsList.forEach((scl) => {
-            this.assembly.functions.push(this.bemitter.generateSingletonConstructorList(scl))
+            this.icppasm.invdecls.push(this.bemitter.generateSingletonConstructorList(scl))
         });
 
         this.bemitter.requiredSingletonConstructorsMap.forEach((scm) => {
-            this.assembly.functions.push(this.bemitter.generateSingletonConstructorMap(scm))
+            this.icppasm.invdecls.push(this.bemitter.generateSingletonConstructorMap(scm))
         });
-
 
         this.icppasm.cbuffsize = this.bemitter.constsize;
         this.icppasm.cmask = "11111";
@@ -201,7 +200,7 @@ class ICPPEmitter {
         this.icppasm.typenames.forEach((tt) => {
             const mirtype = this.temitter.getMIRType(tt);
             const icpptype = this.temitter.getICPPLayoutInfo(mirtype);
-            
+
             this.icppasm.typedecls.push(icpptype);
 
             if (icpptype.layout === ICPPLayoutCategory.UnionRef || icpptype.layout === ICPPLayoutCategory.UnionInline || icpptype.layout === ICPPLayoutCategory.UnionUniversal) {
@@ -233,7 +232,7 @@ class ICPPEmitter {
 
         icppemit.processAssembly(assembly, istestbuild, entrypoints);
 
-        return icppemit.icppasm.jsonEmit(assembly, temitter, entrypoints);
+        return icppemit.icppasm.jsonEmit(assembly, entrypoints);
     }
 }
 

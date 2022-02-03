@@ -1347,10 +1347,6 @@ std::string entityRegexDisplay_impl(const BSQType* btype, StorageLocationPtr dat
 
 #define CONS_BSQ_REGEX_TYPE() (new BSQRegisterType<void*>(BSQ_TYPE_ID_REGEX, sizeof(void*), "1", EMPTY_KEY_CMP, entityRegexDisplay_impl, "Regex"))
 
-std::string entityValidatorDisplay_impl(const BSQType* btype, StorageLocationPtr data);
-
-#define CONS_BSQ_VALIDATOR_TYPE(TID, NAME) (new BSQRegisterType<void*>(TID, sizeof(void*), "1", EMPTY_KEY_CMP, entityValidatorDisplay_impl, NAME))
-
 ////
 //ENUM
 

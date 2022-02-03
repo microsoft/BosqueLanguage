@@ -999,11 +999,6 @@ std::string entityRegexDisplay_impl(const BSQType* btype, StorageLocationPtr dat
     return ((BSQRegex*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data))->restr;
 }
 
-std::string entityValidatorDisplay_impl(const BSQType* btype, StorageLocationPtr data)
-{
-    return btype->name + ((BSQRegex*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data))->restr;
-}
-
 std::string entityEnumDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
     auto val = SLPTR_LOAD_CONTENTS_AS(uint64_t, data);

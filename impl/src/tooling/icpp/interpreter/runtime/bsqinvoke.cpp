@@ -78,11 +78,6 @@ void j_vtable(std::map<BSQVirtualInvokeID, BSQInvokeID>& vtable, json v)
     }
 }
 
-const BSQType* jsonLoadValidatorType(json v)
-{
-    return CONS_BSQ_VALIDATOR_TYPE(j_tkey(v), j_name(v));
-}
-
 const BSQType* jsonLoadStringOfType(json v)
 {
     return CONS_BSQ_STRING_TYPE(j_tkey(v), j_name(v));
@@ -394,7 +389,7 @@ enum class ICPPParseTag
     DataBufferTag,
     TupleStructTag,
     TupleRefTag,
-    RecordStruct,
+    RecordStructTag,
     RecordRefTag,
     EntityObjectStructTag,
     EntityObjectRefTag,
@@ -426,9 +421,6 @@ void jsonLoadBSQTypeDecl(json v)
 
     switch(ptag)
     {
-    case ICPPParseTag::ValidatorTag:
-        ttype = jsonLoadValidatorType(v);
-        break;
     case ICPPParseTag::EnumTag:
         ttype = jsonLoadEnumType(v);
         break;
@@ -447,7 +439,7 @@ void jsonLoadBSQTypeDecl(json v)
     case ICPPParseTag::TupleRefTag:
         ttype = jsonLoadTupleType(v, true);
         break;
-    case ICPPParseTag::RecordStruct:
+    case ICPPParseTag::RecordStructTag:
         ttype = jsonLoadRecordType(v, false);
         break;
     case ICPPParseTag::RecordRefTag:
