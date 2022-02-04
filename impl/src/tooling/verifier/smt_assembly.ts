@@ -422,10 +422,11 @@ class SMTAssembly {
         const keytypeorder: string[] = [...this.keytypeTags].sort().map((ktt, i) => `(assert (= (TypeTag_OrdinalOf ${ktt}) ${i}))`);
 
         const v_min_max: string[] = [
-            `(declare-const BINT_MIN () Int) (assert BINT_MIN -256)`,
-            `(declare-const BINT_MAX () Int) (assert BINT_MAX 256)`,
-            `(declare-const SLEN_MAX () Int) (assert SLEN_MAX 64)`,
-            `(declare-const BLEN_MAX () Int) (assert BLEN_MAX 64)`
+            `(declare-const BINT_MIN () Int) (assert (= BINT_MIN ${this.vopts.INT_MIN}))`,
+            `(declare-const BINT_MAX () Int) (assert (= BINT_MAX ${this.vopts.INT_MAX}))`,
+            `(declare-const SLEN_MAX () Int) (assert (= SLEN_MAX ${this.vopts.SLEN_MAX}))`,
+            `(declare-const BLEN_MAX () Int) (assert (= BLEN_MAX ${this.vopts.BLEN_MAX}))`,
+            `(declare-const CONTAINER_MAX () Int) (assert (= CONTAINER_MAX ${this.vopts.CONTAINER_MAX}))`
         ];
 
         const termtupleinfo = this.tupleDecls

@@ -201,7 +201,7 @@ json workflowEvaluate(std::string smt2decl, const APIModule* apimodule, const In
         }
 
         return {
-            {"result", "witness"},
+            {"result", "output"},
             {"time", delta_ms},
             {"input", jarg.value()}
         };

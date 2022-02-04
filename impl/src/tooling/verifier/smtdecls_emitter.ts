@@ -343,7 +343,7 @@ class SMTEmitter {
         const cons3: SMTExp = this.temitter.generateResultTypeConstructorSuccess(tt, this.temitter.coerce(new SMTCallSimple(this.temitter.getSMTConstructorName(vv3).cons, [access1, access2, access3]), vv3, tt));
 
         const hbody = new SMTLet("clen", clen,
-                new SMTIf(SMTCallSimple.makeOrOf(new SMTCallSimple("<", [new SMTVar("clen"), new SMTConst("0")]), new SMTCallSimple("<", [new SMTConst("3"), new SMTVar("clen")])),
+                new SMTIf(SMTCallSimple.makeOrOf(new SMTCallSimple("<", [new SMTVar("clen"), new SMTConst("0")]), new SMTCallSimple("<", [new SMTConst("CONTAINER_MAX"), new SMTVar("clen")])),
                     this.temitter.generateErrorResultAssert(tt),
                     new SMTLet("len", this.temitter.generateResultGetSuccess(this.temitter.getMIRType("BNat"), new SMTVar("clen")),
                         new SMTIf(SMTCallSimple.makeEq(new SMTVar("len"), new SMTConst("0")),
@@ -432,7 +432,7 @@ class SMTEmitter {
         const cons3: SMTExp = this.temitter.generateResultTypeConstructorSuccess(tt, this.temitter.coerce(new SMTCallSimple(this.temitter.getSMTConstructorName(vv3).cons, [access1, access2, access3]), vv3, tt));
 
         const hbody = new SMTLet("clen", clen,
-                new SMTIf(SMTCallSimple.makeOrOf(new SMTCallSimple("<", [new SMTVar("clen"), new SMTConst("0")]), new SMTCallSimple("<", [new SMTConst("3"), new SMTVar("clen")])),
+                new SMTIf(SMTCallSimple.makeOrOf(new SMTCallSimple("<", [new SMTVar("clen"), new SMTConst("0")]), new SMTCallSimple("<", [new SMTConst("CONTAINER_MAX"), new SMTVar("clen")])),
                     this.temitter.generateErrorResultAssert(tt),
                     new SMTLet("len", this.temitter.generateResultGetSuccess(this.temitter.getMIRType("BNat"), new SMTVar("clen")),
                         new SMTIf(SMTCallSimple.makeEq(new SMTVar("len"), new SMTConst("0")),

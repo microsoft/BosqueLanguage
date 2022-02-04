@@ -24,6 +24,19 @@ const exepath = Path.normalize(Path.join(bosque_dir, "/build/output/chkworkflow"
 
 const smtruntime = FS.readFileSync(smtruntime_path).toString();
 
+function generateStandardVOpts(mode: SymbolicActionMode): VerifierOptions {
+    return {
+        INT_MIN: -255,
+        INT_MAX: 256,
+        SLEN_MAX: 48,
+        BLEN_MAX: 32,
+
+        CONTAINER_MAX: 3,
+
+        ActionMode: mode
+    };
+}
+
 function workflowLoadUserSrc(files: string[]): CodeFileInfo[] | undefined {
     try {
         let code: CodeFileInfo[] = [];
@@ -220,6 +233,7 @@ function workflowEvaluate(usercode: PackageConfig, istestbuild: boolean, timeout
 //TODO: for a given entrypoint (1) check all possible errors, (2) check just PASS, (3) check all errors and pass
 
 export {
+    generateStandardVOpts,
     workflowLoadUserSrc, workflowGetErrors, workflowEmitToFile, 
     workflowErrorCheckSingle, workflowPassCheck, workflowEvaluate
 };
