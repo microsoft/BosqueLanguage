@@ -2391,16 +2391,8 @@ void Evaluator::invokeGlobalCons(const BSQInvokeBodyDecl* invk, StorageLocationP
     this->invokePostlude();
 }
 
-void Evaluator::invokeMain(const BSQInvokeBodyDecl* invk, const std::vector<StorageLocationPtr>& argslocs, StorageLocationPtr resultsl, const BSQType* restype, Argument resarg)
+uint8_t* Evaluator::prepareMainStack(const BSQInvokeBodyDecl* invk)
 {
-    void* argsbase = BSQ_STACK_SPACE_ALLOC(invk->params.size() * sizeof(void*));
-    void** curr = (void**)argsbase;
-    for(size_t i = 0; i < invk->params.size(); ++i)
-    {
-        *curr = argslocs[i];
-        curr++;
-    }
-
     size_t cssize = invk->scalarstackBytes + invk->mixedstackBytes;
     uint8_t* cstack = (uint8_t*)BSQ_STACK_SPACE_ALLOC(cssize);
     GC_MEM_ZERO(cstack, cssize);
@@ -2409,14 +2401,13 @@ void Evaluator::invokeMain(const BSQInvokeBodyDecl* invk, const std::vector<Stor
     BSQBool* maskslots = (BSQBool*)BSQ_STACK_SPACE_ALLOC(maskslotbytes);
     GC_MEM_ZERO(maskslots, maskslotbytes);
 
-    for(size_t i = 0; i < argslocs.size(); ++i)
-    {
-        StorageLocationPtr pv = Evaluator::evalParameterInfo(invk->paraminfo[i], cstack, cstack + invk->scalarstackBytes);
-     
-        invk->params[i].ptype->storeValue(pv, argslocs[i]);
-    }
-
     this->invokePrelude(invk, cstack, maskslots, nullptr);
+
+    return cstack;
+}
+
+void Evaluator::invokeMain(const BSQInvokeBodyDecl* invk, StorageLocationPtr resultsl, const BSQType* restype, Argument resarg)
+{
     this->evaluateBody(resultsl, restype, resarg);
     this->invokePostlude();
 }
@@ -3337,7 +3328,7 @@ StorageLocationPtr ICPPParseJSON::extractValueForContainer(const APIModule* apim
     return loc;
 }
 
-void ICPPParseJSON::completeParseContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
+void ICPPParseJSON::completeExtractContainer(const APIModule* apimodule, const IType* itype, Evaluator& ctx)
 {
     this->parsecontainerstackiter.pop_back();
     this->parsecontainerstack.pop_back();

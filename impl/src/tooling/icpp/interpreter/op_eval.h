@@ -44,6 +44,18 @@ public:
     static std::map<BSQTypeID, const BSQRegex*> g_validators;
     static std::map<std::string, const BSQRegex*> g_regexs;
 
+    static inline StorageLocationPtr evalParameterInfo(ParameterInfo pinfo, uint8_t* scalarbase, uint8_t* mixedbase)
+    {
+        if(pinfo.kind == ArgumentTag::ScalarVal)
+        {
+            return scalarbase + pinfo.poffset;
+        }
+        else 
+        {
+            return mixedbase + pinfo.poffset;
+        }
+    }
+
 private:
     EvaluatorFrame* cframe = nullptr;
     int32_t cpos = 0;
@@ -190,18 +202,6 @@ private:
         else
         {
             return this->cframe->mixedbase + trgt.offset;
-        }
-    }
-
-    static inline StorageLocationPtr evalParameterInfo(ParameterInfo pinfo, uint8_t* scalarbase, uint8_t* mixedbase)
-    {
-        if(pinfo.kind == ArgumentTag::ScalarVal)
-        {
-            return scalarbase + pinfo.poffset;
-        }
-        else 
-        {
-            return mixedbase + pinfo.poffset;
         }
     }
 
@@ -385,7 +385,9 @@ private:
 
 public:
     void invokeGlobalCons(const BSQInvokeBodyDecl* invk, StorageLocationPtr resultsl, const BSQType* restype, Argument resarg);
-    void invokeMain(const BSQInvokeBodyDecl* invk, const std::vector<StorageLocationPtr>& argslocs, StorageLocationPtr resultsl, const BSQType* restype, Argument resarg);
+
+    uint8_t* prepareMainStack(const BSQInvokeBodyDecl* invk);
+    void invokeMain(const BSQInvokeBodyDecl* invk, StorageLocationPtr resultsl, const BSQType* restype, Argument resarg);
 
     void linvoke(const BSQInvokeBodyDecl* call, const std::vector<StorageLocationPtr>& args, StorageLocationPtr resultsl);
     bool iinvoke(const BSQInvokeBodyDecl* call, const std::vector<StorageLocationPtr>& args, BSQBool* optmask);
@@ -406,7 +408,13 @@ private:
     std::vector<std::list<StorageLocationPtr>::iterator> parsecontainerstackiter;
 
 public:
-    virtual bool checkInvokeOk(const std::string& checkinvoke, StorageLocationPtr value, Evaluator& ctx) = 0;
+    ICPPParseJSON(): 
+        ApiManagerJSON(), tuplestack(), recordstack(), entitystack(), entitymaskstack(), containerstack(), parsecontainerstack(), parsecontainerstackiter()
+    {;}
+
+    virtual ~ICPPParseJSON() {;}
+
+    virtual bool checkInvokeOk(const std::string& checkinvoke, StorageLocationPtr value, Evaluator& ctx) override final;
 
     virtual bool parseNoneImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
     virtual bool parseNothingImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
@@ -470,7 +478,7 @@ public:
     virtual void prepareExtractContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
     virtual std::optional<size_t> extractLengthForContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
     virtual StorageLocationPtr extractValueForContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t i, Evaluator& ctx) override final;
-    virtual void completeParseContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
+    virtual void completeExtractContainer(const APIModule* apimodule, const IType* itype, Evaluator& ctx) override final;
 
     virtual std::optional<size_t> extractUnionChoice(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, Evaluator& ctx) override final;
 };

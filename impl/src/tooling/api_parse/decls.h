@@ -53,6 +53,38 @@ public:
         }
     }
 
+    std::optional<const InvokeSignature*> getSigForFriendlyName(const std::string& iname) const
+    {
+        auto ii = std::find_if(this->api.cbegin(), this->api.cend(), [&iname](const InvokeSignature* isig) {
+            return isig->name == iname;
+        });
+
+        if(ii == this->api.cend())
+        {
+            return std::nullopt;
+        }
+        else
+        {
+            return std::make_optional(*ii);
+        }
+    }
+
+    std::optional<const IType*> getTypeForFriendlyName(const std::string& iname) const
+    {
+        //TODO: need to set this up to resolve names per namespace and typedecl mappings
+        //      -- ALSO need to update direct references to the typemap->find to use this resolution as well!!!!
+
+        auto ii = this->typemap.find(iname);
+        if(ii == this->typemap.cend())
+        {
+            return std::nullopt;
+        }
+        else
+        {
+            return std::make_optional(ii->second);
+        }
+    }
+
     static APIModule* jparse(json j);
 };
 
@@ -103,6 +135,9 @@ template <typename ValueRepr, typename State>
 class ApiManagerJSON
 {
 public:
+    ApiManagerJSON() {;}
+    virtual ~ApiManagerJSON() {;}
+
     virtual bool checkInvokeOk(const std::string& checkinvoke, ValueRepr value, State& ctx) = 0;
 
     virtual bool parseNoneImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
@@ -218,7 +253,7 @@ public:
     virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const = 0;
 
     template <typename ValueRepr, typename State>
-    bool tparse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx);
+    bool tparse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const;
 
     template <typename ValueRepr, typename State>
     std::optional<json> textract(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const;

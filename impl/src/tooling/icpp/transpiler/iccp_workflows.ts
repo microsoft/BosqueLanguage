@@ -16,6 +16,7 @@ import { ICPPEmitter } from "./icppdecls_emitter";
 import { CodeFileInfo } from "../../../ast/parser";
 
 import chalk from "chalk";
+import { BuildApplicationMode } from "../../../ast/assembly";
 
 const bosque_dir: string = Path.normalize(Path.join(__dirname, "../../../../"));
 const exepath: string = Path.normalize(Path.join(bosque_dir, "/build/output/icpp" + (process.platform === "win32" ? ".exe" : "")));
@@ -29,7 +30,7 @@ function workflowLoadUserSrc(files: string[]): CodeFileInfo[] | undefined {
 
         for (let i = 0; i < files.length; ++i) {
             const realpath = Path.resolve(files[i]);
-            code.push({ fpath: realpath, filepath: files[i], contents: FS.readFileSync(realpath).toString() });
+            code.push({ srcpath: realpath, filename: files[i], contents: FS.readFileSync(realpath).toString() });
         }
 
         return code;
@@ -47,7 +48,7 @@ function workflowLoadCoreSrc(): CodeFileInfo[] | undefined {
         const corefiles = FS.readdirSync(coredir);
         for (let i = 0; i < corefiles.length; ++i) {
             const cfpath = Path.join(coredir, corefiles[i]);
-            code.push({ fpath: cfpath, filepath: corefiles[i], contents: FS.readFileSync(cfpath).toString() });
+            code.push({ srcpath: cfpath, filename: corefiles[i], contents: FS.readFileSync(cfpath).toString() });
         }
 
         return code;
@@ -57,23 +58,11 @@ function workflowLoadCoreSrc(): CodeFileInfo[] | undefined {
     }
 }
 
-function generateMASM(usercode: CodeFileInfo[], entrypoint: string): MIRAssembly {
+function generateMASM(usercode: PackageConfig, entrypoint: {filename: string, names: string[]}): MIRAssembly {
     const corecode = workflowLoadCoreSrc() as CodeFileInfo[];
-    const code = [...corecode, ...usercode];
+    const coreconfig = new PackageConfig(["CHECK_LIBS"], corecode);
 
-    let namespace = "NSMain";
-    let entryfunc = "main";
-    const cpos = entrypoint.indexOf("::");
-    if(cpos === -1) {
-        entryfunc = entrypoint;
-    }
-    else {
-        namespace = entrypoint.slice(0, cpos);
-        entryfunc = entrypoint.slice(cpos + 2);
-    }
-
-    const macros: string[] = [];
-    const { masm, errors } = MIREmitter.generateMASM(new PackageConfig(), "debug", macros, {namespace: namespace, names: [entryfunc]}, true, code);
+    const { masm, errors } = MIREmitter.generateMASM(BuildApplicationMode.Executable, [coreconfig, usercode], "debug", entrypoint);
     if (errors.length !== 0) {
         for (let i = 0; i < errors.length; ++i) {
             process.stdout.write(chalk.red(`Parse error -- ${errors[i]}\n`));
@@ -85,10 +74,10 @@ function generateMASM(usercode: CodeFileInfo[], entrypoint: string): MIRAssembly
     return masm as MIRAssembly;
 }
 
-function generateICPPAssembly(masm: MIRAssembly, topts: TranspilerOptions, entrypoint: MIRInvokeKey): ICPPAssembly | undefined {
-    let res: ICPPAssembly | undefined = undefined;
+function generateICPPAssembly(masm: MIRAssembly, topts: TranspilerOptions, entrypoint: MIRInvokeKey): any {
+    let res: any = undefined;
     try {
-        res = ICPPEmitter.generateICPPAssembly(masm, topts, entrypoint);
+        res = ICPPEmitter.generateICPPAssembly(masm, false, topts, [entrypoint]);
     } catch(e) {
         process.stdout.write(chalk.red(`ICPP bytecode generate error -- ${e}\n`));
         process.exit(1);

@@ -4,6 +4,7 @@
 //-------------------------------------------------------------------------------------------------------
 
 #include "op_eval.h"
+#include "asm_load.h"
 
 #include <chrono>
 #include <iostream>
@@ -40,64 +41,61 @@ std::optional<json> getIRFromFile(const std::string& file)
     }
 }
 
-BSQInvokeBodyDecl* resolveInvokeForMainName(const std::string& main)
+const BSQInvokeBodyDecl* resolveInvokeForMainName(const std::string& main)
 {
-    return dynamic_cast<BSQInvokeBodyDecl*>(Environment::g_invokes[Environment::g_invokenameToIDMap[main]]);
+    return dynamic_cast<const BSQInvokeBodyDecl*>(BSQInvokeDecl::g_invokes[MarshalEnvironment::g_invokeToIdMap.find(main)->second]);
 }
 
-bool parseJSONArgs(json args, const std::vector<BSQFunctionParameter>& params, uint8_t* argsroot, const std::map<size_t, size_t>& pposmap, std::vector<StorageLocationPtr>& argslocs)
-{
-    for(size_t i = 0; i < params.size(); ++i)
-    {
-        StorageLocationPtr trgt = (argsroot + pposmap.at(i));
-        auto pptype = params[i].ptype;
-        bool ok = pptype->consops.fpJSONParse(pptype, args[i], trgt);
-        if(!ok)
-        {
-            return false;
-        }
-
-        argslocs.push_back(trgt);
-    }
-    return true;
-}
-
-bool run(Evaluator& runner, const std::string& main, json args, std::string& res)
+std::pair<bool, json> run(Evaluator& runner, const APIModule* api, const std::string& main, json args)
 {
     auto filename = std::string("[MAIN INITIALIZE]");
-    BSQInvokeBodyDecl* call = resolveInvokeForMainName(main);
-    BSQ_LANGUAGE_ASSERT(call != nullptr, &filename, -1, "Could not load given entrypoint");
-
-    size_t argsbytes = call->resultType->allocinfo.inlinedatasize;
-    std::string argsmask = call->resultType->allocinfo.inlinedmask;
-    std::map<size_t, size_t> pposmap;
-    for(size_t i = 0; i < call->params.size(); ++i)
+    auto jsig = api->getSigForFriendlyName(main);
+    const BSQInvokeBodyDecl* call = resolveInvokeForMainName(main);
+    if(call != nullptr || !jsig.has_value())
     {
-        pposmap[i] = argsbytes;
-
-        argsbytes += call->params[i].ptype->allocinfo.inlinedatasize;
-        argsmask += call->params[i].ptype->allocinfo.inlinedmask;
+        return std::make_pair(false, "Could not load given entrypoint");
     }
 
-    uint8_t* mframe = (uint8_t*)BSQ_STACK_SPACE_ALLOC(argsbytes);
-    GCStack::pushFrame((void**)mframe, argsmask.c_str());
-
-    std::vector<void*> argslocs;
-    uint8_t* argsroot = mframe;
-
-    if(setjmp(Environment::g_entrybuff) > 0)
+    if(setjmp(Evaluator::g_entrybuff) > 0)
     {
-        return false;
+        return std::make_pair(false, "Failed in argument parsing");
     }
     else
     {
-        bool argsok = parseJSONArgs(args, call->params, argsroot, pposmap, argslocs);
-        BSQ_LANGUAGE_ASSERT(argsok, &filename, -1, "Could not parse entrypoint arguments");
+        ICPPParseJSON jloader;
+        uint8_t* mstack = runner.prepareMainStack(call);
 
-        runner.invokeMain(call, argslocs, mframe, call->resultType, call->resultArg);
+        for(size_t i = 0; i < args.size(); ++i)
+        {
+            auto itype = jsig.value()->argtypes[i];
+            StorageLocationPtr pv = Evaluator::evalParameterInfo(call->paraminfo[i], mstack, mstack + call->scalarstackBytes);
+            bool ok = itype->tparse(jloader, api, args[i], pv, runner);
+            if(!ok)
+            {
+                return std::make_pair(false, "Failed in argument parsing");
+            }
+        }
+    }
 
-        res = call->resultType->fpDisplay(call->resultType, mframe);
-        return true;
+    if(setjmp(Evaluator::g_entrybuff) > 0)
+    {
+        return std::make_pair(false, "Failed in evaluation");
+    }
+    else
+    {
+        auto result = BSQ_STACK_SPACE_ALLOC(call->resultType->allocinfo.inlinedatasize);
+        runner.invokeMain(call, &result, call->resultType, call->resultArg);
+
+        ICPPParseJSON jextract;
+        auto rtype = jsig.value()->restype;
+
+        std::optional<json> res = rtype->textract(jextract, api, result, runner); //call->resultType->fpDisplay(call->resultType, result);
+        if(res == std::nullopt)
+        {
+            return std::make_pair(false, "Failed in result extraction");
+        }
+        
+        return std::make_pair(true, res.value());
     }
 }
 
@@ -142,21 +140,23 @@ int main(int argc, char** argv)
         json jcode = payload.value()["code"];
         json jargs = payload.value()["args"];
 
-        Evaluator runner;
-        std::string main = loadAssembly(jcode, runner);
+        const APIModule* api = APIModule::jparse(jcode["api"]);
 
-        std::string res;
-        bool success = run(runner, main, jargs, res);
-        if(success)
+        Evaluator runner;
+        loadAssembly(jcode["bytecode"], runner);
+
+        auto res = run(runner, api, "Main::main", jargs);
+        auto jout = res.second.dump(4);
+        if(res.first)
         {
-            printf("%s", res.c_str());
+            printf("%s\n", jout.c_str());
+            return 0;
         }
         else
         {
-            printf("!ERROR!");
+            printf("!ERROR! %s\n", jout.c_str());
+            return 1;
         }
-
-        return 0;
     }
     else
     {
@@ -169,28 +169,29 @@ int main(int argc, char** argv)
         }
 
         json jcode = cc.value();
-
-        Evaluator runner;
-        std::string main = loadAssembly(jcode, runner);
-
         auto jargs = json::parse(input);
 
-        std::string res;
+        const APIModule* api = APIModule::jparse(jcode["api"]);
+
+        Evaluator runner;
+        loadAssembly(jcode["bytecode"], runner);
+
         auto start = std::chrono::system_clock::now();
-        bool success = run(runner, main, jargs, res);
+        auto res = run(runner, api, "Main::main", jargs);
         auto end = std::chrono::system_clock::now();
 
         auto delta_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-        if(success)
+        auto jout = res.second.dump(4);
+        if(res.first)
         {
-            printf("> %s\n", res.c_str());
+            printf("> %s\n", jout.c_str());
+            printf("Elapsed time %i...\n", (int)delta_ms);
+            return 0;
         }
         else
         {
-            printf("!ERROR!\n");
+            printf("!ERROR! %s\n", jout.c_str());
+            return 1;
         }
-        printf("Elapsed time %i...\n", (int)delta_ms);
-
-        return 0;
     }
 }

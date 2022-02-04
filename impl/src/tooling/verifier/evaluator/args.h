@@ -13,7 +13,13 @@ private:
     std::vector<std::vector<uint8_t>> hashhash;
 
 public:
-    virtual bool checkInvokeOk(const std::string& checkinvoke, z3::expr value, z3::solver& ctx) = 0;
+    SMTParseJSON(): 
+        ApiManagerJSON(), hashhash()
+    {;}
+
+    virtual ~SMTParseJSON() {;}
+
+    virtual bool checkInvokeOk(const std::string& checkinvoke, z3::expr value, z3::solver& ctx) override final;
 
     virtual bool parseNoneImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
     virtual bool parseNothingImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
@@ -77,7 +83,7 @@ public:
     virtual void prepareExtractContainer(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
     virtual std::optional<size_t> extractLengthForContainer(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
     virtual z3::expr extractValueForContainer(const APIModule* apimodule, const IType* itype, z3::expr value, size_t i, z3::solver& ctx) override final;
-    virtual void completeParseContainer(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
+    virtual void completeExtractContainer(const APIModule* apimodule, const IType* itype, z3::solver& ctx) override final;
 
     virtual std::optional<size_t> extractUnionChoice(const APIModule* apimodule, const IType* itype, z3::expr intoloc, z3::solver& ctx) override final;
 };
