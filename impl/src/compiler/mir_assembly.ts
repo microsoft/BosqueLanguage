@@ -25,6 +25,7 @@ enum APIEmitTypeTag
     StringOfTag,
     DataStringTag,
     ByteBufferTag,
+    DataBufferTag,
     DateTimeTag,
     TickTimeTag,
     LogicalTimeTag,
@@ -38,6 +39,15 @@ enum APIEmitTypeTag
     EntityTag,
     UnionTag
 };
+
+enum ContainerCategory
+{
+    List = 0x0,
+    Stack,
+    Queue,
+    Set,
+    Map
+}
 
 function jemitsinfo(sinfo: SourceInfo): object {
     return { line: sinfo.line, column: sinfo.column, pos: sinfo.pos, span: sinfo.span };
@@ -1067,53 +1077,56 @@ class MIRAssembly {
     private getAPITypeForEntity(tt: MIRType, entity: MIREntityTypeDecl): object {
         if(entity instanceof MIRInternalEntityTypeDecl) {
             if(entity instanceof MIRPrimitiveInternalEntityTypeDecl) {
-                if (this.isType(tt, "None")) {
-                    return {tag: APIEmitTypeTag.NoneTag, name: tt.typeID};
+                if (tt.typeID === "None") {
+                    return {tag: APIEmitTypeTag.NoneTag};
                 }
-                else if (this.isType(tt, "Nothing")) {
-                    return {tag: APIEmitTypeTag.NothingTag, name: tt.typeID};
+                else if (tt.typeID === "Nothing") {
+                    return {tag: APIEmitTypeTag.NothingTag};
                 }
-                else if (this.isType(tt, "Bool")) {
-                    return {tag: APIEmitTypeTag.BoolTag, name: tt.typeID};
+                else if (tt.typeID === "Bool") {
+                    return {tag: APIEmitTypeTag.BoolTag};
                 }
-                else if (this.isType(tt, "Int")) {
-                    return {tag: APIEmitTypeTag.IntTag, name: tt.typeID};
+                else if (tt.typeID === "Int") {
+                    return {tag: APIEmitTypeTag.IntTag};
                 }
-                else if (this.isType(tt, "Nat")) {
-                    return {tag: APIEmitTypeTag.NatTag, name: tt.typeID};
+                else if (tt.typeID === "Nat") {
+                    return {tag: APIEmitTypeTag.NatTag};
                 }
-                else if (this.isType(tt, "BigInt")) {
-                    return {tag: APIEmitTypeTag.BigIntTag, name: tt.typeID};
+                else if (tt.typeID ===  "BigInt") {
+                    return {tag: APIEmitTypeTag.BigIntTag};
                 }
-                else if (this.isType(tt, "BigNat")) {
-                    return {tag: APIEmitTypeTag.BigNatTag, name: tt.typeID};
+                else if (tt.typeID ===  "BigNat") {
+                    return {tag: APIEmitTypeTag.BigNatTag};
                 }
-                else if (this.isType(tt, "Float")) {
-                    return {tag: APIEmitTypeTag.FloatTag, name: tt.typeID};
+                else if (tt.typeID ===  "Float") {
+                    return {tag: APIEmitTypeTag.FloatTag};
                 }
-                else if (this.isType(tt, "Decimal")) {
-                    return {tag: APIEmitTypeTag.DecimalTag, name: tt.typeID};
+                else if (tt.typeID ===  "Decimal") {
+                    return {tag: APIEmitTypeTag.DecimalTag};
                 }
-                else if (this.isType(tt, "Rational")) {
-                    return {tag: APIEmitTypeTag.RationalTag, name: tt.typeID};
+                else if (tt.typeID ===  "Rational") {
+                    return {tag: APIEmitTypeTag.RationalTag};
                 }
-                else if (this.isType(tt, "String")) {
-                    return {tag: APIEmitTypeTag.StringTag, name: tt.typeID};
+                else if (tt.typeID === "String") {
+                    return {tag: APIEmitTypeTag.StringTag};
                 }
-                else if (this.isType(tt, "ByteBuffer")) {
-                    return {tag: APIEmitTypeTag.ByteBufferTag, name: tt.typeID};
+                else if (tt.typeID ===  "ByteBuffer") {
+                    return {tag: APIEmitTypeTag.ByteBufferTag};
                 }
-                else if(this.isType(tt, "ISOTime")) {
-                    return {tag: APIEmitTypeTag.ISOTag, name: tt.typeID};
+                else if(tt.typeID === "DateTime") {
+                    return {tag: APIEmitTypeTag.DateTimeTag};
                 }
-                else if(this.isType(tt, "LogicalTime")) {
-                    return {tag: APIEmitTypeTag.LogicalTag, name: tt.typeID};
+                else if(tt.typeID === "TickTime") {
+                    return {tag: APIEmitTypeTag.TickTimeTag};
                 }
-                else if(this.isType(tt, "UUID")) {
-                    return {tag: APIEmitTypeTag.UUIDTag, name: tt.typeID};
+                else if(tt.typeID === "LogicalTime") {
+                    return {tag: APIEmitTypeTag.LogicalTimeTag};
                 }
-                else if(this.isType(tt, "ContentHash")) {
-                    return {tag: APIEmitTypeTag.ContentHashTag, name: tt.typeID};
+                else if(tt.typeID === "UUID") {
+                    return {tag: APIEmitTypeTag.UUIDTag};
+                }
+                else if(tt.typeID === "ContentHash") {
+                    return {tag: APIEmitTypeTag.ContentHashTag};
                 }
                 else {
                     assert(false);
@@ -1125,40 +1138,40 @@ class MIRAssembly {
                     return {tag: APIEmitTypeTag.StringOfTag, name: tt.typeID, validator: (entity.fromtype as MIRResolvedTypeKey)};
                 }
                 else if (tt.typeID.startsWith("DataString")) {
-                    return {tag: APIEmitTypeTag.DataStringTag, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey)};
+                    return {tag: APIEmitTypeTag.DataStringTag, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey), chkinv: (entity as MIRDataStringInternalEntityTypeDecl).accepts};
                 }
                 else if (tt.typeID.startsWith("DataBuffer")) {
-                    return {tag: APIEmitTypeTag.DataBufferTag, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey)};
+                    return {tag: APIEmitTypeTag.DataBufferTag, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey), chkinv: (entity as MIRDataBufferInternalEntityTypeDecl).accepts};
                 }
                 else if (tt.typeID.startsWith("Something")) {
-                    return {tag: APIEmitTypeTag.SomethingTag, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey)};
+                    return {tag: APIEmitTypeTag.ConstructableOfType, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey), validatefunc: null};
                 }
                 else if (tt.typeID.startsWith("Result::Ok")) {
-                    return {tag: APIEmitTypeTag.OkTag, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey)};
+                    return {tag: APIEmitTypeTag.ConstructableOfType, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey), validatefunc: null};
                 }
                 else {
                     assert(tt.typeID.startsWith("Result::Err"));
-                    return {tag: APIEmitTypeTag.ErrTag, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey)};
+                    return {tag: APIEmitTypeTag.ConstructableOfType, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey), validatefunc: null};
                 }
             }
             else {
                 assert(entity instanceof MIRPrimitiveCollectionEntityTypeDecl);
 
                 if(entity instanceof MIRPrimitiveListEntityTypeDecl) {
-                    return {tag: APIEmitTypeTag.ListTag, name: tt.typeID, oftype: entity.oftype};
+                    return {tag: APIEmitTypeTag.ContainerTag, name: tt.typeID, category: ContainerCategory.List, elemtype: entity.oftype};
                 }
                 else if(entity instanceof MIRPrimitiveStackEntityTypeDecl) {
-                    return {tag: APIEmitTypeTag.StackTag, name: tt.typeID, oftype: entity.oftype, ultype: entity.ultype};
+                    return {tag: APIEmitTypeTag.ContainerTag, name: tt.typeID, category: ContainerCategory.Stack, elemtype: entity.oftype};
                 }
                 else if(entity instanceof MIRPrimitiveQueueEntityTypeDecl) {
-                    return {tag: APIEmitTypeTag.QueueTag, name: tt.typeID, oftype: entity.oftype, ultype: entity.ultype};
+                    return {tag: APIEmitTypeTag.ContainerTag, name: tt.typeID, category: ContainerCategory.Queue, elemtype: entity.oftype};
                 }
                 else if(entity instanceof MIRPrimitiveSetEntityTypeDecl) {
-                    return {tag: APIEmitTypeTag.SetTag, name: tt.typeID, oftype: entity.oftype, ultype: entity.ultype, unqchkinv: entity.unqchkinv, unqconvinv: entity.unqconvinv};
+                    return {tag: APIEmitTypeTag.ContainerTag, name: tt.typeID, category: ContainerCategory.Set, elemtype: entity.oftype};
                 }
                 else {
                     const mentity = entity as MIRPrimitiveMapEntityTypeDecl;
-                    return {tag: APIEmitTypeTag.MapTag, name: tt.typeID, oftype: mentity.oftype, ultype: mentity.ultype, unqchkinv: mentity.unqchkinv};
+                    return {tag: APIEmitTypeTag.ContainerTag, name: tt.typeID, category: ContainerCategory.Map, elemtype: mentity.oftype};
                 }
             }
         }
@@ -1171,26 +1184,24 @@ class MIRAssembly {
         else {
             const oentity = entity as MIRObjectEntityTypeDecl;
             
-            let fields: string[] = [];
+            let consfields: string[] = [];
             let ttypes: string[] = [];
             for(let i = 0; i < oentity.consfuncfields.length; ++i)
             {
                 const ff = oentity.consfuncfields[i];
-                const mirff = this.assembly.fieldDecls.get(ff) as MIRFieldDecl;
+                const mirff = this.fieldDecls.get(ff.cfkey) as MIRFieldDecl;
 
-                fields.push(mirff.fname);
+                consfields.push(mirff.fname);
                 ttypes.push(mirff.declaredType);
             }
 
-            return {tag: APIEmitTypeTag.EntityTag, name: tt.typeID, fields: fields, ttypes: ttypes};
+            return {tag: APIEmitTypeTag.EntityTag, name: tt.typeID, consfields: consfields, ttypes: ttypes, validatefunc: oentity.validatefunc || null, consfunc: oentity.consfunc || null};
         }
     }
 
     getAPITypeFor(tt: MIRType): object {
-        this.internTypeName(tt.typeID, tt.shortname);
-
-        if(this.isUniqueTupleType(tt)) {
-            const tdecl = this.assembly.tupleDecls.get(tt.typeID) as MIRTupleType;
+        if(tt.options.length === 1 && (tt.options[0] instanceof MIRTupleType)) {
+            const tdecl = this.tupleDecls.get(tt.typeID) as MIRTupleType;
 
             let ttypes: string[] = [];
             for(let i = 0; i < tdecl.entries.length; ++i)
@@ -1201,8 +1212,8 @@ class MIRAssembly {
 
             return {tag: APIEmitTypeTag.TupleTag, name: tt.typeID, ttypes: ttypes};
         }
-        else if(this.isUniqueRecordType(tt)) {
-            const rdecl = this.assembly.recordDecls.get(tt.typeID) as MIRRecordType;
+        else if(tt.options.length === 1 && (tt.options[0] instanceof MIRRecordType)) {
+            const rdecl = this.recordDecls.get(tt.typeID) as MIRRecordType;
 
             let props: string[] = [];
             let ttypes: string[] = [];
@@ -1217,14 +1228,14 @@ class MIRAssembly {
 
             return {tag: APIEmitTypeTag.RecordTag, name: tt.typeID, props: props, ttypes: ttypes};
         }
-        else if(this.isUniqueEntityType(tt)) {
-            return this.getAPITypeForEntity(tt, this.assembly.entityDecls.get(tt.typeID) as MIREntityTypeDecl);
+        else if(tt.options.length === 1 && (tt.options[0] instanceof MIREntityType)) {
+            return this.getAPITypeForEntity(tt, this.entityDecls.get(tt.typeID) as MIREntityTypeDecl);
         }
-        else if(tt instanceof MIRConceptType) {
-            const etypes = [...this.assembly.entityDecls].filter((edi) => this.assembly.subtypeOf(this.getMIRType(edi[1].tkey), this.getMIRType(tt.typeID)));
+        else if(tt.options.length === 1 && (tt.options[0] instanceof MIRConceptType)) {
+            const etypes = [...this.entityDecls].filter((edi) => this.subtypeOf(this.typeMap.get(edi[1].tkey) as MIRType, tt));
             const opts: string[] = etypes.map((opt) => opt[1].tkey);
 
-            return {tag: APIEmitTypeTag.ConceptTag, name: tt.typeID, opts: opts};
+            return {tag: APIEmitTypeTag.UnionTag, name: tt.typeID, opts: opts};
         }
         else {
             const opts: string[] = tt.options.map((opt) => opt.typeID);
@@ -1233,9 +1244,32 @@ class MIRAssembly {
         }
     }
 
-    emitAPIInfo(): any {
-        let x = APIEmitTypeTag.BigIntTag;
-        xxxx; //emit the API type infor JSON object for this assembly
+    getAPIForInvoke(invk: MIRInvokeDecl): object {
+        return { name: invk.ikey, argnames: invk.params.map((pp) => pp.name), argtypes: invk.params.map((pp) => pp.type), restype: invk.resultType };
+    }
+
+    emitAPIInfo(entrypoints: MIRInvokeKey[], istestbuild: boolean): any {
+        const apitype = this.typeMap.get("APIType") as MIRType;
+        const testtype = this.typeMap.get("TestableType") as MIRType;
+        const apitypes = [...this.typeMap]
+            .filter((tp) => this.subtypeOf(this.typeMap.get(tp[0]) as MIRType, apitype) || (istestbuild && this.subtypeOf(this.typeMap.get(tp[0]) as MIRType, testtype)))
+            .sort((a, b) => a[0].localeCompare(b[0]))
+            .map((tt) => this.getAPITypeFor(tt[1]));
+
+        const typedecls = [...this.entyremaps.entrytypedef].sort((a, b) => a[0].localeCompare(b[0])).map((td) => {
+            return {name: td[0], type: td[1].typeID};
+        });
+
+        const namespacemap = [...this.entyremaps.namespaceremap].sort((a, b) => a[0].localeCompare(b[0])).map((td) => {
+            return {name: td[0], into: td[1]};
+        });
+
+        const sigs = entrypoints.sort().map((ep) => {
+            const epdcl = this.invokeDecls.get(ep) as MIRInvokeBodyDecl;
+            return this.getAPIForInvoke(epdcl);
+        })
+
+        return { apitypes: apitypes, typedecls: typedecls, namespacemap: namespacemap, apisig: sigs};
     }
 }
 

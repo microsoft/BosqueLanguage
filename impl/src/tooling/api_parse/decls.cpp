@@ -716,6 +716,8 @@ IType* IType::jparse(json j)
             return DataStringType::jparse(j);
         case TypeTag::ByteBufferTag:
             return ByteBufferType::jparse(j);
+        case TypeTag::DataBufferTag:
+            return DataBufferType::jparse(j);
         case TypeTag::DateTimeTag:
             return DateTimeType::jparse(j);
         case TypeTag::TickTimeTag:

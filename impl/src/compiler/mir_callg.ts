@@ -122,8 +122,10 @@ function constructCallGraphInfo(entryPoints: MIRInvokeKey[], assembly: MIRAssemb
         topoVisit(invokes.get(ivk) as CallGNode, [], tordered, invokes);
     });
 
+    const apitype = assembly.typeMap.get("APIType") as MIRType;
+    const testtype = assembly.typeMap.get("TestableType") as MIRType;
     assembly.entityDecls.forEach((ee) => {
-        if(ee.provides.includes("APIType") || (istestbuild && ee.provides.includes("TestableType"))) {
+        if(assembly.subtypeOf(assembly.typeMap.get(ee.tkey) as MIRType, apitype) || (istestbuild && assembly.subtypeOf(assembly.typeMap.get(ee.tkey) as MIRType, testtype))) {
             if (ee instanceof MIRObjectEntityTypeDecl && ee.validatefunc !== undefined) {
                 roots.push(invokes.get(ee.validatefunc) as CallGNode);
                 topoVisit(invokes.get(ee.validatefunc) as CallGNode, [], tordered, invokes);
