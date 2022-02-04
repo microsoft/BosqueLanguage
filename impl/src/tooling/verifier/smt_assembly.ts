@@ -241,9 +241,9 @@ class SMTModelState {
 
     readonly targeterrorcheck: SMTExp;
     readonly isvaluecheck: SMTExp;
-    readonly isvaluetruechk: SMTExp;
+    readonly isvaluefalsechk: SMTExp;
 
-    constructor(arginits: { vname: string, vtype: SMTTypeInfo, vchk: SMTExp | undefined, vinit: SMTExp, callexp: SMTExp }[], resinit: { vname: string, vtype: SMTTypeInfo, vchk: SMTExp | undefined, vinit: SMTExp, callexp: SMTExp } | undefined, argchk: SMTExp[] | undefined, checktype: SMTTypeInfo, echeck: SMTExp, targeterrorcheck: SMTExp, isvaluecheck: SMTExp, isvaluetruechk: SMTExp) {
+    constructor(arginits: { vname: string, vtype: SMTTypeInfo, vchk: SMTExp | undefined, vinit: SMTExp, callexp: SMTExp }[], resinit: { vname: string, vtype: SMTTypeInfo, vchk: SMTExp | undefined, vinit: SMTExp, callexp: SMTExp } | undefined, argchk: SMTExp[] | undefined, checktype: SMTTypeInfo, echeck: SMTExp, targeterrorcheck: SMTExp, isvaluecheck: SMTExp, isvaluefalsechk: SMTExp) {
         this.arginits = arginits;
         this.resinit = resinit;
         this.argchk = argchk;
@@ -252,7 +252,7 @@ class SMTModelState {
 
         this.targeterrorcheck = targeterrorcheck;
         this.isvaluecheck = isvaluecheck;
-        this.isvaluetruechk = isvaluetruechk;
+        this.isvaluefalsechk = isvaluefalsechk;
     }
 }
 
@@ -562,7 +562,7 @@ class SMTAssembly {
         }
         else if(this.vopts.ActionMode === SymbolicActionMode.ChkTestSymbolic) {
             action.push(`(assert ${mmodel.isvaluecheck.emitSMT2(undefined)})`);
-            action.push(`(assert ${mmodel.isvaluetruechk.emitSMT2(undefined)})`)
+            action.push(`(assert ${mmodel.isvaluefalsechk.emitSMT2(undefined)})`)
         }
         else {
             action.push(`(assert ${mmodel.isvaluecheck.emitSMT2(undefined)})`);

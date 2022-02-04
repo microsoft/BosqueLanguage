@@ -11,7 +11,7 @@ import { MIRAssembly, PackageConfig } from "../../../compiler/mir_assembly";
 import { MIREmitter } from "../../../compiler/mir_emitter";
 import { MIRInvokeKey } from "../../../compiler/mir_ops";
 
-import { ICPPAssembly, TranspilerOptions } from "./icpp_assembly";
+import { TranspilerOptions } from "./icpp_assembly";
 import { ICPPEmitter } from "./icppdecls_emitter";
 import { CodeFileInfo } from "../../../ast/parser";
 
@@ -74,10 +74,10 @@ function generateMASM(usercode: PackageConfig, entrypoint: {filename: string, na
     return masm as MIRAssembly;
 }
 
-function generateICPPAssembly(masm: MIRAssembly, topts: TranspilerOptions, entrypoint: MIRInvokeKey): any {
+function generateICPPAssembly(masm: MIRAssembly, istestbuild: boolean, topts: TranspilerOptions, entrypoints: MIRInvokeKey[]): any {
     let res: any = undefined;
     try {
-        res = ICPPEmitter.generateICPPAssembly(masm, false, topts, [entrypoint]);
+        res = ICPPEmitter.generateICPPAssembly(masm, istestbuild, topts, entrypoints);
     } catch(e) {
         process.stdout.write(chalk.red(`ICPP bytecode generate error -- ${e}\n`));
         process.exit(1);
@@ -113,27 +113,27 @@ function runICPPFile(icppjson: {code: object, args: any[]}, cb: (result: string 
     }
 }
 
-function workflowEmitICPPFile(into: string, usercode: CodeFileInfo[], topts: TranspilerOptions, entrypoint: MIRInvokeKey): boolean {
+function workflowEmitICPPFile(into: string, usercode: PackageConfig, istestbuild: boolean, topts: TranspilerOptions, entrypoint: {filename: string, names: string[]}): boolean {
     const massembly = generateMASM(usercode, entrypoint);
-    const icppasm = generateICPPAssembly(massembly, topts, "NSMain::main");
+    const icppasm = generateICPPAssembly(massembly, istestbuild, topts, entrypoint.names);
             
     if (icppasm === undefined) {
         return false;
     }
 
-    const icppjson = JSON.stringify(icppasm.jsonEmit(), undefined, 2);
+    const icppjson = JSON.stringify({code: {api: massembly.emitAPIInfo(entrypoint.names, istestbuild), bytecode: icppasm.jsonEmit() }, args: []}, undefined, 2);
     return emitICPPFile(icppjson, into);
 }
 
-function workflowRunICPPFile(args: any[], usercode: CodeFileInfo[], topts: TranspilerOptions, entrypoint: MIRInvokeKey, cb: (result: string | undefined) => void) {
+function workflowRunICPPFile(args: any[], usercode: PackageConfig, istestbuild: boolean, topts: TranspilerOptions, entrypoint: {filename: string, names: string[]}, cb: (result: string | undefined) => void) {
     const massembly = generateMASM(usercode, entrypoint);
-    const icppasm = generateICPPAssembly(massembly, topts, "NSMain::main");
+    const icppasm = generateICPPAssembly(massembly, istestbuild, topts, entrypoint.names);
             
     if (icppasm === undefined) {
         return undefined;
     }
 
-    return runICPPFile({code: icppasm.jsonEmit(), args: args}, cb);
+    return runICPPFile({code: {api: massembly.emitAPIInfo(entrypoint.names, istestbuild), bytecode: icppasm.jsonEmit() }, args: args}, cb);
 }
 
 export {

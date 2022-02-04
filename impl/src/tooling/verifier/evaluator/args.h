@@ -17,6 +17,19 @@ public:
         ApiManagerJSON(), hashhash()
     {;}
 
+    static z3::expr generateInitialArgContext(z3::context& c, size_t i)
+    {
+        auto ii = c.int_val((uint64_t)0);
+        auto ij = c.int_val((uint64_t)i);
+        return z3::concat(ii.unit(), ij.unit());
+    }
+
+    static z3::expr generateInitialResultContext(z3::context& c)
+    {
+        auto ii = c.int_val((uint64_t)1);
+        return ii.unit();
+    }
+
     virtual ~SMTParseJSON() {;}
 
     virtual bool checkInvokeOk(const std::string& checkinvoke, z3::expr value, z3::solver& ctx) override final;

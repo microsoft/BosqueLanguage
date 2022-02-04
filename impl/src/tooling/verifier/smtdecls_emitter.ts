@@ -1000,13 +1000,13 @@ class SMTEmitter {
         let argchk: SMTExp[] | undefined = undefined;
         let targeterrorcheck: SMTExp | undefined = undefined;
         let isvaluecheck: SMTExp | undefined = undefined;
-        let isvaluetruechk: SMTExp | undefined = undefined;
+        let isvaluefalsechk: SMTExp | undefined = undefined;
         if(issafe) {
             iexp = this.temitter.generateResultTypeConstructorSuccess(restype, new SMTCallSimple(smtcall, callargs));
 
             targeterrorcheck = new SMTConst("false");
             isvaluecheck = new SMTConst("true");
-            isvaluetruechk = new SMTVar("_@smtres@");
+            isvaluefalsechk = new SMTVar("_@smtres@");
         }
         else {
             iexp = new SMTCallGeneral(smtcall, callargs);
@@ -1024,7 +1024,7 @@ class SMTEmitter {
 
             targeterrorcheck = new SMTCallSimple("=", [new SMTVar("_@smtres@"), this.temitter.generateResultTypeConstructorError(restype, new SMTConst("ErrorID_Target"))]);
             isvaluecheck = this.temitter.generateResultIsSuccessTest(restype, new SMTVar("_@smtres@"));
-            isvaluetruechk = this.temitter.generateResultGetSuccess(restype, new SMTVar("_@smtres@"));
+            isvaluefalsechk = (restype.typeID === "Bool") ? SMTCallSimple.makeNot(this.temitter.generateResultGetSuccess(restype, new SMTVar("_@smtres@"))) : new SMTConst("[Not a Bool Result]");
         }
         
         this.bemitter.requiredUFConsts.forEach((ctype) => {
@@ -1032,12 +1032,12 @@ class SMTEmitter {
             this.assembly.uninterpfunctions.push(ufcc);
         });
 
-        this.assembly.model = new SMTModelState(iargs, rarg, argchk, this.temitter.generateResultType(restype), iexp, targeterrorcheck, isvaluecheck, isvaluetruechk);
+        this.assembly.model = new SMTModelState(iargs, rarg, argchk, this.temitter.generateResultType(restype), iexp, targeterrorcheck, isvaluecheck, isvaluefalsechk);
         this.assembly.allErrors = this.bemitter.allErrors;
     }
 
-    static generateSMTPayload(assembly: MIRAssembly, istestbuild: boolean, runtime: string, vopts: VerifierOptions, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey): String {
-        const callsafety = markSafeCalls([entrypoint], assembly, istestbuild, errorTrgtPos);
+    static generateSMTPayload(assembly: MIRAssembly, istestbuild: boolean, runtime: string, vopts: VerifierOptions, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey): string {
+        const callsafety = markSafeCalls(["__i__" + entrypoint], assembly, istestbuild, errorTrgtPos);
 
         const temitter = new SMTTypeEmitter(assembly, vopts);
         assembly.typeMap.forEach((tt) => {
@@ -1054,10 +1054,10 @@ class SMTEmitter {
         });
 
         const bemitter = new SMTBodyEmitter(assembly, temitter, vopts, callsafety, errorTrgtPos);
-        const smtassembly = new SMTAssembly(vopts, temitter.lookupFunctionName(entrypoint));
+        const smtassembly = new SMTAssembly(vopts, temitter.lookupFunctionName("__i__" + entrypoint));
 
         let smtemit = new SMTEmitter(temitter, bemitter, smtassembly, vopts);
-        smtemit.initializeSMTAssembly(assembly, istestbuild, entrypoint, callsafety);
+        smtemit.initializeSMTAssembly(assembly, istestbuild, "__i__" + entrypoint, callsafety);
 
         ////////////
         const smtinfo = smtemit.assembly.buildSMT2file(runtime);
@@ -1066,7 +1066,7 @@ class SMTEmitter {
     }
 
     static generateSMTAssemblyAllErrors(assembly: MIRAssembly, istestbuild: boolean, vopts: VerifierOptions, entrypoint: MIRInvokeKey): { file: string, line: number, pos: number, msg: string }[] {
-        const callsafety = markSafeCalls([entrypoint], assembly, istestbuild, undefined);
+        const callsafety = markSafeCalls(["__i__" + entrypoint], assembly, istestbuild, undefined);
 
         const temitter = new SMTTypeEmitter(assembly, vopts);
         assembly.typeMap.forEach((tt) => {
@@ -1083,10 +1083,10 @@ class SMTEmitter {
         });
 
         const bemitter = new SMTBodyEmitter(assembly, temitter, vopts, callsafety, {file: "[]", line: -1, pos: -1});
-        const smtassembly = new SMTAssembly(vopts, temitter.lookupFunctionName(entrypoint));
+        const smtassembly = new SMTAssembly(vopts, temitter.lookupFunctionName("__i__" + entrypoint));
 
         let smtemit = new SMTEmitter(temitter, bemitter, smtassembly, vopts);
-        smtemit.initializeSMTAssembly(assembly, istestbuild, entrypoint, callsafety);
+        smtemit.initializeSMTAssembly(assembly, istestbuild, "__i__" + entrypoint, callsafety);
 
         return smtemit.assembly.allErrors;
     }
