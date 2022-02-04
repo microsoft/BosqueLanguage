@@ -6,13 +6,13 @@
 import * as assert  from "assert";
 import { BSQRegex } from "../../ast/bsqregex";
 
-import { MIRAssembly, MIRConceptType, MIRConstructableEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIRDataBufferInternalEntityTypeDecl, MIRDataStringInternalEntityTypeDecl, MIREntityType, MIREntityTypeDecl, MIREnumEntityTypeDecl, MIRFieldDecl, MIRInvokeDecl, MIRObjectEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRRecordType, MIRStringOfInternalEntityTypeDecl, MIRTupleType, MIRType, MIRTypeOption } from "../../compiler/mir_assembly";
+import { MIRAssembly, MIRConceptType, MIRConstructableEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIRDataBufferInternalEntityTypeDecl, MIRDataStringInternalEntityTypeDecl, MIREntityType, MIREntityTypeDecl, MIREnumEntityTypeDecl, MIRFieldDecl, MIRInvokeDecl, MIRObjectEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRRecordType, MIRStringOfInternalEntityTypeDecl, MIRTupleType, MIRType, MIRTypeOption, SymbolicActionMode } from "../../compiler/mir_assembly";
 import { constructCallGraphInfo, markSafeCalls } from "../../compiler/mir_callg";
 import { MIRInvokeKey } from "../../compiler/mir_ops";
 import { SMTBodyEmitter } from "./smtbody_emitter";
 import { SMTTypeEmitter } from "./smttype_emitter";
 import { SMTAssembly, SMTConstantDecl, SMTEntityOfTypeDecl, SMTEntityStdDecl, SMTEphemeralListDecl, SMTFunction, SMTFunctionUninterpreted, SMTModelState, SMTRecordDecl, SMTTupleDecl } from "./smt_assembly";
-import { SMTCallGeneral, SMTCallGeneralWOptMask, SMTCallSimple, SMTConst, SMTExp, SMTIf, SMTInputOutputMode, SMTLet, SMTLetMulti, SMTMaskConstruct, SMTTypeInfo, SMTVar, VerifierOptions } from "./smt_exp";
+import { SMTCallGeneral, SMTCallGeneralWOptMask, SMTCallSimple, SMTConst, SMTExp, SMTIf, SMTLet, SMTLetMulti, SMTMaskConstruct, SMTTypeInfo, SMTVar, VerifierOptions } from "./smt_exp";
 
 class SMTEmitter {
     readonly temitter: SMTTypeEmitter;
@@ -276,7 +276,7 @@ class SMTEmitter {
         }
         else {
             const mask = new SMTMaskConstruct("InputOutputMask");
-            if (this.vopts.IOMode === SMTInputOutputMode.Evaluate) {
+            if (this.vopts.ActionMode === SymbolicActionMode.EvaluateSymbolic) {
                 for(let ii = optidx; ii < tdecl.consfuncfields.length; ++ii) {
                     const idiff = ii - optidx;
                     mask.entries.push(new SMTCallSimple("BBool@UFCons_API", [this.temitter.generateHavocConstructorPathExtend(maskpath, new SMTVar(idiff.toString()))]));
@@ -782,7 +782,7 @@ class SMTEmitter {
 
         const restype = this.temitter.getMIRType(mirep.resultType);
         let rarg:  { vname: string, vtype: SMTTypeInfo, vchk: SMTExp | undefined, vinit: SMTExp, callexp: SMTExp } | undefined = undefined;
-        if (this.vopts.IOMode === SMTInputOutputMode.Evaluate) {
+        if (this.vopts.ActionMode === SymbolicActionMode.EvaluateSymbolic) {
             let ufuncs: SMTFunctionUninterpreted[] = [];
             this.walkAndGenerateHavocType(restype, this.assembly.havocfuncs, ufuncs);
             ufuncs.forEach((uf) => {
@@ -1000,11 +1000,13 @@ class SMTEmitter {
         let argchk: SMTExp[] | undefined = undefined;
         let targeterrorcheck: SMTExp | undefined = undefined;
         let isvaluecheck: SMTExp | undefined = undefined;
+        let isvaluetruechk: SMTExp | undefined = undefined;
         if(issafe) {
             iexp = this.temitter.generateResultTypeConstructorSuccess(restype, new SMTCallSimple(smtcall, callargs));
 
             targeterrorcheck = new SMTConst("false");
             isvaluecheck = new SMTConst("true");
+            isvaluetruechk = new SMTVar("_@smtres@");
         }
         else {
             iexp = new SMTCallGeneral(smtcall, callargs);
@@ -1022,6 +1024,7 @@ class SMTEmitter {
 
             targeterrorcheck = new SMTCallSimple("=", [new SMTVar("_@smtres@"), this.temitter.generateResultTypeConstructorError(restype, new SMTConst("ErrorID_Target"))]);
             isvaluecheck = this.temitter.generateResultIsSuccessTest(restype, new SMTVar("_@smtres@"));
+            isvaluetruechk = this.temitter.generateResultGetSuccess(restype, new SMTVar("_@smtres@"));
         }
         
         this.bemitter.requiredUFConsts.forEach((ctype) => {
@@ -1029,7 +1032,7 @@ class SMTEmitter {
             this.assembly.uninterpfunctions.push(ufcc);
         });
 
-        this.assembly.model = new SMTModelState(iargs, rarg, argchk, this.temitter.generateResultType(restype), iexp, targeterrorcheck, isvaluecheck);
+        this.assembly.model = new SMTModelState(iargs, rarg, argchk, this.temitter.generateResultType(restype), iexp, targeterrorcheck, isvaluecheck, isvaluetruechk);
         this.assembly.allErrors = this.bemitter.allErrors;
     }
 

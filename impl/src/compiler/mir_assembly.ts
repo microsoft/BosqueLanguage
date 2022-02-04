@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { SourceInfo } from "../ast/parser";
+import { CodeFileInfo, SourceInfo } from "../ast/parser";
 import { MIRBody, MIRResolvedTypeKey, MIRFieldKey, MIRInvokeKey, MIRVirtualMethodKey, MIRGlobalKey } from "./mir_ops";
 import { BSQRegex } from "../ast/bsqregex";
 
@@ -842,24 +842,25 @@ class MIRType {
     }
 }
 
-enum ActionMode {
-    EvaluateConcrete, //Inputs will be parsed as concrete values and set to extract result value
+enum SymbolicActionMode {
     EvaluateSymbolic, //Inputs will be symbolically parsed and executed and set to extract result value -- single entrypoint assumed
-
-    ErrTestConcrete, //Inputs will be parsed as concrete values and executed with failures reported (NO check on output)
-    ChkTestConcrete, //Inputs will be parsed as concrete values and executed with failures reported and check for "true" return value
-    
     ErrTestSymbolic, //Inputs will symbolically generated and executed with failures reported (NO check on output) -- single entrypoint assumed
     ChkTestSymbolic //Inputs will be symbolically generated and executed with failures reported and check for "true" return value -- single entrypoint assumed
+}
+
+enum RuntimeActionMode {
+    EvaluateConcrete, //Inputs will be parsed as concrete values and set to extract result value
+    ErrTestConcrete, //Inputs will be parsed as concrete values and executed with failures reported (NO check on output)
+    ChkTestConcrete, //Inputs will be parsed as concrete values and executed with failures reported and check for "true" return value
 }
 
 class PackageConfig {
     
     readonly macrodefs: string[]; 
 
-    readonly src: { srcpath: string, shortname: string, contents: string }[];
+    readonly src: CodeFileInfo[];
 
-    constructor(macrodefs: string[], src: { srcpath: string, shortname: string, contents: string }[]) {
+    constructor(macrodefs: string[], src: CodeFileInfo[]) {
         this.macrodefs = macrodefs;
         this.src = src;
     }
@@ -1281,5 +1282,5 @@ export {
     MIRHavocEntityTypeDecl,
     MIRPrimitiveCollectionEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl,
     MIRConceptType, MIRTupleType, MIRRecordType, MIREphemeralListType,
-    ActionMode, PackageConfig, MIRAssembly
+    SymbolicActionMode, RuntimeActionMode, PackageConfig, MIRAssembly
 };

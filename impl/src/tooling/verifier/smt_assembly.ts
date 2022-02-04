@@ -4,8 +4,9 @@
 //-------------------------------------------------------------------------------------------------------
 
 import { BSQRegex } from "../../ast/bsqregex";
+import { SymbolicActionMode } from "../../compiler/mir_assembly";
 import { MIRResolvedTypeKey } from "../../compiler/mir_ops";
-import { SMTExp, SMTInputOutputMode, SMTTypeInfo, VerifierOptions } from "./smt_exp";
+import { SMTExp, SMTTypeInfo, VerifierOptions } from "./smt_exp";
 
 type SMT2FileInfo = {
     TYPE_TAG_DECLS: string[],
@@ -240,8 +241,9 @@ class SMTModelState {
 
     readonly targeterrorcheck: SMTExp;
     readonly isvaluecheck: SMTExp;
+    readonly isvaluetruechk: SMTExp;
 
-    constructor(arginits: { vname: string, vtype: SMTTypeInfo, vchk: SMTExp | undefined, vinit: SMTExp, callexp: SMTExp }[], resinit: { vname: string, vtype: SMTTypeInfo, vchk: SMTExp | undefined, vinit: SMTExp, callexp: SMTExp } | undefined, argchk: SMTExp[] | undefined, checktype: SMTTypeInfo, echeck: SMTExp, targeterrorcheck: SMTExp, isvaluecheck: SMTExp) {
+    constructor(arginits: { vname: string, vtype: SMTTypeInfo, vchk: SMTExp | undefined, vinit: SMTExp, callexp: SMTExp }[], resinit: { vname: string, vtype: SMTTypeInfo, vchk: SMTExp | undefined, vinit: SMTExp, callexp: SMTExp } | undefined, argchk: SMTExp[] | undefined, checktype: SMTTypeInfo, echeck: SMTExp, targeterrorcheck: SMTExp, isvaluecheck: SMTExp, isvaluetruechk: SMTExp) {
         this.arginits = arginits;
         this.resinit = resinit;
         this.argchk = argchk;
@@ -250,6 +252,7 @@ class SMTModelState {
 
         this.targeterrorcheck = targeterrorcheck;
         this.isvaluecheck = isvaluecheck;
+        this.isvaluetruechk = isvaluetruechk;
     }
 }
 
@@ -554,8 +557,12 @@ class SMTAssembly {
         action.push(`(declare-const _@smtres@ ${mmodel.checktype.smttypename})`);
         action.push(`(assert (= _@smtres@ ${mmodel.fcheck.emitSMT2(undefined)}))`);
 
-        if (this.vopts.IOMode === SMTInputOutputMode.ModelCheck) {
+        if (this.vopts.ActionMode === SymbolicActionMode.ErrTestSymbolic) {
             action.push(`(assert ${mmodel.targeterrorcheck.emitSMT2(undefined)})`);
+        }
+        else if(this.vopts.ActionMode === SymbolicActionMode.ChkTestSymbolic) {
+            action.push(`(assert ${mmodel.isvaluecheck.emitSMT2(undefined)})`);
+            action.push(`(assert ${mmodel.isvaluetruechk.emitSMT2(undefined)})`)
         }
         else {
             action.push(`(assert ${mmodel.isvaluecheck.emitSMT2(undefined)})`);

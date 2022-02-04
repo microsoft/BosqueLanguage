@@ -29,7 +29,7 @@ function workflowLoadUserSrc(files: string[]): CodeFileInfo[] | undefined {
 
         for (let i = 0; i < files.length; ++i) {
             const realpath = Path.resolve(files[i]);
-            code.push({ fpath: realpath, contents: FS.readFileSync(realpath).toString() });
+            code.push({ fpath: realpath, filepath: files[i], contents: FS.readFileSync(realpath).toString() });
         }
 
         return code;
@@ -43,11 +43,11 @@ function workflowLoadCoreSrc(): CodeFileInfo[] | undefined {
     try {
         let code: CodeFileInfo[] = [];
 
-        const coredir = Path.join(bosque_dir, "bin/core/execute");
+        const coredir = Path.join(bosque_dir, "bin/core");
         const corefiles = FS.readdirSync(coredir);
         for (let i = 0; i < corefiles.length; ++i) {
             const cfpath = Path.join(coredir, corefiles[i]);
-            code.push({ fpath: cfpath, contents: FS.readFileSync(cfpath).toString() });
+            code.push({ fpath: cfpath, filepath: corefiles[i], contents: FS.readFileSync(cfpath).toString() });
         }
 
         return code;

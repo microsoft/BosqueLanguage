@@ -244,9 +244,9 @@ class SourceInfo {
 }
 
 type CodeFileInfo = { 
-    fpath: string, 
-    filepath: string,
-    contents: string 
+    srcpath: string, 
+    filename: string, 
+    contents: string
 };
 
 function unescapeLiteralString(str: string): string {

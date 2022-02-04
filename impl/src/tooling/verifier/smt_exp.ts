@@ -3,13 +3,8 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
+import { SymbolicActionMode } from "../../compiler/mir_assembly";
 import { MIRResolvedTypeKey } from "../../compiler/mir_ops";
-
-enum SMTInputOutputMode
-{
-    ModelCheck,
-    Evaluate
-}
 
 type VerifierOptions = {
     INT_MIN: number,
@@ -19,7 +14,7 @@ type VerifierOptions = {
 
     CONTAINER_MAX: number,
 
-    IOMode: SMTInputOutputMode
+    ActionMode: SymbolicActionMode
 };
 
 class SMTMaskConstruct {
@@ -350,7 +345,7 @@ class SMTCond extends SMTExp {
 }
 
 export {
-    SMTInputOutputMode, VerifierOptions,
+    VerifierOptions,
     SMTMaskConstruct,
     SMTTypeInfo, SMTExp, SMTVar, SMTConst, 
     SMTCallSimple, SMTCallGeneral, SMTCallGeneralWOptMask, SMTCallGeneralWPassThroughMask,

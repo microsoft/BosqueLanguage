@@ -16,6 +16,6 @@
         "src/type_checker/*.ts",
         "src/compiler/*.ts",
         "src/tooling/verifier/*.ts",
-        "src/tooling/icpp/*.ts"
+        "src/tooling/icpp/transpiler/*.ts"
     ]
 }

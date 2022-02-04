@@ -9,14 +9,14 @@ import { exec, execSync } from "child_process";
 
 import chalk from "chalk";
 
-import { MIRAssembly, MIRObjectEntityTypeDecl, PackageConfig } from "../../compiler/mir_assembly";
+import { MIRAssembly, MIRObjectEntityTypeDecl, PackageConfig, SymbolicActionMode } from "../../compiler/mir_assembly";
 import { MIREmitter } from "../../compiler/mir_emitter";
 import { MIRInvokeKey } from "../../compiler/mir_ops";
 
-import { Payload, SMTEmitter } from "./smtdecls_emitter";
-import { BVEmitter, VerifierOptions } from "./smt_exp";
+import { SMTEmitter } from "./smtdecls_emitter";
+import { VerifierOptions } from "./smt_exp";
 import { CodeFileInfo } from "../../ast/parser";
-import { computeMaxConstantSize } from "../../compiler/mir_info";
+import { BuildApplicationMode } from "../../ast/assembly";
 
 const bosque_dir: string = Path.normalize(Path.join(__dirname, "../../../"));
 const smtruntime_path = Path.join(bosque_dir, "bin/tooling/verifier/runtime/smtruntime.smt2");
@@ -24,26 +24,13 @@ const exepath = Path.normalize(Path.join(bosque_dir, "/build/output/chkworkflow"
 
 const smtruntime = FS.readFileSync(smtruntime_path).toString();
 
-const DEFAULT_TIMEOUT = 5000;
-
-type CheckerResult = "unreachable" | "witness" | "possible" | "timeout";
-
-//ocrresponds to 1a, 1b, 2a, 2b in paper
-type ChkWorkflowOutcome = "unreachable" | "witness" | "partial" | "nosmall" | "exhaustive";
-
-enum AssemblyFlavor
-{
-    RecuriveImpl,
-    UFOverApproximate
-}
-
 function workflowLoadUserSrc(files: string[]): CodeFileInfo[] | undefined {
     try {
         let code: CodeFileInfo[] = [];
 
         for (let i = 0; i < files.length; ++i) {
             const realpath = Path.resolve(files[i]);
-            code.push({ fpath: realpath, filepath: files[i], contents: FS.readFileSync(realpath).toString() });
+            code.push({ srcpath: realpath, filename: files[i], contents: FS.readFileSync(realpath).toString() });
         }
 
         return code;
@@ -61,7 +48,7 @@ function workflowLoadCoreSrc(): CodeFileInfo[] | undefined {
         const corefiles = FS.readdirSync(coredir);
         for (let i = 0; i < corefiles.length; ++i) {
             const cfpath = Path.join(coredir, corefiles[i]);
-            code.push({ fpath: cfpath, filepath: corefiles[i], contents: FS.readFileSync(cfpath).toString() });
+            code.push({ srcpath: cfpath, filename: corefiles[i], contents: FS.readFileSync(cfpath).toString() });
         }
 
         return code;
@@ -71,45 +58,23 @@ function workflowLoadCoreSrc(): CodeFileInfo[] | undefined {
     }
 }
 
-function generateMASM(usercode: CodeFileInfo[], entrypoint: string, asmflavor: AssemblyFlavor, enablesmall: boolean): { masm: MIRAssembly | undefined, errors: string[] } {
+function generateMASM(usercode: PackageConfig, entrypoint: {filename: string, names: string[]}): { masm: MIRAssembly | undefined, errors: string[] } {
     const corecode = workflowLoadCoreSrc() as CodeFileInfo[];
-    const code = [...corecode, ...usercode];
+    const coreconfig = new PackageConfig(["CHECK_LIBS"], corecode);
 
-    let namespace = "NSMain";
-    let entryfunc = "main";
-    const cpos = entrypoint.indexOf("::");
-    if(cpos === -1) {
-        entryfunc = entrypoint;
-    }
-    else {
-        namespace = entrypoint.slice(0, cpos);
-        entryfunc = entrypoint.slice(cpos + 2);
-    }
-
-    let macros: string[] = [];
-    if(asmflavor === AssemblyFlavor.UFOverApproximate)
-    {
-        macros.push("UF_APPROX");
-    }
-
-    if(enablesmall)
-    {
-        macros.push("SMALL_MODEL_ENABLED");
-    }
-
-    return MIREmitter.generateMASM(new PackageConfig(), "debug", macros, {namespace: namespace, names: [entryfunc]}, true, code);
+    return MIREmitter.generateMASM(BuildApplicationMode.ModelChecker, [coreconfig, usercode], "debug", entrypoint);
 }
 
-function generateSMTPayload(masm: MIRAssembly, mode: "unreachable" | "witness" | "evaluate" | "invert", timeout: number, numgen: { int: BVEmitter, hash: BVEmitter }, vopts: VerifierOptions, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey): Payload | undefined {
+function generateSMTPayload(masm: MIRAssembly, vopts: VerifierOptions, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey): any {
     try {
-        return SMTEmitter.generateSMTPayload(masm, mode, timeout, smtruntime, vopts, numgen, errorTrgtPos, "__i__" + entrypoint);
+        return SMTEmitter.generateSMTPayload(masm, false, smtruntime, vopts, errorTrgtPos, "__i__" + entrypoint);
     } catch(e) {
         process.stderr.write(chalk.red(`SMT generate error -- ${e}\n`));
         return undefined;
     }
 }
 
-function runVEvaluator(cpayload: object, workflow: "unreachable" | "witness" | "eval" | "invert"): string {
+function runVEvaluator(cpayload: object, mode: SymbolicActionMode): string {
     try {
         const cmd = `${exepath} --${workflow}`;
         return execSync(cmd, { input: JSON.stringify(cpayload, undefined, 2) }).toString().trim();
@@ -118,28 +83,6 @@ function runVEvaluator(cpayload: object, workflow: "unreachable" | "witness" | "
         return JSON.stringify({result: "error", info: `${ex}`});
     }
 }
-
-function computeNumGen(masm: MIRAssembly, desiredbv: number): BVEmitter | undefined {
-    const tuplemax = Math.max(...[0, ...[...masm.tupleDecls].map((tdcl) => tdcl[1].entries.length)]);
-    const recordmax = Math.max(...[0, ...[...masm.recordDecls].map((rdcl) => rdcl[1].entries.length)]);
-    const emax = Math.max(...[0, ...[...masm.entityDecls].map((edcl) => (edcl[1] instanceof MIRObjectEntityTypeDecl) ? edcl[1].fields.length : 0)]);
-    const elmax = Math.max(...[0, ...[...masm.ephemeralListDecls].map((tdcl) => tdcl[1].entries.length)]);
-
-    const consts = [...masm.invokeDecls].map((idcl) => computeMaxConstantSize(idcl[1].body.body));
-    let max = BigInt(Math.max(tuplemax, recordmax, emax, elmax));
-    for(let i = 0; i < consts.length; ++i) {
-        if(max < consts[i]) {
-            max = consts[i];
-        }
-    }
-
-    if(2n**(BigInt(desiredbv) - 1n) < max) {
-        return undefined;
-    }
-    else {
-        return BVEmitter.create(BigInt(desiredbv));
-    }
-} 
 
 function runVEvaluatorAsync(cpayload: object, workflow: "unreachable" | "witness" | "eval" | "invert", cb: (result: string) => void) {
     try {
