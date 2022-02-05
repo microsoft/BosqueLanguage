@@ -566,8 +566,8 @@ std::optional<json> JSONParseHelper::emitDateTime(DateTime t)
     {
         auto hh = t.tzoffset / 60;
         auto mm = std::abs(t.tzoffset) % 60;
-        char sstrt[10] = {0};
-        sprintf_s(sstrt, 10, "%+02d:%0d", hh, mm);
+        char sstrt[16] = {0};
+        sprintf(sstrt, "%+02d:%0d", hh, mm);
         std::string tzstr(sstrt, sstrt + 10);
 
         auto tstr = emitDateTimeRaw(t.year, t.month, t.day, t.hour, t.min) + tzstr;
@@ -605,8 +605,8 @@ std::optional<json> JSONParseHelper::emitUUID(std::vector<uint8_t> uuid)
     unsigned int bb2_3 = (unsigned int)(*reinterpret_cast<const uint16_t*>(&uuid[8]));
     unsigned int bb6 = (unsigned int)(*reinterpret_cast<const uint64_t*>(&uuid[10]) & 0xFFFFFFFFFFFF);
     
-    char sstrt[36] = {0};
-    sprintf_s(sstrt, 36, "%06x-%04x-%04x-%04x-%08x", bb4, bb2_1, bb2_2, bb2_3, bb6);
+    char sstrt[64] = {0};
+    sprintf(sstrt, "%06x-%04x-%04x-%04x-%08x", bb4, bb2_1, bb2_2, bb2_3, bb6);
     std::string res(sstrt, sstrt + 36);
 
     return res;
@@ -617,8 +617,8 @@ std::optional<json> JSONParseHelper::emitHash(std::vector<uint8_t> hash)
     std::string rr = "0x";
     for(auto iter = hash.cbegin(); iter < hash.cend(); ++iter)
     {
-        char sstrt[2] = {0};
-        sprintf_s(sstrt, 2, "%02x", *iter);
+        char sstrt[8] = {0};
+        sprintf(sstrt, "%02x", *iter);
 
         std::string ss(sstrt, sstrt + 2);
         rr += ss;
@@ -672,6 +672,19 @@ InvokeSignature* InvokeSignature::jparse(json j, const std::map<std::string, con
     });
 
     return new InvokeSignature(name, restype, argnames, argtypes);
+}
+
+APIModule::~APIModule()
+{
+    for(auto iter = this->typemap.begin(); iter != this->typemap.end(); ++iter)
+    {
+        delete iter->second;
+    }
+
+    for(auto iter = this->api.begin(); iter != this->api.end(); ++iter)
+    {
+        delete *iter;
+    }
 }
 
 APIModule* APIModule::jparse(json j)

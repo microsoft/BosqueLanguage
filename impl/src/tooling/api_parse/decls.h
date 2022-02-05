@@ -40,18 +40,7 @@ public:
         ;
     }
 
-    ~APIModule()
-    {
-        for(auto iter = this->typemap.begin(); iter != this->typemap.end(); ++iter)
-        {
-            delete iter->second;
-        }
-
-        for(auto iter = this->api.begin(); iter != this->api.end(); ++iter)
-        {
-            delete *iter;
-        }
-    }
+    ~APIModule();
 
     std::optional<const InvokeSignature*> getSigForFriendlyName(const std::string& iname) const
     {
@@ -1647,7 +1636,6 @@ public:
             return tentry.second;
         });
         auto firstoptdist = std::distance(this->ttypes.cbegin(), firstoptpos);
-        auto maskoffset = this->consfields.size() - firstoptdist;
 
         apimgr.prepareParseEntity(apimodule, this, ctx);
         apimgr.prepareParseEntityMask(apimodule, this, ctx);

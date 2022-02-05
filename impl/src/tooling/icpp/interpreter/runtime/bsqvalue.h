@@ -1033,11 +1033,11 @@ public:
         assert(this->valid());
 
         auto utfbyte = this->cbuff[this->cpos];
-        if((utfbyte & 0x8) == 0) [[likely]]
+        if((utfbyte & 0x8) == 0)
         {
             this->increment_utf8byte();
         }
-        else [[unlikely]]
+        else
         {
             //not implemented
             assert(false);
@@ -1049,11 +1049,11 @@ public:
         assert(this->valid());
 
         auto utfbyte = this->cbuff[this->cpos];
-        if((utfbyte & 0x8) == 0) [[likely]]
+        if((utfbyte & 0x8) == 0)
         {
             return (CharCode)utfbyte;
         }
-        else [[unlikely]]
+        else
         {
             //not implemented
             assert(false);
@@ -1096,7 +1096,7 @@ public:
     uint8_t* cbuff;
     uint16_t cpos;
 
-    BSQStringReverseIterator(BSQString* sstr, int64_t curr) : CharCodeIterator(), sstr(sstr), curr(curr), strmax(strmax), cbuff(nullptr), cpos(0) 
+    BSQStringReverseIterator(BSQString* sstr, int64_t curr) : CharCodeIterator(), sstr(sstr), curr(curr), strmax(0), cbuff(nullptr), cpos(0) 
     {
         if(IS_INLINE_STRING(sstr))
         {
@@ -1111,7 +1111,7 @@ public:
         if(curr == strmax - 1)
         {
             auto utfbyte = this->cbuff[this->cpos];
-            if((utfbyte & 0x8) == 1)
+            if((utfbyte & 0x8) == 0x8)
             {
                 //not implemented
                 assert(false);
@@ -1131,10 +1131,10 @@ public:
         assert(this->valid());
         this->increment_utf8byte();
 
-        if(this->valid()) [[likely]]
+        if(this->valid())
         {
             auto utfbyte = this->cbuff[this->cpos];
-            if((utfbyte & 0x8) == 1) [[unlikely]]
+            if((utfbyte & 0x8) == 0x8)
             {
                 //not implemented
                 assert(false);
@@ -1147,11 +1147,11 @@ public:
         assert(this->valid());
 
         auto utfbyte = this->cbuff[this->cpos];
-        if((utfbyte & 0x8) == 0) [[likely]]
+        if((utfbyte & 0x8) == 0)
         {
             return (CharCode)utfbyte;
         }
-        else [[unlikely]]
+        else
         {
             //not implemented
             assert(false);

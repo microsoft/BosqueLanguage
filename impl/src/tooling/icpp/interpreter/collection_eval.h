@@ -53,7 +53,7 @@ public:
         {
             return r;
         }
-        else if(rand == nullptr)
+        else if(r == nullptr)
         {
             return l;
         }
@@ -353,7 +353,6 @@ public:
         {
             Allocator::GlobalAllocator.ensureSpace(alloc + lflavor.pv8type->allocinfo.heapsize + sizeof(GC_META_DATA_WORD));
 
-            auto count = BSQPartialVectorType::getPVCount(iter.lcurr);
             void* res = Allocator::GlobalAllocator.allocateDynamic((end <= 4) ? lflavor.pv4type : lflavor.pv8type);
             BSQPartialVectorType::slicePVData(res, iter.lcurr, 0, end, lflavor.entrytype->allocinfo.inlinedatasize);
         }
@@ -433,8 +432,8 @@ public:
     static void s_reduce_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* f, const std::vector<StorageLocationPtr>& params, StorageLocationPtr res);
     static void s_reduce_idx_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* f, const std::vector<StorageLocationPtr>& params, StorageLocationPtr res);
 
-    static void* s_transduce_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQListTypeFlavor& uflavor, const BSQType* envtype, const BSQPCode* f, const std::vector<StorageLocationPtr>& params, const BSQEphemeralListType* rrtype, StorageLocationPtr eres);
-    static void* s_transduce_idx_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQListTypeFlavor& uflavor, const BSQType* envtype, const BSQPCode* f, const std::vector<StorageLocationPtr>& params, const BSQEphemeralListType* rrtype, StorageLocationPtr eres);
+    static void s_transduce_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQListTypeFlavor& uflavor, const BSQType* envtype, const BSQPCode* f, const std::vector<StorageLocationPtr>& params, const BSQEphemeralListType* rrtype, StorageLocationPtr eres);
+    static void s_transduce_idx_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQListTypeFlavor& uflavor, const BSQType* envtype, const BSQPCode* f, const std::vector<StorageLocationPtr>& params, const BSQEphemeralListType* rrtype, StorageLocationPtr eres);
 
     static void* s_sort_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* lt, const std::vector<StorageLocationPtr>& params);
     static void* s_unique_from_sorted_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* eq, const std::vector<StorageLocationPtr>& params);
@@ -468,11 +467,11 @@ public:
         while(curr != nullptr)
         {
             auto ck = ttype->getKeyLocation(curr);
-            if(ktype->fpkeycmp(ktype, kl, ck))
+            if(ktype->fpkeycmp(ktype, kl, ck) < 0)
             {
                 curr = static_cast<BSQMapTreeRepr*>(curr->l);
             }
-            else if(ktype->fpkeycmp(ktype, ck, kl))
+            else if(ktype->fpkeycmp(ktype, ck, kl) < 0)
             {
                 curr = static_cast<BSQMapTreeRepr*>(curr->r);
             }
@@ -522,7 +521,7 @@ public:
         if(pred(mflavor.treetype->getKeyLocation(iter.lcurr), mflavor.treetype->getValueLocation(iter.lcurr)))
         {
             auto nn = Allocator::GlobalAllocator.allocateDynamic(mflavor.treetype);
-            mflavor.treetype->initializeLeaf(nn, mflavor.treetype->getKeyLocation(iter.lcurr), mflavor.keytype, mflavor.treetype->valuetype(iter.lcurr), mflavor.valuetype);
+            mflavor.treetype->initializeLeaf(nn, mflavor.treetype->getKeyLocation(iter.lcurr), mflavor.keytype, mflavor.treetype->getValueLocation(iter.lcurr), mflavor.valuetype);
 
             auto root = Allocator::GlobalAllocator.registerTempRoot(mflavor.treetype);
             root->root = nn;

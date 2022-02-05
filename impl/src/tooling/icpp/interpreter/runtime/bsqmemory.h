@@ -28,7 +28,7 @@ public:
 
     //Constructor that everyone delegates to
     BSQType(BSQTypeID tid, BSQTypeLayoutKind tkind, BSQTypeSizeInfo allocinfo, GCFunctorSet gcops, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyCmpFP fpkeycmp, DisplayFP fpDisplay, std::string name): 
-        tid(tid), tkind(tkind), allocinfo(allocinfo), gcops(gcops), vtable(vtable), fpkeycmp(fpkeycmp), fpDisplay(fpDisplay), name(name)
+        tid(tid), tkind(tkind), allocinfo(allocinfo), gcops(gcops), fpkeycmp(fpkeycmp), vtable(vtable), fpDisplay(fpDisplay), name(name)
     {;}
 
     virtual ~BSQType() {;}
@@ -89,11 +89,11 @@ public:
 
     inline static void pushFrame(void** framep, RefMask mask)
     {
-        if (GCStack::stackp < BSQ_MAX_STACK) [[likely]]
+        if (GCStack::stackp < BSQ_MAX_STACK)
         {
             GCStack::frames[GCStack::stackp++] = { framep, mask };
         }
-        else [[unlikely]]
+        else
         {
             printf("Out-Of-Stack\n");
             exit(1);
@@ -206,11 +206,11 @@ public:
 
     inline void enque(void* v)
     {
-        if(this->epos < GC_REF_LIST_BLOCK_SIZE_DEFAULT) [[likely]]
+        if(this->epos < GC_REF_LIST_BLOCK_SIZE_DEFAULT)
         {
             this->tailrl[this->epos++] = v;
         }
-        else [[unlikely]]
+        else
         {
             this->enqueSlow(v);
         }
@@ -231,11 +231,11 @@ public:
     {
         assert(!this->empty());
 
-        if(this->spos < GC_REF_LIST_BLOCK_SIZE_DEFAULT) [[likely]]
+        if(this->spos < GC_REF_LIST_BLOCK_SIZE_DEFAULT)
         {
             return this->tailrl[this->spos++];
         }
-        else [[unlikely]]
+        else
         {
             return this->dequeSlow();
         }
@@ -260,11 +260,11 @@ public:
 
     inline void iterAdvance(GCRefListIterator& iter) const
     {
-        if(iter.cpos < GC_REF_LIST_BLOCK_SIZE_DEFAULT) [[likely]]
+        if(iter.cpos < GC_REF_LIST_BLOCK_SIZE_DEFAULT)
         {
             iter.cpos++;
         }
-        else [[unlikely]]
+        else
         {
             this->iterAdvanceSlow(iter);
         }
@@ -352,7 +352,7 @@ public:
     {
         size_t rsize = asize + sizeof(GC_META_DATA_WORD);
 
-        if(this->m_currPos + rsize > this->m_endPos) [[unlikely]]
+        if(this->m_currPos + rsize > this->m_endPos)
         {
              this->ensureSpace_slow();
         }
@@ -365,7 +365,7 @@ public:
 
     inline void ensureSpace(size_t required)
     {
-        if (this->m_currPos + required > this->m_endPos) [[unlikely]]
+        if (this->m_currPos + required > this->m_endPos)
         {
             this->ensureSpace_slow();
         }
@@ -830,7 +830,7 @@ private:
 
         while (!this->releaselist.empty())
         {
-            if(freelimit <= freecount) [[unlikely]]
+            if(freelimit <= freecount)
             {
                 break;
             } 

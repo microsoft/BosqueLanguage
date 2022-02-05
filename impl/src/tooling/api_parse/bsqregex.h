@@ -457,7 +457,7 @@ public:
     const NFA* nfare;
     const NFA* nfare_rev;
 
-    BSQRegex(std::string restr, const BSQRegexOpt* re, NFA* nfare): restr(restr), re(re), nfare(nfare), nfare_rev(nfare_rev) {;}
+    BSQRegex(std::string restr, const BSQRegexOpt* re, NFA* nfare, NFA* nfare_rev): restr(restr), re(re), nfare(nfare), nfare_rev(nfare_rev) {;}
     ~BSQRegex() {;}
 
     static BSQRegex* jparse(json j);

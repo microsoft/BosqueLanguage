@@ -239,7 +239,7 @@ void Evaluator::processEntityVirtualLoadAndStore(StorageLocationPtr src, const B
     auto fldidx = (size_t)std::distance(einfo->fields.cbegin(), fldpos);
     auto voffset = einfo->fieldoffsets[fldidx];
 
-    this->processEntityDirectLoadAndStore(src, etype, voffset, dst, dsttype);
+    this->processEntityDirectLoadAndStore(pp, etype, voffset, dst, dsttype);
 }
 
 void Evaluator::processGuardVarStore(const BSQGuard& gv, BSQBool f)
@@ -309,7 +309,7 @@ void Evaluator::evalLoadTupleIndexSetGuardVirtualOp(const LoadTupleIndexSetGuard
     BSQBool loadsafe = op->idx < tinfo->maxIndex;
     if(loadsafe)
     {
-        this->processTupleVirtualLoadAndStore(sl, op->layouttype, op->idx, op->trgt, op->trgttype);
+        this->processTupleVirtualLoadAndStore(pp, op->layouttype, op->idx, op->trgt, op->trgttype);
 
     }
     this->processGuardVarStore(op->guard, loadsafe);
@@ -347,7 +347,7 @@ void Evaluator::evalLoadRecordPropertySetGuardVirtualOp(const LoadRecordProperty
     BSQBool loadsafe = std::find(rinfo->properties.cbegin(), rinfo->properties.cend(), op->propId) != rinfo->properties.cend();
     if(loadsafe)
     {
-        this->processRecordVirtualLoadAndStore(sl, op->layouttype, op->propId, op->trgt, op->trgttype);
+        this->processRecordVirtualLoadAndStore(pp, op->layouttype, op->propId, op->trgt, op->trgttype);
     }
     this->processGuardVarStore(op->guard, loadsafe);
 }
@@ -2934,17 +2934,14 @@ void ICPPParseJSON::completeParseContainer(const APIModule* apimodule, const ITy
         {
             std::list<BSQTempRootNode>& roots = Allocator::GlobalAllocator.getTempRootCurrScope();
             std::stable_sort(roots.begin(), roots.end(), [&](const BSQTempRootNode& ln, const BSQTempRootNode& rn) {
-                BSQBool bb;
-                mflavor.keytype->fpkeycmp(mflavor.keytype, mflavor.treetype->getKeyLocation(ln.root), mflavor.treetype->getKeyLocation(rn.root));
-                return (bool)bb;
+                return mflavor.keytype->fpkeycmp(mflavor.keytype, mflavor.treetype->getKeyLocation(ln.root), mflavor.treetype->getKeyLocation(rn.root)) < 0;
             });
 
             //check for dups in the input
             auto fl = std::adjacent_find(roots.begin(), roots.end(), [&](const BSQTempRootNode& ln, const BSQTempRootNode& rn) {
-                BSQBool bb;
-                mflavor.keytype->fpkeycmp(mflavor.keytype, mflavor.treetype->getKeyLocation(ln.root), mflavor.treetype->getKeyLocation(rn.root));
-                return !((bool)bb);
+                return mflavor.keytype->fpkeycmp(mflavor.keytype, mflavor.treetype->getKeyLocation(ln.root), mflavor.treetype->getKeyLocation(rn.root)) == 0;
             });
+            
             std::string fname("[JSON_PARSE]");
             BSQ_LANGUAGE_ASSERT(fl != roots.end(), (&fname), -1, "Duplicate keys in map");
 

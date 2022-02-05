@@ -343,7 +343,11 @@ BSQRegex* BSQRegex::jparse(json j)
     std::vector<NFAOpt*> nfastates = { new NFAOptAccept(0) };
     auto nfastart = bsqre->compile(0, nfastates);
 
-    auto nfare = new NFA(nfastart, 0, nfastates);
+    std::vector<NFAOpt*> nfastates_rev = { new NFAOptAccept(0) };
+    auto nfastart_rev = bsqre->compileReverse(0, nfastates);
 
-    return new BSQRegex(restr, bsqre, nfare);
+    auto nfare = new NFA(nfastart, 0, nfastates);
+    auto nfare_rev = new NFA(nfastart_rev, 0, nfastates_rev);
+
+    return new BSQRegex(restr, bsqre, nfare, nfare_rev);
 }

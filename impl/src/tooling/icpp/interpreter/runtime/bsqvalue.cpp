@@ -883,8 +883,8 @@ std::string entityDateTimeDisplay_impl(const BSQType* btype, StorageLocationPtr 
     {
         auto hh = t->tzoffset / 60;
         auto mm = std::abs(t->tzoffset) % 60;
-        char sstrt[10] = {0};
-        sprintf_s(sstrt, 10, "%+02d:%0d", hh, mm);
+        char sstrt[16] = {0};
+        sprintf(sstrt, "%+02d:%0d", hh, mm);
         std::string tzstr(sstrt, sstrt + 10);
 
         auto tstr = emitDateTimeRaw(t->year, t->month, t->day, t->hour, t->min) + tzstr;
@@ -938,8 +938,8 @@ std::string entityUUIDDisplay_impl(const BSQType* btype, StorageLocationPtr data
     uint16_t bb2_3 = *reinterpret_cast<const uint16_t*>(uuid.bytes + 8);
     uint64_t bb6 = *reinterpret_cast<const uint64_t*>(uuid.bytes + 10) & 0xFFFFFFFFFFFF;
     
-    char sstrt[36] = {0};
-    sprintf_s(sstrt, 36, "%06x-%04x-%04x-%04x-%08x", bb4, bb2_1, bb2_2, bb2_3, bb6);
+    char sstrt[64] = {0};
+    sprintf(sstrt, "%06x-%04x-%04x-%04x-%08x", bb4, bb2_1, bb2_2, bb2_3, bb6);
     std::string res(sstrt, sstrt + 36);
 
     return res;
@@ -968,8 +968,8 @@ std::string entityContentHashDisplay_impl(const BSQType* btype, StorageLocationP
     std::string rr = "0x";
     for(auto iter = v1->bytes; iter < v1->bytes + sizeof(v1->bytes); ++iter)
     {
-        char sstrt[2] = {0};
-        sprintf_s(sstrt, 2, "%02x", *iter);
+        char sstrt[8] = {0};
+        sprintf(sstrt, "%02x", *iter);
 
         std::string ss(sstrt, sstrt + 2);
         rr += ss;

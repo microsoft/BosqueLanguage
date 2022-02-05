@@ -549,7 +549,7 @@ void* BSQListOps::s_map_sync_ne(const BSQListTypeFlavor& lflavor1, const BSQList
     void* rres = BSQListOps::s_temp_root_to_list_rec(resflavor, lstart, count);
 
     Allocator::GlobalAllocator.popTempRootScope();
-    auto llres = Allocator::GlobalAllocator.resetCollectionNodeEnd(gcpoint);
+    Allocator::GlobalAllocator.resetCollectionNodeEnd(gcpoint);
     
     return rres;
 }
@@ -606,7 +606,7 @@ void BSQListOps::s_reduce_idx_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThu
     Allocator::GlobalAllocator.releaseCollectionIterator(&iter);
 }
 
-void* BSQListOps::s_transduce_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQListTypeFlavor& uflavor, const BSQType* envtype, const BSQPCode* f, const std::vector<StorageLocationPtr>& params, const BSQEphemeralListType* rrtype, StorageLocationPtr eres)
+void BSQListOps::s_transduce_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQListTypeFlavor& uflavor, const BSQType* envtype, const BSQPCode* f, const std::vector<StorageLocationPtr>& params, const BSQEphemeralListType* rrtype, StorageLocationPtr eres)
 {
     auto gcpoint = Allocator::GlobalAllocator.getCollectionNodeCurrentEnd();
     auto rnode = Allocator::GlobalAllocator.registerCollectionNode(static_cast<BSQListTreeRepr*>(t));
@@ -652,7 +652,7 @@ void* BSQListOps::s_transduce_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThu
     Allocator::GlobalAllocator.resetCollectionNodeEnd(gcpoint);
 }
 
-void* BSQListOps::s_transduce_idx_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQListTypeFlavor& uflavor, const BSQType* envtype, const BSQPCode* f, const std::vector<StorageLocationPtr>& params, const BSQEphemeralListType* rrtype, StorageLocationPtr eres)
+void BSQListOps::s_transduce_idx_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQListTypeFlavor& uflavor, const BSQType* envtype, const BSQPCode* f, const std::vector<StorageLocationPtr>& params, const BSQEphemeralListType* rrtype, StorageLocationPtr eres)
 {
     auto gcpoint = Allocator::GlobalAllocator.getCollectionNodeCurrentEnd();
     auto rnode = Allocator::GlobalAllocator.registerCollectionNode(static_cast<BSQListTreeRepr*>(t));
@@ -810,7 +810,7 @@ void s_union_rec_ne(const BSQMapTypeFlavor& mflavor, StorageLocationPtr tnode, B
 
     auto tmpi = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(tnode);
     auto tmpr = BSQMapOps::s_add_ne(mflavor, tmpi, mflavor.treetype, mflavor.treetype->getKeyLocation(ii.lcurr), mflavor.treetype->getKeyLocation(ii.lcurr));
-    SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(tmpnam, tmpr);
+    SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(tnode, tmpr);
 
     if(BSQMapTreeType::getRight(ii.lcurr) != nullptr)
     {
@@ -919,7 +919,7 @@ void* s_add_ne_rec(const BSQMapTypeFlavor& mflavor, BSQMapSpineIterator& iter, S
         auto nalloc = alloc + mflavor.treetype->allocinfo.heapsize + sizeof(GC_META_DATA_WORD);
 
         auto ck = mflavor.treetype->getKeyLocation(iter.lcurr);
-        if(mflavor.keytype->fpkeycmp(mflavor.keytype, kl, ck))
+        if(mflavor.keytype->fpkeycmp(mflavor.keytype, kl, ck) < 0)
         {
             iter.moveLeft();
             void* ll = s_add_ne_rec(mflavor, iter, kl, vl, nalloc);
@@ -930,7 +930,7 @@ void* s_add_ne_rec(const BSQMapTypeFlavor& mflavor, BSQMapSpineIterator& iter, S
         }
         else
         {
-            BSQ_INTERNAL_ASSERT(mflavor.keytype->fpkeycmp(mflavor.keytype, ck, kl));
+            BSQ_INTERNAL_ASSERT(mflavor.keytype->fpkeycmp(mflavor.keytype, ck, kl) < 0);
 
             iter.moveRight();
             void* rr = s_add_ne_rec(mflavor, iter, kl, vl, nalloc);
@@ -963,7 +963,7 @@ void* s_set_ne_rec(const BSQMapTypeFlavor& mflavor, BSQMapSpineIterator& iter, S
     auto nalloc = alloc + mflavor.treetype->allocinfo.heapsize + sizeof(GC_META_DATA_WORD);
 
     auto ck = mflavor.treetype->getKeyLocation(iter.lcurr);
-    if(mflavor.keytype->fpkeycmp(mflavor.keytype, kl, ck))
+    if(mflavor.keytype->fpkeycmp(mflavor.keytype, kl, ck) < 0)
     {
         iter.moveLeft();
         void* ll = s_add_ne_rec(mflavor, iter, kl, vl, nalloc);
@@ -972,7 +972,7 @@ void* s_set_ne_rec(const BSQMapTypeFlavor& mflavor, BSQMapSpineIterator& iter, S
         res = Allocator::GlobalAllocator.allocateSafe(mflavor.treetype);
         mflavor.treetype->initializeLR(res, mflavor.treetype->getKeyLocation(iter.lcurr), mflavor.keytype, mflavor.treetype->getValueLocation(iter.lcurr), mflavor.valuetype, ll, BSQMapTreeType::getRight(iter.lcurr));
     }
-    else if(mflavor.keytype->fpkeycmp(mflavor.keytype, ck, kl))
+    else if(mflavor.keytype->fpkeycmp(mflavor.keytype, ck, kl) < 0)
     {
         iter.moveRight();
         void* rr = s_add_ne_rec(mflavor, iter, kl, vl, nalloc);
@@ -1035,7 +1035,7 @@ void* s_remove_find_ne_rec(const BSQMapTypeFlavor& mflavor, BSQMapSpineIterator&
     auto nalloc = alloc + mflavor.treetype->allocinfo.heapsize + sizeof(GC_META_DATA_WORD);
 
     auto ck = mflavor.treetype->getKeyLocation(iter.lcurr);
-    if(mflavor.keytype->fpkeycmp(mflavor.keytype, kl, ck))
+    if(mflavor.keytype->fpkeycmp(mflavor.keytype, kl, ck) < 0)
     {
         iter.moveLeft();
         void* ll = s_remove_find_ne_rec(mflavor, iter, kl, nalloc);
@@ -1044,7 +1044,7 @@ void* s_remove_find_ne_rec(const BSQMapTypeFlavor& mflavor, BSQMapSpineIterator&
         res = Allocator::GlobalAllocator.allocateSafe(mflavor.treetype);
         mflavor.treetype->initializeLR(res, mflavor.treetype->getKeyLocation(iter.lcurr), mflavor.keytype, mflavor.treetype->getValueLocation(iter.lcurr), mflavor.valuetype, ll, BSQMapTreeType::getRight(iter.lcurr));
     }
-    else if(mflavor.keytype->fpkeycmp(mflavor.keytype, ck, kl))
+    else if(mflavor.keytype->fpkeycmp(mflavor.keytype, ck, kl) < 0)
     {
         iter.moveRight();
         void* rr = s_remove_find_ne_rec(mflavor, iter, kl, nalloc);
