@@ -22,7 +22,7 @@ function copyResourceDir(dir) {
 process.stdout.write(`Copying resources...\n`);
 
 copyResourceDir("core");
-copyResourceDir("tooling/verifier/runtime");
+copyResourceDir("tooling/checker/runtime");
 //copyResourceDir("test/tests");
 
 process.stdout.write(`done!\n`);

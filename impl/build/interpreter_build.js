@@ -22,7 +22,7 @@ let outfile = "";
 let milib = "";
 if(process.platform === "darwin") {
     compiler = "clang++";
-    ccflags = "-O0 -g -DBSQ_DEBUG_BUILD -Wall -std=c++20";
+    ccflags = "-O0 -g -DBSQ_DEBUG_BUILD -Wall -std=c++20 -arch arm64";
     includes = includeheaders.map((ih) => `-I ${ih}`).join(" ");
     milib = path.join(includebase, "/macos/mimalloc/bin/libmimalloc.a");
     outfile = "-o " + outbase + "/icpp";

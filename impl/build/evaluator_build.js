@@ -7,7 +7,7 @@ const fsx = require("fs-extra");
 const path = require("path");
 const proc = require('child_process');
 
-const rootsrc = path.normalize(path.join(__dirname, "../", "src/tooling/verifier/evaluator"));
+const rootsrc = path.normalize(path.join(__dirname, "../", "src/tooling/checker/evaluator"));
 const apisrc = path.normalize(path.join(__dirname, "../", "src/tooling/api_parse"));
 const cppfiles = [rootsrc, apisrc].map((pp) => pp + "/*.cpp");
 

@@ -6,7 +6,7 @@
 import * as readline from "readline";
 
 import { PackageConfig, SymbolicActionMode } from "../compiler/mir_assembly";
-import { generateStandardVOpts, workflowEmitToFile, workflowEvaluate, workflowLoadUserSrc, workflowPassCheck } from "../tooling/verifier/smt_workflows";
+import { generateStandardVOpts, workflowEmitToFile, workflowEvaluate, workflowLoadUserSrc, workflowPassCheck } from "../tooling/checker/smt_workflows";
 
 const mode = process.argv[2];
 const args = process.argv.slice((mode === "--output" || mode === "--smt") ? 4 : 3);
