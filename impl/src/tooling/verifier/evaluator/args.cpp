@@ -448,6 +448,7 @@ z3::func_decl getFloatValueConstConstructor(z3::context& c)
 bool SMTParseJSON::checkInvokeOk(const std::string& checkinvoke, z3::expr value, z3::solver& ctx)
 {
     ; //the call to the check is already set by the Havoc initializer
+    return true;
 }
 
 bool SMTParseJSON::parseNoneImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
@@ -603,6 +604,8 @@ bool SMTParseJSON::parseDateTimeImpl(const APIModule* apimodule, const IType* it
 
     auto bes = getArgContextConstructor(ctx.ctx(), "BString@UFCons_API", ctx.ctx().string_sort());
     ctx.add(bes(etzn) == ctx.ctx().string_val(t.tzname));
+
+    return true;
 }
 
 bool SMTParseJSON::parseTickTimeImpl(const APIModule* apimodule, const IType* itype, uint64_t t, z3::expr value, z3::solver& ctx)
@@ -1003,7 +1006,7 @@ z3::expr SMTParseJSON::extractValueForContainer(const APIModule* apimodule, cons
     return extendContext(ctx.ctx(), value, i);
 }
 
-void SMTParseJSON::completeParseContainer(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
+void SMTParseJSON::completeExtractContainer(const APIModule* apimodule, const IType* itype, z3::solver& ctx)
 {
     ;
 }

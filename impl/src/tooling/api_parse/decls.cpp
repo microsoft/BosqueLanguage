@@ -405,6 +405,32 @@ std::optional<uint64_t> JSONParseHelper::parseToTickTime(json j)
     return nval;
 }
 
+std::optional<uint64_t> JSONParseHelper::parseToLogicalTime(json j)
+{
+    if(!j.is_string())
+    {
+        return std::nullopt;
+    }
+    
+    std::string sstr = j.get<std::string>();
+    if(!std::regex_match(sstr, re_numberino_n))
+    {
+        return std::nullopt;
+    }
+
+    std::optional<uint64_t> nval = std::nullopt;
+    try
+    {
+        nval = std::stoull(sstr);
+    }
+    catch(...)
+    {
+        ;
+    }
+
+    return nval;
+}
+
 std::optional<std::vector<uint8_t>> JSONParseHelper::parseUUID(json j)
 {
     if(!j.is_string())
@@ -490,27 +516,27 @@ std::optional<json> JSONParseHelper::emitSignedNumber(int64_t i)
 
 std::optional<json> JSONParseHelper::emitBigUnsignedNumber(std::string s)
 {
-    std::make_optional(s);
+    return std::make_optional(s);
 }
 
 std::optional<json> JSONParseHelper::emitBigSignedNumber(std::string s)
 {
-    std::make_optional(s);
+    return std::make_optional(s);
 }
 
 std::optional<json> JSONParseHelper::emitRealNumber(std::string s)
 {
-    std::make_optional(s);
+    return std::make_optional(s);
 }
 
 std::optional<json> JSONParseHelper::emitDecimalNumber(std::string s)
 {
-    std::make_optional(s);
+    return std::make_optional(s);
 }
 
 std::optional<json> JSONParseHelper::emitRationalNumber(std::pair<std::string, uint64_t> rv)
 {
-    std::make_optional(rv.first + "/" + std::to_string(rv.second));
+    return std::make_optional(rv.first + "/" + std::to_string(rv.second));
 }
 
 std::string emitDateTimeRaw(uint16_t y, uint8_t m, uint8_t d, uint8_t hh, uint8_t mm)
@@ -566,15 +592,18 @@ std::optional<json> JSONParseHelper::emitTickTime(uint64_t t)
     return "T" + std::to_string(t) + "ns";
 }
 
+std::optional<json> JSONParseHelper::emitLogicalTime(uint64_t t)
+{
+    return "L" + std::to_string(t);
+}
+
 std::optional<json> JSONParseHelper::emitUUID(std::vector<uint8_t> uuid)
 {
-    std::string res;
-
-    uint32_t bb4 = *reinterpret_cast<const uint32_t*>(&uuid[0]);
-    uint16_t bb2_1 = *reinterpret_cast<const uint16_t*>(&uuid[4]);
-    uint16_t bb2_2 = *reinterpret_cast<const uint16_t*>(&uuid[6]);
-    uint16_t bb2_3 = *reinterpret_cast<const uint16_t*>(&uuid[8]);
-    uint64_t bb6 = *reinterpret_cast<const uint64_t*>(&uuid[10]) & 0xFFFFFFFFFFFF;
+    unsigned int bb4 = (unsigned int)(*reinterpret_cast<const uint32_t*>(&uuid[0]));
+    unsigned int bb2_1 = (unsigned int)(*reinterpret_cast<const uint16_t*>(&uuid[4]));
+    unsigned int bb2_2 = (unsigned int)(*reinterpret_cast<const uint16_t*>(&uuid[6]));
+    unsigned int bb2_3 = (unsigned int)(*reinterpret_cast<const uint16_t*>(&uuid[8]));
+    unsigned int bb6 = (unsigned int)(*reinterpret_cast<const uint64_t*>(&uuid[10]) & 0xFFFFFFFFFFFF);
     
     char sstrt[36] = {0};
     sprintf_s(sstrt, 36, "%06x-%04x-%04x-%04x-%08x", bb4, bb2_1, bb2_2, bb2_3, bb6);
@@ -750,136 +779,3 @@ IType* IType::jparse(json j)
     }
 }
 
-template <typename ValueRepr, typename State>
-bool IType::tparse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
-{
-    switch(this->tag)
-    {
-        case TypeTag::NoneTag:
-            return dynamic_cast<NoneType>(this)->parse(apimgr, apimodule, j, value, ctx);
-        case TypeTag::NothingTag:
-            return dynamic_cast<NothingType>(this)->parse(apimgr, apimodule, j, value, ctx);
-        case TypeTag::BoolTag:
-            return dynamic_cast<BoolType>(this)->parse(apimgr, apimodule, j, value, ctx);
-        case TypeTag::NatTag:
-            return dynamic_cast<NatType>(this)->parse(apimgr, apimodule, j, value, ctx);
-        case TypeTag::IntTag:
-            return dynamic_cast<IntType>(this)->parse(apimgr, apimodule, j, value, ctx);
-        case TypeTag::BigNatTag:
-            return dynamic_cast<BigNatType>(this)->parse(apimgr, apimodule, j, value, ctx);
-        case TypeTag::BigIntTag:
-            return dynamic_cast<BigIntType>(this)->parse(apimgr, apimodule, j, value, ctx);
-        case TypeTag::RationalTag:
-            return dynamic_cast<RationalType>(this)->parse(apimgr, apimodule, j, value, ctx);
-        case TypeTag::FloatTag:
-            return dynamic_cast<FloatType>(this)->parse(apimgr, apimodule, j, value, ctx);
-        case TypeTag::DecimalTag:
-            return dynamic_cast<DecimalType>(this)->parse(apimgr, apimodule, j, value, ctx);
-        case TypeTag::StringTag:
-            return dynamic_cast<StringType>(this)->parse(apimgr, apimodule, j, value, ctx);
-        case TypeTag::StringOfTag:
-            return dynamic_cast<StringOfType>(this)->parse(apimgr, apimodule, j, value, ctx);
-        case TypeTag::DataStringTag:
-            return dynamic_cast<DataStringType>(this)->parse(apimgr, apimodule, j, value, ctx);
-        case TypeTag::ByteBufferTag:
-            return dynamic_cast<ByteBufferType>(this)->parse(apimgr, apimodule, j, value, ctx);
-        case TypeTag::DataBufferTag:
-            return dynamic_cast<DataBufferType>(this)->parse(apimgr, apimodule, j, value, ctx);
-        case TypeTag::DateTimeTag:
-            return dynamic_cast<DateTimeType>(this)->parse(apimgr, apimodule, j, value, ctx);
-        case TypeTag::TickTimeTag:
-            return dynamic_cast<TickTimeType>(this)->parse(apimgr, apimodule, j, value, ctx);
-        case TypeTag::LogicalTimeTag:
-            return dynamic_cast<LogicalTimeType>(this)->parse(apimgr, apimodule, j, value, ctx);
-        case TypeTag::UUIDTag:
-            return dynamic_cast<UUIDType>(this)->parse(apimgr, apimodule, j, value, ctx);
-        case TypeTag::ContentHashTag:
-            return dynamic_cast<ContentHashType>(this)->parse(apimgr, apimodule, j, value, ctx);
-        case TypeTag::ConstructableOfType:
-            return dynamic_cast<ConstructableOfType>(this)->parse(apimgr, apimodule, j, value, ctx);
-        case TypeTag::TupleTag:
-            return dynamic_cast<TupleType>(this)->parse(apimgr, apimodule, j, value, ctx);
-        case TypeTag::RecordTag:
-            return dynamic_cast<RecordType>(this)->parse(apimgr, apimodule, j, value, ctx);
-        case TypeTag::ContainerTag:
-            return dynamic_cast<ContainerType>(this)->parse(apimgr, apimodule, j, value, ctx);
-        case TypeTag::EnumTag:
-            return dynamic_cast<EnumType>(this)->parse(apimgr, apimodule, j, value, ctx);
-        case TypeTag::EntityTag:
-            return dynamic_cast<EntityType>(this)->parse(apimgr, apimodule, j, value, ctx);
-        case TypeTag::UnionTag:
-            return dynamic_cast<UnionType>(this)->parse(apimgr, apimodule, j, value, ctx);
-        default: 
-        {
-            assert(false);
-            return false;
-        }
-    }
-}
-
-template <typename ValueRepr, typename State>
-std::optional<json> IType::textract(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
-{
-    switch(this->tag)
-    {
-        case TypeTag::NoneTag:
-            return dynamic_cast<NoneType>(this)->extract(apimgr, apimodule, value, ctx);
-        case TypeTag::NothingTag:
-            return dynamic_cast<NothingType>(this)->extract(apimgr, apimodule, value, ctx);
-        case TypeTag::BoolTag:
-            return dynamic_cast<BoolType>(this)->extract(apimgr, apimodule, value, ctx);
-        case TypeTag::NatTag:
-            return dynamic_cast<NatType>(this)->extract(apimgr, apimodule, value, ctx);
-        case TypeTag::IntTag:
-            return dynamic_cast<IntType>(this)->extract(apimgr, apimodule, value, ctx);
-        case TypeTag::BigNatTag:
-            return dynamic_cast<BigNatType>(this)->extract(apimgr, apimodule, value, ctx);
-        case TypeTag::BigIntTag:
-            return dynamic_cast<BigIntType>(this)->extract(apimgr, apimodule, value, ctx);
-        case TypeTag::RationalTag:
-            return dynamic_cast<RationalType>(this)->extract(apimgr, apimodule, value, ctx);
-        case TypeTag::FloatTag:
-            return dynamic_cast<FloatType>(this)->extract(apimgr, apimodule, value, ctx);
-        case TypeTag::DecimalTag:
-            return dynamic_cast<DecimalType>(this)->extract(apimgr, apimodule, value, ctx);
-        case TypeTag::StringTag:
-            return dynamic_cast<StringType>(this)->extract(apimgr, apimodule, value, ctx);
-        case TypeTag::StringOfTag:
-            return dynamic_cast<StringOfType>(this)->extract(apimgr, apimodule, value, ctx);
-        case TypeTag::DataStringTag:
-            return dynamic_cast<DataStringType>(this)->extract(apimgr, apimodule, value, ctx);
-        case TypeTag::ByteBufferTag:
-            return dynamic_cast<ByteBufferType>(this)->extract(apimgr, apimodule, value, ctx);
-        case TypeTag::DataBufferTag:
-            return dynamic_cast<DataBufferType>(this)->extract(apimgr, apimodule, value, ctx);
-        case TypeTag::DateTimeTag:
-            return dynamic_cast<DateTimeType>(this)->extract(apimgr, apimodule, value, ctx);
-        case TypeTag::TickTimeTag:
-            return dynamic_cast<TickTimeType>(this)->extract(apimgr, apimodule, value, ctx);
-        case TypeTag::LogicalTimeTag:
-            return dynamic_cast<LogicalTimeType>(this)->extract(apimgr, apimodule, value, ctx);
-        case TypeTag::UUIDTag:
-            return dynamic_cast<UUIDType>(this)->extract(apimgr, apimodule, value, ctx);
-        case TypeTag::ContentHashTag:
-            return dynamic_cast<ContentHashType>(this)->extract(apimgr, apimodule, value, ctx);
-        case TypeTag::ConstructableOfType:
-            return dynamic_cast<ConstructableOfType>(this)->extract(apimgr, apimodule, value, ctx);
-        case TypeTag::TupleTag:
-            return dynamic_cast<TupleType>(this)->extract(apimgr, apimodule, value, ctx);
-        case TypeTag::RecordTag:
-            return dynamic_cast<RecordType>(this)->extract(apimgr, apimodule, value, ctx);
-        case TypeTag::ContainerTag:
-            return dynamic_cast<ContainerType>(this)->extract(apimgr, apimodule, value, ctx);
-        case TypeTag::EnumTag:
-            return dynamic_cast<EnumType>(this)->extract(apimgr, apimodule, value, ctx);
-        case TypeTag::EntityTag:
-            return dynamic_cast<EntityType>(this)->extract(apimgr, apimodule, value, ctx);
-        case TypeTag::UnionTag:
-            return dynamic_cast<UnionType>(this)->extract(apimgr, apimodule, value, ctx);
-        default: 
-        {
-            assert(false);
-            return std::nullopt;
-        }
-    }
-}

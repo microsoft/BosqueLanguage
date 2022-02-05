@@ -855,9 +855,7 @@ enum RuntimeActionMode {
 }
 
 class PackageConfig {
-    
     readonly macrodefs: string[]; 
-
     readonly src: CodeFileInfo[];
 
     constructor(macrodefs: string[], src: CodeFileInfo[]) {

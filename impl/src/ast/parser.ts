@@ -573,8 +573,8 @@ class Lexer {
         Lexer._s_nameRe.lastIndex = this.m_cpos;
         const m = Lexer._s_nameRe.exec(this.m_input);
 
-        const kwmatch = (m !== null) && Lexer.findKeywordString(m[0]);
-        if (kwmatch) {
+        const kwmatch = (m !== null) ? Lexer.findKeywordString(m[0]) : undefined;
+        if (kwmatch !== undefined && m !== null) {
             this.recordLexToken(this.m_cpos + m[0].length, kwmatch);
             return true;
         }

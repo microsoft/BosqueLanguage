@@ -80,8 +80,8 @@ public:
 
     virtual std::pair<CharCode, StateID> generate(RandGenerator& rnd, const std::vector<NFAOpt*>& nfaopts) const override final
     {
-        std::uniform_int_distribution<CharCode> cgen(this->low, this->high);
-        return std::make_pair(cgen(rnd), this->follow);
+        std::uniform_int_distribution<uint32_t> cgen(this->low, this->high);
+        return std::make_pair((CharCode)cgen(rnd), this->follow);
     }
 };
 
@@ -100,8 +100,8 @@ public:
 
     virtual std::pair<CharCode, StateID> generate(RandGenerator& rnd, const std::vector<NFAOpt*>& nfaopts) const override final
     {
-        std::uniform_int_distribution<CharCode> cgen(32, 126);
-        return std::make_pair(cgen(rnd), this->follow);
+        std::uniform_int_distribution<uint32_t> cgen(32, 126);
+        return std::make_pair((CharCode)cgen(rnd), this->follow);
     }
 };
 

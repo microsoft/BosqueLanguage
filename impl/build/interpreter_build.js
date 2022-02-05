@@ -8,8 +8,8 @@ const path = require("path");
 const proc = require('child_process');
 
 const rootsrc = path.normalize(path.join(__dirname, "../", "src/tooling/icpp/interpreter"));
-const cppfiles = [rootsrc, path.join(rootsrc, "assembly"), path.join(rootsrc, "core"), path.join(rootsrc, "runtime")].map((pp) => pp + "/*.cpp");
-
+const apisrc = path.normalize(path.join(__dirname, "../", "src/tooling/api_parse"));
+const cppfiles = [apisrc, rootsrc, path.join(rootsrc, "runtime")].map((pp) => pp + "/*.cpp");
 
 const includebase = path.normalize(path.join(__dirname, "include"));
 const includeheaders = [path.join(includebase, "headers/json")];
@@ -24,7 +24,7 @@ if(process.platform === "darwin") {
     compiler = "clang++";
     ccflags = "-O0 -g -DBSQ_DEBUG_BUILD -Wall -std=c++20";
     includes = includeheaders.map((ih) => `-I ${ih}`).join(" ");
-    milib = path.join(includebase, "/macos/mimalloc/bin/mimalloc-static.a");
+    milib = path.join(includebase, "/macos/mimalloc/bin/libmimalloc.a");
     outfile = "-o " + outbase + "/icpp";
 }
 else if(process.platform === "linux") {
@@ -38,7 +38,7 @@ else {
     compiler = "cl.exe";
     ccflags = "/EHsc /Zi /D \"BSQ_DEBUG_BUILD\" /std:c++20";  
     includes = includeheaders.map((ih) => `/I ${ih}`).join(" ");
-    milib = path.join(includebase, "/win/mimalloc/bin/libmimalloc.a");
+    milib = path.join(includebase, "/win/mimalloc/bin/mimalloc-static.lib");
     outfile = "/Fo:\"" + outbase + "/\"" + " " + "/Fd:\"" + outbase + "/\"" + " " + "/Fe:\"" + outbase + "\\icpp.exe\"";
 }
 
@@ -49,5 +49,12 @@ fsx.removeSync(outfile);
 
 console.log(command);
 
-const outstr = proc.execSync(command).toString();
-console.log(`${outstr}`);
+
+try {
+    const outstr = proc.execSync(command).toString();
+    console.log(`${outstr}`);
+}
+catch (ex) {
+    console.log(ex.toString());
+    process.exit(1);
+}

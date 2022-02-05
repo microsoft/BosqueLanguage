@@ -21,7 +21,7 @@
 
 #include "../../api_parse/decls.h"
 
-#include <mimalloc.h>
+#include "../../../build/include/headers/mimalloc/mimalloc.h"
 
 ////////////////////////////////
 //Various sizes

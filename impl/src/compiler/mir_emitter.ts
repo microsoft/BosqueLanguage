@@ -1285,7 +1285,7 @@ class MIREmitter {
         ////////////////
         //Parse the contents and generate the assembly
         const assembly = new Assembly();
-        const allfiles = ([] as [PackageConfig, string, string, string][]).concat(...pckge.map((pk) => pk.src.map((srci) => [pk, srci.srcpath, srci.shortname, srci.contents] as [PackageConfig, string, string, string])));
+        const allfiles = ([] as [PackageConfig, string, string, string][]).concat(...pckge.map((pk) => pk.src.map((srci) => [pk, srci.srcpath, srci.filename, srci.contents] as [PackageConfig, string, string, string])));
 
         const p = new Parser(assembly, allfiles.map((fe) => { return {fullname: fe[1], shortname: fe[2]}; }));
         let depsmap = new Map<string, string[]>();

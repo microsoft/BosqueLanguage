@@ -8,7 +8,8 @@ const path = require("path");
 const proc = require('child_process');
 
 const rootsrc = path.normalize(path.join(__dirname, "../", "src/tooling/verifier/evaluator"));
-const cppfiles = [rootsrc].map((pp) => pp + "/*.cpp");
+const apisrc = path.normalize(path.join(__dirname, "../", "src/tooling/api_parse"));
+const cppfiles = [rootsrc, apisrc].map((pp) => pp + "/*.cpp");
 
 const includebase = path.normalize(path.join(__dirname, "include"));
 const includeheaders = [path.join(includebase, "headers/json"), path.join(includebase, "headers/z3")];
@@ -52,7 +53,6 @@ try {
     const outstr = proc.execSync(command).toString();
     console.log(`${outstr}`);
 
-    
     if(process.platform === "win32") {
         fsx.copyFileSync(path.join(includebase, "win/z3/bin/libz3.dll"), path.join(outbase, "libz3.dll"));
     }

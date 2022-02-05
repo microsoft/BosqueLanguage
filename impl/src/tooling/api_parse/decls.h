@@ -473,7 +473,7 @@ public:
     template <typename ValueRepr, typename State>
     bool parse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
     {
-        std::optional<std::string> nval = JSONParseHelper.parseToBigUnsignedNumber(j);
+        std::optional<std::string> nval = JSONParseHelper::parseToBigUnsignedNumber(j);
         if(!nval.has_value())
         {
             return false;
@@ -515,7 +515,7 @@ public:
     template <typename ValueRepr, typename State>
     bool parse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
     {
-        std::optional<std::string> nval = JSONParseHelper.parseToBigSignedNumber(j);
+        std::optional<std::string> nval = JSONParseHelper::parseToBigSignedNumber(j);
         if(!nval.has_value())
         {
             return false;
@@ -681,7 +681,7 @@ public:
     virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
     {
         std::uniform_int_distribution<size_t> lgen(0, 64);
-        std::uniform_int_distribution<uint8_t> cgen(32, 126);
+        std::uniform_int_distribution<uint32_t> cgen(32, 126);
         
         auto slen = lgen(rnd);
         std::vector<uint8_t> res;
@@ -689,7 +689,7 @@ public:
 
         for(size_t i = 0; i < slen; ++i)
         {
-            res.push_back(cgen(rnd));
+            res.push_back((uint8_t)cgen(rnd));
         }
 
         return std::string(res.cbegin(), res.cend());
@@ -749,7 +749,7 @@ public:
         auto sstr = j.get<std::string>();
 
         auto siter = StdStringCodeIterator(sstr);
-        bool match = this->validator->nfare->match(siter);
+        bool match = this->validator->nfare->test(siter);
         if(!match)
         {
             return false;
@@ -821,7 +821,7 @@ public:
     virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
     {
         std::uniform_int_distribution<size_t> lgen(0, 64);
-        std::uniform_int_distribution<uint8_t> bgen(0, 255);
+        std::uniform_int_distribution<uint32_t> bgen(0, 255);
         
         auto blen = lgen(rnd);
         std::vector<uint8_t> res;
@@ -829,7 +829,7 @@ public:
 
         for(size_t i = 0; i < blen; ++i)
         {
-            res.push_back(bgen(rnd));
+            res.push_back((uint8_t)bgen(rnd));
         }
 
         return res;
@@ -838,11 +838,6 @@ public:
     template <typename ValueRepr, typename State>
     bool parse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
     {
-        if(!jdata.is())
-        {
-            return false;
-        }
-
         auto jdata = j["data"];
         auto jcompress = j["compress"];
         auto jformat = j["format"];
@@ -853,15 +848,15 @@ public:
 
         std::vector<uint8_t> bbuff;
         bool badval = false;
-        std::transform(jdata.cbegin(), jdata.cend(), [&badval](const json& vv) {
+        std::transform(jdata.cbegin(), jdata.cend(), std::back_inserter(bbuff), [&badval](const json& vv) {
             if(!vv.is_number_unsigned() || vv.get<uint64_t>() >= 256)
             {
                 badval = true;
-                return 0;
+                return (uint8_t)0;
             }
             else
             {
-                return vv.get<uint64_t>();
+                return vv.get<uint8_t>();
             }
         });
 
@@ -870,7 +865,7 @@ public:
             return false;
         }
 
-        return apimgr.parseByteBufferImpl(apimodule, this, jcompress.get<utin8_t>(), jformat.get<uint8_t>(), bbuff, value, ctx);
+        return apimgr.parseByteBufferImpl(apimodule, this, jcompress.get<uint8_t>(), jformat.get<uint8_t>(), bbuff, value, ctx);
     }
 
     template <typename ValueRepr, typename State>
@@ -1062,7 +1057,7 @@ public:
             return false;
         }
 
-        return apimgr.parseLogicalTimeImpl(apimodule, this, t, value, ctx);
+        return apimgr.parseLogicalTimeImpl(apimodule, this, t.value(), value, ctx);
     }
 
     template <typename ValueRepr, typename State>
@@ -1129,7 +1124,7 @@ public:
             return std::nullopt;
         }
 
-        return JSONParseHelper::emitUUID(tval.value());
+        return JSONParseHelper::emitUUID(uval.value());
     }
 };
 
@@ -1460,10 +1455,9 @@ public:
         }
 
         apimgr.prepareParseContainer(apimodule, this, value, j.size(), ctx);
-        for(size_t i = 0; i < this->ttypes.size(); ++i)
+        auto tt = apimodule->typemap.find(this->elemtype)->second;
+        for(size_t i = 0; i < j.size(); ++i)
         {
-            auto tt = apimodule->typemap.find(this->elemtype)->second;
-
             ValueRepr vval = apimgr.getValueForContainerElementParse(apimodule, this, value, i, ctx);
             bool ok = tt->tparse(apimgr, apimodule, j[i], vval, ctx);
             if(!ok)
@@ -1487,10 +1481,9 @@ public:
         }
 
         auto jres = json::array();
+        auto tt = apimodule->typemap.find(this->elemtype)->second;
         for(size_t i = 0; i < clen.value(); ++i)
         {
-            auto tt = apimodule->typemap.find(this->ttypes[i])->second;
-
             ValueRepr vval = apimgr.extractValueForContainer(apimodule, this, value, i, ctx);
             auto rr = tt->textract(apimgr, apimodule, value, ctx);
             if(!rr.has_value())
@@ -1555,7 +1548,7 @@ public:
             return false;
         }
         
-        return apimgr.parseNatImpl(apimodule, this, (uint64_t)pos, value, ctx);
+        return apimgr.parseNatImpl(apimodule, this, (uint64_t)std::distance(this->enums.cbegin(), pos), value, ctx);
     }
 
     template <typename ValueRepr, typename State>
@@ -1640,8 +1633,8 @@ public:
                 continue;
             }
 
-            auto fpos = std::find_if(this->consfields.cbegin(), this->consfields.cend() [&fkey](const std::string& fname) {
-                return fname == fkey;
+            auto fpos = std::find_if(this->consfields.cbegin(), this->consfields.cend(), [&fkey](const std::pair<std::string, std::string>& fnamekey) {
+                return fnamekey.second == fkey;
             });
 
             if(fpos == this->consfields.cend())
@@ -1653,7 +1646,8 @@ public:
         auto firstoptpos = std::find_if(this->ttypes.cbegin(), this->ttypes.cend(), [](const std::pair<std::string, bool>& tentry) {
             return tentry.second;
         });
-        auto maskoffset = this->consfields - std::distance(this->ttypes.cbegin(), firstoptpos);
+        auto firstoptdist = std::distance(this->ttypes.cbegin(), firstoptpos);
+        auto maskoffset = this->consfields.size() - firstoptdist;
 
         apimgr.prepareParseEntity(apimodule, this, ctx);
         apimgr.prepareParseEntityMask(apimodule, this, ctx);
@@ -1668,11 +1662,11 @@ public:
                     return false;
                 }
 
-                apimgr.setMaskFlag(apimodule, value, i - firstoptpos, false, ctx);
+                apimgr.setMaskFlag(apimodule, value, i - firstoptdist, false, ctx);
             }
             else
             {
-                auto tt = apimodule->typemap.find(this->ttypes[i])->second;
+                auto tt = apimodule->typemap.find(this->ttypes[i].first)->second;
 
                 ValueRepr vval = apimgr.getValueForEntityField(apimodule, this, value, this->consfields[i], ctx);
                 bool ok = tt->tparse(apimgr, apimodule, j[fname], vval, ctx);
@@ -1683,7 +1677,7 @@ public:
 
                 if(this->ttypes[i].second)
                 {
-                    apimgr.setMaskFlag(apimodule, value, i - firstoptpos, true, ctx);
+                    apimgr.setMaskFlag(apimodule, value, i - firstoptdist, true, ctx);
                 }
             }
         }
@@ -1763,7 +1757,7 @@ public:
                 return false;
             }
 
-            auto ofidxref = std::find(this->opts.cbegin(), this->opts.cend());
+            auto ofidxref = std::find(this->opts.cbegin(), this->opts.cend(), j[0].get<std::string>());
             if(ofidxref == this->opts.cend())
             {
                 return false;
@@ -1772,7 +1766,7 @@ public:
             auto ofidx = std::distance(this->opts.cbegin(), ofidxref);
 
             auto vval = apimgr.parseUnionChoice(apimodule, oftyperef->second, value, ofidx, ctx);
-            return oftyperef->second->tparse(apimgr, apimodule, j, vval);
+            return oftyperef->second->tparse(apimgr, apimodule, j, vval, ctx);
         }
         else{
             if(!j.is_array() || j.size() != 2 || !j[0].is_string())
@@ -1786,7 +1780,7 @@ public:
                 return false;
             }
 
-            auto ofidxref = std::find(this->opts.cbegin(), this->opts.cend());
+            auto ofidxref = std::find(this->opts.cbegin(), this->opts.cend(), j[0].get<std::string>());
             if(ofidxref == this->opts.cend())
             {
                 return false;
@@ -1795,7 +1789,7 @@ public:
             auto ofidx = std::distance(this->opts.cbegin(), ofidxref);
 
             auto vval = apimgr.parseUnionChoice(apimodule, oftyperef->second, value, ofidx, ctx);
-            return oftyperef->second->tparse(apimgr, apimodule, j[1], vval);
+            return oftyperef->second->tparse(apimgr, apimodule, j[1], vval, ctx);
         }
     } 
 
@@ -1830,5 +1824,139 @@ public:
         return std::make_optional(rj);
     }
 };
+
+template <typename ValueRepr, typename State>
+bool IType::tparse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
+{
+    switch(this->tag)
+    {
+        case TypeTag::NoneTag:
+            return dynamic_cast<const NoneType*>(this)->parse(apimgr, apimodule, j, value, ctx);
+        case TypeTag::NothingTag:
+            return dynamic_cast<const NothingType*>(this)->parse(apimgr, apimodule, j, value, ctx);
+        case TypeTag::BoolTag:
+            return dynamic_cast<const BoolType*>(this)->parse(apimgr, apimodule, j, value, ctx);
+        case TypeTag::NatTag:
+            return dynamic_cast<const NatType*>(this)->parse(apimgr, apimodule, j, value, ctx);
+        case TypeTag::IntTag:
+            return dynamic_cast<const IntType*>(this)->parse(apimgr, apimodule, j, value, ctx);
+        case TypeTag::BigNatTag:
+            return dynamic_cast<const BigNatType*>(this)->parse(apimgr, apimodule, j, value, ctx);
+        case TypeTag::BigIntTag:
+            return dynamic_cast<const BigIntType*>(this)->parse(apimgr, apimodule, j, value, ctx);
+        case TypeTag::RationalTag:
+            return dynamic_cast<const RationalType*>(this)->parse(apimgr, apimodule, j, value, ctx);
+        case TypeTag::FloatTag:
+            return dynamic_cast<const FloatType*>(this)->parse(apimgr, apimodule, j, value, ctx);
+        case TypeTag::DecimalTag:
+            return dynamic_cast<const DecimalType*>(this)->parse(apimgr, apimodule, j, value, ctx);
+        case TypeTag::StringTag:
+            return dynamic_cast<const StringType*>(this)->parse(apimgr, apimodule, j, value, ctx);
+        case TypeTag::StringOfTag:
+            return dynamic_cast<const StringOfType*>(this)->parse(apimgr, apimodule, j, value, ctx);
+        case TypeTag::DataStringTag:
+            return dynamic_cast<const DataStringType*>(this)->parse(apimgr, apimodule, j, value, ctx);
+        case TypeTag::ByteBufferTag:
+            return dynamic_cast<const ByteBufferType*>(this)->parse(apimgr, apimodule, j, value, ctx);
+        case TypeTag::DataBufferTag:
+            return dynamic_cast<const DataBufferType*>(this)->parse(apimgr, apimodule, j, value, ctx);
+        case TypeTag::DateTimeTag:
+            return dynamic_cast<const DateTimeType*>(this)->parse(apimgr, apimodule, j, value, ctx);
+        case TypeTag::TickTimeTag:
+            return dynamic_cast<const TickTimeType*>(this)->parse(apimgr, apimodule, j, value, ctx);
+        case TypeTag::LogicalTimeTag:
+            return dynamic_cast<const LogicalTimeType*>(this)->parse(apimgr, apimodule, j, value, ctx);
+        case TypeTag::UUIDTag:
+            return dynamic_cast<const UUIDType*>(this)->parse(apimgr, apimodule, j, value, ctx);
+        case TypeTag::ContentHashTag:
+            return dynamic_cast<const ContentHashType*>(this)->parse(apimgr, apimodule, j, value, ctx);
+        case TypeTag::ConstructableOfType:
+            return dynamic_cast<const ConstructableOfType*>(this)->parse(apimgr, apimodule, j, value, ctx);
+        case TypeTag::TupleTag:
+            return dynamic_cast<const TupleType*>(this)->parse(apimgr, apimodule, j, value, ctx);
+        case TypeTag::RecordTag:
+            return dynamic_cast<const RecordType*>(this)->parse(apimgr, apimodule, j, value, ctx);
+        case TypeTag::ContainerTag:
+            return dynamic_cast<const ContainerType*>(this)->parse(apimgr, apimodule, j, value, ctx);
+        case TypeTag::EnumTag:
+            return dynamic_cast<const EnumType*>(this)->parse(apimgr, apimodule, j, value, ctx);
+        case TypeTag::EntityTag:
+            return dynamic_cast<const EntityType*>(this)->parse(apimgr, apimodule, j, value, ctx);
+        case TypeTag::UnionTag:
+            return dynamic_cast<const UnionType*>(this)->parse(apimgr, apimodule, j, value, ctx);
+        default: 
+        {
+            assert(false);
+            return false;
+        }
+    }
+}
+
+template <typename ValueRepr, typename State>
+std::optional<json> IType::textract(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
+{
+    switch(this->tag)
+    {
+        case TypeTag::NoneTag:
+            return dynamic_cast<const NoneType*>(this)->extract(apimgr, apimodule, value, ctx);
+        case TypeTag::NothingTag:
+            return dynamic_cast<const NothingType*>(this)->extract(apimgr, apimodule, value, ctx);
+        case TypeTag::BoolTag:
+            return dynamic_cast<const BoolType*>(this)->extract(apimgr, apimodule, value, ctx);
+        case TypeTag::NatTag:
+            return dynamic_cast<const NatType*>(this)->extract(apimgr, apimodule, value, ctx);
+        case TypeTag::IntTag:
+            return dynamic_cast<const IntType*>(this)->extract(apimgr, apimodule, value, ctx);
+        case TypeTag::BigNatTag:
+            return dynamic_cast<const BigNatType*>(this)->extract(apimgr, apimodule, value, ctx);
+        case TypeTag::BigIntTag:
+            return dynamic_cast<const BigIntType*>(this)->extract(apimgr, apimodule, value, ctx);
+        case TypeTag::RationalTag:
+            return dynamic_cast<const RationalType*>(this)->extract(apimgr, apimodule, value, ctx);
+        case TypeTag::FloatTag:
+            return dynamic_cast<const FloatType*>(this)->extract(apimgr, apimodule, value, ctx);
+        case TypeTag::DecimalTag:
+            return dynamic_cast<const DecimalType*>(this)->extract(apimgr, apimodule, value, ctx);
+        case TypeTag::StringTag:
+            return dynamic_cast<const StringType*>(this)->extract(apimgr, apimodule, value, ctx);
+        case TypeTag::StringOfTag:
+            return dynamic_cast<const StringOfType*>(this)->extract(apimgr, apimodule, value, ctx);
+        case TypeTag::DataStringTag:
+            return dynamic_cast<const DataStringType*>(this)->extract(apimgr, apimodule, value, ctx);
+        case TypeTag::ByteBufferTag:
+            return dynamic_cast<const ByteBufferType*>(this)->extract(apimgr, apimodule, value, ctx);
+        case TypeTag::DataBufferTag:
+            return dynamic_cast<const DataBufferType*>(this)->extract(apimgr, apimodule, value, ctx);
+        case TypeTag::DateTimeTag:
+            return dynamic_cast<const DateTimeType*>(this)->extract(apimgr, apimodule, value, ctx);
+        case TypeTag::TickTimeTag:
+            return dynamic_cast<const TickTimeType*>(this)->extract(apimgr, apimodule, value, ctx);
+        case TypeTag::LogicalTimeTag:
+            return dynamic_cast<const LogicalTimeType*>(this)->extract(apimgr, apimodule, value, ctx);
+        case TypeTag::UUIDTag:
+            return dynamic_cast<const UUIDType*>(this)->extract(apimgr, apimodule, value, ctx);
+        case TypeTag::ContentHashTag:
+            return dynamic_cast<const ContentHashType*>(this)->extract(apimgr, apimodule, value, ctx);
+        case TypeTag::ConstructableOfType:
+            return dynamic_cast<const ConstructableOfType*>(this)->extract(apimgr, apimodule, value, ctx);
+        case TypeTag::TupleTag:
+            return dynamic_cast<const TupleType*>(this)->extract(apimgr, apimodule, value, ctx);
+        case TypeTag::RecordTag:
+            return dynamic_cast<const RecordType*>(this)->extract(apimgr, apimodule, value, ctx);
+        case TypeTag::ContainerTag:
+            return dynamic_cast<const ContainerType*>(this)->extract(apimgr, apimodule, value, ctx);
+        case TypeTag::EnumTag:
+            return dynamic_cast<const EnumType*>(this)->extract(apimgr, apimodule, value, ctx);
+        case TypeTag::EntityTag:
+            return dynamic_cast<const EntityType*>(this)->extract(apimgr, apimodule, value, ctx);
+        case TypeTag::UnionTag:
+            return dynamic_cast<const UnionType*>(this)->extract(apimgr, apimodule, value, ctx);
+        default: 
+        {
+            assert(false);
+            return std::nullopt;
+        }
+    }
+}
 
 

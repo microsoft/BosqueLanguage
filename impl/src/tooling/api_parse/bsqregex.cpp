@@ -113,7 +113,7 @@ BSQCharClassDotRe* BSQCharClassDotRe::parse(json j)
     return new BSQCharClassDotRe();
 }
 
-StateID BSQCharRangeRe::compile(StateID follows, std::vector<NFAOpt*>& states) const
+StateID BSQCharClassDotRe::compile(StateID follows, std::vector<NFAOpt*>& states) const
 {
     auto thisstate = (StateID)states.size();
     states.push_back(new NFAOptDot(thisstate, follows));
@@ -121,7 +121,7 @@ StateID BSQCharRangeRe::compile(StateID follows, std::vector<NFAOpt*>& states) c
     return thisstate;
 }
 
-StateID BSQCharRangeRe::compileReverse(StateID follows, std::vector<NFAOpt*>& states) const
+StateID BSQCharClassDotRe::compileReverse(StateID follows, std::vector<NFAOpt*>& states) const
 {
     auto thisstate = (StateID)states.size();
     states.push_back(new NFAOptDot(thisstate, follows));
