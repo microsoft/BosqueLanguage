@@ -1283,7 +1283,7 @@ public:
             auto tt = apimodule->typemap.find(this->ttypes[i])->second;
 
             ValueRepr vval = apimgr.extractValueForTupleIndex(apimodule, this, value, i, ctx);
-            auto rr = tt->textract(apimgr, apimodule, value, ctx);
+            auto rr = tt->textract(apimgr, apimodule, vval, ctx);
             if(!rr.has_value())
             {
                 return std::nullopt;
@@ -1380,7 +1380,7 @@ public:
             auto tt = apimodule->typemap.find(this->ttypes[i])->second;
 
             ValueRepr vval = apimgr.extractValueForRecordProperty(apimodule, this, value, this->props[i], ctx);
-            auto rr = tt->textract(apimgr, apimodule, value, ctx);
+            auto rr = tt->textract(apimgr, apimodule, vval, ctx);
             if(!rr.has_value())
             {
                 return std::nullopt;
@@ -1474,7 +1474,7 @@ public:
         for(size_t i = 0; i < clen.value(); ++i)
         {
             ValueRepr vval = apimgr.extractValueForContainer(apimodule, this, value, i, ctx);
-            auto rr = tt->textract(apimgr, apimodule, value, ctx);
+            auto rr = tt->textract(apimgr, apimodule, vval, ctx);
             if(!rr.has_value())
             {
                 return std::nullopt;
@@ -1683,7 +1683,7 @@ public:
             auto tt = apimodule->typemap.find(this->ttypes[i].first)->second;
 
             ValueRepr vval = apimgr.extractValueForEntityField(apimodule, this, value, this->consfields[i], ctx);
-            auto rr = tt->textract(apimgr, apimodule, value, ctx);
+            auto rr = tt->textract(apimgr, apimodule, vval, ctx);
             if(!rr.has_value())
             {
                 return std::nullopt;

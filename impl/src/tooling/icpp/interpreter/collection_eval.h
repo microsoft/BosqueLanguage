@@ -501,7 +501,7 @@ public:
         {
             auto gcrpoint = Allocator::GlobalAllocator.getCollectionNodeCurrentEnd();
             auto rnode = Allocator::GlobalAllocator.registerCollectionNode(BSQMapTreeType::getRight(reprnode->repr));
-            auto rr = list_tree_transform(mflavor, rnode, fn_node);
+            auto rr = map_tree_transform(mflavor, rnode, fn_node);
             rrres = Allocator::GlobalAllocator.resetCollectionNodeEnd(gcrpoint, rr);
         }
 
@@ -550,19 +550,15 @@ public:
         else
         {
             auto mid = count / 2;
-            auto gclpoint = Allocator::GlobalAllocator.getCollectionNodeCurrentEnd();
             auto llnode = BSQMapOps::s_temp_root_to_map_rec(mflavor, lelems, mid);
-            auto llres = Allocator::GlobalAllocator.resetCollectionNodeEnd(gclpoint, llnode);
 
             auto rootitem = lelems;
             lelems++;
 
-            auto gcrpoint = Allocator::GlobalAllocator.getCollectionNodeCurrentEnd();
             auto rrnode = BSQMapOps::s_temp_root_to_map_rec(mflavor, lelems, count - mid);
-            auto rrres = Allocator::GlobalAllocator.resetCollectionNodeEnd(gcrpoint, rrnode);
 
-            static_cast<BSQMapTreeRepr*>(rootitem->root)->l = llres->repr;
-            static_cast<BSQMapTreeRepr*>(rootitem->root)->r = rrres->repr;
+            static_cast<BSQMapTreeRepr*>(rootitem->root)->l = llnode;
+            static_cast<BSQMapTreeRepr*>(rootitem->root)->r = rrnode;
         }
         return res;
     }

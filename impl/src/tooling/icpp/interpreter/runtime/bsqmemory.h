@@ -48,6 +48,28 @@ public:
     virtual StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const = 0;
 };
 
+////////////////////////////////
+//Storage Operators
+
+template <bool isRoot>
+GCProcessOperatorFP getProcessFP(const BSQType* tt)
+{
+    BSQ_INTERNAL_ASSERT(false);
+    return nullptr;
+}
+
+template <>
+inline GCProcessOperatorFP getProcessFP<true>(const BSQType* tt)
+{
+    return tt->gcops.fpProcessObjRoot;
+}
+
+template <>
+inline GCProcessOperatorFP getProcessFP<false>(const BSQType* tt)
+{
+    return tt->gcops.fpProcessObjHeap;
+}
+
 class BSQCollectionIterator
 {
 public:
@@ -63,6 +85,7 @@ class BSQCollectionGCReprNode
 public:
     void* repr;
 
+    BSQCollectionGCReprNode(): repr(nullptr) {;}
     BSQCollectionGCReprNode(void* repr): repr(repr) {;}
 };
 

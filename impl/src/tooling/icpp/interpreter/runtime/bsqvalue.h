@@ -239,28 +239,6 @@ public:
     }
 };
 
-////////////////////////////////
-//Storage Operators
-
-template <bool isRoot>
-GCProcessOperatorFP getProcessFP(const BSQType* tt)
-{
-    BSQ_INTERNAL_ASSERT(false);
-    return nullptr;
-}
-
-template <>
-inline GCProcessOperatorFP getProcessFP<true>(const BSQType* tt)
-{
-    return tt->gcops.fpProcessObjRoot;
-}
-
-template <>
-inline GCProcessOperatorFP getProcessFP<false>(const BSQType* tt)
-{
-    return tt->gcops.fpProcessObjHeap;
-}
-
 ////
 //Concrete types
 
@@ -1094,7 +1072,7 @@ public:
     int64_t curr;
     int64_t strmax;
     uint8_t* cbuff;
-    uint16_t cpos;
+    int16_t cpos;
 
     BSQStringReverseIterator(BSQString* sstr, int64_t curr) : CharCodeIterator(), sstr(sstr), curr(curr), strmax(0), cbuff(nullptr), cpos(0) 
     {

@@ -17,6 +17,10 @@ void BumpSpaceAllocator::ensureSpace_slow()
 
 Allocator Allocator::GlobalAllocator;
 
+BSQCollectionGCReprNode* Allocator::collectionnodesend = Allocator::collectionnodes;
+BSQCollectionGCReprNode Allocator::collectionnodes[BSQ_MAX_STACK];
+std::list<BSQCollectionIterator*> Allocator::collectioniters;
+std::vector<std::list<BSQTempRootNode>> Allocator::alloctemps;
 
 void gcProcessRootOperator_nopImpl(const BSQType* btype, void** data)
 {

@@ -539,7 +539,7 @@ std::optional<json> JSONParseHelper::emitRationalNumber(std::pair<std::string, u
     return std::make_optional(rv.first + "/" + std::to_string(rv.second));
 }
 
-std::string emitDateTimeRaw(uint16_t y, uint8_t m, uint8_t d, uint8_t hh, uint8_t mm)
+std::string emitDateTimeRaw_d(uint16_t y, uint8_t m, uint8_t d, uint8_t hh, uint8_t mm)
 {
     struct tm dt = {0};
     dt.tm_year = y + 1900;
@@ -559,7 +559,7 @@ std::optional<json> JSONParseHelper::emitDateTime(DateTime t)
 {
     if(t.tzoffset == 0)
     {
-        auto tstr = emitDateTimeRaw(t.year, t.month, t.day, t.hour, t.min) + "Z"; 
+        auto tstr = emitDateTimeRaw_d(t.year, t.month, t.day, t.hour, t.min) + "Z"; 
         return std::make_optional(tstr);
     }
     else
@@ -570,7 +570,7 @@ std::optional<json> JSONParseHelper::emitDateTime(DateTime t)
         sprintf(sstrt, "%+02d:%0d", hh, mm);
         std::string tzstr(sstrt, sstrt + 10);
 
-        auto tstr = emitDateTimeRaw(t.year, t.month, t.day, t.hour, t.min) + tzstr;
+        auto tstr = emitDateTimeRaw_d(t.year, t.month, t.day, t.hour, t.min) + tzstr;
 
         if(t.tzname.empty())
         {

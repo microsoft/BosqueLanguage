@@ -15,7 +15,7 @@ std::map<std::string, BSQVirtualInvokeID> MarshalEnvironment::g_vinvokeToIdMap;
 
 std::map<std::string, RefMask> MarshalEnvironment::g_stringmaskToDeclMap;
 
-std::map<std::string, BSQPrimitiveImplTag> g_primitiveinvokenameToIDMap = {
+std::map<std::string, BSQPrimitiveImplTag> MarshalEnvironment::g_primitiveinvokenameToIDMap = {
     {"validator_accepts", BSQPrimitiveImplTag::validator_accepts},
     
     {"number_nattoint", BSQPrimitiveImplTag::number_nattoint},

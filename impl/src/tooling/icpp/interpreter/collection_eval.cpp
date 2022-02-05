@@ -666,7 +666,7 @@ void BSQListOps::s_transduce_idx_ne(const BSQListTypeFlavor& lflavor, LambdaEval
         BI_LAMBDA_CALL_SETUP_TRANSDUCE_IDX(lflavor.entrytype, esl, uflavor.pv8type, rsl, envtype, envsl, pcrtype, outsl, params, f, lparams, &pos)
         envtype->storeValue(envsl, params[1]);
 
-        rres = BSQListOps::list_tree_transform(lflavor, rnode, [&](BSQCollectionGCReprNode* reprnode, const BSQPartialVectorType* reprtype, uint64_t idx) {
+        rres = BSQListOps::list_tree_transform_idx(lflavor, rnode, 0, [&](BSQCollectionGCReprNode* reprnode, const BSQPartialVectorType* reprtype, uint64_t idx) {
             int16_t vcount = reprtype->getPVCount(reprnode->repr);
         
             pos = idx;
@@ -702,99 +702,16 @@ void BSQListOps::s_transduce_idx_ne(const BSQListTypeFlavor& lflavor, LambdaEval
 
 void* BSQListOps::s_sort_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* lt, const std::vector<StorageLocationPtr>& params)
 {
-    //
-    //TODO: this is somewhat inefficient -- we can do a better merge sort here
-    //
-
-    uint64_t count = ttype->getCount(t);
-
-    BSQListForwardIterator iter(ttype, t);
-    Allocator::GlobalAllocator.registerCollectionIterator(&iter);
-
-    Allocator::GlobalAllocator.pushTempRootScope();
-    while(iter.valid())
-    {
-        auto rr = Allocator::GlobalAllocator.registerTempRoot(lflavor.entrytype);
-        lflavor.entrytype->storeValue(rr->root, iter.getlocation());
-
-        iter.advance();
-    }
-
-    Allocator::GlobalAllocator.releaseCollectionIterator(&iter);
-
-    const BSQInvokeBodyDecl* icall = dynamic_cast<const BSQInvokeBodyDecl*>(BSQInvokeDecl::g_invokes[lt->code]);
-
-    {
-        BI_LAMBDA_CALL_SETUP_TEMP_X2_CMP(lflavor.entrytype, esl, lflavor.entrytype, esr, params, lt, lparams)
-
-        std::list<BSQTempRootNode>& roots = Allocator::GlobalAllocator.getTempRootCurrScope();
-        std::stable_sort(roots.begin(), roots.end(), [&](const BSQTempRootNode& ln, const BSQTempRootNode& rn) {
-            BSQBool bb;
-            ee.invoke(icall, lparams, &bb);
-            return (bool)bb;
-        });
-
-        BI_LAMBDA_CALL_SETUP_POP()
-    }
-    
-    auto gcpoint = Allocator::GlobalAllocator.getCollectionNodeCurrentEnd();
-
-    auto lstart = Allocator::GlobalAllocator.getTempRootCurrScope().begin();
-    void* rres = BSQListOps::s_temp_root_to_list_rec(lflavor, lstart, count);
-
-    Allocator::GlobalAllocator.popTempRootScope();
-    Allocator::GlobalAllocator.resetCollectionNodeEnd(gcpoint);
-    
-    return rres;
+    //TODO: implement
+    assert(false);
+    return nullptr;
 }
 
 void* BSQListOps::s_unique_from_sorted_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* eq, const std::vector<StorageLocationPtr>& params)
 {
-    //
-    //TODO: this is somewhat inefficient -- we can do a better merge sort here
-    //
-
-    uint64_t count = 0;
-
-    BSQListForwardIterator iter(ttype, t);
-    Allocator::GlobalAllocator.registerCollectionIterator(&iter);
-
-    Allocator::GlobalAllocator.pushTempRootScope();
-    while(iter.valid())
-    {
-        auto rr = Allocator::GlobalAllocator.registerTempRoot(lflavor.entrytype);
-        lflavor.entrytype->storeValue(rr->root, iter.getlocation());
-
-        iter.advance();
-    }
-
-    Allocator::GlobalAllocator.releaseCollectionIterator(&iter);
-
-    const BSQInvokeBodyDecl* icall = dynamic_cast<const BSQInvokeBodyDecl*>(BSQInvokeDecl::g_invokes[eq->code]);
-
-    {
-        BI_LAMBDA_CALL_SETUP_TEMP_X2_CMP(lflavor.entrytype, esl, lflavor.entrytype, esr, params, eq, lparams)
-
-        std::list<BSQTempRootNode>& roots = Allocator::GlobalAllocator.getTempRootCurrScope();
-        auto epos = std::unique(roots.begin(), roots.end(), [&](const BSQTempRootNode& ln, const BSQTempRootNode& rn) {
-            BSQBool bb;
-            ee.invoke(icall, lparams, &bb);
-            return (bool)bb;
-        });
-
-        count = std::distance(roots.begin(), epos);
-        BI_LAMBDA_CALL_SETUP_POP()
-    }
-    
-    auto gcpoint = Allocator::GlobalAllocator.getCollectionNodeCurrentEnd();
-
-    auto lstart = Allocator::GlobalAllocator.getTempRootCurrScope().begin();
-    void* rres = BSQListOps::s_temp_root_to_list_rec(lflavor, lstart, count);
-
-    Allocator::GlobalAllocator.popTempRootScope();
-    Allocator::GlobalAllocator.resetCollectionNodeEnd(gcpoint);
-    
-    return rres;
+    //TODO: implement
+    assert(false);
+    return nullptr;
 }
 
 std::map<std::pair<BSQTypeID, BSQTypeID>, BSQMapTypeFlavor> BSQMapOps::g_flavormap;

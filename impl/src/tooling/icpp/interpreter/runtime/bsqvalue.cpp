@@ -489,7 +489,6 @@ void initializeForwardIterRecProcess(int64_t pos, void* data, BSQStringForwardIt
     }
     else
     {
-        auto tstype = static_cast<const BSQStringTreeReprType*>(stype);
         auto tsdata = static_cast<BSQStringTreeRepr*>(data);
 
         auto s1size = GET_TYPE_META_DATA_AS(BSQStringReprType, tsdata->srepr1)->utf8ByteCount(tsdata->srepr1);
@@ -529,7 +528,7 @@ void BSQStringForwardIterator::increment_utf8byte()
     this->curr++;
     this->cpos++;
     
-    if(this->cpos == this->maxpos) [[unlikely]]
+    if(this->cpos == this->maxpos)
     {
         this->initializeIteratorPosition(this->curr);
     }
@@ -545,7 +544,6 @@ void initializeReverseIterRecProcess(int64_t pos, void* data, BSQStringReverseIt
     }
     else
     {
-        auto tstype = static_cast<const BSQStringTreeReprType*>(stype);
         auto tsdata = static_cast<BSQStringTreeRepr*>(data);
 
         auto s1size = GET_TYPE_META_DATA_AS(BSQStringReprType, tsdata->srepr1)->utf8ByteCount(tsdata->srepr1);
@@ -583,7 +581,7 @@ void BSQStringReverseIterator::increment_utf8byte()
     this->curr--;
     this->cpos--;
     
-    if(this->cpos == -1) [[unlikely]]
+    if(this->cpos == -1)
     {
         this->initializeIteratorPosition(this->curr);
     }
@@ -854,7 +852,7 @@ std::string entityByteBufferDisplay_impl(const BSQType* btype, StorageLocationPt
     return bstr;
 }
 
-std::string emitDateTimeRaw(uint16_t y, uint8_t m, uint8_t d, uint8_t hh, uint8_t mm)
+std::string emitDateTimeRaw_v(uint16_t y, uint8_t m, uint8_t d, uint8_t hh, uint8_t mm)
 {
     struct tm dt = {0};
     dt.tm_year = y + 1900;
@@ -876,7 +874,7 @@ std::string entityDateTimeDisplay_impl(const BSQType* btype, StorageLocationPtr 
 
     if(t->tzoffset == 0)
     {
-        auto tstr = emitDateTimeRaw(t->year, t->month, t->day, t->hour, t->min) + "Z"; 
+        auto tstr = emitDateTimeRaw_v(t->year, t->month, t->day, t->hour, t->min) + "Z"; 
         return tstr + ((btype->name == "DateTime") ? "" : ("_" + btype->name));
     }
     else
@@ -887,7 +885,7 @@ std::string entityDateTimeDisplay_impl(const BSQType* btype, StorageLocationPtr 
         sprintf(sstrt, "%+02d:%0d", hh, mm);
         std::string tzstr(sstrt, sstrt + 10);
 
-        auto tstr = emitDateTimeRaw(t->year, t->month, t->day, t->hour, t->min) + tzstr;
+        auto tstr = emitDateTimeRaw_v(t->year, t->month, t->day, t->hour, t->min) + tzstr;
 
         std::string rstr;
         if(t->tzname.empty())
@@ -930,13 +928,12 @@ int entityLogicalTimeKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1,
 std::string entityUUIDDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
     auto uuid = SLPTR_LOAD_CONTENTS_AS(BSQUUID, data);
-    std::string res;
 
-    uint32_t bb4 = *reinterpret_cast<const uint32_t*>(uuid.bytes);
-    uint16_t bb2_1 = *reinterpret_cast<const uint16_t*>(uuid.bytes + 4);
-    uint16_t bb2_2 = *reinterpret_cast<const uint16_t*>(uuid.bytes + 6);
-    uint16_t bb2_3 = *reinterpret_cast<const uint16_t*>(uuid.bytes + 8);
-    uint64_t bb6 = *reinterpret_cast<const uint64_t*>(uuid.bytes + 10) & 0xFFFFFFFFFFFF;
+    unsigned int bb4 = *reinterpret_cast<const uint32_t*>(uuid.bytes);
+    unsigned int bb2_1 = *reinterpret_cast<const uint16_t*>(uuid.bytes + 4);
+    unsigned int bb2_2 = *reinterpret_cast<const uint16_t*>(uuid.bytes + 6);
+    unsigned int bb2_3 = *reinterpret_cast<const uint16_t*>(uuid.bytes + 8);
+    unsigned int bb6 = *reinterpret_cast<const uint64_t*>(uuid.bytes + 10) & 0xFFFFFFFFFFFF;
     
     char sstrt[64] = {0};
     sprintf(sstrt, "%06x-%04x-%04x-%04x-%08x", bb4, bb2_1, bb2_2, bb2_3, bb6);

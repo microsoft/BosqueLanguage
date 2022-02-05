@@ -2860,7 +2860,7 @@ StorageLocationPtr ICPPParseJSON::getValueForContainerElementParse(const APIModu
     if(ctype->category == ContainerCategory::List)
     {
         const BSQListType* listtype = dynamic_cast<const BSQListType*>(this->containerstack.back().first);
-        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap[listtype->etype];
+        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(listtype->etype)->second;
 
         auto rr = Allocator::GlobalAllocator.registerTempRoot(lflavor.entrytype);
         return rr->root;
@@ -2880,7 +2880,7 @@ StorageLocationPtr ICPPParseJSON::getValueForContainerElementParse(const APIModu
     else
     {
         const BSQMapType* maptype = dynamic_cast<const BSQMapType*>(this->containerstack.back().first);
-        const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap[std::make_pair(maptype->ktype, maptype->vtype)];
+        const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.find(std::make_pair(maptype->ktype, maptype->vtype))->second;
 
         //We are very creative here and use the fact that the kv layout in the tree is identical to the kv layout in the tuple!
         auto rr = Allocator::GlobalAllocator.registerTempRoot(mflavor.treetype);
@@ -2895,7 +2895,7 @@ void ICPPParseJSON::completeParseContainer(const APIModule* apimodule, const ITy
     if(ctype->category == ContainerCategory::List)
     {
         const BSQListType* listtype = dynamic_cast<const BSQListType*>(this->containerstack.back().first);
-        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap[listtype->etype];
+        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(listtype->etype)->second;
 
         if(this->containerstack.back().second == 0)
         {
@@ -2924,7 +2924,7 @@ void ICPPParseJSON::completeParseContainer(const APIModule* apimodule, const ITy
     else
     {
         const BSQMapType* maptype = dynamic_cast<const BSQMapType*>(this->containerstack.back().first);
-        const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap[std::make_pair(maptype->ktype, maptype->vtype)];
+        const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.find(std::make_pair(maptype->ktype, maptype->vtype))->second;
 
         if(this->containerstack.back().second == 0)
         {
@@ -2933,19 +2933,22 @@ void ICPPParseJSON::completeParseContainer(const APIModule* apimodule, const ITy
         else
         {
             std::list<BSQTempRootNode>& roots = Allocator::GlobalAllocator.getTempRootCurrScope();
-            std::stable_sort(roots.begin(), roots.end(), [&](const BSQTempRootNode& ln, const BSQTempRootNode& rn) {
+            std::vector<BSQTempRootNode> opv(roots.cbegin(), roots.cend());
+
+            std::stable_sort(opv.begin(), opv.end(), [&](const BSQTempRootNode& ln, const BSQTempRootNode& rn) {
                 return mflavor.keytype->fpkeycmp(mflavor.keytype, mflavor.treetype->getKeyLocation(ln.root), mflavor.treetype->getKeyLocation(rn.root)) < 0;
             });
 
             //check for dups in the input
-            auto fl = std::adjacent_find(roots.begin(), roots.end(), [&](const BSQTempRootNode& ln, const BSQTempRootNode& rn) {
+            auto fl = std::adjacent_find(opv.begin(), opv.end(), [&](const BSQTempRootNode& ln, const BSQTempRootNode& rn) {
                 return mflavor.keytype->fpkeycmp(mflavor.keytype, mflavor.treetype->getKeyLocation(ln.root), mflavor.treetype->getKeyLocation(rn.root)) == 0;
             });
-            
-            std::string fname("[JSON_PARSE]");
-            BSQ_LANGUAGE_ASSERT(fl != roots.end(), (&fname), -1, "Duplicate keys in map");
 
-            auto lstart = Allocator::GlobalAllocator.getTempRootCurrScope().begin();
+            std::string fname("[JSON_PARSE]");
+            BSQ_LANGUAGE_ASSERT(fl != opv.end(), (&fname), -1, "Duplicate keys in map");
+
+            std::list<BSQTempRootNode> ltomap(opv.begin(), opv.end());
+            auto lstart = ltomap.begin();
             void* rres = BSQMapOps::s_temp_root_to_map_rec(mflavor, lstart, this->containerstack.back().second);
 
             MAP_STORE_RESULT_REPR(rres, this->containerstack.back().second, value);
@@ -3145,6 +3148,8 @@ std::optional<std::string> ICPPParseJSON::extractStringImpl(const APIModule* api
         rstr.push_back((char)iter.get_byte());
         iter.advance_byte();
     }
+
+    return rstr;
 }
 
 std::optional<std::pair<std::vector<uint8_t>, std::pair<uint8_t, uint8_t>>> ICPPParseJSON::extractByteBufferImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
@@ -3158,7 +3163,7 @@ std::optional<std::pair<std::vector<uint8_t>, std::pair<uint8_t, uint8_t>>> ICPP
     BSQByteBufferNode* bbn = bb->bytes;
     while(bbn != nullptr)
     {
-        std::copy(bbn->bytes, bbn->bytes + bbn->bytecount, std::back_inserter(bytes));
+        std::copy(bbn->bytes->bytes, bbn->bytes->bytes + bbn->bytecount, std::back_inserter(bytes));
         bbn = bbn->next;
     }
 
@@ -3216,7 +3221,7 @@ StorageLocationPtr ICPPParseJSON::extractValueForTupleIndex(const APIModule* api
     BSQTypeID tupid = MarshalEnvironment::g_typenameToIdMap.find(itype->name)->second;
     const BSQType* tuptype = BSQType::g_typetable[tupid];
 
-    tuptype->indexStorageLocationOffset(value, dynamic_cast<const BSQTupleInfo*>(tuptype)->idxoffsets[i]);
+    return tuptype->indexStorageLocationOffset(value, dynamic_cast<const BSQTupleInfo*>(tuptype)->idxoffsets[i]);
 }
 
 StorageLocationPtr ICPPParseJSON::extractValueForRecordProperty(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, std::string pname, Evaluator& ctx)
@@ -3250,7 +3255,7 @@ void ICPPParseJSON::prepareExtractContainer(const APIModule* apimodule, const IT
         if(LIST_LOAD_TYPE_INFO(value)->tid != BSQ_TYPE_ID_NONE)
         {
             const BSQListType* listtype = dynamic_cast<const BSQListType*>(collectiontype);
-            const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap[listtype->etype];
+            const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(listtype->etype)->second;
 
             BSQListOps::s_enumerate_for_extract(lflavor, LIST_LOAD_DATA(value), this->parsecontainerstack.back());
         }
@@ -3272,7 +3277,7 @@ void ICPPParseJSON::prepareExtractContainer(const APIModule* apimodule, const IT
         if(MAP_LOAD_TYPE_INFO(value)->tid != BSQ_TYPE_ID_NONE)
         {
             const BSQMapType* maptype = dynamic_cast<const BSQMapType*>(this->containerstack.back().first);
-            const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap[std::make_pair(maptype->ktype, maptype->vtype)];
+            const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.find(std::make_pair(maptype->ktype, maptype->vtype))->second;
 
             BSQMapOps::s_enumerate_for_extract(mflavor, MAP_LOAD_REPR(value), this->parsecontainerstack.back());
         }
