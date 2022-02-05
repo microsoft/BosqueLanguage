@@ -27,7 +27,7 @@ const userpackage = new PackageConfig([], usercode);
 
 process.stdout.write(`Processing Bosque sources in:\n${args.join("\n")}\n...\n`);
 
-if (mode === "--output") {
+if (mode === "-output") {
     process.stdout.write(`Processing and writing IR to ${process.argv[3]}...\n`);
     const ok = workflowEmitICPPFile(process.argv[3], userpackage, false, {}, {filename: args[0], names: ["Main::main"]});
     if(ok) {

@@ -9,7 +9,7 @@ import { PackageConfig, SymbolicActionMode } from "../compiler/mir_assembly";
 import { generateStandardVOpts, workflowEmitToFile, workflowEvaluate, workflowLoadUserSrc, workflowPassCheck } from "../tooling/checker/smt_workflows";
 
 const mode = process.argv[2];
-const args = process.argv.slice((mode === "--output" || mode === "--smt") ? 4 : 3);
+const args = process.argv.slice((mode === "-output" || mode === "-smt") ? 4 : 3);
 
 const usercode = workflowLoadUserSrc(args);
 if(usercode === undefined) {
@@ -24,17 +24,17 @@ const EVAL_OPTS = generateStandardVOpts(SymbolicActionMode.EvaluateSymbolic);
 const noerrtrgt = {file: "[No Error Trgt]", line: -1, pos: -1};
 const userpackage = new PackageConfig([], usercode);
 
-if(mode === "--output") {
+if(mode === "-output") {
     process.stdout.write(`Writing file to ${process.argv[3]}\n`);
 
     workflowEmitToFile(process.argv[3], userpackage, false, TIMEOUT, STD_OPTS, {filename: args[0], name: "Main::main"}, noerrtrgt, false);
 }
-else if(mode === "--smt") {
+else if(mode === "-smt") {
     process.stdout.write(`Writing file to ${process.argv[3]}\n`);
 
     workflowEmitToFile(process.argv[3], userpackage, false, TIMEOUT, STD_OPTS, {filename: args[0], name: "Main::main"}, noerrtrgt, true);
 }
-else if(mode === "--test") {
+else if(mode === "-test") {
     workflowPassCheck(userpackage, false, TIMEOUT, STD_OPTS, {filename: args[0], name: "Main::main"}, (res: string) => {
         process.stdout.write(res + "\n");
     });
