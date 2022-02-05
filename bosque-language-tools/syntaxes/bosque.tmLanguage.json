@@ -106,11 +106,11 @@
 			"patterns": [
 				{
 					"name": "constant.numeric.bosque",
-					"match": "\\b(0|[1-9][0-9]*)|(0|[1-9][0-9]*)n|([0-9]+(\\.[0-9]+)?|\\.[0-9]+)([eE][-+]?[0-9]+)?f\\b"
+					"match": "\\b(0|[1-9][0-9]*)|(0|[1-9][0-9]*)(n|i|N|I)|(0|[1-9][0-9]*)/(0|[1-9][0-9]*)R|([0-9]+(\\.[0-9]+)?|\\.[0-9]+)([eE][-+]?[0-9]+)?(f|d)\\b"
 				},
 				{
 					"name": "constant.language",
-					"match": "\\b(none|true|false)\\b"
+					"match": "\\b(none|nothing|true|false)\\b"
 				}
 			]
 		},
