@@ -212,7 +212,7 @@ class BSQBigNumType : public BSQType
 {
 public:
     BSQBigNumType(BSQTypeID tid, uint64_t datasize, const RefMask imask, KeyCmpFP fpkeycmp, DisplayFP fpDisplay, std::string name): 
-        BSQType(tid, BSQTypeKind::BigNum, { datasize, datasize, datasize, nullptr, imask }, REGISTER_GC_FUNCTOR_SET, {}, fpkeycmp, fpDisplay, __std_fs_read_name_from_reparse_data_buffer)
+        BSQType(tid, BSQTypeLayoutKind::BigNum, { datasize, datasize, datasize, nullptr, imask }, REGISTER_GC_FUNCTOR_SET, {}, fpkeycmp, fpDisplay, name)
     {;}
 
     virtual ~BSQBigNumType() {;}

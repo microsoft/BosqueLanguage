@@ -39,7 +39,7 @@ public:
         }
         else
         {
-            assert(false, "list_cons -- not implemented");
+            assert(false);
         }
     }
 
@@ -216,14 +216,16 @@ public:
     static std::pair<void*, T> s_range_ne_rec(const BSQListTypeFlavor& lflavor, T start, BSQNat count)
     {
         void* res = nullptr;
-        StorageLocationPtr max = nullptr;
+        T max = start;
         if(count <= 4)
         {
             res = Allocator::GlobalAllocator.allocateDynamic(lflavor.pv4type);
             BSQPartialVectorType::setPVCount(res, (int16_t)count);
+            T curr = start;
             for(int16_t i = 0; i < (int16_t)count; ++i)
             {
-                lflavor.entrytype->storeValue(lflavor.pv4type->get(res, i), start + (T)i);
+                lflavor.entrytype->storeValue(lflavor.pv4type->get(res, i), &curr);
+                curr = curr + (T)1;
             }
             max = start + (int16_t)count;
         }
@@ -231,9 +233,11 @@ public:
         {
             res = Allocator::GlobalAllocator.allocateDynamic(lflavor.pv8type);
             BSQPartialVectorType::setPVCount(res, (int16_t)count);
+            T curr = start;
             for(int16_t i = 0; i < (int16_t)count; ++i)
             {
-                lflavor.entrytype->storeValue(lflavor.pv8type->get(res, i), start + (T)i);
+                lflavor.entrytype->storeValue(lflavor.pv8type->get(res, i), &curr);
+                curr = curr + (T)1;
             }
             max = start + (int16_t)count;
         }
@@ -454,7 +458,7 @@ public:
         }
         else
         {
-            assert(false, "map_cons -- not implemented");
+            assert(false);
         }
     }
 
@@ -498,7 +502,7 @@ public:
         {
             auto gcrpoint = Allocator::GlobalAllocator.getCollectionNodeCurrentEnd();
             auto rnode = Allocator::GlobalAllocator.registerCollectionNode(BSQMapTreeType::getRight(reprnode->repr));
-            auto rr = list_tree_transform(lflavor, rnode, fn_partialvector);
+            auto rr = list_tree_transform(mflavor, rnode, fn_node);
             rrres = Allocator::GlobalAllocator.resetCollectionNodeEnd(gcrpoint, rr);
         }
 

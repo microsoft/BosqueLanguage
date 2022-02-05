@@ -459,14 +459,7 @@ public:
                 const BSQType* ometa = GET_TYPE_META_DATA_FROM_WORD(w);
                 size_t osize = ometa->allocinfo.heapsize + sizeof(GC_META_DATA_WORD);
 
-                if(GC_TEST_IS_BUMP_SPACE(w)) [[likely]]
-                {
-                    *slot = Allocator::GlobalAllocator.moveYoungBumpObjectToOldRCSpace<isRoot>(v, addr, w, ometa, osize);
-                }
-                else [[unlikely]]
-                {
-                    Allocator::GlobalAllocator.moveYoungRCAllocObjectToOldRCSpace<isRoot>(v, addr, w, ometa, osize);
-                }
+                *slot = Allocator::GlobalAllocator.moveBumpObjectToOldRCSpace<isRoot>(v, addr, w, ometa, osize);
             }
             else
             {

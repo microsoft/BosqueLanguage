@@ -394,7 +394,6 @@ void Evaluator::evalProjectTupleOp(const ProjectTupleOp* op)
 void Evaluator::evalProjectRecordOp(const ProjectRecordOp* op)
 {
     StorageLocationPtr src = this->evalArgument(op->arg);
-    StorageLocationPtr trgtl = this->evalTargetVar(op->trgt);
 
     void* sl = nullptr;
     if(op->layouttype->tkind == BSQTypeLayoutKind::Struct)
@@ -423,7 +422,6 @@ void Evaluator::evalProjectRecordOp(const ProjectRecordOp* op)
 void Evaluator::evalProjectEntityOp(const ProjectEntityOp* op)
 {
     StorageLocationPtr src = this->evalArgument(op->arg);
-    StorageLocationPtr trgtl = this->evalTargetVar(op->trgt);
 
     void* sl = nullptr;
     if(op->layouttype->tkind == BSQTypeLayoutKind::Struct)

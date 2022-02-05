@@ -21,7 +21,7 @@
 
 #include "../../api_parse/decls.h"
 
-#include "../../../build/include/headers/mimalloc/mimalloc.h"
+#include "mimalloc.h"
 
 ////////////////////////////////
 //Various sizes
@@ -79,7 +79,7 @@
 #define BSQ_BUMP_SPACE_ALLOC(SIZE) mi_zalloc(SIZE)
 #define BSQ_BUMP_SPACE_RELEASE(M) mi_free(M)
 
-#define BSQ_FREE_LIST_ALLOC_SMALL(SIZE) mi_alloc_small(SIZE)
+#define BSQ_FREE_LIST_ALLOC_SMALL(SIZE) mi_malloc_small(SIZE)
 #define BSQ_FREE_LIST_RELEASE(SIZE, M) mi_free(M)
 
 #define GC_REF_LIST_BLOCK_SIZE_DEFAULT 256

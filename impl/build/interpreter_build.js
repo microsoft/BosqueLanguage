@@ -12,7 +12,7 @@ const apisrc = path.normalize(path.join(__dirname, "../", "src/tooling/api_parse
 const cppfiles = [apisrc, rootsrc, path.join(rootsrc, "runtime")].map((pp) => pp + "/*.cpp");
 
 const includebase = path.normalize(path.join(__dirname, "include"));
-const includeheaders = [path.join(includebase, "headers/json")];
+const includeheaders = [path.join(includebase, "headers/json"), path.join(includebase, "headers/mimalloc")];
 const outbase = path.normalize(path.join(__dirname, "output"));
 
 let compiler = "";

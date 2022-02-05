@@ -416,8 +416,8 @@ void jsonLoadBSQTypeDecl(json v)
     const BSQType* ttype = nullptr;
 
     ICPPParseTag ptag = v["ptag"].get<ICPPParseTag>();
-    assert(ptag != ICPPParseTag::Builtin, "Why are we doing this?");
-    assert(ptag != ICPPParseTag::BoxedStructTag, "Should be done after all other types are loaded");
+    assert(ptag != ICPPParseTag::Builtin);
+    assert(ptag != ICPPParseTag::BoxedStructTag);
 
     switch(ptag)
     {

@@ -286,7 +286,6 @@ BSQNat BSQListOps::s_find_pred_last_ne(LambdaEvalThunk ee, void* t, const BSQLis
 
     {
         BSQBool found = BSQFALSE;
-        StorageLocationPtr esl;
         BI_LAMBDA_CALL_SETUP_TEMP(lentrytype, esl, params, pred, lparams)
 
         while(iter.valid())
@@ -755,7 +754,7 @@ void* BSQListOps::s_unique_from_sorted_ne(const BSQListTypeFlavor& lflavor, Lamb
     //TODO: this is somewhat inefficient -- we can do a better merge sort here
     //
 
-    uint64_t count = ttype->getCount(t);
+    uint64_t count = 0;
 
     BSQListForwardIterator iter(ttype, t);
     Allocator::GlobalAllocator.registerCollectionIterator(&iter);
@@ -777,12 +776,13 @@ void* BSQListOps::s_unique_from_sorted_ne(const BSQListTypeFlavor& lflavor, Lamb
         BI_LAMBDA_CALL_SETUP_TEMP_X2_CMP(lflavor.entrytype, esl, lflavor.entrytype, esr, params, eq, lparams)
 
         std::list<BSQTempRootNode>& roots = Allocator::GlobalAllocator.getTempRootCurrScope();
-        std::unique(roots.begin(), roots.end(), [&](const BSQTempRootNode& ln, const BSQTempRootNode& rn) {
+        auto epos = std::unique(roots.begin(), roots.end(), [&](const BSQTempRootNode& ln, const BSQTempRootNode& rn) {
             BSQBool bb;
             ee.invoke(icall, lparams, &bb);
             return (bool)bb;
         });
 
+        count = std::distance(roots.begin(), epos);
         BI_LAMBDA_CALL_SETUP_POP()
     }
     
