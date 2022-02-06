@@ -36,13 +36,13 @@ else if(process.platform === "linux") {
 }
 else {
     compiler = "cl.exe";
-    ccflags = "/EHsc /Zi /D \"BSQ_DEBUG_BUILD\" /std:c++20";  
+    ccflags = "/EHsc /Zi /MD /D \"BSQ_DEBUG_BUILD\" /std:c++20";  
     includes = includeheaders.map((ih) => `/I ${ih}`).join(" ");
     milib = path.join(includebase, "/win/mimalloc/bin/mimalloc-static.lib");
     outfile = "/Fo:\"" + outbase + "/\"" + " " + "/Fd:\"" + outbase + "/\"" + " " + "/Fe:\"" + outbase + "\\icpp.exe\"";
 }
 
-const command = `${compiler} ${ccflags} ${includes} ${outfile} ${cppfiles.join(" ")} ${milib}`;
+const command = `${compiler} ${ccflags} ${includes} ${outfile} ${cppfiles.join(" ")} ${milib} advapi32.lib`;
 
 fsx.ensureDirSync(outbase);
 fsx.removeSync(outfile);

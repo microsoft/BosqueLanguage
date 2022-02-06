@@ -1035,6 +1035,7 @@ public:
         {
             //not implemented
             assert(false);
+            return (CharCode)0;
         }
     }
 

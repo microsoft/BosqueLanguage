@@ -2868,14 +2868,17 @@ StorageLocationPtr ICPPParseJSON::getValueForContainerElementParse(const APIModu
     else if(ctype->category == ContainerCategory::Stack)
     {
         BSQ_INTERNAL_ASSERT(false);
+        return nullptr;
     }
     else if(ctype->category == ContainerCategory::Queue)
     {
         BSQ_INTERNAL_ASSERT(false);
+        return nullptr;
     }
     else if(ctype->category == ContainerCategory::Set)
     {
         BSQ_INTERNAL_ASSERT(false);
+        return nullptr;
     }
     else
     {
@@ -3305,14 +3308,17 @@ std::optional<size_t> ICPPParseJSON::extractLengthForContainer(const APIModule* 
     else if(ctype->category == ContainerCategory::Stack)
     {
         BSQ_INTERNAL_ASSERT(false);
+        return std::nullopt;
     }
     else if(ctype->category == ContainerCategory::Queue)
     {
         BSQ_INTERNAL_ASSERT(false);
+        return std::nullopt;
     }
     else if(ctype->category == ContainerCategory::Set)
     {
         BSQ_INTERNAL_ASSERT(false);
+        return std::nullopt;
     }
     else
     {

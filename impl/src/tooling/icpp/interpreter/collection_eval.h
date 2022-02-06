@@ -40,6 +40,7 @@ public:
         else
         {
             assert(false);
+            return nullptr;
         }
     }
 
@@ -458,6 +459,7 @@ public:
         else
         {
             assert(false);
+            return nullptr;
         }
     }
 
