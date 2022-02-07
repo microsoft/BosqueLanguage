@@ -31,7 +31,7 @@ if (mode === "-output") {
     process.stdout.write(`Processing and writing IR to ${process.argv[3]}...\n`);
 
     const ofile = args[0].slice(0, args[0].length - 3) + "json";
-    const ok = workflowEmitICPPFile(ofile, userpackage, false, {}, {filename: args[0], names: ["Main::main"]});
+    const ok = workflowEmitICPPFile(ofile, userpackage, false, {}, {filename: args[0], names: ["main"], fkeys: ["Main::main"]});
     if(ok) {
         process.stdout.write("done\n");
     }
@@ -51,7 +51,7 @@ else {
 
             process.stdout.write(`Evaluating...\n`);
 
-            workflowRunICPPFile(jargs, userpackage, false, {}, {filename: args[0], names: ["Main::main"]}, (result: string | undefined) => {
+            workflowRunICPPFile(jargs, userpackage, false, {}, {filename: args[0], names: ["main"], fkeys: ["Main::main"]}, (result: string | undefined) => {
                 if (result !== undefined) {
                     process.stdout.write(`${result}\n`);
                 }

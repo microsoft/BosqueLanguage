@@ -692,7 +692,7 @@ class MIRConceptType extends MIRTypeOption {
 
     static create(ckeys: MIRResolvedTypeKey[]): MIRConceptType {
         const skeys = ckeys.sort((a, b) => a[0].localeCompare(b[0]));
-        return new MIRConceptType(skeys.map((v) => v[0]).join(" & "), skeys.map((v) => v[0]));
+        return new MIRConceptType(skeys.join(" & "), skeys);
     }
 
     jemit(): object {

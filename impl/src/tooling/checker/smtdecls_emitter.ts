@@ -343,7 +343,7 @@ class SMTEmitter {
         const cons3: SMTExp = this.temitter.generateResultTypeConstructorSuccess(tt, this.temitter.coerce(new SMTCallSimple(this.temitter.getSMTConstructorName(vv3).cons, [access1, access2, access3]), vv3, tt));
 
         const hbody = new SMTLet("clen", clen,
-                new SMTIf(SMTCallSimple.makeOrOf(new SMTCallSimple("<", [new SMTVar("clen"), new SMTConst("0")]), new SMTCallSimple("<", [new SMTConst("CONTAINER_MAX"), new SMTVar("clen")])),
+                new SMTIf(SMTCallSimple.makeOrOf(new SMTCallSimple("<", [new SMTVar("clen"), new SMTConst("0")]), new SMTCallSimple("<", [new SMTConst("@CONTAINERMAX"), new SMTVar("clen")])),
                     this.temitter.generateErrorResultAssert(tt),
                     new SMTLet("len", this.temitter.generateResultGetSuccess(this.temitter.getMIRType("BNat"), new SMTVar("clen")),
                         new SMTIf(SMTCallSimple.makeEq(new SMTVar("len"), new SMTConst("0")),
@@ -432,7 +432,7 @@ class SMTEmitter {
         const cons3: SMTExp = this.temitter.generateResultTypeConstructorSuccess(tt, this.temitter.coerce(new SMTCallSimple(this.temitter.getSMTConstructorName(vv3).cons, [access1, access2, access3]), vv3, tt));
 
         const hbody = new SMTLet("clen", clen,
-                new SMTIf(SMTCallSimple.makeOrOf(new SMTCallSimple("<", [new SMTVar("clen"), new SMTConst("0")]), new SMTCallSimple("<", [new SMTConst("CONTAINER_MAX"), new SMTVar("clen")])),
+                new SMTIf(SMTCallSimple.makeOrOf(new SMTCallSimple("<", [new SMTVar("clen"), new SMTConst("0")]), new SMTCallSimple("<", [new SMTConst("@CONTAINERMAX"), new SMTVar("clen")])),
                     this.temitter.generateErrorResultAssert(tt),
                     new SMTLet("len", this.temitter.generateResultGetSuccess(this.temitter.getMIRType("BNat"), new SMTVar("clen")),
                         new SMTIf(SMTCallSimple.makeEq(new SMTVar("len"), new SMTConst("0")),
@@ -1037,7 +1037,7 @@ class SMTEmitter {
     }
 
     static generateSMTPayload(assembly: MIRAssembly, istestbuild: boolean, runtime: string, vopts: VerifierOptions, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey): string {
-        const callsafety = markSafeCalls(["__i__" + entrypoint], assembly, istestbuild, errorTrgtPos);
+        const callsafety = markSafeCalls([entrypoint], assembly, istestbuild, errorTrgtPos);
 
         const temitter = new SMTTypeEmitter(assembly, vopts);
         assembly.typeMap.forEach((tt) => {
@@ -1054,10 +1054,10 @@ class SMTEmitter {
         });
 
         const bemitter = new SMTBodyEmitter(assembly, temitter, vopts, callsafety, errorTrgtPos);
-        const smtassembly = new SMTAssembly(vopts, temitter.lookupFunctionName("__i__" + entrypoint));
+        const smtassembly = new SMTAssembly(vopts, temitter.lookupFunctionName(entrypoint));
 
         let smtemit = new SMTEmitter(temitter, bemitter, smtassembly, vopts);
-        smtemit.initializeSMTAssembly(assembly, istestbuild, "__i__" + entrypoint, callsafety);
+        smtemit.initializeSMTAssembly(assembly, istestbuild, entrypoint, callsafety);
 
         ////////////
         const smtinfo = smtemit.assembly.buildSMT2file(runtime);
@@ -1083,10 +1083,10 @@ class SMTEmitter {
         });
 
         const bemitter = new SMTBodyEmitter(assembly, temitter, vopts, callsafety, {file: "[]", line: -1, pos: -1});
-        const smtassembly = new SMTAssembly(vopts, temitter.lookupFunctionName("__i__" + entrypoint));
+        const smtassembly = new SMTAssembly(vopts, temitter.lookupFunctionName(entrypoint));
 
         let smtemit = new SMTEmitter(temitter, bemitter, smtassembly, vopts);
-        smtemit.initializeSMTAssembly(assembly, istestbuild, "__i__" + entrypoint, callsafety);
+        smtemit.initializeSMTAssembly(assembly, istestbuild, entrypoint, callsafety);
 
         return smtemit.assembly.allErrors;
     }

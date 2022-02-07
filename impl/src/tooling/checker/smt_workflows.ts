@@ -11,7 +11,7 @@ import chalk from "chalk";
 
 import { MIRAssembly, PackageConfig, SymbolicActionMode } from "../../compiler/mir_assembly";
 import { MIREmitter } from "../../compiler/mir_emitter";
-import { MIRInvokeKey } from "../../compiler/mir_ops";
+import { MIRInvokeKey, MIRResolvedTypeKey } from "../../compiler/mir_ops";
 
 import { SMTEmitter } from "./smtdecls_emitter";
 import { VerifierOptions } from "./smt_exp";
@@ -141,7 +141,7 @@ function workflowGetErrors(usercode: PackageConfig, istestbuild: boolean, vopts:
     }
 }
 
-function workflowEmitToFile(into: string, usercode: PackageConfig, istestbuild: boolean, timeout: number, vopts: VerifierOptions, entrypoint: {filename: string, name: string}, errorTrgtPos: { file: string, line: number, pos: number }, smtonly: boolean) {
+function workflowEmitToFile(into: string, usercode: PackageConfig, istestbuild: boolean, timeout: number, vopts: VerifierOptions, entrypoint: {filename: string, name: string, fkey: MIRResolvedTypeKey}, errorTrgtPos: { file: string, line: number, pos: number }, smtonly: boolean) {
     try {
         const { masm, errors } = generateMASM(usercode, {filename: entrypoint.filename, names: [entrypoint.name]});
         if(masm === undefined) {
@@ -150,13 +150,13 @@ function workflowEmitToFile(into: string, usercode: PackageConfig, istestbuild: 
             process.exit(1);
         }
         else {
-            const smtcode = generateSMTPayload(masm, istestbuild, vopts, errorTrgtPos, entrypoint.name);
+            const smtcode = generateSMTPayload(masm, istestbuild, vopts, errorTrgtPos, entrypoint.fkey);
             if(smtcode !== undefined) {
                 if(smtonly) {
                     FS.writeFileSync(into, smtcode);
                 }
                 else {
-                    const payload = generateCheckerPayload(masm, istestbuild, smtcode, timeout, entrypoint.name);
+                    const payload = generateCheckerPayload(masm, istestbuild, smtcode, timeout, entrypoint.fkey);
                     FS.writeFileSync(into, JSON.stringify(payload, undefined, 2));
                 }
             }
@@ -167,20 +167,20 @@ function workflowEmitToFile(into: string, usercode: PackageConfig, istestbuild: 
     }
 }
 
-function workflowErrorCheckSingle(usercode: PackageConfig, istestbuild: boolean, timeout: number, vopts: VerifierOptions, entrypoint: {filename: string, name: string}, errorTrgtPos: { file: string, line: number, pos: number }, cb: (result: string) => void) {
+function workflowErrorCheckSingle(usercode: PackageConfig, istestbuild: boolean, timeout: number, vopts: VerifierOptions, entrypoint: {filename: string, name: string, fkey: MIRResolvedTypeKey}, errorTrgtPos: { file: string, line: number, pos: number }, cb: (result: string) => void) {
     try {
         const { masm } = generateMASM(usercode, {filename: entrypoint.filename, names: [entrypoint.name]});
         if(masm === undefined) {
             cb(JSON.stringify({result: "error", info: "compile errors"}));
         }
         else {
-            const smtcode = generateSMTPayload(masm, istestbuild, vopts, errorTrgtPos, entrypoint.name);
+            const smtcode = generateSMTPayload(masm, istestbuild, vopts, errorTrgtPos, entrypoint.fkey);
             if(smtcode === undefined) {
                 cb(JSON.stringify({result: "error", info: "payload generation error"}));
                 return;
             }
 
-            const payload = generateCheckerPayload(masm, istestbuild, smtcode, timeout, entrypoint.name);
+            const payload = generateCheckerPayload(masm, istestbuild, smtcode, timeout, entrypoint.fkey);
             runVEvaluatorAsync(payload, SymbolicActionMode.ErrTestSymbolic, cb);
         }
     } catch(e) {
@@ -188,20 +188,20 @@ function workflowErrorCheckSingle(usercode: PackageConfig, istestbuild: boolean,
     }
 }
 
-function workflowPassCheck(usercode: PackageConfig, istestbuild: boolean, timeout: number, vopts: VerifierOptions, entrypoint: {filename: string, name: string}, cb: (result: string) => void) {
+function workflowPassCheck(usercode: PackageConfig, istestbuild: boolean, timeout: number, vopts: VerifierOptions, entrypoint: {filename: string, name: string, fkey: MIRResolvedTypeKey}, cb: (result: string) => void) {
     try {
         const { masm } = generateMASM(usercode, {filename: entrypoint.filename, names: [entrypoint.name]});
         if(masm === undefined) {
             cb(JSON.stringify({result: "error", info: "compile errors"}));
         }
         else {
-            const smtcode = generateSMTPayload(masm, istestbuild, vopts, { file: "[NO TARGET]", line: -1, pos: -1 }, entrypoint.name);
+            const smtcode = generateSMTPayload(masm, istestbuild, vopts, { file: "[NO TARGET]", line: -1, pos: -1 }, entrypoint.fkey);
             if(smtcode === undefined) {
                 cb(JSON.stringify({result: "error", info: "payload generation error"}));
                 return;
             }
 
-            const payload = generateCheckerPayload(masm, istestbuild, smtcode, timeout, entrypoint.name);
+            const payload = generateCheckerPayload(masm, istestbuild, smtcode, timeout, entrypoint.fkey);
             runVEvaluatorAsync(payload, SymbolicActionMode.ChkTestSymbolic, cb);
         }
     } catch(e) {
@@ -209,20 +209,20 @@ function workflowPassCheck(usercode: PackageConfig, istestbuild: boolean, timeou
     }
 }
 
-function workflowEvaluate(usercode: PackageConfig, istestbuild: boolean, timeout: number, vopts: VerifierOptions, entrypoint: {filename: string, name: string}, jin: any[], cb: (result: string) => void) {
+function workflowEvaluate(usercode: PackageConfig, istestbuild: boolean, timeout: number, vopts: VerifierOptions, entrypoint: {filename: string, name: string, fkey: MIRResolvedTypeKey}, jin: any[], cb: (result: string) => void) {
     try {
         const { masm } = generateMASM(usercode, {filename: entrypoint.filename, names: [entrypoint.name]});
         if(masm === undefined) {
             cb(JSON.stringify({result: "error", info: "compile errors"}));
         }
         else {
-            const smtcode = generateSMTPayload(masm, istestbuild, vopts, { file: "[NO TARGET]", line: -1, pos: -1 }, entrypoint.name)
+            const smtcode = generateSMTPayload(masm, istestbuild, vopts, { file: "[NO TARGET]", line: -1, pos: -1 }, entrypoint.fkey)
             if(smtcode === undefined) {
                 cb(JSON.stringify({result: "error", info: "payload generation error"}));
                 return;
             }
 
-            const payload = generateCheckerPayload(masm, istestbuild, smtcode, timeout, entrypoint.name);
+            const payload = generateCheckerPayload(masm, istestbuild, smtcode, timeout, entrypoint.fkey);
             runVEvaluatorAsync({...payload, jin: jin}, SymbolicActionMode.EvaluateSymbolic, cb);
         }
     } catch(e) {

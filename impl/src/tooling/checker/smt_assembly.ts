@@ -422,11 +422,11 @@ class SMTAssembly {
         const keytypeorder: string[] = [...this.keytypeTags].sort().map((ktt, i) => `(assert (= (TypeTag_OrdinalOf ${ktt}) ${i}))`);
 
         const v_min_max: string[] = [
-            `(declare-const BINT_MIN () Int) (assert (= BINT_MIN ${this.vopts.INT_MIN}))`,
-            `(declare-const BINT_MAX () Int) (assert (= BINT_MAX ${this.vopts.INT_MAX}))`,
-            `(declare-const SLEN_MAX () Int) (assert (= SLEN_MAX ${this.vopts.SLEN_MAX}))`,
-            `(declare-const BLEN_MAX () Int) (assert (= BLEN_MAX ${this.vopts.BLEN_MAX}))`,
-            `(declare-const CONTAINER_MAX () Int) (assert (= CONTAINER_MAX ${this.vopts.CONTAINER_MAX}))`
+            `(declare-const @BINTMIN Int) (assert (= @BINTMIN ${this.vopts.INT_MIN}))`,
+            `(declare-const @BINTMAX Int) (assert (= @BINTMAX ${this.vopts.INT_MAX}))`,
+            `(declare-const @SLENMAX Int) (assert (= @SLENMAX ${this.vopts.SLEN_MAX}))`,
+            `(declare-const @BLENMAX Int) (assert (= @BLENMAX ${this.vopts.BLEN_MAX}))`,
+            `(declare-const @CONTAINERMAX Int) (assert (= @CONTAINERMAX ${this.vopts.CONTAINER_MAX}))`
         ];
 
         const termtupleinfo = this.tupleDecls
@@ -696,7 +696,7 @@ class SMTAssembly {
             .replace(";;MASK_DECLS;;", joinWithIndent(sfileinfo.MASK_INFO.decls, "      "))
             .replace(";;RESULTS;;", joinWithIndent(sfileinfo.RESULT_INFO.constructors, "    "))
             .replace(";;MASKS;;", joinWithIndent(sfileinfo.MASK_INFO.constructors, "    "))
-            .replace("V_MIN_MAX", joinWithIndent(sfileinfo.V_MIN_MAX, ""))
+            .replace(";;V_MIN_MAX", joinWithIndent(sfileinfo.V_MIN_MAX, ""))
             .replace(";;GLOBAL_DECLS;;", joinWithIndent(sfileinfo.GLOBAL_DECLS, ""))
             .replace(";;UF_DECLS;;", joinWithIndent(sfileinfo.UF_DECLS, "\n"))
             .replace(";;FUNCTION_DECLS;;", joinWithIndent(sfileinfo.FUNCTION_DECLS, "\n"))

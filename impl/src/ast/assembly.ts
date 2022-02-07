@@ -1060,7 +1060,9 @@ class Assembly {
             rtype = this.normalizeTypeGeneral(aliasResolvedType, aliasResolvedBinds);
         }
         else {
-            const fconcept = this.tryGetConceptTypeForFullyResolvedName(aliasResolvedType.nameSpace + "::" + aliasResolvedType.computeResolvedName());
+            const ttname = (aliasResolvedType.nameSpace !== "Core" ? (aliasResolvedType.nameSpace + "::") : "") + aliasResolvedType.computeResolvedName();
+
+            const fconcept = this.tryGetConceptTypeForFullyResolvedName(ttname);
             if (fconcept !== undefined) {
                 if (fconcept.terms.length !== aliasResolvedType.terms.length) {
                     return ResolvedType.createEmpty();
@@ -1070,7 +1072,7 @@ class Assembly {
                 rtype = cta !== undefined ? ResolvedType.createSingle(cta) : ResolvedType.createEmpty();
             }
 
-            const fobject = this.tryGetObjectTypeForFullyResolvedName(aliasResolvedType.nameSpace + "::" + aliasResolvedType.computeResolvedName());
+            const fobject = this.tryGetObjectTypeForFullyResolvedName(ttname);
             if (fobject !== undefined) {
                 if (fobject.terms.length !== aliasResolvedType.terms.length) {
                     return ResolvedType.createEmpty();
@@ -1079,12 +1081,11 @@ class Assembly {
                 const ota = this.createObjectTypeAtom(fobject, aliasResolvedType, aliasResolvedBinds);
                 rtype = ota !== undefined ? ResolvedType.createSingle(ota) : ResolvedType.createEmpty();
             }
-
-            return ResolvedType.createEmpty();
         }
 
         if(isresolution) {
             let sstr = (t.nameSpace !== "Core" ? (t.nameSpace + "::") : "") + t.computeResolvedName();
+
             if(t.terms.length !== 0) {
                 sstr += "<" + t.terms.map((t) => this.normalizeTypeOnly(t, binds).typeID).join(", ") + ">";
             }
@@ -1658,7 +1659,7 @@ class Assembly {
             return [undefined, new Map<string, ResolvedType>(), false];
         }
 
-        const lname = t.nameSpace + "::" + t.tnames.join("::");
+        const lname = (t.nameSpace !== "Core" ? (t.nameSpace + "::") : "") + t.tnames.join("::");
         const nsd = this.getNamespace(t.nameSpace);
         if (!nsd.typeDefs.has(lname)) {
             return [t, new Map<string, ResolvedType>(binds), false];

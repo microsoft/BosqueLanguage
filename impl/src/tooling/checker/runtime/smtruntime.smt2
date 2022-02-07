@@ -84,7 +84,7 @@
 (declare-fun FloatValue@ToInt (FloatValue) Int)
 
 (declare-fun FloatValue@Rounding (FloatValue) FloatValue)
-(declare-fun FloatValue@Power (FloatValue, FloatValue) FloatValue)
+(declare-fun FloatValue@Power (FloatValue FloatValue) FloatValue)
 
 (declare-const FloatValue@zero FloatValue)
 (assert (= FloatValue@zero (FloatValue@const "0.0")))
@@ -102,28 +102,22 @@
 ;;BSTRING_TYPE_ALIAS;;
 (define-sort BTickTime () Int)
 (define-sort BLogicalTime () Int)
-(define-sort BUUID (Seq (_ BitVec 8)))
-(define-sort BHashCode (_ BitVec 16))
+(define-sort BUUID () (Seq (_ BitVec 8)))
+(define-sort BContentHash () (_ BitVec 16))
 
 ;;TODO BHashable and Hash + HashInvert and axioms
 
-(define-datatype BByteBuffer 
-  (BByteBuffer@cons 
-    (BByteBuffer@bytes (Seq (_ BitVec 8)))
-    (BByteBuffer@format BNat)
-    (BByteBuffer@compress BNat)
-))
+(declare-datatype BByteBuffer 
+  (
+    (BByteBuffer@cons (BByteBuffer@bytes (Seq (_ BitVec 8))) (BByteBuffer@format BNat) (BByteBuffer@compress BNat))
+  )
+)
 
 (declare-datatype BDateTime 
-  (BDateTime@cons 
-    (BDateTime@year BNat)
-    (BDateTime@month BNat)
-    (BDateTime@day BNat)
-    (BDateTime@hour BNat)
-    (BDateTime@min BNat) 
-    (BDateTime@tzoffset BNat)
-    (BDateTime@tzinfo BString)
-))
+  (
+    (BDateTime@cons (BDateTime@year BNat) (BDateTime@month BNat) (BDateTime@day BNat) (BDateTime@hour BNat) (BDateTime@min BNat) (BDateTime@tzoffset BNat) (BDateTime@tzinfo BString))
+  )
+)
 
 (declare-const BInt@zero BInt) (assert (= BInt@zero 0))
 (declare-const BInt@one BInt) (assert (= BInt@one 1))
@@ -150,7 +144,7 @@
 (declare-const BRational@zero BRational) (assert (= BRational@zero FloatValue@zero))
 (declare-const BRational@one BRational) (assert (= BRational@one FloatValue@one))
 
-(define-sort HavocSequence (Seq Int))
+(define-sort HavocSequence () (Seq Int))
 
 ;;
 ;; Primitive datatypes 
@@ -197,7 +191,7 @@
       (bsqkey_string@box (bsqkey_string_value BString))
       (bsqkey_logicaltime@box (bsqkey_logicaltime_value BLogicalTime))
       (bsqkey_uuid@box (bsqkey_uuid_value BUUID))
-      (bsqkey_contenthash@box (bsqkey_contenthash_value BHash))
+      (bsqkey_contenthash@box (bsqkey_contenthash_value BContentHash))
       ;;KEY_BOX_OPS;;
     )
     ( (BKey@box (BKey_type TypeTag) (BKey_oftype TypeTag) (BKey_value bsq_keyobject)) )
@@ -239,7 +233,8 @@
 )
 
 (define-fun BUUID@less ((k1 BUUID) (k2 BUUID)) Bool
-  (seq.< k1 k2)
+  ;;TODO: fix this
+  true
 )
 
 (define-fun BContentHash@less ((k1 BContentHash) (k2 BContentHash)) Bool
@@ -251,7 +246,7 @@
     (ite (not (= ttv1 ttv2))
       (< ttv1 ttv2)
       (let ((vv1 (BKey_value k1)) (vv2 (BKey_value k2)))
-        (ite (tt TypeTag_None)
+        (ite (= tt TypeTag_None)
           false
           (ite (= tt TypeTag_Bool)
             (Bool@less (bsqkey_bool_value vv1) (bsqkey_bool_value vv2))
@@ -380,7 +375,7 @@
 (declare-fun BTickTime@UFCons_API (HavocSequence) BTickTime)
 (declare-fun BLogicalTime@UFCons_API (HavocSequence) BLogicalTime)
 (declare-fun BUUID@UFCons_API (HavocSequence) BUUID)
-(declare-fun BContentHash@UFCons_API (HavocSequence) BHash)
+(declare-fun BContentHash@UFCons_API (HavocSequence) BContentHash)
 
 (declare-fun ContainerSize@UFCons_API (HavocSequence) BNat)
 (declare-fun UnionChoice@UFCons_API (HavocSequence) BNat)
@@ -393,7 +388,7 @@
   ($Result_bsq_nothing@success bsq_nothing@literal)
 )
 
-;;BINT_MIN, BINT_MAX, SLEN_MAX, BLEN_MAX
+;;@BINTMIN, @BINTMAX, @SLENMAX, @BLENMAX
 ;;V_MIN_MAX;;
 
 (define-fun _@@cons_Bool_entrypoint ((ctx HavocSequence)) $Result_Bool
@@ -402,7 +397,7 @@
 
 (define-fun _@@cons_BInt_entrypoint ((ctx HavocSequence)) $Result_BInt
   (let ((iv (BBInt@UFCons_API ctx)))
-    (ite (and (<= @BINT_MIN iv) (<= iv @BINT_MAX))
+    (ite (and (<= @BINTMIN iv) (<= iv @BINTMAX))
       ($Result_BInt@success iv)
       ($Result_BInt@error ErrorID_AssumeCheck) 
     )
@@ -411,7 +406,7 @@
 
 (define-fun _@@cons_BNat_entrypoint ((ctx HavocSequence)) $Result_BNat
   (let ((iv (BBNat@UFCons_API ctx)))
-    (ite (and (<= 0 iv) (<= iv @BINT_MAX))
+    (ite (and (<= 0 iv) (<= iv @BINTMAX))
       ($Result_BNat@success iv)
       ($Result_BNat@error ErrorID_AssumeCheck) 
     )
@@ -420,7 +415,7 @@
 
 (define-fun _@@cons_BBigInt_entrypoint ((ctx HavocSequence)) $Result_BBigInt
   (let ((iv (BBigInt@UFCons_API ctx)))
-    (ite (and (<= (+ @BINT_MIN @BINT_MIN) iv) (<= iv (+ @BINT_MAX @BINT_MAX)))
+    (ite (and (<= (+ @BINTMIN @BINTMIN) iv) (<= iv (+ @BINTMAX @BINTMAX)))
       ($Result_BBigInt@success iv)
       ($Result_BBigInt@error ErrorID_AssumeCheck) 
     )
@@ -429,7 +424,7 @@
 
 (define-fun _@@cons_BBigNat_entrypoint ((ctx HavocSequence)) $Result_BBigNat
   (let ((iv (BBigNat@UFCons_API ctx)))
-    (ite (and (<= 0 iv) (<= iv (+ @BINT_MAX @BINT_MAX)))
+    (ite (and (<= 0 iv) (<= iv (+ @BINTMAX @BINTMAX)))
       ($Result_BBigNat@success iv)
       ($Result_BBigNat@error ErrorID_AssumeCheck) 
     )
@@ -450,7 +445,7 @@
 
 (define-fun _@@cons_BString_entrypoint ((ctx HavocSequence)) $Result_BString
   (let ((sv (BString@UFCons_API ctx)))
-    (ite (<= (str.len sv) SLEN_MAX)
+    (ite (<= (str.len sv) @SLENMAX)
       ($Result_BString@success sv)
       ($Result_BString@error ErrorID_AssumeCheck) 
     )
@@ -459,7 +454,7 @@
 
 (define-fun _@@cons_BByteBuffer_entrypoint ((ctx HavocSequence)) $Result_BByteBuffer
   (let ((compress (BNat@UFCons_API (seq.++ ctx (seq.unit 0)))) (format (BNat@UFCons_API (seq.++ ctx (seq.unit 1)))) (buff (BByteBuffer@UFCons_API (seq.++ ctx (seq.unit 2)))))
-    (ite (and (< compress 2) (< format 4) (<= (seq.len bv) BLEN_MAX))
+    (ite (and (< compress 2) (< format 4) (<= (seq.len bv) @BLENMAX))
       ($Result_BByteBuffer@success (BByteBuffer@cons bv compress format))
       ($Result_BByteBuffer@error ErrorID_AssumeCheck) 
     )

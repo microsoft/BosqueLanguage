@@ -9,7 +9,7 @@ import { exec } from "child_process";
 
 import { MIRAssembly, PackageConfig } from "../../../compiler/mir_assembly";
 import { MIREmitter } from "../../../compiler/mir_emitter";
-import { MIRInvokeKey } from "../../../compiler/mir_ops";
+import { MIRInvokeKey, MIRResolvedTypeKey } from "../../../compiler/mir_ops";
 
 import { TranspilerOptions } from "./icpp_assembly";
 import { ICPPEmitter } from "./icppdecls_emitter";
@@ -113,27 +113,27 @@ function runICPPFile(icppjson: {code: object, args: any[]}, cb: (result: string 
     }
 }
 
-function workflowEmitICPPFile(into: string, usercode: PackageConfig, istestbuild: boolean, topts: TranspilerOptions, entrypoint: {filename: string, names: string[]}): boolean {
+function workflowEmitICPPFile(into: string, usercode: PackageConfig, istestbuild: boolean, topts: TranspilerOptions, entrypoint: {filename: string, names: string[], fkeys: MIRResolvedTypeKey[]}): boolean {
     const massembly = generateMASM(usercode, entrypoint);
-    const icppasm = generateICPPAssembly(massembly, istestbuild, topts, entrypoint.names);
+    const icppasm = generateICPPAssembly(massembly, istestbuild, topts, entrypoint.fkeys);
             
     if (icppasm === undefined) {
         return false;
     }
 
-    const icppjson = JSON.stringify({code: {api: massembly.emitAPIInfo(entrypoint.names, istestbuild), bytecode: icppasm.jsonEmit() }, args: []}, undefined, 2);
+    const icppjson = JSON.stringify({code: {api: massembly.emitAPIInfo(entrypoint.fkeys, istestbuild), bytecode: icppasm.jsonEmit() }, args: []}, undefined, 2);
     return emitICPPFile(icppjson, into);
 }
 
-function workflowRunICPPFile(args: any[], usercode: PackageConfig, istestbuild: boolean, topts: TranspilerOptions, entrypoint: {filename: string, names: string[]}, cb: (result: string | undefined) => void) {
+function workflowRunICPPFile(args: any[], usercode: PackageConfig, istestbuild: boolean, topts: TranspilerOptions, entrypoint: {filename: string, names: string[], fkeys: MIRResolvedTypeKey[]}, cb: (result: string | undefined) => void) {
     const massembly = generateMASM(usercode, entrypoint);
-    const icppasm = generateICPPAssembly(massembly, istestbuild, topts, entrypoint.names);
+    const icppasm = generateICPPAssembly(massembly, istestbuild, topts, entrypoint.fkeys);
             
     if (icppasm === undefined) {
         return undefined;
     }
 
-    return runICPPFile({code: {api: massembly.emitAPIInfo(entrypoint.names, istestbuild), bytecode: icppasm.jsonEmit() }, args: args}, cb);
+    return runICPPFile({code: {api: massembly.emitAPIInfo(entrypoint.fkeys, istestbuild), bytecode: icppasm.jsonEmit() }, args: args}, cb);
 }
 
 export {

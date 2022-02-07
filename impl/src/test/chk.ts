@@ -28,16 +28,16 @@ if(mode === "-output") {
     process.stdout.write(`Writing file to ${process.argv[3]}\n`);
 
     const ofile = args[0].slice(0, args[0].length - 3) + "json";
-    workflowEmitToFile(ofile, userpackage, false, TIMEOUT, STD_OPTS, {filename: args[0], name: "Main::main"}, noerrtrgt, false);
+    workflowEmitToFile(ofile, userpackage, false, TIMEOUT, STD_OPTS, {filename: args[0], name: "main", fkey: "__i__Main::main"}, noerrtrgt, false);
 }
 else if(mode === "-smt") {
     process.stdout.write(`Writing file to ${process.argv[3]}\n`);
 
     const ofile = args[0].slice(0, args[0].length - 3) + "smt";
-    workflowEmitToFile(ofile, userpackage, false, TIMEOUT, STD_OPTS, {filename: args[0], name: "Main::main"}, noerrtrgt, true);
+    workflowEmitToFile(ofile, userpackage, false, TIMEOUT, STD_OPTS, {filename: args[0], name: "main", fkey:  "__i__Main::main"}, noerrtrgt, true);
 }
 else if(mode === "-test") {
-    workflowPassCheck(userpackage, false, TIMEOUT, STD_OPTS, {filename: args[0], name: "Main::main"}, (res: string) => {
+    workflowPassCheck(userpackage, false, TIMEOUT, STD_OPTS, {filename: args[0], name: "main", fkey:  "__i__Main::main"}, (res: string) => {
         process.stdout.write(res + "\n");
     });
 }
@@ -50,7 +50,7 @@ else {
     rl.question(">> ", (input) => {
         try {
             const jinput = JSON.parse(input) as any[];
-            workflowEvaluate(userpackage, false, TIMEOUT, EVAL_OPTS, {filename: args[0], name: "Main::main"}, jinput, (res: string) => {
+            workflowEvaluate(userpackage, false, TIMEOUT, EVAL_OPTS, {filename: args[0], name: "main", fkey:  "main"}, jinput, (res: string) => {
                 try {
                     const jres = JSON.parse(res);
 

@@ -3779,7 +3779,7 @@ class Parser {
         const btype = this.parseTypeSignature();
         this.consumeToken();
 
-        currentDecl.typeDefs.set(currentDecl.ns + "::" + tyname, new NamespaceTypedef(attributes, currentDecl.ns, tyname, terms, btype));
+        currentDecl.typeDefs.set((currentDecl.ns !== "Core" ? currentDecl.ns : "") + tyname, new NamespaceTypedef(attributes, currentDecl.ns, tyname, terms, btype));
     }
 
     private parseProvides(iscorens: boolean, endtoken: string[]): [TypeSignature, TypeConditionRestriction | undefined][] {
@@ -4043,7 +4043,7 @@ class Parser {
 
             const cdecl = new ConceptTypeDecl(sinfo, this.m_penv.getCurrentFile(), attributes, currentDecl.ns, cname, terms, provides, invariants, validates, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods, nestedEntities);
             currentDecl.concepts.set(cname, cdecl);
-            this.m_penv.assembly.addConceptDecl(currentDecl.ns + "::" + cname, cdecl);
+            this.m_penv.assembly.addConceptDecl((currentDecl.ns !== "Core" ? currentDecl.ns : "") + cname, cdecl);
         }
         catch (ex) {
             this.processRecover();
@@ -4161,7 +4161,7 @@ class Parser {
             const feterms = [...currentTermNest, ...terms];
 
             const edecl = new EntityTypeDecl(sinfo, this.m_penv.getCurrentFile(), attributes, currentDecl.ns, fename, feterms, provides, invariants, validates, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods, nestedEntities);
-            this.m_penv.assembly.addObjectDecl(currentDecl.ns + "::" + fename, edecl);
+            this.m_penv.assembly.addObjectDecl((currentDecl.ns !== "Core" ? currentDecl.ns : "") + fename, edecl);
             currentDecl.objects.set(ename, edecl);
             
             if(enclosingMap !== undefined) {
@@ -4251,7 +4251,7 @@ class Parser {
 
             this.clearRecover();
             currentDecl.objects.set(ename, new EntityTypeDecl(sinfo, this.m_penv.getCurrentFile(), attributes, currentDecl.ns, ename, [], provides, invariants, validates, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods, new Map<string, EntityTypeDecl>()));
-            this.m_penv.assembly.addObjectDecl(currentDecl.ns + "::" + ename, currentDecl.objects.get(ename) as EntityTypeDecl);
+            this.m_penv.assembly.addObjectDecl((currentDecl.ns !== "Core" ? currentDecl.ns : "") + ename, currentDecl.objects.get(ename) as EntityTypeDecl);
         }
         catch (ex) {
             this.processRecover();
@@ -4306,8 +4306,8 @@ class Parser {
                 const validatortype = new EntityTypeDecl(sinfo, this.m_penv.getCurrentFile(), ["__validator_type", ...attributes], currentDecl.ns, iname, [], provides, [], [], [validator], [accepts], [], [], [], new Map<string, EntityTypeDecl>());
 
                 currentDecl.objects.set(iname, validatortype);
-                this.m_penv.assembly.addObjectDecl(currentDecl.ns + "::" + iname, currentDecl.objects.get(iname) as EntityTypeDecl);
-                this.m_penv.assembly.addValidatorRegex(currentDecl.ns + "::" + iname, re as BSQRegex);
+                this.m_penv.assembly.addObjectDecl((currentDecl.ns !== "Core" ? currentDecl.ns : "") + iname, currentDecl.objects.get(iname) as EntityTypeDecl);
+                this.m_penv.assembly.addValidatorRegex((currentDecl.ns !== "Core" ? currentDecl.ns : "") + iname, re as BSQRegex);
             }
             else {
                 //[attr] typedecl NAME = PRIMITIVE [& {...}];
@@ -4469,7 +4469,7 @@ class Parser {
                 attributes.push("__typedprimitive", "__constructable");
 
                 currentDecl.objects.set(iname, new EntityTypeDecl(sinfo, this.m_penv.getCurrentFile(), attributes, currentDecl.ns, iname, [], provides, invariants, validates, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods, new Map<string, EntityTypeDecl>()));
-                this.m_penv.assembly.addObjectDecl(currentDecl.ns + "::" + iname, currentDecl.objects.get(iname) as EntityTypeDecl);
+                this.m_penv.assembly.addObjectDecl((currentDecl.ns !== "Core" ? currentDecl.ns : "") + iname, currentDecl.objects.get(iname) as EntityTypeDecl);
             }
         }
         else {
@@ -4572,7 +4572,7 @@ class Parser {
                 
                 edecls.push(edecl);
                 currentDecl.objects.set(ename, edecl);
-                this.m_penv.assembly.addObjectDecl(currentDecl.ns + "::" + ename, currentDecl.objects.get(ename) as EntityTypeDecl);
+                this.m_penv.assembly.addObjectDecl((currentDecl.ns !== "Core" ? currentDecl.ns : "") + ename, currentDecl.objects.get(ename) as EntityTypeDecl);
             }
 
             if (this.testAndConsumeTokenIf("&")) {
@@ -4608,7 +4608,7 @@ class Parser {
 
             const cdecl = new ConceptTypeDecl(sinfo, this.m_penv.getCurrentFile(), ["__adt_concept_type"], currentDecl.ns, iname, terms, provides, cinvariants, cvalidates, cstaticMembers, cstaticFunctions, cstaticOperators, cusing, cmemberMethods, new Map<string, EntityTypeDecl>());
             currentDecl.concepts.set(iname, cdecl);
-            this.m_penv.assembly.addConceptDecl(currentDecl.ns + "::" + iname, cdecl);
+            this.m_penv.assembly.addConceptDecl((currentDecl.ns !== "Core" ? currentDecl.ns : "") + iname, cdecl);
         }
     }
 
@@ -4812,7 +4812,7 @@ class Parser {
                         this.raiseError(this.getCurrentLine(), "Duplicate definition of name");
                     }
 
-                    nsdecl.declaredNames.add(ns + "::" + fname);
+                    nsdecl.declaredNames.add(fname);
                 }
                 else if (this.testToken("operator")) {
                     this.consumeToken();
@@ -4833,7 +4833,7 @@ class Parser {
                         const fname = this.consumeTokenAndGetValue();
                         
                         if (nns === ns) {
-                            nsdecl.declaredNames.add(ns + "::" + fname);
+                            nsdecl.declaredNames.add(fname);
                         }
                     }
                 }
@@ -4848,7 +4848,7 @@ class Parser {
                     if (nsdecl.declaredNames.has(tname)) {
                         this.raiseError(this.getCurrentLine(), "Duplicate definition of name");
                     }
-                    nsdecl.declaredNames.add(ns + "::" + tname);
+                    nsdecl.declaredNames.add(tname);
                 }
                 else if (this.testToken("typedecl")) {            
                     this.consumeToken();
@@ -4862,7 +4862,7 @@ class Parser {
                     if (nsdecl.declaredNames.has(tname)) {
                         this.raiseError(this.getCurrentLine(), "Duplicate definition of name");
                     }
-                    nsdecl.declaredNames.add(ns + "::" + tname);
+                    nsdecl.declaredNames.add(tname);
 
                     const isassigntype = this.testAndConsumeTokenIf("=");
                     if (isassigntype) {
@@ -4906,7 +4906,7 @@ class Parser {
                             if (nsdecl.declaredNames.has(tname)) {
                                 this.raiseError(this.getCurrentLine(), "Duplicate definition of name");
                             }
-                            nsdecl.declaredNames.add(ns + "::" + ename);
+                            nsdecl.declaredNames.add(ename);
 
                             if (this.testToken("{")) {
                                 this.m_cpos = this.scanCodeParens(); //scan to the closing paren
@@ -4933,7 +4933,7 @@ class Parser {
                     if (nsdecl.declaredNames.has(tname)) {
                         this.raiseError(this.getCurrentLine(), "Duplicate definition of name");
                     }
-                    nsdecl.declaredNames.add(ns + "::" + tname);
+                    nsdecl.declaredNames.add(tname);
 
                     this.ensureToken("{"); //we should be at the opening left paren 
                     this.m_cpos = this.scanCodeParens(); //scan to the closing paren
@@ -4954,7 +4954,7 @@ class Parser {
                     if (nsdecl.declaredNames.has(tname)) {
                         this.raiseError(this.getCurrentLine(), "Duplicate definition of name");
                     }
-                    nsdecl.declaredNames.add(ns + "::" + tname);
+                    nsdecl.declaredNames.add(tname);
 
                     this.parseTermDeclarations();
                     this.parseProvides(ns === "Core", ["{"]);

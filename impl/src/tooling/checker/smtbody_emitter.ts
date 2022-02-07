@@ -2100,353 +2100,353 @@ class SMTBodyEmitter {
 
         switch (op) {
             //op unary +
-            case "__i__+=prefix=(Int)": {
+            case "__i__Core::+=prefix=(Int)": {
                 rtype = this.typegen.getMIRType("Int");
                 smte = args[0];
                 break;
             }
-            case "__i__+=prefix=(Nat)": {
+            case "__i__Core::+=prefix=(Nat)": {
                 rtype = this.typegen.getMIRType("Nat");
                 smte = args[0];
                 break;
             }
-            case "__i__+=prefix=(BigInt)": {
+            case "__i__Core::+=prefix=(BigInt)": {
                 rtype = this.typegen.getMIRType("BigInt");
                 smte = args[0];
                 break;
             }
-            case "__i__+=prefix=(BigNat)": {
+            case "__i__Core::+=prefix=(BigNat)": {
                 rtype = this.typegen.getMIRType("BigNat");
                 smte = args[0];
                 break;
             }
-            case "__i__+=prefix=(Rational)": {
+            case "__i__Core::+=prefix=(Rational)": {
                 rtype = this.typegen.getMIRType("Rational");
                 smte = args[0];
                 break;
             }
-            case "__i__+=prefix=(Float)": {
+            case "__i__Core::+=prefix=(Float)": {
                 rtype = this.typegen.getMIRType("Float");
                 smte = args[0];
                 break;
             }
-            case "__i__+=prefix=(Decimal)": {
+            case "__i__Core::+=prefix=(Decimal)": {
                 rtype = this.typegen.getMIRType("Decimal");
                 smte = args[0];
                 break;
             }
             //op unary -
-            case "__i__-=prefix=(Int)": {
+            case "__i__Core::-=prefix=(Int)": {
                 rtype = this.typegen.getMIRType("Int");
                 smte = new SMTCallSimple("*", [args[0], new SMTConst("-1")]);
                 break;
             }
-            case "__i__-=prefix=(BigInt)": {
+            case "__i__Core::-=prefix=(BigInt)": {
                 rtype = this.typegen.getMIRType("BigInt");
                 smte = new SMTCallSimple("*", [args[0], new SMTConst("-1")]);
                 break;
             }
-            case "__i__-=prefix=(Rational)": {
+            case "__i__Core::-=prefix=(Rational)": {
                 rtype = this.typegen.getMIRType("Rational");
                 smte = new SMTCallSimple("FloatValue@neg", args);
                 break;
             }
-            case "__i__-=prefix=(Float)": {
+            case "__i__Core::-=prefix=(Float)": {
                 rtype = this.typegen.getMIRType("Float");
                 smte = new SMTCallSimple("FloatValue@neg", args);
                 break;
             }
-            case "__i__-=prefix=(Decimal)": {
+            case "__i__Core::-=prefix=(Decimal)": {
                 rtype = this.typegen.getMIRType("Decimal");
                 smte = new SMTCallSimple("FloatValue@neg", args);
                 break;
             }
             //op infix +
-            case "__i__+=infix=(Int, Int)": {
+            case "__i__Core::+=infix=(Int, Int)": {
                 rtype = this.typegen.getMIRType("Int");
                 smte = new SMTCallSimple("+", args);
                 break;
             }
-            case "__i__+=infix=(Nat, Nat)": {
+            case "__i__Core::+=infix=(Nat, Nat)": {
                 rtype = this.typegen.getMIRType("Nat");
                 smte = new SMTCallSimple("+", args);
                 break;
             }
-            case "__i__+=infix=(BigInt, BigInt)": {
+            case "__i__Core::+=infix=(BigInt, BigInt)": {
                 rtype = this.typegen.getMIRType("BigInt");
                 smte = new SMTCallSimple("+", args);
                 break;
             }
-            case "__i__+=infix=(BigNat, BigNat)": {
+            case "__i__Core::+=infix=(BigNat, BigNat)": {
                 rtype = this.typegen.getMIRType("BigNat");
                 smte = new SMTCallSimple("+", args);
                 break;
             }
-            case "__i__+=infix=(Rational, Rational)": {
+            case "__i__Core::+=infix=(Rational, Rational)": {
                 rtype = this.typegen.getMIRType("Rational");
                 smte = new SMTCallSimple("FloatValue@add", args);
                 break;
             }
-            case "__i__+=infix=(Float, Float)": {
+            case "__i__Core::+=infix=(Float, Float)": {
                 rtype = this.typegen.getMIRType("Float");
                 smte = new SMTCallSimple("FloatValue@add", args);
                 break;
             }
-            case "__i__+=infix=(Decimal, Decimal)": {
+            case "__i__Core::+=infix=(Decimal, Decimal)": {
                 rtype = this.typegen.getMIRType("Decmial");
                 smte = new SMTCallSimple("FloatValue@add", args);
                 break;
             }
             //op infix -
-            case "__i__-=infix=(Int, Int)": {
+            case "__i__Core::-=infix=(Int, Int)": {
                 rtype = this.typegen.getMIRType("Int");
                 smte = new SMTCallSimple("-", args);
                 break;
             }
-            case "__i__-=infix=(Nat, Nat)": {
+            case "__i__Core::-=infix=(Nat, Nat)": {
                 rtype = this.typegen.getMIRType("Nat");
                 smte = new SMTCallSimple("-", args);
                 break;
             }
-            case "__i__-=infix=(BigInt, BigInt)": {
+            case "__i__Core::-=infix=(BigInt, BigInt)": {
                 rtype = this.typegen.getMIRType("BigInt");
                 smte = new SMTCallSimple("-", args);
                 break;
             }
-            case "__i__-=infix=(BigNat, BigNat)": {
+            case "__i__Core::-=infix=(BigNat, BigNat)": {
                 rtype = this.typegen.getMIRType("BigNat");
                 smte = new SMTCallSimple("-", args);
                 break
             }
-            case "__i__-=infix=(Rational, Rational)": {
+            case "__i__Core::-=infix=(Rational, Rational)": {
                 rtype = this.typegen.getMIRType("Rational");
                 smte = new SMTCallSimple("FloatValue@sub", args);
                 break;
             }
-            case "__i__-=infix=(Float, Float)": {
+            case "__i__Core::-=infix=(Float, Float)": {
                 rtype = this.typegen.getMIRType("Float");
                 smte = new SMTCallSimple("FloatValue@sub", args);
                 break;
             }
-            case "__i__-=infix=(Decimal, Decimal)": {
+            case "__i__Core::-=infix=(Decimal, Decimal)": {
                 rtype = this.typegen.getMIRType("Decmial");
                 smte = new SMTCallSimple("FloatValue@sub", args);
                 break;
             }
             //op infix *
-            case "__i__*=infix=(Int, Int)": {
+            case "__i__Core::*=infix=(Int, Int)": {
                 rtype = this.typegen.getMIRType("Int");
                 smte = new SMTCallSimple("*", args);
                 break;
             }
-            case "__i__*=infix=(Nat, Nat)": {
+            case "__i__Core::*=infix=(Nat, Nat)": {
                 rtype = this.typegen.getMIRType("Nat");
                 smte = new SMTCallSimple("*", args);
                 break;
             }
-            case "__i__*=infix=(BigInt, BigInt)": {
+            case "__i__Core::*=infix=(BigInt, BigInt)": {
                 rtype = this.typegen.getMIRType("BigInt");
                 smte = new SMTCallSimple("*", args);
                 break;
             }
-            case "__i__*=infix=(BigNat, BigNat)": {
+            case "__i__Core::*=infix=(BigNat, BigNat)": {
                 rtype = this.typegen.getMIRType("BigNat");
                 smte = new SMTCallSimple("*", args);
                 break;
             }
-            case "__i__*=infix=(Rational, Rational)": {
+            case "__i__Core::*=infix=(Rational, Rational)": {
                 rtype = this.typegen.getMIRType("Rational");
                 smte = new SMTCallSimple("FloatValue@mult", args);
                 break;
             }
-            case "__i__*=infix=(Float, Float)": {
+            case "__i__Core::*=infix=(Float, Float)": {
                 rtype = this.typegen.getMIRType("Float");
                 smte = new SMTCallSimple("FloatValue@mult", args);
                 break;
             }
-            case "__i__*=infix=(Decimal, Decimal)": {
+            case "__i__Core::*=infix=(Decimal, Decimal)": {
                 rtype = this.typegen.getMIRType("Decmial");
                 smte = new SMTCallSimple("FloatValue@mult", args);
                 break;
             }
             //op infix /
-            case "__i__/=infix=(Int, Int)": {
+            case "__i__Core::/=infix=(Int, Int)": {
                 rtype = this.typegen.getMIRType("Int");
                 smte = this.processGenerateResultWithZeroArgCheck(sinfo, new SMTConst("BInt@zero"), args[1], rtype, new SMTCallSimple("/", args));
                 erropt = true;
                 break;
             }
-            case "__i__/=infix=(Nat, Nat)": {
+            case "__i__Core::/=infix=(Nat, Nat)": {
                 rtype = this.typegen.getMIRType("Nat");
                 smte = this.processGenerateResultWithZeroArgCheck(sinfo, new SMTConst("BNat@zero"), args[1], rtype, new SMTCallSimple("/", args));
                 erropt = true;
                 break;
             }
-            case "__i__/=infix=(BigInt, BigInt)": {
+            case "__i__Core::/=infix=(BigInt, BigInt)": {
                 rtype = this.typegen.getMIRType("BigInt");
                 smte = this.processGenerateResultWithZeroArgCheck(sinfo, new SMTConst("BBigInt@zero"), args[1], rtype, new SMTCallSimple("/", args));
                 erropt = true;
                 break;
             }
-            case "__i__/=infix=(BigNat, BigNat)": {
+            case "__i__Core::/=infix=(BigNat, BigNat)": {
                 rtype = this.typegen.getMIRType("BigNat");
                 smte = this.processGenerateResultWithZeroArgCheck(sinfo, new SMTConst("BBigNat@zero"), args[1], rtype, new SMTCallSimple("/", args));
                 erropt = true;
                 break
             }
-            case "__i__/=infix=(Rational, Rational)": {
+            case "__i__Core::/=infix=(Rational, Rational)": {
                 rtype = this.typegen.getMIRType("Rational");
                 smte = this.processGenerateResultWithZeroArgCheck(sinfo, new SMTConst("BRational@zero"), args[1], rtype, new SMTCallSimple("FloatValue@div", args));
                 erropt = true;
                 break;
             }
-            case "__i__/=infix=(Float, Float)": {
+            case "__i__Core::/=infix=(Float, Float)": {
                 rtype = this.typegen.getMIRType("Float");
                 smte = this.processGenerateResultWithZeroArgCheck(sinfo, new SMTConst("BFloat@zero"), args[1], rtype, new SMTCallSimple("FloatValue@div", args));
                 erropt = true;
                 break;
             }
-            case "__i__/=infix=(Decimal, Decimal)": {
+            case "__i__Core::/=infix=(Decimal, Decimal)": {
                 rtype = this.typegen.getMIRType("Decimal");
                 smte = this.processGenerateResultWithZeroArgCheck(sinfo, new SMTConst("BDecimal@zero"), args[1], rtype, new SMTCallSimple("FloatValue@div", args));
                 erropt = true;
                 break;
             }
             //op infix ==
-            case "__i__===infix=(Int, Int)":
-            case "__i__===infix=(Nat, Nat)":
-            case "__i__===infix=(BigInt, BigInt)":
-            case "__i__===infix=(BigNat, BigNat)":
-            case "__i__===infix=(Rational, Rational)":
-            case "__i__===infix=(Float, Float)":
-            case "__i__===infix=(Decimal, Decimal)": {
+            case "__i__Core::===infix=(Int, Int)":
+            case "__i__Core::===infix=(Nat, Nat)":
+            case "__i__Core::===infix=(BigInt, BigInt)":
+            case "__i__Core::===infix=(BigNat, BigNat)":
+            case "__i__Core::===infix=(Rational, Rational)":
+            case "__i__Core::===infix=(Float, Float)":
+            case "__i__Core::===infix=(Decimal, Decimal)": {
                 smte = SMTCallSimple.makeEq(args[0], args[1]);
                 break;
             }
             //op infix !=
-            case "__i__!==infix=(Int, Int)":
-            case "__i__!==infix=(Nat, Nat)":
-            case "__i__!==infix=(BigInt, BigInt)":
-            case "__i__!==infix=(BigNat, BigNat)":
-            case "__i__!==infix=(Rational, Rational)":
-            case "__i__!==infix=(Float, Float)":
-            case "__i__!==infix=(Decimal, Decimal)": {
+            case "__i__Core::!==infix=(Int, Int)":
+            case "__i__Core::!==infix=(Nat, Nat)":
+            case "__i__Core::!==infix=(BigInt, BigInt)":
+            case "__i__Core::!==infix=(BigNat, BigNat)":
+            case "__i__Core::!==infix=(Rational, Rational)":
+            case "__i__Core::!==infix=(Float, Float)":
+            case "__i__Core::!==infix=(Decimal, Decimal)": {
                 smte = SMTCallSimple.makeNotEq(args[0], args[1]);
                 break;
             }
             //op infix <
-            case "__i__<=infix=(Int, Int)": {
+            case "__i__Core::<=infix=(Int, Int)": {
                 smte = new SMTCallSimple("<", args);
                 break;
             }
-            case "__i__<=infix=(Nat, Nat)": {
+            case "__i__Core::<=infix=(Nat, Nat)": {
                 smte = new SMTCallSimple("<", args);
                 break;
             }
-            case "__i__<=infix=(BigInt, BigInt)": {
+            case "__i__Core::<=infix=(BigInt, BigInt)": {
                 smte = new SMTCallSimple("<", args);
                 break;
             }
-            case "__i__<=infix=(BigNat, BigNat)": {
+            case "__i__Core::<=infix=(BigNat, BigNat)": {
                 smte = new SMTCallSimple("<", args);
                 break;
             }
-            case "__i__<=infix=(Rational, Rational)": {
+            case "__i__Core::<=infix=(Rational, Rational)": {
                 smte = new SMTCallSimple("FloatValue@lt", args);
                 break;
             }
-            case "__i__<=infix=(Float, Float)": {
+            case "__i__Core::<=infix=(Float, Float)": {
                 smte = new SMTCallSimple("FloatValue@lt", args);
                 break;
             }
-            case "__i__<=infix=(Decimal, Decimal)": {
+            case "__i__Core::<=infix=(Decimal, Decimal)": {
                 smte = new SMTCallSimple("FloatValue@lt", args);
                 break;
             }
             //op infix >
-            case "__i__>=infix=(Int, Int)": {
+            case "__i__Core::>=infix=(Int, Int)": {
                 smte = new SMTCallSimple(">", args);
                 break;
             }
-            case "__i__>=infix=(Nat, Nat)": {
+            case "__i__Core::>=infix=(Nat, Nat)": {
                 smte = new SMTCallSimple(">", args);
                 break;
             }
-            case "__i__>=infix=(BigInt, BigInt)": {
+            case "__i__Core::>=infix=(BigInt, BigInt)": {
                 smte = new SMTCallSimple(">", args);
                 break;
             }
-            case "__i__>=infix=(BigNat, BigNat)": {
+            case "__i__Core::>=infix=(BigNat, BigNat)": {
                 smte = new SMTCallSimple(">", args);
                 break;
             }
-            case "__i__>=infix=(Rational, Rational)": {
+            case "__i__Core::>=infix=(Rational, Rational)": {
                 smte = new SMTCallSimple(">", args);
                 break;
             }
-            case "__i__>=infix=(Float, Float)": {
+            case "__i__Core::>=infix=(Float, Float)": {
                 smte = new SMTCallSimple("FloatValue@lt", [args[1], args[0]]);
                 break;
             }
-            case "__i__>=infix=(Decimal, Decimal)": {
+            case "__i__Core::>=infix=(Decimal, Decimal)": {
                 smte = new SMTCallSimple("FloatValue@lt", [args[1], args[0]]);
                 break;
             }
             //op infix <=
-            case "__i__<==infix=(Int, Int)": {
+            case "__i__Core::<==infix=(Int, Int)": {
                 smte = new SMTCallSimple("<=", args);
                 break;
             }
-            case "__i__<==infix=(Nat, Nat)": {
+            case "__i__Core::<==infix=(Nat, Nat)": {
                 smte = new SMTCallSimple("<=", args);
                 break;
             }
-            case "__i__<==infix=(BigInt, BigInt)":  {
+            case "__i__Core::<==infix=(BigInt, BigInt)":  {
                 smte = new SMTCallSimple("<=", args);
                 break;
             }
-            case "__i__<==infix=(BigNat, BigNat)": {
+            case "__i__Core::<==infix=(BigNat, BigNat)": {
                 smte = new SMTCallSimple("<=", args);
                 break;
             }
-            case "__i__<==infix=(Rational, Rational)": {
+            case "__i__Core::<==infix=(Rational, Rational)": {
                 smte = SMTCallSimple.makeAndOf(SMTCallSimple.makeEq(args[0], args[1]),  new SMTCallSimple("FloatValue@lt", args));
                 break;
             }
-            case "__i__<==infix=(Float, Float)": {
+            case "__i__Core::<==infix=(Float, Float)": {
                 smte = SMTCallSimple.makeAndOf(SMTCallSimple.makeEq(args[0], args[1]),  new SMTCallSimple("FloatValue@lt", args));
                 break;
             }
-            case "__i__<==infix=(Decimal, Decimal)": {
+            case "__i__Core::<==infix=(Decimal, Decimal)": {
                 smte = SMTCallSimple.makeAndOf(SMTCallSimple.makeEq(args[0], args[1]),  new SMTCallSimple("FloatValue@lt", args));
                 break;
             }
             //op infix >=
-            case "__i__>==infix=(Int, Int)": {
+            case "__i__Core::>==infix=(Int, Int)": {
                 smte = new SMTCallSimple(">=", args);
                 break;
             }
-            case "__i__>==infix=(Nat, Nat)": {
+            case "__i__Core::>==infix=(Nat, Nat)": {
                 smte = new SMTCallSimple(">=", args);
                 break;
             }
-            case "__i__>==infix=(BigInt, BigInt)": {
+            case "__i__Core::>==infix=(BigInt, BigInt)": {
                 smte = new SMTCallSimple(">=", args);
                 break;
             }
-            case "__i__>==infix=(BigNat, BigNat)": {
+            case "__i__Core::>==infix=(BigNat, BigNat)": {
                 smte = new SMTCallSimple(">=", args);
                 break;
             }
-            case "__i__>==infix=(Rational, Rational)":{
+            case "__i__Core::>==infix=(Rational, Rational)":{
                 smte = SMTCallSimple.makeAndOf(SMTCallSimple.makeEq(args[0], args[1]),  new SMTCallSimple("FloatValue@lt", [args[1], args[0]]));
                 break;
             }
-            case "__i__>==infix=(Float, Float)":{
+            case "__i__Core::>==infix=(Float, Float)":{
                 smte = SMTCallSimple.makeAndOf(SMTCallSimple.makeEq(args[0], args[1]),  new SMTCallSimple("FloatValue@lt", [args[1], args[0]]));
                 break;
             }
-            case "__i__>==infix=(Decimal, Decimal)":{
+            case "__i__Core::>==infix=(Decimal, Decimal)":{
                 smte = SMTCallSimple.makeAndOf(SMTCallSimple.makeEq(args[0], args[1]),  new SMTCallSimple("FloatValue@lt", [args[1], args[0]]));
                 break;
             }

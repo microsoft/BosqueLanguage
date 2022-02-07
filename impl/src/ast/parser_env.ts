@@ -169,7 +169,7 @@ class ParserEnvironment {
         }
         else {
             const nsdecl = this.assembly.getNamespace(this.m_currentNamespace as string);
-            if (nsdecl.declaredNames.has(this.m_currentNamespace + "::" + typename)) {
+            if (nsdecl.declaredNames.has(typename)) {
                 return this.m_currentNamespace as string;
             }
             else {
@@ -181,7 +181,7 @@ class ParserEnvironment {
 
     tryResolveAsPrefixUnaryOperator(opname: string, level: number): string | undefined {
         const nsdecl = this.assembly.getNamespace(this.m_currentNamespace as string);
-        if (nsdecl.declaredNames.has(this.m_currentNamespace + "::" + opname) && nsdecl.operators.get(opname) !== undefined) {
+        if (nsdecl.declaredNames.has(opname) && nsdecl.operators.get(opname) !== undefined) {
             const opdecls = nsdecl.operators.get(opname) as NamespaceOperatorDecl[];
             return opdecls.some((opdecl) => (opdecl.isPrefix && opdecl.level === level)) ? this.m_currentNamespace as string : undefined;
         }
@@ -198,7 +198,7 @@ class ParserEnvironment {
 
     tryResolveAsInfixBinaryOperator(opname: string, level: number): string | undefined {
         const nsdecl = this.assembly.getNamespace(this.m_currentNamespace as string);
-        if (nsdecl.declaredNames.has(this.m_currentNamespace + "::" + opname) && nsdecl.operators.get(opname) !== undefined) {
+        if (nsdecl.declaredNames.has(opname) && nsdecl.operators.get(opname) !== undefined) {
             const opdecls = nsdecl.operators.get(opname) as NamespaceOperatorDecl[];
             return opdecls.some((opdecl) => (opdecl.isInfix && opdecl.level === level)) ? this.m_currentNamespace as string : undefined;
         }

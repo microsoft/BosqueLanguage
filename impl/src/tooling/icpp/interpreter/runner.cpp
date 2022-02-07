@@ -138,6 +138,7 @@ int main(int argc, char** argv)
         }
 
         json jcode = payload.value()["code"];
+        json jmain = payload.value()["main"].get<std::string>();
         json jargs = payload.value()["args"];
 
         const APIModule* api = APIModule::jparse(jcode["api"]);
@@ -145,7 +146,7 @@ int main(int argc, char** argv)
         Evaluator runner;
         loadAssembly(jcode["bytecode"], runner);
 
-        auto res = run(runner, api, "Main::main", jargs);
+        auto res = run(runner, api, jmain, jargs);
         auto jout = res.second.dump(4);
         if(res.first)
         {
@@ -170,6 +171,12 @@ int main(int argc, char** argv)
 
         json jcode = cc.value();
         auto jargs = json::parse(input);
+        std::string jmain("main");
+        if(jargs.is_object())
+        {
+            jargs = jargs["args"];
+            jmain = jargs["main"].get<std::string>();
+        }
 
         const APIModule* api = APIModule::jparse(jcode["api"]);
 
@@ -177,7 +184,7 @@ int main(int argc, char** argv)
         loadAssembly(jcode["bytecode"], runner);
 
         auto start = std::chrono::system_clock::now();
-        auto res = run(runner, api, "Main::main", jargs);
+        auto res = run(runner, api, jmain, jargs);
         auto end = std::chrono::system_clock::now();
 
         auto delta_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();

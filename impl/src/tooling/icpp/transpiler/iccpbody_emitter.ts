@@ -1395,249 +1395,249 @@ class ICPPBodyEmitter {
     processDefaultOperatorInvokePrimitiveType(sinfo: SourceInfo, trgt: TargetVar, oftype: MIRResolvedTypeKey, op: MIRInvokeKey, args: Argument[]): ICPPOp {
         switch (op) {
             //op unary +
-            case "__i__+=prefix=(Int)":
-            case "__i__+=prefix=(Nat)":
-            case "__i__+=prefix=(BigInt)":
-            case "__i__+=prefix=(BigNat)":
-            case "__i__+=prefix=(Rational)":
-            case "__i__+=prefix=(Float)":
-            case "__i__+=prefix=(Decimal)": {
+            case "__i__Core::+=prefix=(Int)":
+            case "__i__Core::+=prefix=(Nat)":
+            case "__i__Core::+=prefix=(BigInt)":
+            case "__i__Core::+=prefix=(BigNat)":
+            case "__i__Core::+=prefix=(Rational)":
+            case "__i__Core::+=prefix=(Float)":
+            case "__i__Core::+=prefix=(Decimal)": {
                 return ICPPOpEmitter.genDirectAssignOp(sinfo, trgt, oftype, args[0], ICPPOpEmitter.genNoStatmentGuard());
             }
             //op unary -
-            case "__i__-=prefix=(Int)": {
+            case "__i__Core::-=prefix=(Int)": {
                 return ICPPOpEmitter.genNegateOp(sinfo, OpCodeTag.NegateIntOp, trgt, oftype, args[0]);
             }
-            case "__i__-=prefix=(BigInt)": {
+            case "__i__Core::-=prefix=(BigInt)": {
                 return ICPPOpEmitter.genNegateOp(sinfo, OpCodeTag.NegateBigIntOp, trgt, oftype, args[0]);
             }
-            case "__i__-=prefix=(Rational)": {
+            case "__i__Core::-=prefix=(Rational)": {
                 return ICPPOpEmitter.genNegateOp(sinfo, OpCodeTag.NegateRationalOp, trgt, oftype, args[0]);
             }
-            case "__i__-=prefix=(Float)": {
+            case "__i__Core::-=prefix=(Float)": {
                 return ICPPOpEmitter.genNegateOp(sinfo, OpCodeTag.NegateFloatOp, trgt, oftype, args[0]);
             }
-            case "__i__-=prefix=(Decimal)": {
+            case "__i__Core::-=prefix=(Decimal)": {
                 return ICPPOpEmitter.genNegateOp(sinfo, OpCodeTag.NegateDecimalOp, trgt, oftype, args[0]);
             }
             //op infix +
-            case "__i__+=infix=(Int, Int)": {
+            case "__i__Core::+=infix=(Int, Int)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.AddIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "__i__+=infix=(Nat, Nat)": {
+            case "__i__Core::+=infix=(Nat, Nat)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.AddNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "__i__+=infix=(BigInt, BigInt)": {
+            case "__i__Core::+=infix=(BigInt, BigInt)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.AddBigIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "__i__+=infix=(BigNat, BigNat)": {
+            case "__i__Core::+=infix=(BigNat, BigNat)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.AddBigNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "__i__+=infix=(Rational, Rational)": {
+            case "__i__Core::+=infix=(Rational, Rational)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.AddRationalOp, trgt, oftype, args[0], args[1]);
             }
-            case "__i__+=infix=(Float, Float)": {
+            case "__i__Core::+=infix=(Float, Float)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.AddFloatOp, trgt, oftype, args[0], args[1]);
             }
-            case "__i__+=infix=(Decimal, Decimal)": {
+            case "__i__Core::+=infix=(Decimal, Decimal)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.AddDecimalOp, trgt, oftype, args[0], args[1]);
             }
             //op infix -
-            case "__i__-=infix=(Int, Int)": {
+            case "__i__Core::-=infix=(Int, Int)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.SubIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "__i__-=infix=(Nat, Nat)": {
+            case "__i__Core::-=infix=(Nat, Nat)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.SubNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "__i__-=infix=(BigInt, BigInt)": {
+            case "__i__Core::-=infix=(BigInt, BigInt)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.SubBigIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "__i__-=infix=(BigNat, BigNat)": {
+            case "__i__Core::-=infix=(BigNat, BigNat)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.SubBigNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "__i__-=infix=(Rational, Rational)": {
+            case "__i__Core::-=infix=(Rational, Rational)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.SubRationalOp, trgt, oftype, args[0], args[1]);
             }
-            case "__i__-=infix=(Float, Float)": {
+            case "__i__Core::-=infix=(Float, Float)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.SubFloatOp, trgt, oftype, args[0], args[1]);
             }
-            case "__i__-=infix=(Decimal, Decimal)": {
+            case "__i__Core::-=infix=(Decimal, Decimal)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.SubDecimalOp, trgt, oftype, args[0], args[1]);
             }
             //op infix *
-            case "__i__*=infix=(Int, Int)": {
+            case "__i__Core::*=infix=(Int, Int)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.MultIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "__i__*=infix=(Nat, Nat)": {
+            case "__i__Core::*=infix=(Nat, Nat)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.MultNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "__i__*=infix=(BigInt, BigInt)": {
+            case "__i__Core::*=infix=(BigInt, BigInt)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.MultBigIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "__i__*=infix=(BigNat, BigNat)": {
+            case "__i__Core::*=infix=(BigNat, BigNat)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.MultBigNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "__i__*=infix=(Rational, Rational)": {
+            case "__i__Core::*=infix=(Rational, Rational)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.MultRationalOp, trgt, oftype, args[0], args[1]);
             }
-            case "__i__*=infix=(Float, Float)": {
+            case "__i__Core::*=infix=(Float, Float)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.MultFloatOp, trgt, oftype, args[0], args[1]);
             }
-            case "__i__*=infix=(Decimal, Decimal)": {
+            case "__i__Core::*=infix=(Decimal, Decimal)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.MultDecimalOp, trgt, oftype, args[0], args[1]);
             }
             //op infix /
-            case "__i__/=infix=(Int, Int)": {
+            case "__i__Core::/=infix=(Int, Int)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.DivIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "__i__/=infix=(Nat, Nat)": {
+            case "__i__Core::/=infix=(Nat, Nat)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.DivNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "__i__/=infix=(BigInt, BigInt)": {
+            case "__i__Core::/=infix=(BigInt, BigInt)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.DivBigIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "__i__/=infix=(BigNat, BigNat)": {
+            case "__i__Core::/=infix=(BigNat, BigNat)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.DivBigNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "__i__/=infix=(Rational, Rational)": {
+            case "__i__Core::/=infix=(Rational, Rational)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.DivRationalOp, trgt, oftype, args[0], args[1]);
             }
-            case "__i__/=infix=(Float, Float)": {
+            case "__i__Core::/=infix=(Float, Float)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.DivFloatOp, trgt, oftype, args[0], args[1]);
             }
-            case "__i__/=infix=(Decimal, Decimal)": {
+            case "__i__Core::/=infix=(Decimal, Decimal)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.DivDecimalOp, trgt, oftype, args[0], args[1]);
             }
             //op infix ==
-            case "__i__===infix=(Int, Int)": {
+            case "__i__Core::===infix=(Int, Int)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.EqIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "__i__===infix=(Nat, Nat)": {
+            case "__i__Core::===infix=(Nat, Nat)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.EqNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "__i__===infix=(BigInt, BigInt)": {
+            case "__i__Core::===infix=(BigInt, BigInt)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.EqBigIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "__i__===infix=(BigNat, BigNat)": {
+            case "__i__Core::===infix=(BigNat, BigNat)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.EqBigNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "__i__===infix=(Rational, Rational)": {
+            case "__i__Core::===infix=(Rational, Rational)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.EqRationalOp, trgt, oftype, args[0], args[1]);
             }
-            case "__i__===infix=(Float, Float)": {
+            case "__i__Core::===infix=(Float, Float)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.EqFloatOp, trgt, oftype, args[0], args[1]);
             }
-            case "__i__===infix=(Decimal, Decmial)": {
+            case "__i__Core::===infix=(Decimal, Decmial)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.EqDecimalOp, trgt, oftype, args[0], args[1]);
             }
             //op infix !=
-            case "__i__!==infix=(Int, Int)": {
+            case "__i__Core::!==infix=(Int, Int)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.NeqIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "__i__!==infix=(Nat, Nat)": {
+            case "__i__Core::!==infix=(Nat, Nat)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.NeqNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "__i__!==infix=(BigInt, BigInt)": {
+            case "__i__Core::!==infix=(BigInt, BigInt)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.NeqBigIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "__i__!==infix=(BigNat, BigNat)": {
+            case "__i__Core::!==infix=(BigNat, BigNat)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.NeqBigNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "__i__!==infix=(Rational, Rational)": {
+            case "__i__Core::!==infix=(Rational, Rational)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.NeqRationalOp, trgt, oftype, args[0], args[1]);
             }
-            case "__i__!==infix=(Float, Float)": {
+            case "__i__Core::!==infix=(Float, Float)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.NeqFloatOp, trgt, oftype, args[0], args[1]);
             }
-            case "__i__!==infix=(Decimal, Decimal)": {
+            case "__i__Core::!==infix=(Decimal, Decimal)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.NeqDecimalOp, trgt, oftype, args[0], args[1]);
             }
             //op infix <
-            case "__i__<=infix=(Int, Int)": {
+            case "__i__Core::<=infix=(Int, Int)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "__i__<=infix=(Nat, Nat)": {
+            case "__i__Core::<=infix=(Nat, Nat)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "__i__<=infix=(BigInt, BigInt)": {
+            case "__i__Core::<=infix=(BigInt, BigInt)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtBigIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "__i__<=infix=(BigNat, BigNat)": {
+            case "__i__Core::<=infix=(BigNat, BigNat)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtBigNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "__i__<=infix=(Rational, Rational)": {
+            case "__i__Core::<=infix=(Rational, Rational)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtRationalOp, trgt, oftype, args[0], args[1]);
             }
-            case "__i__<=infix=(Float, Float)": {
+            case "__i__Core::<=infix=(Float, Float)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtFloatOp, trgt, oftype, args[0], args[1]);
             }
-            case "__i__<=infix=(Decimal, Decimal)": {
+            case "__i__Core::<=infix=(Decimal, Decimal)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtDecimalOp, trgt, oftype, args[0], args[1]);
             }
             //op infix >
-            case "__i__>=infix=(Int, Int)": {
+            case "__i__Core::>=infix=(Int, Int)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtIntOp, trgt, oftype, args[1], args[0]);
             }
-            case "__i__>=infix=(Nat, Nat)": {
+            case "__i__Core::>=infix=(Nat, Nat)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtNatOp, trgt, oftype, args[1], args[0]);
             }
-            case "__i__>=infix=(BigInt, BigInt)": {
+            case "__i__Core::>=infix=(BigInt, BigInt)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtBigIntOp, trgt, oftype, args[1], args[0]);
             }
-            case "__i__>=infix=(BigNat, BigNat)": {
+            case "__i__Core::>=infix=(BigNat, BigNat)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtBigNatOp, trgt, oftype, args[1], args[0]);
             }
-            case "__i__>=infix=(Rational, Rational)": {
+            case "__i__Core::>=infix=(Rational, Rational)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtRationalOp, trgt, oftype, args[1], args[0]);
             }
-            case "__i__>=infix=(Float, Float)": {
+            case "__i__Core::>=infix=(Float, Float)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtFloatOp, trgt, oftype, args[1], args[0]);
             }
-            case "__i__>=infix=(Decimal, Decimal)": {
+            case "__i__Core::>=infix=(Decimal, Decimal)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtDecimalOp, trgt, oftype, args[1], args[0]);
             }
             //op infix <=
-            case "__i__<==infix=(Int, Int)": {
+            case "__i__Core::<==infix=(Int, Int)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "__i__<==infix=(Nat, Nat)": {
+            case "__i__Core::<==infix=(Nat, Nat)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "__i__<==infix=(BigInt, BigInt)":  {
+            case "__i__Core::<==infix=(BigInt, BigInt)":  {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeBigIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "__i__<==infix=(BigNat, BigNat)": {
+            case "__i__Core::<==infix=(BigNat, BigNat)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeBigNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "__i__<==infix=(Rational, Rational)": {
+            case "__i__Core::<==infix=(Rational, Rational)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeRationalOp, trgt, oftype, args[0], args[1]);
             }
-            case "__i__<==infix=(Float, Float)": {
+            case "__i__Core::<==infix=(Float, Float)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeFloatOp, trgt, oftype, args[0], args[1]);
             }
-            case "__i__<==infix=(Decimal, Decimal)": {
+            case "__i__Core::<==infix=(Decimal, Decimal)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeDecimalOp, trgt, oftype, args[0], args[1]);
             }
             //op infix >=
-            case "__i__>==infix=(Int, Int)": {
+            case "__i__Core::>==infix=(Int, Int)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeIntOp, trgt, oftype, args[1], args[0]);
             }
-            case "__i__>==infix=(Nat, Nat)": {
+            case "__i__Core::>==infix=(Nat, Nat)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeNatOp, trgt, oftype, args[1], args[0]);
             }
-            case "__i__>==infix=(BigInt, BigInt)": {
+            case "__i__Core::>==infix=(BigInt, BigInt)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeBigIntOp, trgt, oftype, args[1], args[0]);
             }
-            case "__i__>==infix=(BigNat, BigNat)": {
+            case "__i__Core::>==infix=(BigNat, BigNat)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeBigNatOp, trgt, oftype, args[1], args[0]);
             }
-            case "__i__>==infix=(Rational, Rational)":{
+            case "__i__Core::>==infix=(Rational, Rational)":{
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeRationalOp, trgt, oftype, args[1], args[0]);
             }
-            case "__i__>==infix=(Float, Float)": {
+            case "__i__Core::>==infix=(Float, Float)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeFloatOp, trgt, oftype, args[1], args[0]);
             }
-            case "__i__>==infix=(Decimal, Decimal)": {
+            case "__i__Core::>==infix=(Decimal, Decimal)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeDecimalOp, trgt, oftype, args[1], args[0]);
             }
             default: {
