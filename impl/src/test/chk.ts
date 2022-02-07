@@ -9,7 +9,7 @@ import { PackageConfig, SymbolicActionMode } from "../compiler/mir_assembly";
 import { generateStandardVOpts, workflowEmitToFile, workflowEvaluate, workflowLoadUserSrc, workflowPassCheck } from "../tooling/checker/smt_workflows";
 
 const mode = process.argv[2];
-const args = process.argv.slice((mode === "-output" || mode === "-smt") ? 4 : 3);
+const args = process.argv.slice(3);
 
 const usercode = workflowLoadUserSrc(args);
 if(usercode === undefined) {
@@ -27,12 +27,14 @@ const userpackage = new PackageConfig([], usercode);
 if(mode === "-output") {
     process.stdout.write(`Writing file to ${process.argv[3]}\n`);
 
-    workflowEmitToFile(process.argv[3], userpackage, false, TIMEOUT, STD_OPTS, {filename: args[0], name: "Main::main"}, noerrtrgt, false);
+    const ofile = args[0].slice(0, args[0].length - 3) + "json";
+    workflowEmitToFile(ofile, userpackage, false, TIMEOUT, STD_OPTS, {filename: args[0], name: "Main::main"}, noerrtrgt, false);
 }
 else if(mode === "-smt") {
     process.stdout.write(`Writing file to ${process.argv[3]}\n`);
 
-    workflowEmitToFile(process.argv[3], userpackage, false, TIMEOUT, STD_OPTS, {filename: args[0], name: "Main::main"}, noerrtrgt, true);
+    const ofile = args[0].slice(0, args[0].length - 3) + "smt";
+    workflowEmitToFile(ofile, userpackage, false, TIMEOUT, STD_OPTS, {filename: args[0], name: "Main::main"}, noerrtrgt, true);
 }
 else if(mode === "-test") {
     workflowPassCheck(userpackage, false, TIMEOUT, STD_OPTS, {filename: args[0], name: "Main::main"}, (res: string) => {

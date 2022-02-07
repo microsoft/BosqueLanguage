@@ -1298,8 +1298,13 @@ class MIREmitter {
             for(let i = 0; i < allfiles.length; ++i) {
                 const fe = allfiles[i];
                 const deps = p.parseCompilationUnitGetNamespaceDeps(fe[1], fe[3], fe[0].macrodefs);
+            
                 if(deps === undefined) {
                     return { masm: undefined, errors: ["Hard failure in parse of namespace deps"] };
+                }
+
+                if(deps.ns !== "Core") {
+                    deps.deps.push("Core");
                 }
 
                 if(fe[1] === entrypoints.filename) {

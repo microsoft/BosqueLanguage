@@ -320,7 +320,7 @@ class Lexer {
         }
 
         Lexer._s_scopenameRe.lastIndex = this.m_cpos;
-        const m = Lexer._s_nameRe.exec(this.m_input);
+        const m = Lexer._s_scopenameRe.exec(this.m_input);
         if(m === null) {
             return undefined;
         }
@@ -335,7 +335,7 @@ class Lexer {
         }
 
         Lexer._s_scopenameRe.lastIndex = this.m_cpos;
-        const m = Lexer._s_nameRe.exec(this.m_input);
+        const m = Lexer._s_scopenameRe.exec(this.m_input);
         if(m === null) {
             return undefined;
         }
@@ -377,6 +377,7 @@ class Lexer {
     }
 
     public isDeclTypeName(str: string): boolean {
+        Lexer._s_istypenameRe.lastIndex = 0;
         return Lexer._s_istypenameRe.test(str);
     }
 
