@@ -19,17 +19,6 @@
 ))
 
 (declare-fun TypeTag_OrdinalOf (TypeTag) Int)
-(assert (= (TypeTag_OrdinalOf TypeTag_None) 0))
-(assert (= (TypeTag_OrdinalOf TypeTag_Bool) 2))
-(assert (= (TypeTag_OrdinalOf TypeTag_Nat) 3))
-(assert (= (TypeTag_OrdinalOf TypeTag_Int) 4))
-(assert (= (TypeTag_OrdinalOf TypeTag_BigNat) 5))
-(assert (= (TypeTag_OrdinalOf TypeTag_BigInt) 6))
-(assert (= (TypeTag_OrdinalOf TypeTag_String) 10))
-(assert (= (TypeTag_OrdinalOf TypeTag_DateTime) 15))
-(assert (= (TypeTag_OrdinalOf TypeTag_LogicalTime) 16))
-(assert (= (TypeTag_OrdinalOf TypeTag_UUID) 17))
-(assert (= (TypeTag_OrdinalOf TypeTag_ContentHash) 18))
 ;;ORDINAL_TAG_DECLS;;
 
 (declare-datatypes (
@@ -251,9 +240,9 @@
           (ite (= tt TypeTag_Bool)
             (Bool@less (bsqkey_bool_value vv1) (bsqkey_bool_value vv2))
             (ite (= tt TypeTag_Int) 
-              (BInt@less (bsqkey_int_value k1) (bsqkey_int_value k2))
+              (BInt@less (bsqkey_int_value vv1) (bsqkey_int_value vv2))
               (ite (= tt TypeTag_Nat) 
-                (BNat@less (bsqkey_nat_value k1) (bsqkey_nat_value k2))
+                (BNat@less (bsqkey_nat_value vv1) (bsqkey_nat_value vv2))
                 (ite (= tt TypeTag_BigInt)
                   (BBigInt@less (bsqkey_bigint_value vv1) (bsqkey_bigint_value vv2))
                   (ite (= tt TypeTag_BigNat)
@@ -264,7 +253,7 @@
                         (BLogicalTime@less (bsqkey_logicaltime_value vv1) (bsqkey_logicaltime_value vv2))
                         (ite (= tt TypeTag_UUID)
                           (BUUID@less (bsqkey_uuid_value vv1) (bsqkey_uuid_value vv2))
-                          (bsqkey_contenthash@less (bsqkey_contenthash_value vv1) (bsqkey_contenthash_value vv2))
+                          (BContentHash@less (bsqkey_contenthash_value vv1) (bsqkey_contenthash_value vv2))
                         )
                       )
                     )
@@ -395,8 +384,8 @@
   ($Result_Bool@success (BBool@UFCons_API ctx))
 )
 
-(define-fun _@@cons_BInt_entrypoint ((ctx HavocSequence)) $Result_BInt
-  (let ((iv (BBInt@UFCons_API ctx)))
+(define-fun _@@cons_Int_entrypoint ((ctx HavocSequence)) $Result_BInt
+  (let ((iv (BInt@UFCons_API ctx)))
     (ite (and (<= @BINTMIN iv) (<= iv @BINTMAX))
       ($Result_BInt@success iv)
       ($Result_BInt@error ErrorID_AssumeCheck) 
@@ -404,8 +393,8 @@
   )
 )
 
-(define-fun _@@cons_BNat_entrypoint ((ctx HavocSequence)) $Result_BNat
-  (let ((iv (BBNat@UFCons_API ctx)))
+(define-fun _@@cons_Nat_entrypoint ((ctx HavocSequence)) $Result_BNat
+  (let ((iv (BNat@UFCons_API ctx)))
     (ite (and (<= 0 iv) (<= iv @BINTMAX))
       ($Result_BNat@success iv)
       ($Result_BNat@error ErrorID_AssumeCheck) 
@@ -413,7 +402,7 @@
   )
 )
 
-(define-fun _@@cons_BBigInt_entrypoint ((ctx HavocSequence)) $Result_BBigInt
+(define-fun _@@cons_BigInt_entrypoint ((ctx HavocSequence)) $Result_BBigInt
   (let ((iv (BBigInt@UFCons_API ctx)))
     (ite (and (<= (+ @BINTMIN @BINTMIN) iv) (<= iv (+ @BINTMAX @BINTMAX)))
       ($Result_BBigInt@success iv)
@@ -422,7 +411,7 @@
   )
 )
 
-(define-fun _@@cons_BBigNat_entrypoint ((ctx HavocSequence)) $Result_BBigNat
+(define-fun _@@cons_BigNat_entrypoint ((ctx HavocSequence)) $Result_BBigNat
   (let ((iv (BBigNat@UFCons_API ctx)))
     (ite (and (<= 0 iv) (<= iv (+ @BINTMAX @BINTMAX)))
       ($Result_BBigNat@success iv)
@@ -431,19 +420,19 @@
   )
 )
 
-(define-fun _@@cons_BFloat_entrypoint ((ctx HavocSequence)) $Result_BFloat
+(define-fun _@@cons_Float_entrypoint ((ctx HavocSequence)) $Result_BFloat
   ($Result_BFloat@success (BFloat@UFCons_API ctx))
 )
 
-(define-fun _@@cons_BDecimal_entrypoint ((ctx HavocSequence)) $Result_BDecimal
+(define-fun _@@cons_Decimal_entrypoint ((ctx HavocSequence)) $Result_BDecimal
   ($Result_BDecimal@success (BDecimal@UFCons_API ctx))
 )
 
-(define-fun _@@cons_BRational_entrypoint ((ctx HavocSequence)) $Result_BRational
+(define-fun _@@cons_Rational_entrypoint ((ctx HavocSequence)) $Result_BRational
   ($Result_BRational@success (BRational@UFCons_API ctx))
 )
 
-(define-fun _@@cons_BString_entrypoint ((ctx HavocSequence)) $Result_BString
+(define-fun _@@cons_String_entrypoint ((ctx HavocSequence)) $Result_BString
   (let ((sv (BString@UFCons_API ctx)))
     (ite (<= (str.len sv) @SLENMAX)
       ($Result_BString@success sv)
@@ -452,36 +441,36 @@
   )
 )
 
-(define-fun _@@cons_BByteBuffer_entrypoint ((ctx HavocSequence)) $Result_BByteBuffer
+(define-fun _@@cons_ByteBuffer_entrypoint ((ctx HavocSequence)) $Result_BByteBuffer
   (let ((compress (BNat@UFCons_API (seq.++ ctx (seq.unit 0)))) (format (BNat@UFCons_API (seq.++ ctx (seq.unit 1)))) (buff (BByteBuffer@UFCons_API (seq.++ ctx (seq.unit 2)))))
-    (ite (and (< compress 2) (< format 4) (<= (seq.len bv) @BLENMAX))
-      ($Result_BByteBuffer@success (BByteBuffer@cons bv compress format))
+    (ite (and (< compress 2) (< format 4) (<= (seq.len buff) @BLENMAX))
+      ($Result_BByteBuffer@success (BByteBuffer@cons buff compress format))
       ($Result_BByteBuffer@error ErrorID_AssumeCheck) 
     )
   )
 )
 
-(define-fun _@@cons_BDateTime_entrypoint ((ctx HavocSequence)) $Result_BTickTime
+(define-fun _@@cons_DateTime_entrypoint ((ctx HavocSequence)) $Result_BDateTime
   (let ((tctx (seq.++ ctx (seq.unit 0))))
     (let ((y (BNat@UFCons_API (seq.++ tctx (seq.unit 0)))) (m (BNat@UFCons_API (seq.++ tctx (seq.unit 1)))) (d (BNat@UFCons_API (seq.++ tctx (seq.unit 2)))) (hh (BNat@UFCons_API (seq.++ tctx (seq.unit 3)))) (mm (BNat@UFCons_API (seq.++ tctx (seq.unit 4)))) (tzo (BNat@UFCons_API (seq.++ ctx (seq.unit 1)))) (tzn (BString@UFCons_API (seq.++ ctx (seq.unit 2)))))
       (ite (and (<= 0 y) (<= y 300) (<= 0 m) (<= m 11) (<= 1 d) (<= d 31) (<= 0 hh) (<= hh 23) (<= 0 mm) (<= mm 59) (<= -720 tzo) (<= tzo 840) (<= (str.len tzn) 32))
-        ($Result_BDateTime@success iv)
+        ($Result_BDateTime@success (BDateTime@cons y m d hh mm tzo tzn))
         ($Result_BDateTime@error ErrorID_AssumeCheck) 
       )
     )
   )
 )
 
-(define-fun _@@cons_BTickTime_entrypoint ((ctx HavocSequence)) $Result_BTickTime
+(define-fun _@@cons_TickTime_entrypoint ((ctx HavocSequence)) $Result_BTickTime
   (let ((tv (BTickTime@UFCons_API ctx)))
-    (ite (and (<= 0 tv) (<= iv 1048576))
-      ($Result_BTickTime@success iv)
+    (ite (and (<= 0 tv) (<= tv 1048576))
+      ($Result_BTickTime@success tv)
       ($Result_BTickTime@error ErrorID_AssumeCheck) 
     )
   )
 )
 
-(define-fun _@@cons_BLogicalTime_entrypoint ((ctx HavocSequence)) $Result_BLogicalTime
+(define-fun _@@cons_LogicalTime_entrypoint ((ctx HavocSequence)) $Result_BLogicalTime
   (let ((lv (BLogicalTime@UFCons_API ctx)))
     (ite (and (<= 0 lv) (<= lv 64))
       ($Result_BLogicalTime@success lv)
@@ -490,16 +479,16 @@
   )
 )
 
-(define-fun _@@cons_BUUID_entrypoint ((ctx HavocSequence)) $Result_BUUID
+(define-fun _@@cons_UUID_entrypoint ((ctx HavocSequence)) $Result_BUUID
   (let ((uuv (BUUID@UFCons_API ctx)))
     (ite (= (seq.len uuv) 16)
-      ($Result_BUUID@success lv)
+      ($Result_BUUID@success uuv)
       ($Result_BUUID@error ErrorID_AssumeCheck) 
     )
   )
 )
 
-(define-fun _@@cons_BContentHash_entrypoint ((ctx HavocSequence)) $Result_BContentHash
+(define-fun _@@cons_ContentHash_entrypoint ((ctx HavocSequence)) $Result_BContentHash
   ($Result_BContentHash@success (BContentHash@UFCons_API ctx))
 )
 

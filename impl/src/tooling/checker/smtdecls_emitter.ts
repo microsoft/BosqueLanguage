@@ -1006,7 +1006,7 @@ class SMTEmitter {
 
             targeterrorcheck = new SMTConst("false");
             isvaluecheck = new SMTConst("true");
-            isvaluefalsechk = new SMTVar("_@smtres@");
+            isvaluefalsechk = SMTCallSimple.makeNot(this.temitter.generateResultGetSuccess(restype, new SMTVar("_@smtres@")));
         }
         else {
             iexp = new SMTCallGeneral(smtcall, callargs);

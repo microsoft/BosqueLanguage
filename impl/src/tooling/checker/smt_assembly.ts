@@ -696,7 +696,7 @@ class SMTAssembly {
             .replace(";;MASK_DECLS;;", joinWithIndent(sfileinfo.MASK_INFO.decls, "      "))
             .replace(";;RESULTS;;", joinWithIndent(sfileinfo.RESULT_INFO.constructors, "    "))
             .replace(";;MASKS;;", joinWithIndent(sfileinfo.MASK_INFO.constructors, "    "))
-            .replace(";;V_MIN_MAX", joinWithIndent(sfileinfo.V_MIN_MAX, ""))
+            .replace(";;V_MIN_MAX;;", joinWithIndent(sfileinfo.V_MIN_MAX, ""))
             .replace(";;GLOBAL_DECLS;;", joinWithIndent(sfileinfo.GLOBAL_DECLS, ""))
             .replace(";;UF_DECLS;;", joinWithIndent(sfileinfo.UF_DECLS, "\n"))
             .replace(";;FUNCTION_DECLS;;", joinWithIndent(sfileinfo.FUNCTION_DECLS, "\n"))
