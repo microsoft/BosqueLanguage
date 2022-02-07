@@ -1331,7 +1331,7 @@ class MIREmitter {
             while(nsdone.size < allns.length) {
                 const nsopts = allns.filter((ns) => {
                     const ndeps = depsmap.get(ns) as string[];
-                    return ndeps.every((dep) => nsdone.has(dep));
+                    return !nsdone.has(ns) && ndeps.every((dep) => nsdone.has(dep));
                 });
 
                 if(nsopts.length === 0) {
@@ -1353,7 +1353,7 @@ class MIREmitter {
                 }
     
                 for (let i = 0; i < nsfiles.length; ++i) {
-                    const parseok = p.parseCompilationUnitPass2(nsfiles[i][1], nsfiles[i][3], nsfiles[i][0].macrodefs, filetonsnamemap.get(nsfiles[i][3]) as Set<string>);
+                    const parseok = p.parseCompilationUnitPass2(nsfiles[i][1], nsfiles[i][3], nsfiles[i][0].macrodefs, filetonsnamemap.get(nsfiles[i][1]) as Set<string>);
                     if (!parseok) {
                         const parseErrors = p.getParseErrors();
                         if (parseErrors !== undefined) {

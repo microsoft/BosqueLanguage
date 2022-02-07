@@ -1040,7 +1040,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     method {when T grounded KeyType} projectImage<U=?>(m: Map<T, U>): List<U> {
-        let img = ListOps::s_filter_pred<T>(this.value() pred(v: T) => m.has(v));
+        let img = ListOps::s_filter_pred<T>(this.value(), pred(v: T) => m.has(v));
         return List<T>::s_into(ListOps::s_map<T, U>(img, fn(v: T): U => m.get(v)));
     }
 
@@ -1052,7 +1052,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             let jjl = ListOps::s_map<T, List<[T, U]>>[recursive?](this.value(), recursive? fn(v: T): List<[T, U]> => {
                 let ul = ListOps::s_filter_pred<U>[recursive?](ol.value(), pred(u: U) => p[recursive?](v, u));
                 return List<U>::s_into(ListOps::s_map<U>(ul, fn(u: U): [T, U] => [v, u]));
-            }));
+            });
 
             let count = ListOps::s_size<List<[T, U]>>(jjl);
             if(count == 1) {
@@ -1073,6 +1073,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             else {
                 return List<T>::s_into(List<T>::s_concat<T>(jjl));
             }
+        }
     }
 
     recursive? method joinGroup<U=?>(ol: List<U>, p: recursive? pred(_: T, _: U) -> Bool): List<[T, List<U>]> {
@@ -1194,14 +1195,14 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
         return ListOps::s_reduce_idx<T, U>[recursive?](this.value(), init, f);
     }
 
-    recursive? method transduce<E=?, U=?>(env: E, f: recursive? fn(_: T, _: E) -> E, U): E, List<U> {
+    recursive? method transduce<E=?, U=?>(env: E, f: recursive? fn(_: T, _: E) -> (|E, U|)): (|E, List<U>|) {
         let ee, llu = ListOps::s_transduce<T, E, U>[recursive?](this.value(), env, f);
-        return ee, List<U>::s_into(llu);
+        return (|ee, List<U>::s_into(llu)|);
     }
 
-    recursive? method transduce<E=?, U=?>(env: E, f: recursive? fn(_: T, _: E, _: Nat) -> E, U): E, List<U> {
+    recursive? method transduce<E=?, U=?>(env: E, f: recursive? fn(_: T, _: E, _: Nat) -> (|E, U|)): (|E, List<U>|) {
         let ee, llu = ListOps::s_transduce_idx<T, E, U>[recursive?](this.value(), env, f);
-        return ee, List<U>::s_into(llu);
+        return (|ee, List<U>::s_into(llu)|);
     }
 
     //

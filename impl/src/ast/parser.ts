@@ -367,7 +367,7 @@ class Lexer {
         }
 
         Lexer._s_typenameRe.lastIndex = this.m_cpos;
-        const m = Lexer._s_nameRe.exec(this.m_input);
+        const m = Lexer._s_typenameRe.exec(this.m_input);
         if(m === null) {
             return undefined;
         }
@@ -1250,6 +1250,12 @@ class Parser {
             case "recursive?":
             case "recursive":
                 return this.parsePCodeType();
+            case TokenStrings.ScopeName: {
+                //TODO: This is a dummy case for the parse provides call in pass1 where we just need to scan and discard the type info -- we should actually write a better pass for this
+                this.consumeToken();
+                this.parseTermList();
+                return new NominalTypeSignature("Core", ["DummySig"]);
+            }
             default: {
                 this.ensureAndConsumeToken("(");
                 const ptype = this.parseTypeSignature();
@@ -3752,6 +3758,8 @@ class Parser {
     private parseNamespaceTypedef(currentDecl: NamespaceDeclaration) {
         //typedef NAME<T...> = TypeConstraint;
 
+        const attributes = this.parseAttributes();
+
         this.ensureAndConsumeToken("typedef");
         this.ensureToken(TokenStrings.Type);
         const tyname = this.consumeTokenAndGetValue();
@@ -3771,7 +3779,7 @@ class Parser {
         const btype = this.parseTypeSignature();
         this.consumeToken();
 
-        currentDecl.typeDefs.set(currentDecl.ns + "::" + tyname, new NamespaceTypedef(currentDecl.ns, tyname, terms, btype));
+        currentDecl.typeDefs.set(currentDecl.ns + "::" + tyname, new NamespaceTypedef(attributes, currentDecl.ns, tyname, terms, btype));
     }
 
     private parseProvides(iscorens: boolean, endtoken: string[]): [TypeSignature, TypeConditionRestriction | undefined][] {

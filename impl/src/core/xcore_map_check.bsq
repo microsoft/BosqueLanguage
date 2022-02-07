@@ -266,23 +266,23 @@ internal entity MapOps provides Some {
             assert !KeyType::equal<K>(m.v0.0, k);
 
             if(KeyType::less<K>(k, m.v0.0)) {
-                return Vector2<[K, V]>>{[k, v], m.v0};
+                return Vector2<[K, V]>{[k, v], m.v0};
             }
             else {
-                return Vector2<[K, V]>>{m.v0, [k, v]};
+                return Vector2<[K, V]>{m.v0, [k, v]};
             }
         }
         elif(m.is<Vector2<[K, V]>>()) {
             assert !(\/(KeyType::equal<K>(m.v0.0, k), KeyType::equal<K>(m.v1.0, k)));
 
             if(KeyType::less<K>(k, m.v0.0)) {
-                return Vector3<[K, V]>>{[k, v], m.v0, m.v1};
+                return Vector3<[K, V]>{[k, v], m.v0, m.v1};
             }
             elif(KeyType::less<K>(k, m.v1.0)) {
-                return Vector3<[K, V]>>{m.v0, [k, v], m.v1};
+                return Vector3<[K, V]>{m.v0, [k, v], m.v1};
             }
             else {
-                return Vector3<[K, V]>>{m.v0, m.v1, [k, v]};
+                return Vector3<[K, V]>{m.v0, m.v1, [k, v]};
             }
         }
         elif(m.is<Vector3<[K, V]>>()) {
@@ -304,25 +304,25 @@ internal entity MapOps provides Some {
         }
         elif(m.is<Vector2<[K, V]>>()) {
             if(KeyType::equal<K>(m.v0.0, k)) {
-                return Vector2<[K, V]>>{[k, v], m.v1};
+                return Vector2<[K, V]>{[k, v], m.v1};
             }
             else {
                 assert KeyType::equal<K>(m.v1.0, k);
 
-                return Vector2<[K, V]>>{m.v0, [k, v]};
+                return Vector2<[K, V]>{m.v0, [k, v]};
             }
         }
         elif(m.is<Vector3<T>>()) {
             if(KeyType::equal<K>(m.v0.0, k)) {
-                return Vector3<[K, V]>>{[k, v], m.v1, m.v2};
+                return Vector3<[K, V]>{[k, v], m.v1, m.v2};
             }
             elif(KeyType::equal<K>(m.v1.0, k)) {
-                return Vector3<[K, V]>>{m.v0, [k, v], m.v2};
+                return Vector3<[K, V]>{m.v0, [k, v], m.v2};
             }
             else {
                 assert KeyType::equal<K>(m.v2.0, k);
 
-                return Vector3<[K, V]>>{m.v0, m.v1, [k, v]};
+                return Vector3<[K, V]>{m.v0, m.v1, [k, v]};
             }
         }
         else {
@@ -341,25 +341,25 @@ internal entity MapOps provides Some {
         }
         elif(m.is<Vector2<[K, V]>>()) {
             if(KeyType::equal<K>(m.v0.0, k)) {
-                return Vector1<[K, V]>>{m.v1};
+                return Vector1<[K, V]>{m.v1};
             }
             else {
                 assert KeyType::equal<K>(m.v1.0, k);
 
-                return Vector1<[K, V]>>{m.v0};
+                return Vector1<[K, V]>{m.v0};
             }
         }
         elif(m.is<Vector3<T>>()) {
             if(KeyType::equal<K>(m.v0.0, k)) {
-                return Vector2<[K, V]>>{m.v1, m.v2};
+                return Vector2<[K, V]>{m.v1, m.v2};
             }
             elif(KeyType::equal<K>(m.v1.0, k)) {
-                return Vector2<[K, V]>>{m.v0, m.v2};
+                return Vector2<[K, V]>{m.v0, m.v2};
             }
             else {
                 assert KeyType::equal<K>(m.v2.0, k);
 
-                return Vector2<[K, V]>>{m.v0, m.v1};
+                return Vector2<[K, V]>{m.v0, m.v1};
             }
         }
         else {
@@ -371,7 +371,7 @@ internal entity MapOps provides Some {
 
 entity RecMap<K grounded KeyType, V> provides Some {
     field head: [K, V];
-    field tail RecMap<K, V>?;
+    field tail: RecMap<K, V>?;
 
     function s_ensure_list(m: Vector1<[K, V]> | Vector2<[K, V]> | Vector3<[K, V]> | RecMap<K, V>): RecMap<K, V> {
         if(m.is<RecMap<K, V>>()) {
@@ -532,13 +532,13 @@ entity RecMap<K grounded KeyType, V> provides Some {
         if(KeyType::less<K>(k, kk)) {
             let tl = this.ll.tail;
             if(tl === none) {
-                ntl = RecMap<K, V>{[k, v], none};
+                let ntl = RecMap<K, V>{[k, v], none};
+                return RecMap<K, V>{this.head, ntl};
             }
             else {
-                ntl = tl.add[recursive](k, v);
+                let ntl = tl.add[recursive](k, v);
+                return RecMap<K, V>{this.head, ntl};
             }
-
-            return RecMap<K, V>{this.head, ntl};
         }
         else {
             return RecMap<K, V>{[k, v], this.tail};

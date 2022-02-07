@@ -505,12 +505,16 @@ class NamespaceOperatorDecl {
 }
 
 class NamespaceTypedef {
+    readonly attributes: string[];
+
     readonly ns: string;
     readonly name: string;
     readonly terms: TemplateTermDecl[];
     readonly boundType: TypeSignature;
 
-    constructor(ns: string, name: string, terms: TemplateTermDecl[], btype: TypeSignature) {
+    constructor(attributes: string[], ns: string, name: string, terms: TemplateTermDecl[], btype: TypeSignature) {
+        this.attributes = attributes;
+
         this.ns = ns;
         this.name = name;
         this.terms = terms;

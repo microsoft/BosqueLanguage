@@ -13,8 +13,8 @@ internal entity ListOps provides Some {
     recursive? function s_reduce_ne<T, U>(l: ListRepr<T>, iv: U, f: recursive? fn(_: U, _: T) -> U): U = s_list_reduce_ne;
     recursive? function s_reduce_idx_ne<T, U>(l: ListRepr<T>, iv: U, f: recursive? fn(_: U, _: T, _: Nat) -> U): U = s_list_reduce_idx_ne;
 
-    recursive? function s_transduce_ne<T, E, U>(l: ListRepr<T>, env: E, op: recursive? fn(_: E, _: T) -> E, U): E, ListRepr<U> = s_list_transduce_ne;
-    recursive? function s_transduce_ne_idx<T, E, U>(l: ListRepr<T>, env: E, op: recursive? fn(_: E, _: T, _: Nat) -> E, U): E, ListRepr<U> = s_list_transduce_idx_ne;
+    recursive? function s_transduce_ne<T, E, U>(l: ListRepr<T>, env: E, op: recursive? fn(_: E, _: T) -> (|E, U|)): (|E, ListRepr<U>|) = s_list_transduce_ne;
+    recursive? function s_transduce_ne_idx<T, E, U>(l: ListRepr<T>, env: E, op: recursive? fn(_: E, _: T, _: Nat) -> (|E, U|)): (|E, ListRepr<U>|) = s_list_transduce_idx_ne;
 
     function s_range_ne<T unique Int | Nat>(start: T, end: T, inc: T, count: T): ListRepr<T> = s_list_range_ne;
     function s_fill_ne<T>(count: Nat, v: T): ListRepr<T> = s_list_fill_ne;
@@ -331,18 +331,18 @@ internal entity ListOps provides Some {
         }
     }
 
-    recursive? function s_transduce<T, E, U>(env: E, op: recursive? fn(_: E, _: T) -> E, U): E, ListRepr<U> {
+    recursive? function s_transduce<T, E, U>(env: E, op: recursive? fn(_: E, _: T) -> (|E, U|)): (|E, ListRepr<U>|) {
         if(l === none) {
-            return env, none;
+            return (|env, none|);
         }
         else {
             return ListOps::s_transduce_ne<T, E, U>(l, env, op);
         }
     }
 
-    recursive? function s_transduce_idx<T, E, U>(env: E, op: recursive? fn(_: E, _: T, _: Nat) -> E, U): ListRepr<U>, E {
+    recursive? function s_transduce_idx<T, E, U>(env: E, op: recursive? fn(_: E, _: T, _: Nat) -> (|E, U|)): (|ListRepr<U>, E|) {
         if(l === none) {
-            return none, env;
+            return (|none, env|);
         }
         else {
             return ListOps::s_transduce_idx_ne<T, E, U>(l, env, op);

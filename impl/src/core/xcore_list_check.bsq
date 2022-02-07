@@ -35,7 +35,6 @@ internal entity ListOps provides Some {
             return none;
         }
         else {
-            let count = end - start;
             if(count == 1n) {
                 return Vector1<T>{start};
             }
@@ -703,7 +702,7 @@ internal entity ListOps provides Some {
                 return 1n;
             }
             else {
-                return 0n
+                return 0n;
             }
         }
         else {
@@ -737,7 +736,7 @@ internal entity ListOps provides Some {
                 return 1n;
             }
             else {
-                return 0n
+                return 0n;
             }
         }
         else {
@@ -775,7 +774,7 @@ internal entity ListOps provides Some {
                 return l;
             }
             else {
-                return List<T>@{at1, at0};
+                return List<T>{at1, at0};
             }
         }
         elif(l.is<Vector3<T>>()) {
@@ -910,42 +909,42 @@ internal entity ListOps provides Some {
         }
     }
 
-    recursive? function s_transduce<T, E, U>(env: E, op: recursive? fn(_: T, _: T) -> E, U): E, ListRepr<U> {
+    recursive? function s_transduce<T, E, U>(env: E, op: recursive? fn(_: T, _: T) -> (|E, U|)): (|E, ListRepr<U>|) {
         if(l === none) {
-            return env, none;
+            return (|env, none|);
         }
         elif(l.is<Vector1<T>>()) {
             let e0, v0 = op[recursive?](env, l.v0);
-            return e0, Vector1<U>{v0};
+            return (|e0, Vector1<U>{v0}|);
         }
         elif(l.is<Vector2<T>>()) {
             let e0, v0 = op[recursive?](env, l.v0);
             let e1, v1 = op[recursive?](e0, l.v1);
-            return e1, Vector2<U>{v0, v1};
+            return (|e1, Vector2<U>{v0, v1}|);
         }
         elif(l.is<Vector3<T>>()) {
             let e0, v0 = op[recursive?](env, l.v0);
             let e1, v1 = op[recursive?](e0, l.v1);
             let e2, v2 = op[recursive?](e1, l.v2);
-            return e2, Vector2<U>{v0, v1, v2};
+            return (|e2, Vector2<U>{v0, v1, v2}|);
         }
         else {
             return l.transduce<E, U>[recursive](env, op);
         }
     }
 
-    recursive? function s_transduce_idx<T, E, U>(env: E, op: recursive? fn(_: E, _: T, _: Nat) -> E, U): E, ListRepr<U> {
+    recursive? function s_transduce_idx<T, E, U>(env: E, op: recursive? fn(_: E, _: T, _: Nat) -> (|E, U|)): (|E, ListRepr<U>|) {
         if(l === none) {
-            return env, none;
+            return (|env, none|);
         }
         elif(l.is<Vector1<T>>()) {
             let e0, v0 = op[recursive?](env, l.v0, 0n);
-            return e0, Vector1<U>{v0};
+            return (|e0, Vector1<U>{v0}|);
         }
         elif(l.is<Vector2<T>>()) {
             let e0, v0 = op[recursive?](env, l.v0, 0n);
             let e1, v1 = op[recursive?](e0, l.v1, 1n);
-            return e1, Vector2<U>{v0, v1};
+            return (|e1, Vector2<U>{v0, v1}|);
         }
         elif(l.is<Vector3<T>>()) {
             let e0, v0 = op[recursive?](env, l.v0, 0n);
@@ -961,7 +960,7 @@ internal entity ListOps provides Some {
 
 internal entity RecList<T> provides Some {
     field head: T;
-    field tail RecList<T>?;
+    field tail: RecList<T>?;
 
     function s_ensure_list(l: Vector1<T> | Vector2<T> | Vector3<T> | RecList<T>): RecList<T> {
         if(l.is<RecList<T>>()) {
@@ -1019,7 +1018,7 @@ internal entity RecList<T> provides Some {
         }
     }
 
-    recursive {when T unique Int | Nat} function range(start: T, one: T, count: Nat): RecList<T>? {
+    recursive function {when T unique Int | Nat} range(start: T, one: T, count: Nat): RecList<T>? {
         if(count == 0) {
             return none;
         }
@@ -1045,7 +1044,7 @@ internal entity RecList<T> provides Some {
 
         let nh = [idx, hh];
         if(tl === none) {
-            RecList<[Nat, T]>{nh, none};
+            return RecList<[Nat, T]>{nh, none};
         }
         else {
             let ntl = tl.zip_index[recursive](idx + 1n);
@@ -1062,7 +1061,7 @@ internal entity RecList<T> provides Some {
 
         let nh = [th, oh];
         if(\/(tt === none, ot === none)) {
-            RecList<[T, U]>{nh, none};
+            return RecList<[T, U]>{nh, none};
         }
         else {
             let ntl = tt.zip<U>[recursive](ot);
@@ -1193,7 +1192,7 @@ internal entity RecList<T> provides Some {
                 return tres;
             }
             else {
-                if(p[recursive?](this.head);) {
+                if(p[recursive?](this.head)) {
                     return idx;
                 }
                 else {
@@ -1432,11 +1431,11 @@ internal entity RecList<T> provides Some {
             return nu;
         }
         else {
-            return tl.reduce[recursive](nu, op);
+            return tl.reduce<U>[recursive](nu, op);
         }
     }
 
-    recursive function reduce_idx<U>(init: U, idx, Nat, op: recursive? fn(_: U, _: T, _: Nat) -> U): U {
+    recursive function reduce_idx<U>(init: U, idx: Nat, op: recursive? fn(_: U, _: T, _: Nat) -> U): U {
         let tl = this.tail;
         let hh = this.head;
 
@@ -1445,35 +1444,35 @@ internal entity RecList<T> provides Some {
             return nu;
         }
         else {
-            return tl.reduce_idx[recursive](nu, idx + 1n, op);
+            return tl.reduce_idx<U>[recursive](nu, idx + 1n, op);
         }
     }
 
-    recursive function transduce<E, U>(env: E, op: recursive? fn(_: E, _: T) -> E, U): E, RecList<U> {
+    recursive function transduce<E, U>(env: E, op: recursive? fn(_: E, _: T) -> (|E, U|)): (|E, RecList<U>|) {
         let tl = this.tail;
         let hh = this.head;
 
         let nenv, nu = op[recursive?](env, hh);
         if(tl === none) {
-            return nenv, RecList<U>{nu, none};
+            return (|nenv, RecList<U>{nu, none}|);
         }
         else {
-            let tlenv, tll = tl.transduce[recursive](nenv, op);
-            return tlenv, RecList<U>{nu, tll};
+            let tlenv, tll = tl.transduce<U>[recursive](nenv, op);
+            return (|tlenv, RecList<U>{nu, tll}|);
         }
     }
 
-    recursive function s_transduce_idx<E, U>(env: E, idx: Nat op: recursive? fn(_: E, _: T, _: Nat) -> E, U): E, RecList<U> {
+    recursive function s_transduce_idx<E, U>(env: E, idx: Nat, op: recursive? fn(_: E, _: T, _: Nat) -> (|E, U|)): (|E, RecList<U>|) {
         let tl = this.tail;
         let hh = this.head;
 
         let nenv, nu = op[recursive?](env, hh, idx);
         if(tl === none) {
-            return nenv, RecList<U>{nu, none};
+            return (|nenv, RecList<U>{nu, none}|);
         }
         else {
-            let tlenv, tll = tl.transduce_idx[recursive](nenv, idx + 1n, op);
-            return tlenv, RecList<U>{nu, tll};
+            let tlenv, tll = tl.transduce_idx<U>[recursive](nenv, idx + 1n, op);
+            return (|tlenv, RecList<U>{nu, tll}|);
         }
     }
 }

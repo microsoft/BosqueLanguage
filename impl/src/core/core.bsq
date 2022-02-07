@@ -385,7 +385,7 @@ __internal __constructable entity StringOf<T unique Validator> provides Some, Ke
     method value(): String = special_extract;
 
     function coerce(s: String): StringOf<T> {
-        check T::accepts(s);
+        assert T::accepts(s);
         return StringOf<T>::s_into(s);
     } 
 
@@ -405,7 +405,7 @@ __internal __constructable entity DataString<T unique Parsable> provides Some, K
     method value(): String = special_extract;
 
     function coerce(s: String): DataString<T> {
-        check T::accepts(s);
+        assert T::accepts(s);
         return DataString<T>::s_into(s);
     } 
 
@@ -548,7 +548,7 @@ concept Option<T> provides ISomething, APIType when T grounded APIType, Testable
             return nothing;
         }
         else {
-            return Something@{this.data().as<V>()};
+            return Something{this.data().as<V>()};
         }
     }
 }
@@ -601,10 +601,10 @@ concept Result<T, E=None> provides IResult, APIType when T grounded APIType && E
 
     method convert<U=?, V=?>(): Result<U, V> {
         if(this.is<Result<T, E>::Ok>()) {
-            return Result<U, V>::Ok@{this.result().as<U>()};
+            return Result<U, V>::Ok{this.result().as<U>()};
         }
         else {
-            return Result<U, V>::Err@{this.error().as<V>()};
+            return Result<U, V>::Err{this.error().as<V>()};
         }
     }
 }
