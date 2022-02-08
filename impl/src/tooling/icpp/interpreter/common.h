@@ -21,8 +21,6 @@
 
 #include "../../api_parse/decls.h"
 
-#include "mimalloc.h"
-
 ////////////////////////////////
 //Various sizes
 #define BSQ_MAX_STACK 2048
@@ -63,7 +61,7 @@
 #endif
 
 //Program should not contain any allocations larger than this in a single block 
-#define BSQ_ALLOC_MAX_BLOCK_SIZE MI_SMALL_SIZE_MAX
+#define BSQ_ALLOC_MAX_BLOCK_SIZE 65536
 
 //Min and max bump allocator size
 #define BSQ_MIN_NURSERY_SIZE 1048576
@@ -76,11 +74,11 @@
 #define BSQ_STACK_SPACE_ALLOC(SIZE) ((SIZE) == 0 ? nullptr : alloca(SIZE))
 #endif
 
-#define BSQ_BUMP_SPACE_ALLOC(SIZE) mi_zalloc(SIZE)
-#define BSQ_BUMP_SPACE_RELEASE(M) mi_free(M)
+#define BSQ_BUMP_SPACE_ALLOC(SIZE) zxalloc(SIZE)
+#define BSQ_BUMP_SPACE_RELEASE(M) xfree(M)
 
-#define BSQ_FREE_LIST_ALLOC_SMALL(SIZE) mi_malloc_small(SIZE)
-#define BSQ_FREE_LIST_RELEASE(SIZE, M) mi_free(M)
+#define BSQ_FREE_LIST_ALLOC_SMALL(SIZE) xalloc(SIZE)
+#define BSQ_FREE_LIST_RELEASE(SIZE, M) xfree(M)
 
 #define GC_REF_LIST_BLOCK_SIZE_DEFAULT 256
 

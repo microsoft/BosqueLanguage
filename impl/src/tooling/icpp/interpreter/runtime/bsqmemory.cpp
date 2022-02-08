@@ -5,6 +5,24 @@
 
 #include "bsqmemory.h"
 
+void* xalloc(size_t alloc)
+{
+    return malloc(alloc);
+}
+
+void* zxalloc(size_t alloc)
+{
+    void* vv = malloc(alloc);
+    GC_MEM_ZERO(vv, alloc);
+
+    return vv;
+}
+
+void xfree(void* mem)
+{
+    free(mem);
+}
+
 const BSQType** BSQType::g_typetable = nullptr;
 
 GCStackEntry GCStack::frames[BSQ_MAX_STACK];

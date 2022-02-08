@@ -2737,12 +2737,12 @@ void ICPPParseJSON::prepareParseTuple(const APIModule* apimodule, const IType* i
     RefMask tupmask = nullptr;
     if(tuptype->tkind == BSQTypeLayoutKind::Struct)
     {
-        tupmem = mi_zalloc(tuptype->allocinfo.heapsize);
+        tupmem = zxalloc(tuptype->allocinfo.heapsize);
         tupmask = tuptype->allocinfo.heapmask;
     }
     else
     {
-        tupmem = mi_zalloc(tuptype->allocinfo.inlinedatasize);
+        tupmem = zxalloc(tuptype->allocinfo.inlinedatasize);
         tupmask = tuptype->allocinfo.inlinedmask;
     }
     
@@ -2779,7 +2779,7 @@ void ICPPParseJSON::completeParseTuple(const APIModule* apimodule, const IType* 
     }
 
     GC_MEM_COPY(trgt, tupmem, bytes);
-    mi_free(tupmem);
+    xfree(tupmem);
 
     GCStack::popFrame();
     this->tuplestack.pop_back();
@@ -2794,12 +2794,12 @@ void ICPPParseJSON::prepareParseRecord(const APIModule* apimodule, const IType* 
     RefMask recmask = nullptr;
     if(rectype->tkind == BSQTypeLayoutKind::Struct)
     {
-        recmem = mi_zalloc(rectype->allocinfo.heapsize);
+        recmem = zxalloc(rectype->allocinfo.heapsize);
         recmask = rectype->allocinfo.heapmask;
     }
     else
     {
-        recmem = mi_zalloc(rectype->allocinfo.inlinedatasize);
+        recmem = zxalloc(rectype->allocinfo.inlinedatasize);
         recmask = rectype->allocinfo.inlinedmask;
     }
     
@@ -2837,7 +2837,7 @@ void ICPPParseJSON::completeParseRecord(const APIModule* apimodule, const IType*
     }
 
     GC_MEM_COPY(trgt, recmem, bytes);
-    mi_free(recmem);
+    xfree(recmem);
 
     GCStack::popFrame();
     this->tuplestack.pop_back();
@@ -2971,12 +2971,12 @@ void ICPPParseJSON::prepareParseEntity(const APIModule* apimodule, const IType* 
     RefMask oomask = nullptr;
     if(ootype->tkind == BSQTypeLayoutKind::Struct)
     {
-        oomem = mi_zalloc(ootype->allocinfo.heapsize);
+        oomem = zxalloc(ootype->allocinfo.heapsize);
         oomask = ootype->allocinfo.heapmask;
     }
     else
     {
-        oomem = mi_zalloc(ootype->allocinfo.inlinedatasize);
+        oomem = zxalloc(ootype->allocinfo.inlinedatasize);
         oomask = ootype->allocinfo.inlinedmask;
     }
     
@@ -2994,7 +2994,7 @@ void ICPPParseJSON::prepareParseEntityMask(const APIModule* apimodule, const ITy
         return fdecl->isOptional;
     });
 
-    BSQBool* mask = (BSQBool*)mi_zalloc(mcount * sizeof(BSQBool));
+    BSQBool* mask = (BSQBool*)zxalloc(mcount * sizeof(BSQBool));
     this->entitymaskstack.push_back(mask);
 }
 
@@ -3060,8 +3060,8 @@ void ICPPParseJSON::completeParseEntity(const APIModule* apimodule, const IType*
         GC_MEM_COPY(trgt, oomem, bytes);
     }
 
-    mi_free(oomem);
-    mi_free(mask);
+    xfree(oomem);
+    xfree(mask);
 
     GCStack::popFrame();
     this->tuplestack.pop_back();

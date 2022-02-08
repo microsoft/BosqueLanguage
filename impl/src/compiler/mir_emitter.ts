@@ -1407,7 +1407,10 @@ class MIREmitter {
         emitter.registerResolvedTypeReference(assembly.getSpecialContentHashType());
         emitter.registerResolvedTypeReference(assembly.getSpecialRegexType());
         emitter.registerResolvedTypeReference(assembly.getSpecialNothingType());
-        emitter.registerResolvedTypeReference(assembly.getSpecialHavocType());
+
+        if(buildmode === BuildApplicationMode.ModelChecker) {
+            emitter.registerResolvedTypeReference(assembly.getSpecialHavocType());
+        }
 
         emitter.registerResolvedTypeReference(assembly.getSpecialAnyConceptType());
         emitter.registerResolvedTypeReference(assembly.getSpecialSomeConceptType());

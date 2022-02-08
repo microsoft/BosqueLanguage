@@ -7,6 +7,12 @@
 
 #include "../common.h"
 
+////////////////////////////////
+//Core Malloc
+inline void* xalloc(size_t alloc);
+inline void* zxalloc(size_t alloc);
+inline void xfree(void* mem);
+
 ////
 //BSQType abstract base class
 class BSQType
@@ -160,7 +166,7 @@ private:
 public:
     GCRefList() : headrl(nullptr), tailrl(nullptr), spos(1), epos(1) 
     {
-        this->headrl = (void**)mi_zalloc_small(GC_REF_LIST_BLOCK_SIZE_DEFAULT * sizeof(void*));
+        this->headrl = (void**)zxalloc(GC_REF_LIST_BLOCK_SIZE_DEFAULT * sizeof(void*));
         this->tailrl = this->headrl;
     }
 
@@ -171,7 +177,7 @@ public:
             auto tmp = this->headrl;
             this->headrl = (void**)this->headrl[0];
 
-            mi_free(tmp);
+            xfree(tmp);
         }
     }
 
@@ -184,7 +190,7 @@ public:
             auto tmp = this->headrl;
             this->headrl = (void**)this->headrl[0];
 
-            mi_free(tmp);
+            xfree(tmp);
         }
 
         this->headrl = other.headrl;
@@ -192,7 +198,7 @@ public:
         this->spos = other.spos;
         this->epos = other.epos;
 
-        other.headrl = (void**)mi_zalloc_small(GC_REF_LIST_BLOCK_SIZE_DEFAULT * sizeof(void*));
+        other.headrl = (void**)zxalloc(GC_REF_LIST_BLOCK_SIZE_DEFAULT * sizeof(void*));
         other.tailrl = other.headrl;
         other.spos = 1;
         other.epos = 1;
@@ -205,10 +211,10 @@ public:
             auto tmp = this->headrl;
             this->headrl = (void**)this->headrl[0];
 
-            mi_free(tmp);
+            xfree(tmp);
         }
 
-        this->headrl = (void**)mi_zalloc_small(GC_REF_LIST_BLOCK_SIZE_DEFAULT * sizeof(void*));
+        this->headrl = (void**)zxalloc(GC_REF_LIST_BLOCK_SIZE_DEFAULT * sizeof(void*));
         this->tailrl = this->headrl;
         this->spos = 1;
         this->epos = 1;
@@ -221,7 +227,7 @@ public:
 
     void enqueSlow(void* v)
     {
-        void** tmp = (void**)mi_zalloc_small(GC_REF_LIST_BLOCK_SIZE_DEFAULT * sizeof(void*));
+        void** tmp = (void**)zxalloc(GC_REF_LIST_BLOCK_SIZE_DEFAULT * sizeof(void*));
         this->tailrl[0] = tmp;
         this->tailrl = tmp;
         this->epos = 1;
@@ -246,7 +252,7 @@ public:
         this->headrl = (void**)this->headrl[0];
         this->spos = 2;
 
-        mi_free(tmp);
+        xfree(tmp);
         return this->headrl[1];
     }
 
@@ -984,7 +990,7 @@ public:
 
         Allocator::gcMakeImmortalSlotsWithMask((void**)Allocator::GlobalAllocator.globals_mem, Allocator::GlobalAllocator.globals_mask);
 
-        mi_free(Allocator::GlobalAllocator.globals_mem);
+        xfree(Allocator::GlobalAllocator.globals_mem);
         Allocator::GlobalAllocator.globals_mem = nullptr;
     }
 
@@ -1038,7 +1044,7 @@ public:
     {
         for(auto iter = Allocator::alloctemps.back().begin(); iter != Allocator::alloctemps.back().end(); ++iter)
         {
-            mi_free(iter->root);
+            xfree(iter->root);
         }
 
         Allocator::alloctemps.pop_back();
@@ -1046,7 +1052,7 @@ public:
 
     std::list<BSQTempRootNode>::iterator registerTempRoot(const BSQType* btype)
     {
-        void* root = mi_zalloc(btype->allocinfo.inlinedatasize);
+        void* root = zxalloc(btype->allocinfo.inlinedatasize);
         Allocator::alloctemps.back().emplace_front(btype, root);
 
         return Allocator::alloctemps.back().begin();

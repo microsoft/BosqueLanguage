@@ -10,7 +10,7 @@ import { PackageConfig } from "../compiler/mir_assembly";
 import { workflowEmitICPPFile, workflowLoadUserSrc, workflowRunICPPFile } from "../tooling/icpp/transpiler/iccp_workflows";
 
 const mode = process.argv[2];
-const args = process.argv.slice(mode === "--output" ? 4 : 3);
+const args = process.argv.slice(3);
 
 if (args.length === 0) {
     process.stdout.write(chalk.red("Error -- Please specify at least one source file as argument\n"));
@@ -31,7 +31,7 @@ if (mode === "-output") {
     const ofile = args[0].slice(0, args[0].length - 3) + "json";
     process.stdout.write(`Processing and writing IR to ${ofile}...\n`);
 
-    const ok = workflowEmitICPPFile(ofile, userpackage, false, {}, {filename: args[0], names: ["main"], fkeys: ["Main::main"]});
+    const ok = workflowEmitICPPFile(ofile, userpackage, false, {}, {filename: args[0], names: ["main"], fkeys: ["__i__Main::main"]});
     if(ok) {
         process.stdout.write("done\n");
     }
@@ -51,7 +51,7 @@ else if (mode === "-eval") {
 
             process.stdout.write(`Evaluating...\n`);
 
-            workflowRunICPPFile(jargs, userpackage, false, {}, {filename: args[0], names: ["main"], fkeys: ["Main::main"]}, (result: string | undefined) => {
+            workflowRunICPPFile(jargs, userpackage, false, {}, {filename: args[0], names: ["main"], fkeys: ["__i__Main::main"]}, (result: string | undefined) => {
                 if (result !== undefined) {
                     process.stdout.write(`${result}\n`);
                 }

@@ -84,7 +84,7 @@ void initialize(size_t cbuffsize, const RefMask cmask)
     MarshalEnvironment::g_typenameToIdMap["@StringK128"] = BSQ_TYPE_ID_STRINGREPR_K128;
     MarshalEnvironment::g_typenameToIdMap["@StringTree"] = BSQ_TYPE_ID_STRINGREPR_TREE;
 
-    Evaluator::g_constantbuffer = (uint8_t*)mi_zalloc(cbuffsize);
+    Evaluator::g_constantbuffer = (uint8_t*)zxalloc(cbuffsize);
     GC_MEM_ZERO(Evaluator::g_constantbuffer, cbuffsize);
 
     Allocator::GlobalAllocator.setGlobalsMemory(Evaluator::g_constantbuffer, cmask);
@@ -241,7 +241,7 @@ void loadAssembly(json j, Evaluator& ee)
 
     ////
     //Load Types
-    BSQType::g_typetable = (const BSQType**)mi_zalloc(MarshalEnvironment::g_typenameToIdMap.size() * sizeof(const BSQType*));
+    BSQType::g_typetable = (const BSQType**)zxalloc(MarshalEnvironment::g_typenameToIdMap.size() * sizeof(const BSQType*));
     BSQType::g_typetable[BSQ_TYPE_ID_NONE] = BSQWellKnownType::g_typeNone;
     BSQType::g_typetable[BSQ_TYPE_ID_NOTHING] = BSQWellKnownType::g_typeNothing;
     BSQType::g_typetable[BSQ_TYPE_ID_BOOL] = BSQWellKnownType::g_typeBool;

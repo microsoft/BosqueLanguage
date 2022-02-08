@@ -121,7 +121,7 @@ function workflowEmitICPPFile(into: string, usercode: PackageConfig, istestbuild
         return false;
     }
 
-    const icppjson = JSON.stringify({code: {api: massembly.emitAPIInfo(entrypoint.fkeys, istestbuild), bytecode: icppasm.jsonEmit() }, args: []}, undefined, 2);
+    const icppjson = JSON.stringify({code: {api: massembly.emitAPIInfo(entrypoint.fkeys, istestbuild), bytecode: icppasm }, args: []}, undefined, 2);
     return emitICPPFile(icppjson, into);
 }
 
@@ -133,7 +133,7 @@ function workflowRunICPPFile(args: any[], usercode: PackageConfig, istestbuild: 
         return undefined;
     }
 
-    return runICPPFile({code: {api: massembly.emitAPIInfo(entrypoint.fkeys, istestbuild), bytecode: icppasm.jsonEmit() }, args: args}, cb);
+    return runICPPFile({code: {api: massembly.emitAPIInfo(entrypoint.fkeys, istestbuild), bytecode: icppasm }, args: args}, cb);
 }
 
 export {
