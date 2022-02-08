@@ -1491,17 +1491,17 @@ public:
 class EnumType : public IGroundedType
 {
 public:
-    const std::vector<std::pair<std::string, uint32_t>> enums;
+    const std::vector<std::string> enums;
 
-    EnumType(std::string name, std::vector<std::pair<std::string, uint32_t>> enums) : IGroundedType(TypeTag::EnumTag, name), enums(enums) {;}
+    EnumType(std::string name, std::vector<std::string> enums) : IGroundedType(TypeTag::EnumTag, name), enums(enums) {;}
     virtual ~EnumType() {;}
 
     static EnumType* jparse(json j)
     {
-        std::vector<std::pair<std::string, uint32_t>> enums;
+        std::vector<std::string> enums;
         auto jenuminvs = j["enums"];
         std::transform(jenuminvs.cbegin(), jenuminvs.cend(), std::back_inserter(enums), [](const json& jv) {
-            return std::make_pair(jv["ename"].get<std::string>(), jv["value"].get<uint32_t>());
+            return jv.get<std::string>();
         });
 
         return new EnumType(j["name"].get<std::string>(), enums);
@@ -1528,8 +1528,8 @@ public:
         }
 
         auto namestr = nstrinfo.value().second;
-        auto pos = std::find_if(this->enums.cbegin(), this->enums.cend(), [&namestr](const std::pair<std::string, uint32_t>& entry) {
-            return entry.first == namestr;
+        auto pos = std::find_if(this->enums.cbegin(), this->enums.cend(), [&namestr](const std::string& entry) {
+            return entry == namestr;
         });
 
         if(pos == this->enums.cend())
@@ -1549,7 +1549,7 @@ public:
             return std::nullopt;
         }
 
-        return std::make_optional(this->enums[nval.value()].first);
+        return std::make_optional(this->enums[nval.value()]);
     }
 };
 
