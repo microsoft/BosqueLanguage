@@ -65,7 +65,7 @@ else if (mode === "-eval") {
                     }
                     else if (jres["result"] === "output") {
                         process.stdout.write(`Generated output in ${jres["time"]} millis!\n`);
-                        process.stdout.write(JSON.stringify(jres["output"], undefined, 2) + "\n");
+                        process.stdout.write(JSON.stringify(jres["value"], undefined, 2) + "\n");
                     }
                     else if (jres["result"] === "timeout") {
                         process.stdout.write(`Solver timeout :(\n`);
