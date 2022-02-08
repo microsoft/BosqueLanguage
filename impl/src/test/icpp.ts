@@ -28,9 +28,9 @@ const userpackage = new PackageConfig([], usercode);
 process.stdout.write(`Processing Bosque sources in:\n${args.join("\n")}\n...\n`);
 
 if (mode === "-output") {
-    process.stdout.write(`Processing and writing IR to ${process.argv[3]}...\n`);
-
     const ofile = args[0].slice(0, args[0].length - 3) + "json";
+    process.stdout.write(`Processing and writing IR to ${ofile}...\n`);
+
     const ok = workflowEmitICPPFile(ofile, userpackage, false, {}, {filename: args[0], names: ["main"], fkeys: ["Main::main"]});
     if(ok) {
         process.stdout.write("done\n");
@@ -39,7 +39,7 @@ if (mode === "-output") {
         process.stdout.write(chalk.red("failed to generate IR"));
     }
 }
-else {
+else if (mode === "-eval") {
     let rl = readline.createInterface({
         input: process.stdin,
         output: process.stdout
@@ -67,4 +67,8 @@ else {
             process.exit(1);
         }
     });
+}
+else {
+    process.stdout.write("usage: node check.js <-output | -eval> file.bsq");
+    process.exit(0);
 }

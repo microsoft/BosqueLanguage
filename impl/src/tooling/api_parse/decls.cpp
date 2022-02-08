@@ -15,11 +15,8 @@ static std::regex re_fpdiverino("^[(]\\/\\s([-+]?([0-9]+\\.[0-9]+)([eE][-+]?[0-9
 
 static std::regex re_numberino_r("^[-+]?(0|[1-9][0-9]*)/([1-9][0-9]*)$");
 
-static std::regex re_bv_binary("^#b([0|1]+)$");
-static std::regex re_bv_hex("^#x([0-9a-f]+)$");
-
 static std::regex re_utcisotime("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$");
-static std::regex re_lclisotime("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(+|-)[0-9]{2}(:?[0-9]{2})?$");
+static std::regex re_lclisotime("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[+|-][0-9]{2}(:[0-9]{2})?$");
 
 static std::regex re_ticktime("^T(0|[1-9][0-9]*)ns$");
 

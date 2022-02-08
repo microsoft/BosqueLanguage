@@ -25,21 +25,21 @@ if(process.platform === "darwin") {
     ccflags = "-O0 -g -Wall -std=c++20 -arch x86_64";
     includes = includeheaders.map((ih) => `-I ${ih}`).join(" ");
     z3lib = path.join(includebase, "/macos/z3/bin/libz3.a")
-    outfile = "-o " + outbase + "/chkworkflow";
+    outfile = "-o " + outbase + "/chk";
 }
 else if(process.platform === "linux") {
     compiler = "clang++";
     ccflags = "-O0 -g -Wall -std=c++20 -pthread";
     includes = includeheaders.map((ih) => `-I ${ih}`).join(" ");
     z3lib = path.join(includebase, "/linux/z3/bin/libz3.a")
-    outfile = "-o " + outbase + "/chkworkflow";
+    outfile = "-o " + outbase + "/chk";
 }
 else {
     compiler = "cl.exe";
     ccflags = "/EHsc /Zi /std:c++20";  
     includes = includeheaders.map((ih) => `/I ${ih}`).join(" ");
     z3lib = path.join(includebase, "/win/z3/bin/libz3.lib")
-    outfile = "/Fo:\"" + outbase + "/\"" + " " + "/Fd:\"" + outbase + "/\"" + " " + "/Fe:\"" + outbase + "\\chkworkflow.exe\"";
+    outfile = "/Fo:\"" + outbase + "/\"" + " " + "/Fd:\"" + outbase + "/\"" + " " + "/Fe:\"" + outbase + "\\chk.exe\"";
 }
 
 const command = `${compiler} ${ccflags} ${includes} ${outfile} ${cppfiles.join(" ")} ${z3lib}`;

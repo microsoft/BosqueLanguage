@@ -25,15 +25,15 @@ const noerrtrgt = {file: "[No Error Trgt]", line: -1, pos: -1};
 const userpackage = new PackageConfig([], usercode);
 
 if(mode === "-output") {
-    process.stdout.write(`Writing file to ${process.argv[3]}\n`);
-
     const ofile = args[0].slice(0, args[0].length - 3) + "json";
+    process.stdout.write(`Writing file to ${ofile}\n`);
+
     workflowEmitToFile(ofile, userpackage, false, TIMEOUT, STD_OPTS, {filename: args[0], name: "main", fkey: "__i__Main::main"}, noerrtrgt, false);
 }
 else if(mode === "-smt") {
-    process.stdout.write(`Writing file to ${process.argv[3]}\n`);
-
     const ofile = args[0].slice(0, args[0].length - 3) + "smt";
+    process.stdout.write(`Writing file to ${ofile}\n`);
+
     workflowEmitToFile(ofile, userpackage, false, TIMEOUT, STD_OPTS, {filename: args[0], name: "main", fkey:  "__i__Main::main"}, noerrtrgt, true);
 }
 else if(mode === "-test") {
@@ -41,7 +41,7 @@ else if(mode === "-test") {
         process.stdout.write(res + "\n");
     });
 }
-else {
+else if (mode === "-eval") {
     let rl = readline.createInterface({
         input: process.stdin,
         output: process.stdout
@@ -81,4 +81,8 @@ else {
             process.exit(1);
         }
     });
+}
+else {
+    process.stdout.write("usage: node check.js <-output | -smt | -test | -eval> file.bsq");
+    process.exit(0);
 }

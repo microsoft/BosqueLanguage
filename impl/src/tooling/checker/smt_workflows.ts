@@ -20,7 +20,7 @@ import { BuildApplicationMode } from "../../ast/assembly";
 
 const bosque_dir: string = Path.normalize(Path.join(__dirname, "../../../"));
 const smtruntime_path = Path.join(bosque_dir, "bin/tooling/checker/runtime/smtruntime.smt2");
-const exepath = Path.normalize(Path.join(bosque_dir, "/build/output/chkworkflow" + (process.platform === "win32" ? ".exe" : "")));
+const exepath = Path.normalize(Path.join(bosque_dir, "/build/output/chkflow" + (process.platform === "win32" ? ".exe" : "")));
 
 const smtruntime = FS.readFileSync(smtruntime_path).toString();
 
