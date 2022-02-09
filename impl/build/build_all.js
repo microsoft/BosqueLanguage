@@ -32,22 +32,22 @@ function doneop(iserror, msg) {
     }
 }
 
-exec("tsc -p tsconfig.json", {cwd: tscdir}, (err, stdout) => {
+exec("tsc -p tsconfig.json", {cwd: tscdir}, (err, stdout, stderr) => {
     donecopy = true;
-    doneop(err === null, err !== null ? stdout : "done tsc..."); 
+    doneop(err === null, err !== null ? stderr : "done tsc..."); 
 });
 
-exec("node ./resource_copy.js", {cwd: builddir}, (err, stdout) => {
+exec("node ./resource_copy.js", {cwd: builddir}, (err, stdout, stderr) => {
     donecopy = true;
-    doneop(err === null, err !== null ? stdout : "done copy..."); 
+    doneop(err === null, err !== null ? stderr : "done copy..."); 
 });
 
-exec("node ./evaluator_build.js", {cwd: builddir}, (err, stdout) => {
+exec("node ./evaluator_build.js", {cwd: builddir}, (err, stdout, stderr) => {
     donesmt = true;
-    doneop(err === null, err !== null ? stdout : "done smt..."); 
+    doneop(err === null, err !== null ? stderr : "done smt..."); 
 
-    exec("node ./interpreter_build.js", {cwd: builddir}, (err, stdout) => {
+    exec("node ./interpreter_build.js", {cwd: builddir}, (err, stdout, stderr) => {
         doneicpp = true;
-        doneop(err === null, err !== null ? stdout : "done icpp..."); 
+        doneop(err === null, err !== null ? stderr : "done icpp..."); 
     });
 });

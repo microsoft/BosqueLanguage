@@ -941,11 +941,11 @@ class MIRDebug extends MIROp {
     }
 
     jemit(): object {
-        return { ...this.jbemit(), value: this.value ? [this.value.jemit()] : null };
+        return { ...this.jbemit(), value: this.value ? this.value.jemit() : null };
     }
 
     static jparse(jobj: any): MIROp {
-        return new MIRDebug(jparsesinfo(jobj.sinfo), jobj.value ? MIRArgument.jparse(jobj.value[0]) : undefined);
+        return new MIRDebug(jparsesinfo(jobj.sinfo), jobj.value ? MIRArgument.jparse(jobj.value) : undefined);
     }
 }
 

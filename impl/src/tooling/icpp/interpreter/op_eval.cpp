@@ -103,7 +103,10 @@ void Evaluator::evalDebugOp(const DebugOp* op)
     }
     else
     {
-        auto dval = op->argtype->fpDisplay(op->argtype, this->evalArgument(op->arg));
+        auto sl =  this->evalArgument(op->arg);
+        auto oftype = SLPTR_LOAD_UNION_INLINE_TYPE(sl);
+
+        auto dval = oftype->fpDisplay(oftype, SLPTR_LOAD_UNION_INLINE_DATAPTR(sl));
 
         printf("%s\n", dval.c_str());
         fflush(stdout);
@@ -1082,13 +1085,17 @@ void Evaluator::evalReturnAssignOfConsOp(const ReturnAssignOfConsOp* op)
 
 void Evaluator::evalVarLifetimeStartOp(const VarLifetimeStartOp* op)
 {
-    assert(false);
+#ifdef BSQ_DEBUG_BUILD 
+    //TODO: currently nop for variable lifetime intro 
+#endif    
 }
 
 void Evaluator::evalVarLifetimeEndOp(const VarLifetimeEndOp* op)
 {
-    assert(false);
-}
+#ifdef BSQ_DEBUG_BUILD 
+    //TODO: currently nop for variable lifetime end 
+#endif    
+} 
 
 void Evaluator::evaluateOpCode(const InterpOp* op)
 {

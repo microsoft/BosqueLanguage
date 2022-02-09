@@ -274,9 +274,8 @@ class DebugOp : public InterpOp
 public:
     //Arg is invalid and type is nullptr if this is a break
     const Argument arg;
-    const BSQType* argtype;
 
-    DebugOp(SourceInfo sinfo, Argument arg, const BSQType* argtype) : InterpOp(sinfo, OpCodeTag::DebugOp), arg(arg), argtype(argtype) {;}
+    DebugOp(SourceInfo sinfo, Argument arg) : InterpOp(sinfo, OpCodeTag::DebugOp), arg(arg) {;}
     virtual ~DebugOp() {;}
 
     static DebugOp* jparse(json v);
@@ -343,7 +342,7 @@ public:
     const BSQType* fromtype;
     const BSQStatementGuard sguard;
 
-    BoxOp(SourceInfo sinfo, TargetVar trgt, const BSQUnionType* intotype, Argument arg, const BSQType* fromtype, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::DirectAssignOp), trgt(trgt), intotype(intotype), arg(arg), fromtype(fromtype), sguard(sguard) {;}
+    BoxOp(SourceInfo sinfo, TargetVar trgt, const BSQUnionType* intotype, Argument arg, const BSQType* fromtype, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::BoxOp), trgt(trgt), intotype(intotype), arg(arg), fromtype(fromtype), sguard(sguard) {;}
     virtual ~BoxOp() {;}
 
     static BoxOp* jparse(json v);
@@ -358,7 +357,7 @@ public:
     const BSQUnionType* fromtype;
     const BSQStatementGuard sguard;
 
-    ExtractOp(SourceInfo sinfo, TargetVar trgt, const BSQType* intotype, Argument arg, const BSQUnionType* fromtype, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::DirectAssignOp), trgt(trgt), intotype(intotype), arg(arg), fromtype(fromtype), sguard(sguard) {;}
+    ExtractOp(SourceInfo sinfo, TargetVar trgt, const BSQType* intotype, Argument arg, const BSQUnionType* fromtype, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::ExtractOp), trgt(trgt), intotype(intotype), arg(arg), fromtype(fromtype), sguard(sguard) {;}
     virtual ~ExtractOp() {;}
 
     static ExtractOp* jparse(json v);

@@ -224,7 +224,12 @@ AssertOp* AssertOp::jparse(json v)
 
 DebugOp* DebugOp::jparse(json v)
 {
-    return new DebugOp(j_sinfo(v), j_arg(v), j_argtype(v));
+    if(v["arg"].is_null()) {
+        return new DebugOp(j_sinfo(v), j_arg(v));
+    }
+    else {
+        return new DebugOp(j_sinfo(v), j_arg(v));
+    }
 }
 
 LoadUnintVariableValueOp* LoadUnintVariableValueOp::jparse(json v)

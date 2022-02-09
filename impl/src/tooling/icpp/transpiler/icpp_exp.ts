@@ -236,8 +236,8 @@ class ICPPOpEmitter
         return {tag: OpCodeTag.AssertOp, sinfo: sinfo, arg: arg, msg: msg};
     }
     
-    static genDebugOp(sinfo: SourceInfo, arg: Argument): ICPPOp {
-        return {tag: OpCodeTag.DebugOp, sinfo: sinfo, arg: arg};
+    static genDebugOp(sinfo: SourceInfo, arg: Argument | undefined): ICPPOp {
+        return {tag: OpCodeTag.DebugOp, sinfo: sinfo, arg: arg || null};
     }
 
     static genLoadUnintVariableValueOp(sinfo: SourceInfo, trgt: TargetVar, oftype: MIRResolvedTypeKey): ICPPOp {

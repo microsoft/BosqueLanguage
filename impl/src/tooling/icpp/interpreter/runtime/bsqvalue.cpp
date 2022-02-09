@@ -134,8 +134,8 @@ std::string ephemeralDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 
 std::string unionDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
-    auto rtype = SLPTR_LOAD_UNION_INLINE_TYPE(data);
-    return rtype->fpDisplay(rtype, SLPTR_LOAD_UNION_INLINE_DATAPTR(data));
+    auto rtype = dynamic_cast<const BSQUnionType*>(btype)->getVType(data);
+    return rtype->fpDisplay(rtype, dynamic_cast<const BSQUnionType*>(btype)->getVData_NoAlloc(data));
 }
 
 int unionInlineKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2)
