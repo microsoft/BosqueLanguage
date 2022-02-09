@@ -15,7 +15,8 @@ const cppfiles = [apisrc, rootsrc, path.join(rootsrc, "runtime")].map((pp) => pp
 
 const includebase = path.normalize(path.join(__dirname, "include"));
 const includeheaders = [path.join(includebase, "headers/json")];
-const outbase = path.normalize(path.join(__dirname, "output"));
+const outexec = path.normalize(path.join(__dirname, "output"));
+const outobj = path.normalize(path.join(__dirname, "output", "obj"));
 
 let compiler = "";
 let ccflags = "";
@@ -25,24 +26,25 @@ if(process.platform === "darwin") {
     compiler = "clang++";
     ccflags = "-O0 -g -DBSQ_DEBUG_BUILD -Wall -std=c++20";
     includes = includeheaders.map((ih) => `-I ${ih}`).join(" ");
-    outfile = "-o " + outbase + "/icpp";
+    outfile = "-o " + outexec+ "/icpp";
 }
 else if(process.platform === "linux") {
     compiler = "clang++";
     ccflags = "-O0 -g -DBSQ_DEBUG_BUILD -Wall -std=c++20";
     includes = includeheaders.map((ih) => `-I ${ih}`).join(" ");
-    outfile = "-o " + outbase + "/icpp";
+    outfile = "-o " + outexec + "/icpp";
 }
 else {
     compiler = "cl.exe";
-    ccflags = "/EHsc /Zi /MD /D \"BSQ_DEBUG_BUILD\" /std:c++20";  
+    ccflags = "/EHsc /MP /Zi /D \"BSQ_DEBUG_BUILD\" /std:c++20";  
     includes = includeheaders.map((ih) => `/I ${ih}`).join(" ");
-    outfile = "/Fo:\"" + outbase + "/\"" + " " + "/Fd:\"" + outbase + "/\"" + " " + "/Fe:\"" + outbase + "\\icpp.exe\"";
+    outfile = "/Fo:\"" + outobj + "/\"" + " " + "/Fd:\"" + outexec + "/\"" + " " + "/Fe:\"" + outexec + "\\icpp.exe\"";
 }
 
 const command = `${compiler} ${ccflags} ${includes} ${outfile} ${cppfiles.join(" ")}`;
 
-fsx.ensureDirSync(outbase);
+fsx.ensureDirSync(outexec);
+fsx.ensureDirSync(outobj);
 fsx.removeSync(outfile);
 
 console.log(command);

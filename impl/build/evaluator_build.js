@@ -15,7 +15,8 @@ const cppfiles = [rootsrc, apisrc].map((pp) => pp + "/*.cpp");
 
 const includebase = path.normalize(path.join(__dirname, "include"));
 const includeheaders = [path.join(includebase, "headers/json"), path.join(includebase, "headers/z3")];
-const outbase = path.normalize(path.join(__dirname, "output"));
+const outexec = path.normalize(path.join(__dirname, "output"));
+const outobj = path.normalize(path.join(__dirname, "output", "obj"));
 
 let compiler = "";
 let ccflags = "";
@@ -27,26 +28,27 @@ if(process.platform === "darwin") {
     ccflags = "-O0 -g -Wall -std=c++20 -arch x86_64";
     includes = includeheaders.map((ih) => `-I ${ih}`).join(" ");
     z3lib = path.join(includebase, "/macos/z3/bin/libz3.a")
-    outfile = "-o " + outbase + "/chk";
+    outfile = "-o " + outexec + "/chk";
 }
 else if(process.platform === "linux") {
     compiler = "clang++";
     ccflags = "-O0 -g -Wall -std=c++20 -pthread";
     includes = includeheaders.map((ih) => `-I ${ih}`).join(" ");
     z3lib = path.join(includebase, "/linux/z3/bin/libz3.a")
-    outfile = "-o " + outbase + "/chk";
+    outfile = "-o " + outexec + "/chk";
 }
 else {
     compiler = "cl.exe";
-    ccflags = "/EHsc /Zi /std:c++20";  
+    ccflags = "/EHsc /MP /Zi /std:c++20";  
     includes = includeheaders.map((ih) => `/I ${ih}`).join(" ");
     z3lib = path.join(includebase, "/win/z3/bin/libz3.lib")
-    outfile = "/Fo:\"" + outbase + "/\"" + " " + "/Fd:\"" + outbase + "/\"" + " " + "/Fe:\"" + outbase + "\\chk.exe\"";
+    outfile = "/Fo:\"" + outobj + "/\"" + " " + "/Fd:\"" + outexec + "/\"" + " " + "/Fe:\"" + outexec + "\\chk.exe\"";
 }
 
 const command = `${compiler} ${ccflags} ${includes} ${outfile} ${cppfiles.join(" ")} ${z3lib}`;
 
-fsx.ensureDirSync(outbase);
+fsx.ensureDirSync(outexec);
+fsx.ensureDirSync(outobj);
 fsx.removeSync(outfile);
 
 console.log(command);
@@ -56,7 +58,7 @@ try {
     console.log(`${outstr}`);
 
     if(process.platform === "win32") {
-        fsx.copyFileSync(path.join(includebase, "win/z3/bin/libz3.dll"), path.join(outbase, "libz3.dll"));
+        fsx.copyFileSync(path.join(includebase, "win/z3/bin/libz3.dll"), path.join(outexec, "libz3.dll"));
     }
 }
 catch (ex) {

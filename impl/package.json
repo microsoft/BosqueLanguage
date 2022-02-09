@@ -20,7 +20,7 @@
         "fs-extra": "~8.1.0"
     },
     "scripts": {
-        "build": "tsc -p tsconfig.json && node ./build/resource_copy.js && node ./build/evaluator_build.js && node ./build/interpreter_build.js",
+        "build": "node ./build/build_all.js",
         "test": "tsc -p tsconfig.json && node ./build/resource_copy.js && node ./build/evaluator_build.js && node ./bin/test/test_runner.js"
     },
     "files": [
