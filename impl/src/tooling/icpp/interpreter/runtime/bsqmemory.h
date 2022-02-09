@@ -9,9 +9,23 @@
 
 ////////////////////////////////
 //Core Malloc
-inline void* xalloc(size_t alloc);
-inline void* zxalloc(size_t alloc);
-inline void xfree(void* mem);
+inline void* xalloc(size_t alloc)
+{
+    return malloc(alloc);
+}
+
+inline void* zxalloc(size_t alloc)
+{
+    void* vv = malloc(alloc);
+    GC_MEM_ZERO(vv, alloc);
+
+    return vv;
+}
+
+inline void xfree(void* mem)
+{
+    free(mem);
+}
 
 ////
 //BSQType abstract base class
