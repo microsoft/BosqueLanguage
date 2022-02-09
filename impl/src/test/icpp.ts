@@ -51,7 +51,7 @@ else if (mode === "-eval") {
 
             process.stdout.write(`Evaluating...\n`);
 
-            workflowRunICPPFile(jargs, userpackage, false, {}, {filename: args[0], names: ["main"], fkeys: ["__i__Main::main"]}, (result: string | undefined) => {
+            workflowRunICPPFile(jargs, userpackage, false, {}, {filename: args[0], name: "main", fkey: "__i__Main::main"}, (result: string | undefined) => {
                 if (result !== undefined) {
                     process.stdout.write(`${result}\n`);
                 }

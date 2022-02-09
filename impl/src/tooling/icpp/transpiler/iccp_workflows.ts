@@ -95,12 +95,12 @@ function emitICPPFile(cfile: string, into: string): boolean {
     }
 }
 
-function runICPPFile(icppjson: {code: object, args: any[]}, cb: (result: string | undefined) => void) {
+function runICPPFile(icppjson: {code: object, args: any[], main: string}, cb: (result: string | undefined) => void) {
     try {
         const cmd = `${exepath} --stream`;
 
         const proc = exec(cmd, (err, stdout, stderr) => {
-            cb(stdout.toString().trim());
+           cb(stdout.toString().trim());
         });
 
         proc.stdin.setDefaultEncoding('utf-8');
@@ -114,7 +114,7 @@ function runICPPFile(icppjson: {code: object, args: any[]}, cb: (result: string 
 }
 
 function workflowEmitICPPFile(into: string, usercode: PackageConfig, istestbuild: boolean, topts: TranspilerOptions, entrypoint: {filename: string, names: string[], fkeys: MIRResolvedTypeKey[]}): boolean {
-    const massembly = generateMASM(usercode, entrypoint);
+    const massembly = generateMASM(usercode, {filename: entrypoint.filename, names: entrypoint.names});
     const icppasm = generateICPPAssembly(massembly, istestbuild, topts, entrypoint.fkeys);
             
     if (icppasm === undefined) {
@@ -125,15 +125,15 @@ function workflowEmitICPPFile(into: string, usercode: PackageConfig, istestbuild
     return emitICPPFile(icppjson, into);
 }
 
-function workflowRunICPPFile(args: any[], usercode: PackageConfig, istestbuild: boolean, topts: TranspilerOptions, entrypoint: {filename: string, names: string[], fkeys: MIRResolvedTypeKey[]}, cb: (result: string | undefined) => void) {
-    const massembly = generateMASM(usercode, entrypoint);
-    const icppasm = generateICPPAssembly(massembly, istestbuild, topts, entrypoint.fkeys);
+function workflowRunICPPFile(args: any[], usercode: PackageConfig, istestbuild: boolean, topts: TranspilerOptions, entrypoint: {filename: string, name: string, fkey: MIRResolvedTypeKey}, cb: (result: string | undefined) => void) {
+    const massembly = generateMASM(usercode, {filename: entrypoint.filename, names: [entrypoint.name]});
+    const icppasm = generateICPPAssembly(massembly, istestbuild, topts, [entrypoint.fkey]);
             
     if (icppasm === undefined) {
         return undefined;
     }
 
-    return runICPPFile({code: {api: massembly.emitAPIInfo(entrypoint.fkeys, istestbuild), bytecode: icppasm }, args: args}, cb);
+    return runICPPFile({code: {api: massembly.emitAPIInfo([entrypoint.fkey], istestbuild), bytecode: icppasm }, args: args, main: entrypoint.fkey}, cb);
 }
 
 export {

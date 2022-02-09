@@ -2392,11 +2392,11 @@ void Evaluator::invokeGlobalCons(const BSQInvokeBodyDecl* invk, StorageLocationP
 uint8_t* Evaluator::prepareMainStack(const BSQInvokeBodyDecl* invk)
 {
     size_t cssize = invk->scalarstackBytes + invk->mixedstackBytes;
-    uint8_t* cstack = (uint8_t*)BSQ_STACK_SPACE_ALLOC(cssize);
+    uint8_t* cstack = (uint8_t*)zxalloc(cssize);
     GC_MEM_ZERO(cstack, cssize);
 
     size_t maskslotbytes = invk->maskSlots * sizeof(BSQBool);
-    BSQBool* maskslots = (BSQBool*)BSQ_STACK_SPACE_ALLOC(maskslotbytes);
+    BSQBool* maskslots = (BSQBool*)zxalloc(maskslotbytes);
     GC_MEM_ZERO(maskslots, maskslotbytes);
 
     this->invokePrelude(invk, cstack, maskslots, nullptr);

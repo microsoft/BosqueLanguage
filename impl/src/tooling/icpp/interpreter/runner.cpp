@@ -51,7 +51,7 @@ std::pair<bool, json> run(Evaluator& runner, const APIModule* api, const std::st
     auto filename = std::string("[MAIN INITIALIZE]");
     auto jsig = api->getSigForFriendlyName(main);
     const BSQInvokeBodyDecl* call = resolveInvokeForMainName(main);
-    if(call != nullptr || !jsig.has_value())
+    if(call == nullptr || !jsig.has_value())
     {
         return std::make_pair(false, "Could not load given entrypoint");
     }
@@ -84,7 +84,7 @@ std::pair<bool, json> run(Evaluator& runner, const APIModule* api, const std::st
     else
     {
         auto result = BSQ_STACK_SPACE_ALLOC(call->resultType->allocinfo.inlinedatasize);
-        runner.invokeMain(call, &result, call->resultType, call->resultArg);
+        runner.invokeMain(call, result, call->resultType, call->resultArg);
 
         ICPPParseJSON jextract;
         auto rtype = jsig.value()->restype;
@@ -169,13 +169,13 @@ int main(int argc, char** argv)
             exit(1);
         }
 
-        json jcode = cc.value();
+        json jcode = cc.value()["code"];
         auto jargs = json::parse(input);
-        std::string jmain("main");
+        std::string jmain("__i__Main::main");
         if(jargs.is_object())
         {
             jargs = jargs["args"];
-            jmain = jargs["main"].get<std::string>();
+            jmain = "__i__" + jargs["main"].get<std::string>();
         }
 
         const APIModule* api = APIModule::jparse(jcode["api"]);

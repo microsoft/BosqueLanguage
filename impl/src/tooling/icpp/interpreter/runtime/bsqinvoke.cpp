@@ -553,8 +553,8 @@ BSQInvokeBodyDecl* BSQInvokeBodyDecl::jsonLoad(json v)
     std::vector<ParameterInfo> paraminfo;
     auto jparaminfo = v["paraminfo"];
     std::transform(jparaminfo.cbegin(), jparaminfo.cend(), std::back_inserter(paraminfo), [](json param) {
-        auto atag = param["tag"].get<ArgumentTag>();
-        auto offset = param["offset"].get<uint32_t>();
+        auto atag = param["kind"].get<ArgumentTag>();
+        auto offset = param["poffset"].get<uint32_t>();
         return ParameterInfo{atag, offset};
     });
 
