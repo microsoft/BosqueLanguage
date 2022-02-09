@@ -76,22 +76,32 @@ class ICPPBodyEmitter {
         //TODO: later we should make this an abstract index and do "register allocation" on the live ranges -- will also need to convert this to offsets at emit time (or something)
         //
         if(oftype.canScalarStackAllocate()) {
-            const trgt = { kind: ArgumentTag.ScalarVal, offset: this.scalarStackSize };
+            if(this.scalarStackMap.has(vname)) {
+                return { kind: ArgumentTag.ScalarVal, offset: this.scalarStackMap.get(vname) as number };
+            }
+            else {
+                const trgt = { kind: ArgumentTag.ScalarVal, offset: this.scalarStackSize };
 
-            this.scalarStackLayout.push({ offset: this.scalarStackSize, name: vname, storage: oftype });
-            this.scalarStackMap.set(vname, this.scalarStackSize);
-            this.scalarStackSize = this.scalarStackSize + oftype.allocinfo.inlinedatasize;
+                this.scalarStackLayout.push({ offset: this.scalarStackSize, name: vname, storage: oftype });
+                this.scalarStackMap.set(vname, this.scalarStackSize);
+                this.scalarStackSize = this.scalarStackSize + oftype.allocinfo.inlinedatasize;
 
-            return trgt;
+                return trgt;
+            }
         }
         else {
-            const trgt = { kind: ArgumentTag.MixedVal, offset: this.mixedStackSize };
+            if(this.mixedStackMap.has(vname)) {
+                return { kind: ArgumentTag.MixedVal, offset: this.mixedStackMap.get(vname) as number };
+            }
+            else {
+                const trgt = { kind: ArgumentTag.MixedVal, offset: this.mixedStackSize };
 
-            this.mixedStackLayout.push({ offset: this.mixedStackSize, name: vname, storage: oftype });
-            this.mixedStackMap.set(vname, this.mixedStackSize);
-            this.mixedStackSize = this.mixedStackSize + oftype.allocinfo.inlinedatasize;
+                this.mixedStackLayout.push({ offset: this.mixedStackSize, name: vname, storage: oftype });
+                this.mixedStackMap.set(vname, this.mixedStackSize);
+                this.mixedStackSize = this.mixedStackSize + oftype.allocinfo.inlinedatasize;
 
-            return trgt;
+                return trgt;
+            }
         }
     }
 
@@ -100,22 +110,32 @@ class ICPPBodyEmitter {
         //TODO: later we should make this an abstract index and do "register allocation" on the live ranges -- will also need to convert this to offsets at emit time (or something)
         //
         if(oftype.canScalarStackAllocate()) {
-            const trgt = { kind: ArgumentTag.ScalarVal, poffset: this.scalarStackSize };
+            if(this.scalarStackMap.has(pname)) {
+                return { kind: ArgumentTag.ScalarVal, poffset: this.scalarStackMap.get(pname) as number };
+            }
+            else {
+                const trgt = { kind: ArgumentTag.ScalarVal, poffset: this.scalarStackSize };
 
-            this.scalarStackLayout.push({ offset: this.scalarStackSize, name: pname, storage: oftype });
-            this.scalarStackMap.set(pname, this.scalarStackSize);
-            this.scalarStackSize = this.scalarStackSize + oftype.allocinfo.inlinedatasize;
+                this.scalarStackLayout.push({ offset: this.scalarStackSize, name: pname, storage: oftype });
+                this.scalarStackMap.set(pname, this.scalarStackSize);
+                this.scalarStackSize = this.scalarStackSize + oftype.allocinfo.inlinedatasize;
 
-            return trgt;
+                return trgt;
+            }
         }
         else {
-            const trgt = { kind: ArgumentTag.MixedVal, poffset: this.mixedStackSize };
+            if (this.mixedStackMap.has(pname)) {
+                return { kind: ArgumentTag.MixedVal, poffset: this.mixedStackMap.get(pname) as number };
+            }
+            else {
+                const trgt = { kind: ArgumentTag.MixedVal, poffset: this.mixedStackSize };
 
-            this.mixedStackLayout.push({ offset: this.mixedStackSize, name: pname, storage: oftype });
-            this.mixedStackMap.set(pname, this.mixedStackSize);
-            this.mixedStackSize = this.mixedStackSize + oftype.allocinfo.inlinedatasize;
+                this.mixedStackLayout.push({ offset: this.mixedStackSize, name: pname, storage: oftype });
+                this.mixedStackMap.set(pname, this.mixedStackSize);
+                this.mixedStackSize = this.mixedStackSize + oftype.allocinfo.inlinedatasize;
 
-            return trgt;
+                return trgt;
+            }
         }
     }
 
@@ -500,6 +520,7 @@ class ICPPBodyEmitter {
         else {
             const gg = this.generateGuardToInfo(sguard.guard);
             const dvar = sguard.defaultvar !== undefined ? this.argToICPPLocation(sguard.defaultvar) : ICPPOpEmitter.genConstArgument(EMPTY_CONST_POSITION);
+
             return ICPPOpEmitter.genStatmentGuard(gg, sguard.usedefault === "defaultontrue", dvar);
         }
     }
