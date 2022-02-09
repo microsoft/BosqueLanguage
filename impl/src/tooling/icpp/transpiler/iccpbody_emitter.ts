@@ -1646,11 +1646,12 @@ class ICPPBodyEmitter {
         }
     }
 
-    generateBlockExps(blocks: Map<string, MIRBasicBlock>, blockrevorder: string[]): ICPPOp[] {
+    generateBlockExps(blocks: Map<string, MIRBasicBlock>, blockinorder: string[], blockrevorder: string[]): ICPPOp[] {
         let icppblocks = new Map<string, ICPPOp[]>();
 
         //Generate basic logic
-        blocks.forEach((bb) => {
+        blockinorder.forEach((bbid) => {
+            const bb = blocks.get(bbid) as MIRBasicBlock;
             let ii = Math.max(0, bb.ops.findIndex((op) => !(op instanceof MIRPhi)));
 
             if(ii !== 0) { 
@@ -1753,8 +1754,9 @@ class ICPPBodyEmitter {
         }
 
         if (idecl instanceof MIRInvokeBodyDecl) {
-            const revblocks = topologicalOrder((idecl as MIRInvokeBodyDecl).body.body).reverse().map((bb) => bb.label);
-            const body = this.generateBlockExps((idecl as MIRInvokeBodyDecl).body.body, revblocks);
+            const inorderblocks = topologicalOrder((idecl as MIRInvokeBodyDecl).body.body).map((bb) => bb.label);
+            const revblocks = [...inorderblocks].reverse();
+            const body = this.generateBlockExps((idecl as MIRInvokeBodyDecl).body.body, inorderblocks, revblocks);
 
             return new ICPPInvokeBodyDecl(idecl.shortname, idecl.ikey, idecl.srcFile, idecl.sourceLocation, idecl.recursive, params, paraminfo, idecl.resultType, this.getStackInfoForArgVar("$$return"), this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), this.masksize, body, idecl.masksize);
         }
