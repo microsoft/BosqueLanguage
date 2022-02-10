@@ -304,7 +304,7 @@ internal entity ListOps provides Some {
             return \/(p[recursive?](l.v0), p[recursive?](l.v1), p[recursive?](l.v2));
         }
         else {
-            return l.has_pred[recursive?](p);
+            return l.has_pred[recursive](p);
         }
     }
 
@@ -322,7 +322,7 @@ internal entity ListOps provides Some {
             return \/(p[recursive?](l.v0, 0n), p[recursive?](l.v1, 1n), p[recursive?](l.v2, 2n));
         }
         else {
-            return l.has_pred_idx[recursive?](0n, p);
+            return l.has_pred_idx[recursive](0n, p);
         }
     }
 

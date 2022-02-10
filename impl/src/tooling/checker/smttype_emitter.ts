@@ -493,6 +493,10 @@ class SMTTypeEmitter {
         const smtfrom = this.getSMTTypeFor(from);
         const smtinto = this.getSMTTypeFor(into);
 
+        if(from.typeID === into.typeID) {
+            return exp;
+        }
+
         if (smtinto.isGeneralKeyType()) {
             if(smtfrom.isGeneralKeyType()) {
                 return exp;

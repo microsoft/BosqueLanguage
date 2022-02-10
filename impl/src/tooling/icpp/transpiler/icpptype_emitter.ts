@@ -741,6 +741,10 @@ class ICPPTypeEmitter {
         const icppfrom = this.getICPPLayoutInfo(from);
         const icppinto = this.getICPPLayoutInfo(into);
 
+        if(icppfrom.tkey === icppinto.tkey) {
+            return this.coerceEquivReprs(sinfo, arg, trgt, into, sguard);
+        }
+
         if(icppinto.layout === ICPPLayoutCategory.Ref && icppfrom.layout === ICPPLayoutCategory.Ref) {
             return this.coerceEquivReprs(sinfo, arg, trgt, into, sguard);
         }

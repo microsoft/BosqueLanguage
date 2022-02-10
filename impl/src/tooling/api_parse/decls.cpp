@@ -705,7 +705,7 @@ APIModule* APIModule::jparse(json j)
 
     std::map<std::string, std::string> namespacemap;
     auto jnamespaceremap = j["namespacemap"];
-    for (size_t i = 0; i < japitypedecls.size(); ++i)
+    for (size_t i = 0; i < jnamespaceremap.size(); ++i)
     {
         auto key = jnamespaceremap[i]["name"].get<std::string>();
         auto val = jnamespaceremap[i]["into"].get<std::string>();

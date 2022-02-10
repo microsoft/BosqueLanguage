@@ -6,7 +6,7 @@
 import * as assert  from "assert";
 import { BSQRegex } from "../../ast/bsqregex";
 
-import { MIRAssembly, MIRConceptType, MIRConstructableEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIRDataBufferInternalEntityTypeDecl, MIRDataStringInternalEntityTypeDecl, MIREntityType, MIREntityTypeDecl, MIREnumEntityTypeDecl, MIRFieldDecl, MIRInvokeDecl, MIRObjectEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRRecordType, MIRStringOfInternalEntityTypeDecl, MIRTupleType, MIRType, MIRTypeOption, SymbolicActionMode } from "../../compiler/mir_assembly";
+import { MIRAssembly, MIRConceptType, MIRConstructableEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIRDataBufferInternalEntityTypeDecl, MIRDataStringInternalEntityTypeDecl, MIREntityType, MIREntityTypeDecl, MIREnumEntityTypeDecl, MIRFieldDecl, MIRInvokeDecl, MIRObjectEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRRecordType, MIRStringOfInternalEntityTypeDecl, MIRTupleType, MIRType, MIRTypeOption, SymbolicActionMode } from "../../compiler/mir_assembly";
 import { constructCallGraphInfo, markSafeCalls } from "../../compiler/mir_callg";
 import { MIRInvokeKey } from "../../compiler/mir_ops";
 import { SMTBodyEmitter } from "./smtbody_emitter";
@@ -584,38 +584,6 @@ class SMTEmitter {
         this.assembly.entityDecls.push(smtdecl);
     }
 
-    private processPrimitiveListEntityDecl(edecl: MIRPrimitiveListEntityTypeDecl) {
-        const mirtype = this.temitter.getMIRType(edecl.tkey);
-        const smttype = this.temitter.getSMTTypeFor(mirtype);
-
-        const consfuncs = this.temitter.getSMTConstructorName(mirtype);
-
-        const smtdecl = new SMTEntityOfTypeDecl(false, smttype.smttypename, smttype.smttypetag, consfuncs.box, consfuncs.bfield, "BTerm");
-        this.assembly.entityDecls.push(smtdecl);
-    }
-
-    private processPrimitiveStackEntityDecl(edecl: MIRPrimitiveStackEntityTypeDecl) {
-        assert(false, "MIRPrimitiveStackEntityTypeDecl");
-    }
-
-    private processPrimitiveQueueEntityDecl(edecl: MIRPrimitiveQueueEntityTypeDecl) {
-        assert(false, "MIRPrimitiveQueueEntityTypeDecl");
-    }
-
-    private processPrimitiveSetEntityDecl(edecl: MIRPrimitiveSetEntityTypeDecl) {
-        assert(false, "MIRPrimitiveSetEntityTypeDecl");
-    }
-
-    private processPrimitiveMapEntityDecl(edecl: MIRPrimitiveMapEntityTypeDecl) {
-        const mirtype = this.temitter.getMIRType(edecl.tkey);
-        const smttype = this.temitter.getSMTTypeFor(mirtype);
-
-        const consfuncs = this.temitter.getSMTConstructorName(mirtype);
-
-        const smtdecl = new SMTEntityOfTypeDecl(false, smttype.smttypename, smttype.smttypetag, consfuncs.box, consfuncs.bfield, "BTerm");
-        this.assembly.entityDecls.push(smtdecl);
-    }
-
     private processVirtualInvokes() {
         for(let i = this.lastVInvokeIdx; i < this.bemitter.requiredVirtualFunctionInvokes.length; ++i) {
             this.bemitter.generateVirtualFunctionInvoke(this.bemitter.requiredVirtualFunctionInvokes[i]);
@@ -836,23 +804,8 @@ class SMTEmitter {
             else if (edcl.attributes.includes("__something_type")) {
                 this.processConstructableInternalEntityDecl(edcl as MIRConstructableInternalEntityTypeDecl);
             }
-            else if (edcl.attributes.includes("__list_type")) {
-                this.processPrimitiveListEntityDecl(edcl as MIRPrimitiveListEntityTypeDecl);
-            }
-            else if (edcl.attributes.includes("__stack_type")) {
-                this.processPrimitiveStackEntityDecl(edcl as MIRPrimitiveStackEntityTypeDecl);
-            }
-            else if (edcl.attributes.includes("__queue_type")) {
-                this.processPrimitiveQueueEntityDecl(edcl as MIRPrimitiveQueueEntityTypeDecl);
-            }
-            else if (edcl.attributes.includes("__set_type")) {
-                this.processPrimitiveSetEntityDecl(edcl as MIRPrimitiveSetEntityTypeDecl);
-            }
-            else if (edcl.attributes.includes("__map_type")) {
-                this.processPrimitiveMapEntityDecl(edcl as MIRPrimitiveMapEntityTypeDecl);
-            }
             else {
-                //Don't need to do anything
+                //Don't need to do anything -- including for collection decls which all map to BTerm
             }
         });
 

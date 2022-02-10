@@ -468,28 +468,28 @@ class SMTBodyEmitter {
 
     generateSingletonConstructorList(geninfo: { inv: string, argc: number, resulttype: MIRType }): SMTFunction {
         const ldecl = this.assembly.entityDecls.get(geninfo.resulttype.typeID) as MIRPrimitiveListEntityTypeDecl;
-        const etype = ldecl.oftype;
+        const etype = ldecl.getTypeT();
 
         let args: { vname: string, vtype: SMTTypeInfo }[] = [];
         for(let j = 0; j < geninfo.argc; ++j) {
-            args.push({ vname: `arg${j}`, vtype: this.typegen.getSMTTypeFor(this.typegen.getMIRType(etype)) });
+            args.push({ vname: `arg${j}`, vtype: this.typegen.getSMTTypeFor(etype) });
         }
 
         let bbody: SMTExp = new SMTConst("[INVALID]");
         if(geninfo.argc === 1) {
-            const v1type = this.assembly.typeMap.get(`Vector1<${etype}>`) as MIRType;
-            bbody = this.typegen.coerce(new SMTCallSimple(this.typegen.getSMTConstructorName(v1type).cons, [new SMTVar("arg0")]), v1type, geninfo.resulttype);
+            const v1type = this.assembly.typeMap.get(`Vector1<${etype.typeID}>`) as MIRType;
+            bbody = this.typegen.coerce(new SMTCallSimple(this.typegen.getSMTConstructorName(v1type).cons, [new SMTVar("arg0")]), v1type, this.typegen.getMIRType(ldecl.oftype));
         }
         else if(geninfo.argc === 2) {
-            const v2type = this.assembly.typeMap.get(`Vector2<${etype}>`) as MIRType;
-            bbody = this.typegen.coerce(new SMTCallSimple(this.typegen.getSMTConstructorName(v2type).cons, [new SMTVar("arg0"), new SMTVar("arg1")]), v2type, geninfo.resulttype);
+            const v2type = this.assembly.typeMap.get(`Vector2<${etype.typeID}>`) as MIRType;
+            bbody = this.typegen.coerce(new SMTCallSimple(this.typegen.getSMTConstructorName(v2type).cons, [new SMTVar("arg0"), new SMTVar("arg1")]), v2type, this.typegen.getMIRType(ldecl.oftype));
         }
         else if(geninfo.argc === 3) {
-            const v3type = this.assembly.typeMap.get(`Vector3<${etype}>`) as MIRType;
-            bbody = this.typegen.coerce(new SMTCallSimple(this.typegen.getSMTConstructorName(v3type).cons, [new SMTVar("arg0"), new SMTVar("arg1"), new SMTVar("arg2")]), v3type, geninfo.resulttype);
+            const v3type = this.assembly.typeMap.get(`Vector3<${etype.typeID}>`) as MIRType;
+            bbody = this.typegen.coerce(new SMTCallSimple(this.typegen.getSMTConstructorName(v3type).cons, [new SMTVar("arg0"), new SMTVar("arg1"), new SMTVar("arg2")]), v3type, this.typegen.getMIRType(ldecl.oftype));
         }
         else {
-            const lrecl = this.assembly.typeMap.get(`RecList<${etype}>`) as MIRType;
+            const lrecl = this.assembly.typeMap.get(`RecList<${etype.typeID}>`) as MIRType;
             const tftype = this.assembly.typeMap.get((this.assembly.entityDecls.get(lrecl.typeID) as MIRObjectEntityTypeDecl).fields[1].declaredType) as MIRType;
 
             bbody = this.typegen.coerce(new SMTConst("bsq_none"), this.typegen.getMIRType("None"), tftype);
@@ -505,7 +505,7 @@ class SMTBodyEmitter {
 
     generateSingletonConstructorMap(geninfo: { srcFile: string, sinfo: SourceInfo, inv: string, argc: number, resulttype: MIRType }): SMTFunction {
         const ldecl = this.assembly.entityDecls.get(geninfo.resulttype.typeID) as MIRPrimitiveMapEntityTypeDecl;
-        const etype = ldecl.oftype;
+        const etype = ldecl.tupentrytype;
         const etuple = this.typegen.getMIRType(etype).options[0] as MIRTupleType;
         const keytype = ldecl.getTypeK();
 
@@ -517,7 +517,7 @@ class SMTBodyEmitter {
         let bbody: SMTExp = new SMTConst("[INVALID]");
         if(geninfo.argc === 1) {
             const v1type = this.assembly.typeMap.get(`Vector1<${etype}>`) as MIRType;
-            bbody = this.typegen.coerce(new SMTCallSimple(this.typegen.getSMTConstructorName(v1type).cons, [new SMTVar("arg0")]), v1type, geninfo.resulttype);
+            bbody = this.typegen.coerce(new SMTCallSimple(this.typegen.getSMTConstructorName(v1type).cons, [new SMTVar("arg0")]), v1type, this.typegen.getMIRType(ldecl.oftype));
         }
         else if(geninfo.argc === 2) {
             const v2type = this.assembly.typeMap.get(`Vector2<${etype}>`) as MIRType;
@@ -528,9 +528,9 @@ class SMTBodyEmitter {
             const chkorder21: SMTExp = SMTCallSimple.makeNot(this.generateBinKeyCmpFor(keytype, keytype, accesskey1, keytype, accesskey2));
         
             bbody = new SMTIf(chkorder12,
-                this.typegen.generateResultTypeConstructorSuccess(geninfo.resulttype, this.typegen.coerce(new SMTCallSimple(this.typegen.getSMTConstructorName(v2type).cons, [new SMTVar("arg0"), new SMTVar("arg1")]), v2type, geninfo.resulttype)),
+                this.typegen.generateResultTypeConstructorSuccess(geninfo.resulttype, this.typegen.coerce(new SMTCallSimple(this.typegen.getSMTConstructorName(v2type).cons, [new SMTVar("arg0"), new SMTVar("arg1")]), v2type, this.typegen.getMIRType(ldecl.oftype))),
                 new SMTIf(chkorder21,
-                    this.typegen.generateResultTypeConstructorSuccess(geninfo.resulttype, this.typegen.coerce(new SMTCallSimple(this.typegen.getSMTConstructorName(v2type).cons, [new SMTVar("arg0"), new SMTVar("arg1")]), v2type, geninfo.resulttype)),
+                    this.typegen.generateResultTypeConstructorSuccess(geninfo.resulttype, this.typegen.coerce(new SMTCallSimple(this.typegen.getSMTConstructorName(v2type).cons, [new SMTVar("arg0"), new SMTVar("arg1")]), v2type, this.typegen.getMIRType(ldecl.oftype))),
                     this.typegen.generateResultTypeConstructorError(geninfo.resulttype, this.generateErrorCreateWithFile(geninfo.srcFile, geninfo.sinfo, geninfo.resulttype, "Duplicate keys in map constructor"))
                 )
             );
