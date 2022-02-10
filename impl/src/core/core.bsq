@@ -619,7 +619,7 @@ __internal entity HavocSequence provides Some {
 #endif
 
 //<summary>All collections provide this concept so we can expand them with spread operators.</summary>
-concept Expandoable<T> provides Some {
+__universal concept Expandoable<T> provides Some {
     method expand<U>(): List<U> = special_method;
 }
 

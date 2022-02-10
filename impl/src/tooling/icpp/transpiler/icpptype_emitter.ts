@@ -682,12 +682,18 @@ class ICPPTypeEmitter {
                 iidata = this.getICPPLayoutForEntity(tt, this.assembly.entityDecls.get(topt.typeID) as MIREntityTypeDecl);
             }
             else {
-                const isuniversal = tt.options.some((opt) => opt instanceof MIRConceptType && opt.ckeys.some((ckk) => (this.assembly.conceptDecls.get(ckk) as MIRConceptTypeDecl).attributes.includes("__universal")));
+                const copt = tt.options[0] as MIRConceptType;
+
+                const isuniversal = copt.ckeys.some((ckk) => (this.assembly.conceptDecls.get(ckk) as MIRConceptTypeDecl).attributes.includes("__universal"));
                 if(isuniversal) {
                     iidata = new ICPPLayoutUniversalUnion(tt.typeID);
                 }
                 else {
-                    const iccpopts = tt.options.map((opt) => this.getICPPLayoutInfo(this.getMIRType(opt.typeID)));
+                    const cttype = this.getMIRType(copt.typeID);
+                    const iccpopts = [...this.assembly.entityDecls]
+                        .filter((edp) => this.assembly.subtypeOf(this.getMIRType(edp[0]), cttype))
+                        .map((edp) => this.getICPPLayoutInfo(this.getMIRType(edp[0])));
+
                     iidata = this.computeICCPLayoutForUnion(tt, iccpopts);
                 }
             }

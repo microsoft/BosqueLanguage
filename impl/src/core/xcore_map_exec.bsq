@@ -71,7 +71,7 @@ internal entity MapOps provides Some {
             return m1;
         }
         else {
-            return MapOps::s_union_ne<K, V>(m1, m2)
+            return MapOps::s_union_ne<K, V>(m1, m2);
         }
     }
 
