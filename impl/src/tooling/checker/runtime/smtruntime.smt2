@@ -308,6 +308,8 @@
 (declare-const BTerm@nothing BTerm)
 (assert (= BTerm@nothing (BTerm@termbox TypeTag_Nothing bsqobject_nothing@literal)))
 
+;;COLLECTION_DECLS;;
+
 ;;
 ;;Define utility functions
 ;;

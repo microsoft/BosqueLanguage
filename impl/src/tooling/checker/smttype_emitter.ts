@@ -118,7 +118,7 @@ class SMTTypeEmitter {
         return this.isUniqueTupleType(tt) || this.isUniqueRecordType(tt) || this.isUniqueEntityType(tt) || this.isUniqueEphemeralType(tt);
     }
 
-    getSMTTypeFor(tt: MIRType): SMTTypeInfo {
+    getSMTTypeFor(tt: MIRType, fordecl?: boolean): SMTTypeInfo {
         if(this.typeDataMap.has(tt.typeID)) {
             return this.typeDataMap.get(tt.typeID) as SMTTypeInfo;
         }
@@ -131,7 +131,7 @@ class SMTTypeEmitter {
             return new SMTTypeInfo(this.lookupTypeName(tt.typeID), `TypeTag_${this.lookupTypeName(tt.typeID)}`, tt.typeID);
         }
         else if(this.isUniqueEntityType(tt)) {
-            return this.getSMTTypeInfoForEntity(tt, this.assembly.entityDecls.get(tt.typeID) as MIREntityTypeDecl);
+            return this.getSMTTypeInfoForEntity(tt, this.assembly.entityDecls.get(tt.typeID) as MIREntityTypeDecl, fordecl || false);
         }
         else if (this.isUniqueEphemeralType(tt)) {
             return new SMTTypeInfo(this.lookupTypeName(tt.typeID), `TypeTag_${this.lookupTypeName(tt.typeID)}`, tt.typeID);
@@ -144,7 +144,7 @@ class SMTTypeEmitter {
         }
     }
 
-    private getSMTTypeInfoForEntity(tt: MIRType, entity: MIREntityTypeDecl): SMTTypeInfo {
+    private getSMTTypeInfoForEntity(tt: MIRType, entity: MIREntityTypeDecl, fordecl: boolean): SMTTypeInfo {
         if(entity instanceof MIRInternalEntityTypeDecl) {
             if(entity instanceof MIRPrimitiveInternalEntityTypeDecl) {
                 if (this.isType(tt, "None")) {
@@ -224,7 +224,12 @@ class SMTTypeEmitter {
             else {
                 assert(entity instanceof MIRPrimitiveCollectionEntityTypeDecl, "Should be a collection type");
 
-                return new SMTTypeInfo(entity.tkey, `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
+                if(fordecl) {
+                    return new SMTTypeInfo("BTerm", "[BTERM]", tt.typeID);
+                }
+                else {
+                    return new SMTTypeInfo(this.lookupTypeName(entity.tkey), `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
+                }
             }
         }
         else if (entity instanceof MIREnumEntityTypeDecl) {
@@ -493,7 +498,7 @@ class SMTTypeEmitter {
         const smtfrom = this.getSMTTypeFor(from);
         const smtinto = this.getSMTTypeFor(into);
 
-        if(from.typeID === into.typeID) {
+        if(smtfrom.smttypename === smtinto.smttypename) {
             return exp;
         }
 

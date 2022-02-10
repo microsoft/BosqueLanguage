@@ -6,12 +6,12 @@
 import * as assert  from "assert";
 import { BSQRegex } from "../../ast/bsqregex";
 
-import { MIRAssembly, MIRConceptType, MIRConstructableEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIRDataBufferInternalEntityTypeDecl, MIRDataStringInternalEntityTypeDecl, MIREntityType, MIREntityTypeDecl, MIREnumEntityTypeDecl, MIRFieldDecl, MIRInvokeDecl, MIRObjectEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRRecordType, MIRStringOfInternalEntityTypeDecl, MIRTupleType, MIRType, MIRTypeOption, SymbolicActionMode } from "../../compiler/mir_assembly";
+import { MIRAssembly, MIRConceptType, MIRConstructableEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIRDataBufferInternalEntityTypeDecl, MIRDataStringInternalEntityTypeDecl, MIREntityType, MIREntityTypeDecl, MIREnumEntityTypeDecl, MIRFieldDecl, MIRInvokeDecl, MIRObjectEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRRecordType, MIRStringOfInternalEntityTypeDecl, MIRTupleType, MIRType, MIRTypeOption, SymbolicActionMode } from "../../compiler/mir_assembly";
 import { constructCallGraphInfo, markSafeCalls } from "../../compiler/mir_callg";
 import { MIRInvokeKey } from "../../compiler/mir_ops";
 import { SMTBodyEmitter } from "./smtbody_emitter";
 import { SMTTypeEmitter } from "./smttype_emitter";
-import { SMTAssembly, SMTConstantDecl, SMTEntityOfTypeDecl, SMTEntityStdDecl, SMTEphemeralListDecl, SMTFunction, SMTFunctionUninterpreted, SMTModelState, SMTRecordDecl, SMTTupleDecl } from "./smt_assembly";
+import { SMTAssembly, SMTConstantDecl, SMTEntityCollectionTypeDecl, SMTEntityOfTypeDecl, SMTEntityStdDecl, SMTEphemeralListDecl, SMTFunction, SMTFunctionUninterpreted, SMTModelState, SMTRecordDecl, SMTTupleDecl } from "./smt_assembly";
 import { SMTCallGeneral, SMTCallGeneralWOptMask, SMTCallSimple, SMTConst, SMTExp, SMTIf, SMTLet, SMTLetMulti, SMTMaskConstruct, SMTTypeInfo, SMTVar, VerifierOptions } from "./smt_exp";
 
 class SMTEmitter {
@@ -513,7 +513,7 @@ class SMTEmitter {
         const consdecl = {
             cname: consfuncs.cons, 
             cargs: edecl.fields.map((fd) => {
-                return { fname: this.temitter.generateEntityFieldGetFunction(edecl, fd), ftype: this.temitter.getSMTTypeFor(this.temitter.getMIRType(fd.declaredType)) };
+                return { fname: this.temitter.generateEntityFieldGetFunction(edecl, fd), ftype: this.temitter.getSMTTypeFor(this.temitter.getMIRType(fd.declaredType), true) };
             })
         };
 
@@ -578,9 +578,41 @@ class SMTEmitter {
         const smttype = this.temitter.getSMTTypeFor(mirtype);
 
         const consfuncs = this.temitter.getSMTConstructorName(mirtype);
-        const oftype = this.temitter.getSMTTypeFor(this.temitter.getMIRType(edecl.fromtype));
+        const oftype = this.temitter.getSMTTypeFor(this.temitter.getMIRType(edecl.fromtype), true);
 
         const smtdecl = new SMTEntityOfTypeDecl(false, smttype.smttypename, smttype.smttypetag, consfuncs.box, consfuncs.bfield, oftype.smttypename);
+        this.assembly.entityDecls.push(smtdecl);
+    }
+
+    private processPrimitiveListEntityDecl(edecl: MIRPrimitiveListEntityTypeDecl) {
+        const mirtype = this.temitter.getMIRType(edecl.tkey);
+        const smttype = this.temitter.getSMTTypeFor(mirtype);
+
+        const consfuncs = this.temitter.getSMTConstructorName(mirtype);
+
+        const smtdecl = new SMTEntityCollectionTypeDecl(smttype.smttypename, smttype.smttypetag, consfuncs.box, consfuncs.bfield);
+        this.assembly.entityDecls.push(smtdecl);
+    }
+
+    private processPrimitiveStackEntityDecl(edecl: MIRPrimitiveStackEntityTypeDecl) {
+        assert(false, "MIRPrimitiveStackEntityTypeDecl");
+    }
+
+    private processPrimitiveQueueEntityDecl(edecl: MIRPrimitiveQueueEntityTypeDecl) {
+        assert(false, "MIRPrimitiveQueueEntityTypeDecl");
+    }
+
+    private processPrimitiveSetEntityDecl(edecl: MIRPrimitiveSetEntityTypeDecl) {
+        assert(false, "MIRPrimitiveSetEntityTypeDecl");
+    }
+
+    private processPrimitiveMapEntityDecl(edecl: MIRPrimitiveMapEntityTypeDecl) {
+        const mirtype = this.temitter.getMIRType(edecl.tkey);
+        const smttype = this.temitter.getSMTTypeFor(mirtype);
+
+        const consfuncs = this.temitter.getSMTConstructorName(mirtype);
+
+        const smtdecl = new SMTEntityCollectionTypeDecl(smttype.smttypename, smttype.smttypetag, consfuncs.box, consfuncs.bfield);
         this.assembly.entityDecls.push(smtdecl);
     }
 
@@ -803,6 +835,21 @@ class SMTEmitter {
             }
             else if (edcl.attributes.includes("__something_type")) {
                 this.processConstructableInternalEntityDecl(edcl as MIRConstructableInternalEntityTypeDecl);
+            }
+            else if (edcl.attributes.includes("__list_type")) {
+                this.processPrimitiveListEntityDecl(edcl as MIRPrimitiveListEntityTypeDecl);
+            }
+            else if (edcl.attributes.includes("__stack_type")) {
+                this.processPrimitiveStackEntityDecl(edcl as MIRPrimitiveStackEntityTypeDecl);
+            }
+            else if (edcl.attributes.includes("__queue_type")) {
+                this.processPrimitiveQueueEntityDecl(edcl as MIRPrimitiveQueueEntityTypeDecl);
+            }
+            else if (edcl.attributes.includes("__set_type")) {
+                this.processPrimitiveSetEntityDecl(edcl as MIRPrimitiveSetEntityTypeDecl);
+            }
+            else if (edcl.attributes.includes("__map_type")) {
+                this.processPrimitiveMapEntityDecl(edcl as MIRPrimitiveMapEntityTypeDecl);
             }
             else {
                 //Don't need to do anything -- including for collection decls which all map to BTerm

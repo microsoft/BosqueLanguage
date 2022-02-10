@@ -1,11 +1,11 @@
 {
-    "name": "bosque-reference-implementation",
-    "description": "Experimental compiler & runtime for the Bosque programming language.",
+    "name": "bosque-language",
+    "description": "Bosque programming language.",
     "author": {
         "name": "Mark Marron <marron@microsoft.com>"
     },
     "license": "MIT",
-    "version": "0.8.1",
+    "version": "0.9.0",
     "repository": {
         "type": "git",
         "url": "https://github.com/Microsoft/BosqueLanguage"

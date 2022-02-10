@@ -23,6 +23,7 @@ type SMT2FileInfo = {
     TUPLE_INFO: { decls: string[], constructors: string[], boxing: string[] },
     RECORD_INFO: { decls: string[], constructors: string[], boxing: string[] },
     TYPE_INFO: { decls: string[], constructors: string[], boxing: string[] }
+    COLLECTION_INFO: string[],
     EPHEMERAL_DECLS: { decls: string[], constructors: string[] },
     RESULT_INFO: { decls: string[], constructors: string[] },
     MASK_INFO: { decls: string[], constructors: string[] },
@@ -153,6 +154,12 @@ class SMTEntityOfTypeDecl extends SMTEntityDecl {
     constructor(iskeytype: boolean, smtname: string, typetag: string, boxf: string, ubf: string, ofsmttype: string) {
         super(iskeytype, smtname, typetag, boxf, ubf);
         this.ofsmttype = ofsmttype;
+    }
+}
+
+class SMTEntityCollectionTypeDecl extends SMTEntityDecl {
+    constructor(smtname: string, typetag: string, boxf: string, ubf: string) {
+        super(false, smtname, typetag, boxf, ubf);
     }
 }
 
@@ -480,6 +487,16 @@ class SMTAssembly {
                 };
             });
 
+        const collectiontypeinfo = this.entityDecls
+            .filter((et) => et instanceof SMTEntityCollectionTypeDecl)
+            .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
+            .map((tt) => {
+                return {
+                    decl: `(define-sort ${tt.smtname} () BTerm)`,
+                    boxf: `(${tt.boxf} (${tt.ubf} BTerm))`
+                };
+            });
+
         const etypeinfo = this.ephemeralDecls
             .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
             .map((et) => {
@@ -642,12 +659,32 @@ class SMTAssembly {
             STRING_TYPE_ALIAS: "(define-sort BString () String)",
             OF_TYPE_DECLS: [...keytypeinfo.map((kd) => kd.decl), ...oftypeinfo.map((td) => td.decl)],
             KEY_BOX_OPS: oftypeinfo.map((td) => td.boxf),
-            TUPLE_INFO: { decls: termtupleinfo.map((kti) => kti.decl), constructors: termtupleinfo.map((kti) => kti.consf), boxing: termtupleinfo.map((kti) => kti.boxf) },
-            RECORD_INFO: { decls: termrecordinfo.map((kti) => kti.decl), constructors: termrecordinfo.map((kti) => kti.consf), boxing: termrecordinfo.map((kti) => kti.boxf) },
-            TYPE_INFO: { decls: termtypeinfo.filter((tti) => tti.decl !== undefined).map((tti) => tti.decl as string), constructors: termtypeinfo.filter((tti) => tti.consf !== undefined).map((tti) => tti.consf as string), boxing: termtypeinfo.map((tti) => tti.boxf) },
-            EPHEMERAL_DECLS: { decls: etypeinfo.map((kti) => kti.decl), constructors: etypeinfo.map((kti) => kti.consf) },
-            RESULT_INFO: { decls: rtypeinfo.map((kti) => kti.decl), constructors: rtypeinfo.map((kti) => kti.consf) },
-            MASK_INFO: { decls: maskinfo.map((mi) => mi.decl), constructors: maskinfo.map((mi) => mi.consf) },
+            TUPLE_INFO: { 
+                decls: termtupleinfo.map((kti) => kti.decl), constructors: termtupleinfo.map((kti) => kti.consf), 
+                boxing: termtupleinfo.map((kti) => kti.boxf) 
+            },
+            RECORD_INFO: { 
+                decls: termrecordinfo.map((kti) => kti.decl), constructors: termrecordinfo.map((kti) => kti.consf), 
+                boxing: termrecordinfo.map((kti) => kti.boxf) 
+            },
+            TYPE_INFO: { 
+                decls: termtypeinfo.filter((tti) => tti.decl !== undefined).map((tti) => tti.decl as string), 
+                constructors: termtypeinfo.filter((tti) => tti.consf !== undefined).map((tti) => tti.consf as string), 
+                boxing: [...termtypeinfo.map((tti) => tti.boxf), ...collectiontypeinfo.map((cti) => cti.boxf)] 
+            },
+            COLLECTION_INFO: collectiontypeinfo.map((cti) => cti.decl),
+            EPHEMERAL_DECLS: { 
+                decls: etypeinfo.map((kti) => kti.decl), 
+                constructors: etypeinfo.map((kti) => kti.consf) 
+            },
+            RESULT_INFO: { 
+                decls: rtypeinfo.map((kti) => kti.decl), 
+                constructors: rtypeinfo.map((kti) => kti.consf) 
+            },
+            MASK_INFO: { 
+                decls: maskinfo.map((mi) => mi.decl), 
+                constructors: maskinfo.map((mi) => mi.consf) 
+            },
             V_MIN_MAX: v_min_max,
             GLOBAL_DECLS: gdecls,
             UF_DECLS: ufdecls,
@@ -690,6 +727,7 @@ class SMTAssembly {
             .replace(";;TUPLE_TYPE_BOXING;;", joinWithIndent(sfileinfo.TUPLE_INFO.boxing, "      "))
             .replace(";;RECORD_TYPE_BOXING;;", joinWithIndent(sfileinfo.RECORD_INFO.boxing, "      "))
             .replace(";;TYPE_BOXING;;", joinWithIndent(sfileinfo.TYPE_INFO.boxing, "      "))
+            .replace(";;COLLECTION_DECLS;;", joinWithIndent(sfileinfo.COLLECTION_INFO, ""))
             .replace(";;EPHEMERAL_DECLS;;", joinWithIndent(sfileinfo.EPHEMERAL_DECLS.decls, "      "))
             .replace(";;EPHEMERAL_CONSTRUCTORS;;", joinWithIndent(sfileinfo.EPHEMERAL_DECLS.constructors, "      "))
             .replace(";;RESULT_DECLS;;", joinWithIndent(sfileinfo.RESULT_INFO.decls, "      "))
@@ -708,7 +746,7 @@ class SMTAssembly {
 }
 
 export {
-    SMTEntityDecl, SMTEntityOfTypeDecl, SMTEntityStdDecl,
+    SMTEntityDecl, SMTEntityOfTypeDecl, SMTEntityCollectionTypeDecl, SMTEntityStdDecl,
     SMTTupleDecl, SMTRecordDecl, SMTEphemeralListDecl,
     SMTConstantDecl,
     SMTFunction, SMTFunctionUninterpreted,

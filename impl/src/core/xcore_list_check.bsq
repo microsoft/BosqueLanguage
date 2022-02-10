@@ -73,13 +73,16 @@ internal entity ListOps provides Some {
             return none;
         }
         elif(l.is<Vector1<T>>()) {
-            return Vector1<T>{[0, l.v0]};
+            let ll = s_safeAs<ListRepr<T>, Vector1<T>>(l);
+            return Vector1<T>{[0, ll.v0]};
         }
         elif(l.is<Vector2<T>>()) {
-            return Vector2<T>{[0, l.v0], [1, l.v1]};
+            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
+            return Vector2<T>{[0, ll.v0], [1, ll.v1]};
         }
         elif(l.is<Vector3<T>>()) {
-            return Vector3<T>{[0, l.v0], [1, l.v1], [2, l.v2]};
+            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
+            return Vector3<T>{[0, ll.v0], [1, ll.v1], [2, ll.v2]};
         }
         else {
             return l.zip_index[recursive]();
@@ -231,22 +234,24 @@ internal entity ListOps provides Some {
             return l;
         }
         elif(l.is<Vector2<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
             if(end == 2) {
                 return l;
             }
             else {
-                return Vector1<T>{l.v0};
+                return Vector1<T>{ll.v0};
             }
         }
         elif(l.is<Vector3<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
             if(end == 3) {
                 return l;
             }
             elif(end == 2) {
-                return Vector2<T>{l.v0, l.v1};
+                return Vector2<T>{ll.v0, ll.v1};
             }
             else {
-                return Vector1<T>{l.v0};
+                return Vector1<T>{ll.v0};
             }
         }
         else {
@@ -264,25 +269,28 @@ internal entity ListOps provides Some {
         assert(l !== none);
 
         if(l.is<Vector1<T>>()) {
-            return l.v0;
+            let ll = s_safeAs<ListRepr<T>, Vector1<T>>(l);
+            return ll.v0;
         }
         elif(l.is<Vector2<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
             if(i == 0) {
-                return l.v0;
+                return ll.v0;
             }
             else {
-                return l.v1;
+                return ll.v1;
             }
         }
         elif(l.is<Vector3<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
             if(i == 0) {
-                return l.v0;
+                return ll.v0;
             }
             elif(i == 1) {
-                return l.v1;
+                return ll.v1;
             }
             else {
-                return l.v2;
+                return ll.v2;
             }
         }
         else {
@@ -295,13 +303,16 @@ internal entity ListOps provides Some {
             return false;
         }
         elif(l.is<Vector1<T>>()) {
-            return p[recursive?](l.v0);
+            let ll = s_safeAs<ListRepr<T>, Vector1<T>>(l);
+            return p[recursive?](ll.v0);
         }
         elif(l.is<Vector2<T>>()) {
-            return \/(p[recursive?](l.v0), p[recursive?](l.v1));
+            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
+            return \/(p[recursive?](ll.v0), p[recursive?](ll.v1));
         }
         elif(l.is<Vector3<T>>()) {
-            return \/(p[recursive?](l.v0), p[recursive?](l.v1), p[recursive?](l.v2));
+            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
+            return \/(p[recursive?](ll.v0), p[recursive?](ll.v1), p[recursive?](ll.v2));
         }
         else {
             return l.has_pred[recursive](p);
@@ -313,13 +324,16 @@ internal entity ListOps provides Some {
             return false;
         }
         elif(l.is<Vector1<T>>()) {
-            return p[recursive?](l.v0, 0n);
+            let ll = s_safeAs<ListRepr<T>, Vector1<T>>(l);
+            return p[recursive?](ll.v0, 0n);
         }
         elif(l.is<Vector2<T>>()) {
-            return \/(p[recursive?](l.v0, 0n), p[recursive?](l.v1, 1n));
+            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
+            return \/(p[recursive?](ll.v0, 0n), p[recursive?](ll.v1, 1n));
         }
         elif(l.is<Vector3<T>>()) {
-            return \/(p[recursive?](l.v0, 0n), p[recursive?](l.v1, 1n), p[recursive?](l.v2, 2n));
+            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
+            return \/(p[recursive?](ll.v0, 0n), p[recursive?](ll.v1, 1n), p[recursive?](ll.v2, 2n));
         }
         else {
             return l.has_pred_idx[recursive](0n, p);
@@ -331,7 +345,8 @@ internal entity ListOps provides Some {
             return none;
         }
         elif(l.is<Vector1<T>>()) {
-            if(p[recursive?](l.v0)) {
+            let ll = s_safeAs<ListRepr<T>, Vector1<T>>(l);
+            if(p[recursive?](ll.v0)) {
                 return 0n;
             }
             else {
@@ -339,10 +354,11 @@ internal entity ListOps provides Some {
             }
         }
         elif(l.is<Vector2<T>>()) {
-            if(p[recursive?](l.v0)) {
+            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
+            if(p[recursive?](ll.v0)) {
                 return 0n;
             }
-            elif(p[recursive?](l.v1)) {
+            elif(p[recursive?](ll.v1)) {
                 return 1n;
             }
             else {
@@ -350,13 +366,14 @@ internal entity ListOps provides Some {
             }
         }
         elif(l.is<Vector3<T>>()) {
-            if(p[recursive?](l.v0)) {
+            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
+            if(p[recursive?](ll.v0)) {
                 return 0n;
             }
-            elif(p[recursive?](l.v1)) {
+            elif(p[recursive?](ll.v1)) {
                 return 1n;
             }
-            elif(p[recursive?](l.v2)) {
+            elif(p[recursive?](ll.v2)) {
                 return 2n;
             }
             else {
@@ -373,7 +390,8 @@ internal entity ListOps provides Some {
             return none;
         }
         elif(l.is<Vector1<T>>()) {
-            if(p[recursive?](l.v0, 0n)) {
+            let ll = s_safeAs<ListRepr<T>, Vector1<T>>(l);
+            if(p[recursive?](ll.v0, 0n)) {
                 return 0n;
             }
             else {
@@ -381,10 +399,11 @@ internal entity ListOps provides Some {
             }
         }
         elif(l.is<Vector2<T>>()) {
-            if(p[recursive?](l.v0, 0n)) {
+            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
+            if(p[recursive?](ll.v0, 0n)) {
                 return 0n;
             }
-            elif(p[recursive?](l.v1, 1n)) {
+            elif(p[recursive?](ll.v1, 1n)) {
                 return 1n;
             }
             else {
@@ -392,13 +411,14 @@ internal entity ListOps provides Some {
             }
         }
         elif(l.is<Vector3<T>>()) {
-            if(p[recursive?](l.v0, 0n)) {
+            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
+            if(p[recursive?](ll.v0, 0n)) {
                 return 0n;
             }
-            elif(p[recursive?](l.v1, 1n)) {
+            elif(p[recursive?](ll.v1, 1n)) {
                 return 1n;
             }
-            elif(p[recursive?](l.v2, 2n)) {
+            elif(p[recursive?](ll.v2, 2n)) {
                 return 2n;
             }
             else {
@@ -415,7 +435,8 @@ internal entity ListOps provides Some {
             return none;
         }
         elif(l.is<Vector1<T>>()) {
-            if(p[recursive?](l.v0)) {
+            let ll = s_safeAs<ListRepr<T>, Vector1<T>>(l);
+            if(p[recursive?](ll.v0)) {
                 return 0n;
             }
             else {
@@ -423,10 +444,11 @@ internal entity ListOps provides Some {
             }
         }
         elif(l.is<Vector2<T>>()) {
-            if(p[recursive?](l.v1)) {
+            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
+            if(p[recursive?](ll.v1)) {
                 return 1n;
             }
-            elif(p[recursive?](l.v0)) {
+            elif(p[recursive?](ll.v0)) {
                 return 0n;
             }
             else {
@@ -434,13 +456,14 @@ internal entity ListOps provides Some {
             }
         }
         elif(l.is<Vector3<T>>()) {
-            if(p[recursive?](l.v2)) {
+            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
+            if(p[recursive?](ll.v2)) {
                 return 2n;
             }
-            elif(p[recursive?](l.v1)) {
+            elif(p[recursive?](ll.v1)) {
                 return 1n;
             }
-            elif(p[recursive?](l.v0)) {
+            elif(p[recursive?](ll.v0)) {
                 return 0n;
             }
             else {
@@ -457,7 +480,8 @@ internal entity ListOps provides Some {
             return none;
         }
         elif(l.is<Vector1<T>>()) {
-            if(p[recursive?](l.v0, 0n)) {
+            let ll = s_safeAs<ListRepr<T>, Vector1<T>>(l);
+            if(p[recursive?](ll.v0, 0n)) {
                 return 0n;
             }
             else {
@@ -465,10 +489,11 @@ internal entity ListOps provides Some {
             }
         }
         elif(l.is<Vector2<T>>()) {
-            if(p[recursive?](l.v1, 1n)) {
+            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
+            if(p[recursive?](ll.v1, 1n)) {
                 return 1n;
             }
-            elif(p[recursive?](l.v0, 0n)) {
+            elif(p[recursive?](ll.v0, 0n)) {
                 return 0n;
             }
             else {
@@ -476,13 +501,14 @@ internal entity ListOps provides Some {
             }
         }
         elif(l.is<Vector3<T>>()) {
-            if(p[recursive?](l.v2, 2n)) {
+            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
+            if(p[recursive?](ll.v2, 2n)) {
                 return 2n;
             }
-            elif(p[recursive?](l.v1, 1n)) {
+            elif(p[recursive?](ll.v1, 1n)) {
                 return 1n;
             }
-            elif(p[recursive?](l.v0, 0n)) {
+            elif(p[recursive?](ll.v0, 0n)) {
                 return 0n;
             }
             else {
@@ -499,7 +525,9 @@ internal entity ListOps provides Some {
             return none;
         }
         elif(l.is<Vector1<T>>()) {
-            let v0 = l.v0;
+            let ll = s_safeAs<ListRepr<T>, Vector1<T>>(l);
+
+            let v0 = ll.v0;
             let p0 = p[recursive?](v0);
 
             if(p0) {
@@ -510,9 +538,11 @@ internal entity ListOps provides Some {
             }
         }
         elif(l.is<Vector2<T>>()) {
-            let v0 = l.v0;
+            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
+
+            let v0 = ll.v0;
             let p0 = p[recursive?](v0);
-            let v1 = l.v1;
+            let v1 = ll.v1;
             let p1 = p[recursive?](v1);
 
             if(/\(p0, p1)) {
@@ -529,11 +559,13 @@ internal entity ListOps provides Some {
             }
         }
         elif(l.is<Vector3<T>>()) {
-            let v0 = l.v0;
+            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
+
+            let v0 = ll.v0;
             let p0 = p[recursive?](v0);
-            let v1 = l.v1;
+            let v1 = ll.v1;
             let p1 = p[recursive?](v1);
-            let v2 = l.v2;
+            let v2 = ll.v2;
             let p2 = p[recursive?](v2);
 
             if(/\(p0, p1, p2)) {
@@ -572,7 +604,9 @@ internal entity ListOps provides Some {
             return none;
         }
         elif(l.is<Vector1<T>>()) {
-            let v0 = l.v0;
+            let ll = s_safeAs<ListRepr<T>, Vector1<T>>(l);
+
+            let v0 = ll.v0;
             let p0 = p[recursive?](v0, 0n);
 
             if(p0) {
@@ -583,9 +617,11 @@ internal entity ListOps provides Some {
             }
         }
         elif(l.is<Vector2<T>>()) {
-            let v0 = l.v0;
+            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
+
+            let v0 = ll.v0;
             let p0 = p[recursive?](v0, 0n);
-            let v1 = l.v1;
+            let v1 = ll.v1;
             let p1 = p[recursive?](v1, 1n);
 
             if(/\(p0, p1)) {
@@ -602,11 +638,13 @@ internal entity ListOps provides Some {
             }
         }
         elif(l.is<Vector3<T>>()) {
-            let v0 = l.v0;
+            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
+
+            let v0 = ll.v0;
             let p0 = p[recursive?](v0, 0n);
-            let v1 = l.v1;
+            let v1 = ll.v1;
             let p1 = p[recursive?](v1, 1n);
-            let v2 = l.v2;
+            let v2 = ll.v2;
             let p2 = p[recursive?](v2, 2n);
 
             if(/\(p0, p1, p2)) {
@@ -645,13 +683,16 @@ internal entity ListOps provides Some {
             return none;
         }
         elif(l.is<Vector1<T>>()) {
-            return Vector1<U>{f[recursive?](l.v0)};
+            let ll = s_safeAs<ListRepr<T>, Vector1<T>>(l);
+            return Vector1<U>{f[recursive?](ll.v0)};
         }
         elif(l.is<Vector2<T>>()) {
-            return Vector2<U>{f[recursive?](l.v0), f[recursive?](l.v1)};
+            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
+            return Vector2<U>{f[recursive?](ll.v0), f[recursive?](ll.v1)};
         }
         elif(l.is<Vector3<T>>()) {
-            return Vector3<U>{f[recursive?](l.v0), f[recursive?](l.v1), f[recursive?](l.v2)};
+            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
+            return Vector3<U>{f[recursive?](ll.v0), f[recursive?](ll.v1), f[recursive?](ll.v2)};
         }
         else {
             return l.map[recursive](f);
@@ -663,13 +704,16 @@ internal entity ListOps provides Some {
             return none;
         }
         elif(l.is<Vector1<T>>()) {
-            return Vector1<U>{f[recursive?](l.v0, 0n)};
+            let ll = s_safeAs<ListRepr<T>, Vector1<T>>(l);
+            return Vector1<U>{f[recursive?](ll.v0, 0n)};
         }
         elif(l.is<Vector2<T>>()) {
-            return Vector2<U>{f[recursive?](l.v0, 0n), f[recursive?](l.v1, 1n)};
+            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
+            return Vector2<U>{f[recursive?](ll.v0, 0n), f[recursive?](ll.v1, 1n)};
         }
         elif(l.is<Vector3<T>>()) {
-            return Vector3<U>{f[recursive?](l.v0, 0n), f[recursive?](l.v1, 1n), f[recursive?](l.v2, 2n)};
+            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
+            return Vector3<U>{f[recursive?](ll.v0, 0n), f[recursive?](ll.v1, 1n), f[recursive?](ll.v2, 2n)};
         }
         else {
             return l.map_idx[recursive](0n, f);
@@ -684,7 +728,8 @@ internal entity ListOps provides Some {
             return 0n;
         }
         elif(l.is<Vector2<T>>()) {
-            if(f[recursive?](l.v1) < f[recursive?](l.v0)) {
+            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
+            if(f[recursive?](ll.v1) < f[recursive?](ll.v0)) {
                 return 1n;
             }
             else {
@@ -692,9 +737,10 @@ internal entity ListOps provides Some {
             }
         }
         elif(l.is<Vector3<T>>()) {
-            let lt21 = f[recursive?](l.v2) < f[recursive?](l.v1);
-            let lt20 = f[recursive?](l.v2) < f[recursive?](l.v0);
-            let lt10 = f[recursive?](l.v1) < f[recursive?](l.v0);
+            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
+            let lt21 = f[recursive?](ll.v2) < f[recursive?](ll.v1);
+            let lt20 = f[recursive?](ll.v2) < f[recursive?](ll.v0);
+            let lt10 = f[recursive?](ll.v1) < f[recursive?](ll.v0);
             if(/\(lt21, lt20)) {
                 return 2n;
             }
@@ -718,7 +764,8 @@ internal entity ListOps provides Some {
             return 0n;
         }
         elif(l.is<Vector2<T>>()) {
-            if(f[recursive?](l.v1) > f[recursive?](l.v0)) {
+            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
+            if(f[recursive?](l.v1) > f[recursive?](ll.v0)) {
                 return 1n;
             }
             else {
@@ -726,9 +773,10 @@ internal entity ListOps provides Some {
             }
         }
         elif(l.is<Vector3<T>>()) {
-            let gt21 = f[recursive?](l.v2) > f[recursive?](l.v1);
-            let gt20 = f[recursive?](l.v2) > f[recursive?](l.v0);
-            let gt10 = f[recursive?](l.v1) > f[recursive?](l.v0);
+            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
+            let gt21 = f[recursive?](ll.v2) > f[recursive?](ll.v1);
+            let gt20 = f[recursive?](ll.v2) > f[recursive?](ll.v0);
+            let gt10 = f[recursive?](ll.v1) > f[recursive?](ll.v0);
             if(/\(gt21, gt20)) {
                 return 2n;
             }
@@ -749,13 +797,16 @@ internal entity ListOps provides Some {
             return T::zero;
         }
         elif(l.is<Vector1<T>>()) {
-            return l.v0;
+            let ll = s_safeAs<ListRepr<T>, Vector1<T>>(l);
+            return ll.v0;
         }
         elif(l.is<Vector2<T>>()) {
-            return l.v0 + l.v1;
+            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
+            return ll.v0 + ll.v1;
         }
         elif(l.is<Vector3<T>>()) {
-            return l.v0 + l.v1 + l.v2;
+            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
+            return ll.v0 + ll.v1 + ll.v2;
         }
         else {
             return l.sum[recursive]();
@@ -770,40 +821,42 @@ internal entity ListOps provides Some {
             return l;
         }
         elif(l.is<Vector2<T>>()) {
-            if(!cmp[recursive?](l.v1, l.v0)) {
+            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
+            if(!cmp[recursive?](ll.v1, ll.v0)) {
                 return l;
             }
             else {
-                return List<T>{at1, at0};
+                return List<T>{ll.v1, ll.v0};
             }
         }
         elif(l.is<Vector3<T>>()) {
-            let l10 = cmp[recursive?](l.v1, l.v0);
-            let l20 = cmp[recursive?](l.v2, l.v0);
-            let l21 = cmp[recursive?](l.v2, l.v1);
+            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
+            let l10 = cmp[recursive?](ll.v1, ll.v0);
+            let l20 = cmp[recursive?](ll.v2, ll.v0);
+            let l21 = cmp[recursive?](ll.v2, ll.v1);
 
             if(/\(l20, l21)) {
                 if(l10) {
-                    return Vector3<T>{l.v2, l.v1, l.v0};
+                    return Vector3<T>{ll.v2, ll.v1, ll.v0};
                 }
                 else {
-                    return Vector3<T>{l.v2, l.v0, l.v1};
+                    return Vector3<T>{ll.v2, ll.v0, ll.v1};
                 }
             }
             elif(/\(l10, !l21)) {
                 if(l20) {
-                    return Vector3<T>{l.v1, l.v2, l.v0};
+                    return Vector3<T>{ll.v1, ll.v2, ll.v0};
                 }
                 else {
-                    return Vector3<T>{l.v1, l.v0, l.v2};
+                    return Vector3<T>{ll.v1, ll.v0, ll.v2};
                 }
             }
             else {
                 if(l21) {
-                    return Vector3<T>{l.v0, l.v2, l.v1};
+                    return Vector3<T>{ll.v0, ll.v2, ll.v1};
                 }
                 else {
-                    return Vector3<T>{l.v0, l.v1, l.v2};
+                    return Vector3<T>{ll.v0, ll.v1, ll.v2};
                 }
             }
         }
@@ -820,30 +873,32 @@ internal entity ListOps provides Some {
             return l;
         }
         elif(l.is<Vector2<T>>()) {
-            if(eq[recursive?](l.v0, l.v1)) {
-                return Vector1<T>{l.v0};
+            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
+            if(eq[recursive?](ll.v0, ll.v1)) {
+                return Vector1<T>{ll.v0};
             }
             else {
                 return l;
             }
         }
         elif(l.is<Vector3<T>>()) {
-            let eq01 = eq[recursive?](l.v0, l.v1);
-            let eq02 = eq[recursive?](l.v0, l.v2);
-            let eq12 = eq[recursive?](l.v1, l.v2);
+            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
+            let eq01 = eq[recursive?](ll.v0, ll.v1);
+            let eq02 = eq[recursive?](ll.v0, ll.v2);
+            let eq12 = eq[recursive?](ll.v1, ll.v2);
             
 
             if(/\(eq01, eq02)) {
-                return Vector1<T>{l.v0};
+                return Vector1<T>{ll.v0};
             }
             elif(eq01) {
-                return Vector2<T>{l.v0, l.v2};
+                return Vector2<T>{ll.v0, ll.v2};
             }
             elif(eq02) {
-                return Vector2<T>{l.v0, l.v1};
+                return Vector2<T>{ll.v0, ll.v1};
             }
             elif(eq12) {
-                return Vector2<T>{l.v0, l.v1};
+                return Vector2<T>{ll.v0, ll.v1};
             }
             else {
                 return l;
@@ -863,10 +918,12 @@ internal entity ListOps provides Some {
             return l;
         }
         elif(l.is<Vector2<T>>()) {
-            return Vector2<T>{l.v1, l.v0};
+            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
+            return Vector2<T>{ll.v1, ll.v0};
         }
         elif(l.is<Vector3<T>>()) {
-            return Vector3<T>{l.v2, l.v1, l.v0};
+            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
+            return Vector3<T>{ll.v2, ll.v1, ll.v0};
         }
         else {
             return l.reverse[recursive]();
@@ -878,13 +935,16 @@ internal entity ListOps provides Some {
             return init;
         }
         elif(l.is<Vector1<T>>()) {
-            return op[recursive?](init, l.v0);
+            let ll = s_safeAs<ListRepr<T>, Vector1<T>>(l);
+            return op[recursive?](init, ll.v0);
         }
         elif(l.is<Vector2<T>>()) {
-            return op[recursive?](op[recursive?](init, l.v0), l.v1);
+            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
+            return op[recursive?](op[recursive?](init, ll.v0), ll.v1);
         }
         elif(l.is<Vector3<T>>()) {
-            return op[recursive?](op[recursive?](op[recursive?](init, l.v0), l.v1), l.v2);
+            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
+            return op[recursive?](op[recursive?](op[recursive?](init, ll.v0), ll.v1), ll.v2);
         }
         else {
             return l.reduce<U>[recursive](init, op);
@@ -896,13 +956,16 @@ internal entity ListOps provides Some {
             return init;
         }
         elif(l.is<Vector1<T>>()) {
-            return op[recursive?](init, l.v0, 0n);
+            let ll = s_safeAs<ListRepr<T>, Vector1<T>>(l);
+            return op[recursive?](init, ll.v0, 0n);
         }
         elif(l.is<Vector2<T>>()) {
-            return op[recursive?](op[recursive?](init, l.v0, 0n), l.v1, 1n);
+            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
+            return op[recursive?](op[recursive?](init, ll.v0, 0n), ll.v1, 1n);
         }
         elif(l.is<Vector3<T>>()) {
-            return op[recursive?](op[recursive?](op[recursive?](init, l.v0, 0n), l.v1, 1n), l.v2, 2n);
+            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
+            return op[recursive?](op[recursive?](op[recursive?](init, ll.v0, 0n), ll.v1, 1n), ll.v2, 2n);
         }
         else {
             return l.reduce_idx<U>[recursive?](init, 0n, op);
@@ -914,18 +977,21 @@ internal entity ListOps provides Some {
             return (|env, none|);
         }
         elif(l.is<Vector1<T>>()) {
-            let e0, v0 = op[recursive?](env, l.v0);
+            let ll = s_safeAs<ListRepr<T>, Vector1<T>>(l);
+            let e0, v0 = op[recursive?](env, ll.v0);
             return (|e0, Vector1<U>{v0}|);
         }
         elif(l.is<Vector2<T>>()) {
-            let e0, v0 = op[recursive?](env, l.v0);
-            let e1, v1 = op[recursive?](e0, l.v1);
+            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
+            let e0, v0 = op[recursive?](env, ll.v0);
+            let e1, v1 = op[recursive?](e0, ll.v1);
             return (|e1, Vector2<U>{v0, v1}|);
         }
         elif(l.is<Vector3<T>>()) {
-            let e0, v0 = op[recursive?](env, l.v0);
-            let e1, v1 = op[recursive?](e0, l.v1);
-            let e2, v2 = op[recursive?](e1, l.v2);
+            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
+            let e0, v0 = op[recursive?](env, ll.v0);
+            let e1, v1 = op[recursive?](e0, ll.v1);
+            let e2, v2 = op[recursive?](e1, ll.v2);
             return (|e2, Vector2<U>{v0, v1, v2}|);
         }
         else {
@@ -938,18 +1004,21 @@ internal entity ListOps provides Some {
             return (|env, none|);
         }
         elif(l.is<Vector1<T>>()) {
-            let e0, v0 = op[recursive?](env, l.v0, 0n);
+            let ll = s_safeAs<ListRepr<T>, Vector1<T>>(l);
+            let e0, v0 = op[recursive?](env, ll.v0, 0n);
             return (|e0, Vector1<U>{v0}|);
         }
         elif(l.is<Vector2<T>>()) {
-            let e0, v0 = op[recursive?](env, l.v0, 0n);
-            let e1, v1 = op[recursive?](e0, l.v1, 1n);
+            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
+            let e0, v0 = op[recursive?](env, ll.v0, 0n);
+            let e1, v1 = op[recursive?](e0, ll.v1, 1n);
             return (|e1, Vector2<U>{v0, v1}|);
         }
         elif(l.is<Vector3<T>>()) {
-            let e0, v0 = op[recursive?](env, l.v0, 0n);
-            let e1, v1 = op[recursive?](e0, l.v1, 1n);
-            let e2, v2 = op[recursive?](e1, l.v2, 2n);
+            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
+            let e0, v0 = op[recursive?](env, ll.v0, 0n);
+            let e1, v1 = op[recursive?](e0, ll.v1, 1n);
+            let e2, v2 = op[recursive?](e1, ll.v2, 2n);
             return e2, Vector2<U>{v0, v1, v2};
         }
         else {
