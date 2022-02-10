@@ -60,7 +60,7 @@ function workflowLoadCoreSrc(): CodeFileInfo[] | undefined {
 
 function generateMASM(usercode: PackageConfig, entrypoint: {filename: string, names: string[]}): MIRAssembly {
     const corecode = workflowLoadCoreSrc() as CodeFileInfo[];
-    const coreconfig = new PackageConfig(["CHECK_LIBS"], corecode);
+    const coreconfig = new PackageConfig(["EXEC_LIBS"], corecode);
 
     const { masm, errors } = MIREmitter.generateMASM(BuildApplicationMode.Executable, [coreconfig, usercode], "debug", entrypoint);
     if (errors.length !== 0) {
