@@ -66,15 +66,12 @@ BSQTypeSizeInfo j_allocinfo(json v)
 
 void j_vtable(std::map<BSQVirtualInvokeID, BSQInvokeID>& vtable, json v)
 {
+    auto oftype = v["oftype"].get<std::string>();
     auto varray = v["vtable"];
     for(size_t i = 0; i < varray.size(); ++i)
     {
         auto ventry = varray.at(i);
-
-        auto vstr = ventry["vcall"].get<std::string>();
-        auto istr = ventry["inv"].get<std::string>();
-        
-        vtable[MarshalEnvironment::g_vinvokeToIdMap[vstr]] = MarshalEnvironment::g_invokeToIdMap[istr];
+        vtable[MarshalEnvironment::g_vinvokeToIdMap[oftype]] = MarshalEnvironment::g_invokeToIdMap[ventry];
     }
 }
 
@@ -182,7 +179,7 @@ const BSQType* jsonLoadEntityType(json v, bool isref)
     auto allocinfo = j_allocinfo(v);
 
     std::map<BSQVirtualInvokeID, BSQInvokeID> vtable;
-    j_vtable(vtable, v);
+    j_vtable(vtable, v["vtable"]);
 
     std::vector<BSQFieldID> fieldnames;
     auto fnlist = v["fieldnames"];

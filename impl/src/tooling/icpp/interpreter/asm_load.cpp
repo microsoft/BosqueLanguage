@@ -30,8 +30,8 @@ const BSQField* jsonLoadFieldDecl(json v)
 
 BSQListTypeFlavor jsonLoadListFlavor(json v)
 {
-    auto ltype = v["ltype"].get<BSQTypeID>();
-
+    auto ltype = MarshalEnvironment::g_typenameToIdMap.find(v["ltype"].get<std::string>())->second;
+    
     const BSQType* entrytype = BSQType::g_typetable[MarshalEnvironment::g_typenameToIdMap.find(v["entrytype"].get<std::string>())->second];
 
     const BSQPartialVectorType* pv4type = dynamic_cast<const BSQPartialVectorType*>(BSQType::g_typetable[MarshalEnvironment::g_typenameToIdMap.find(v["pv4type"].get<std::string>())->second]);
