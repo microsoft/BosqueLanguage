@@ -327,7 +327,7 @@ public:
     const Argument arg;
     const BSQStatementGuard sguard;
 
-    DirectAssignOp(SourceInfo sinfo, TargetVar trgt, const BSQType* intotype, Argument arg, uint32_t size, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::DirectAssignOp), trgt(trgt), intotype(intotype), arg(arg), sguard(sguard) {;}
+    DirectAssignOp(SourceInfo sinfo, TargetVar trgt, const BSQType* intotype, Argument arg, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::DirectAssignOp), trgt(trgt), intotype(intotype), arg(arg), sguard(sguard) {;}
     virtual ~DirectAssignOp() {;}
 
     static DirectAssignOp* jparse(json v);

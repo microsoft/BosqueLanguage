@@ -249,7 +249,7 @@ StoreConstantMaskValueOp* StoreConstantMaskValueOp::jparse(json v)
 
 DirectAssignOp* DirectAssignOp::jparse(json v)
 {
-    return new DirectAssignOp(j_sinfo(v), j_trgt(v), j_intotype(v), j_arg(v), v["size"].get<uint32_t>(), j_sguard(v));
+    return new DirectAssignOp(j_sinfo(v), j_trgt(v), j_intotype(v), j_arg(v), j_sguard(v));
 }
 
 BoxOp* BoxOp::jparse(json v)
