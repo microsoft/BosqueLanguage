@@ -609,7 +609,7 @@ public:
         else
         {
             auto structbtype = dynamic_cast<const BSQStructType*>(btype);
-            if(structbtype->boxedtype == 0)
+            if(structbtype == nullptr || structbtype->boxedtype == 0)
             {
                 SLPTR_STORE_UNION_INLINE_TYPE(btype, trgt);
                 btype->storeValue(SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), src);
@@ -645,14 +645,16 @@ public:
         }
         else
         {
-            const BSQBoxedStructType* boxedtype = dynamic_cast<const BSQBoxedStructType*>(BSQType::g_typetable[dynamic_cast<const BSQStructType*>(reprtype)->boxedtype]);
-            if(boxedtype == nullptr)
+            auto structrtype = dynamic_cast<const BSQStructType*>(reprtype);
+            if(structrtype == nullptr || structrtype->boxedtype == 0)
             {
                 SLPTR_STORE_UNION_INLINE_TYPE(reprtype, trgt);
                 reprtype->storeValue(SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), SLPTR_LOAD_UNION_INLINE_DATAPTR(src));
             }
             else
             {
+                const BSQBoxedStructType* boxedtype = dynamic_cast<const BSQBoxedStructType*>(BSQType::g_typetable[structrtype->boxedtype]);
+
                 auto obj = Allocator::GlobalAllocator.allocateDynamic(boxedtype);
                 reprtype->storeValue(obj, SLPTR_LOAD_UNION_INLINE_DATAPTR(src));
 

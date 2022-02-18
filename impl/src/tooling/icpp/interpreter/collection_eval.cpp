@@ -1015,6 +1015,11 @@ void* BSQMapOps::s_remove_ne(const BSQMapTypeFlavor& mflavor, void* t, const BSQ
 
 std::string entityListDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
+    if(LIST_LOAD_DATA(data) == BSQNoneValue)
+    {
+        return btype->name + "{}";
+    }
+
     auto ltype = dynamic_cast<const BSQListType*>(btype);
     auto lflavor = BSQListOps::g_flavormap.find(ltype->etype)->second;
 
@@ -1060,6 +1065,11 @@ std::string entityMapDisplay_impl_rec(const BSQMapTypeFlavor& mflavor, BSQMapSpi
 
 std::string entityMapDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
+    if(MAP_LOAD_REPR(data) == BSQNoneValue)
+    {
+        return btype->name + "{}";
+    }
+
     auto mtype = dynamic_cast<const BSQMapType*>(btype);
     auto mflavor = BSQMapOps::g_flavormap.find(std::make_pair(mtype->ktype, mtype->vtype))->second;
 
