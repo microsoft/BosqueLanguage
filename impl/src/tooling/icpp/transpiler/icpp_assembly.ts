@@ -476,8 +476,8 @@ class ICPPAssembly
     readonly propertynames: string[];
     readonly fields: MIRFieldDecl[];
 
-    readonly invokenames: MIRInvokeKey[];
-    readonly vinvokenames: MIRVirtualMethodKey[];
+    invokenames: Set<MIRInvokeKey>;
+    vinvokenames: Set<MIRVirtualMethodKey>;
 
     vtable: {oftype: MIRResolvedTypeKey, vtable: {vcall: MIRVirtualMethodKey, inv: MIRInvokeKey}[]}[] = [];
     subtypes: Map<MIRResolvedTypeKey, Set<MIRResolvedTypeKey>> = new Map<MIRResolvedTypeKey, Set<MIRResolvedTypeKey>>();
@@ -493,8 +493,8 @@ class ICPPAssembly
         this.propertynames = propertynames;
         this.fields = fields;
 
-        this.invokenames = invokenames;
-        this.vinvokenames = vinvokenames;
+        this.invokenames = new Set<MIRInvokeKey>(invokenames);
+        this.vinvokenames = new Set<MIRVirtualMethodKey>(vinvokenames);
     }
 
     private generateBoxedTypeName(tkey: MIRResolvedTypeKey): string {
@@ -987,8 +987,8 @@ class ICPPAssembly
                 }
             }),
 
-            invokenames: this.invokenames.sort(),
-            vinvokenames: this.vinvokenames.sort(),
+            invokenames: [...this.invokenames].sort(),
+            vinvokenames: [...this.vinvokenames].sort(),
 
             vtable: this.vtable.sort((a, b) => a.oftype.localeCompare(b.oftype)),
 

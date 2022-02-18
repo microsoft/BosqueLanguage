@@ -107,9 +107,11 @@ class ICPPEmitter {
             const vtype = rvpt.argflowtype;
             const opts = [...this.assembly.typeMap].filter((tme) => this.temitter.isUniqueTupleType(tme[1]) && this.assembly.subtypeOf(tme[1], vtype)).map((tme) => tme[1]);
 
+            this.icppasm.vinvokenames.add(rvpt.inv);
             opts.forEach((ttup) => {
                 const oper = this.bemitter.generateProjectTupleIndexVirtual(rvpt, new SourceInfo(-1, -1, -1 ,-1), ttup);
                 this.icppasm.invdecls.push(oper);
+                this.icppasm.invokenames.add(oper.ikey);
 
                 let vte = this.icppasm.vtable.find((v) => v.oftype === ttup.typeID);
                 if(vte !== undefined) {
@@ -126,9 +128,11 @@ class ICPPEmitter {
             const vtype = rvpr.argflowtype;
             const opts = [...this.assembly.typeMap].filter((tme) => this.temitter.isUniqueRecordType(tme[1]) && this.assembly.subtypeOf(tme[1], vtype)).map((tme) => tme[1]);
 
+            this.icppasm.vinvokenames.add(rvpr.inv);
             opts.forEach((trec) => {
                 const oper = this.bemitter.generateProjectRecordPropertyVirtual(rvpr, new SourceInfo(-1, -1, -1 ,-1), trec);
                 this.icppasm.invdecls.push(oper);
+                this.icppasm.invokenames.add(oper.ikey);
 
                 let vte = this.icppasm.vtable.find((v) => v.oftype === trec.typeID);
                 if(vte !== undefined) {
@@ -145,9 +149,11 @@ class ICPPEmitter {
             const vtype = rvpe.argflowtype;
             const opts = [...this.assembly.typeMap].filter((tme) => this.temitter.isUniqueEntityType(tme[1]) && this.assembly.subtypeOf(tme[1], vtype)).map((tme) => tme[1]);
 
+            this.icppasm.vinvokenames.add(rvpe.inv);
             opts.forEach((tentity) => {
                 const oper = this.bemitter.generateProjectEntityFieldVirtual(rvpe, new SourceInfo(-1, -1, -1 ,-1), tentity);
                 this.icppasm.invdecls.push(oper);
+                this.icppasm.invokenames.add(oper.ikey);
 
                 let vte = this.icppasm.vtable.find((v) => v.oftype === tentity.typeID);
                 if(vte !== undefined) {
@@ -161,11 +167,13 @@ class ICPPEmitter {
         });
 
         this.bemitter.requiredSingletonConstructorsList.forEach((scl) => {
-            this.icppasm.invdecls.push(this.bemitter.generateSingletonConstructorList(scl))
+            this.icppasm.invdecls.push(this.bemitter.generateSingletonConstructorList(scl));
+            this.icppasm.invokenames.add(scl.inv);
         });
 
         this.bemitter.requiredSingletonConstructorsMap.forEach((scm) => {
-            this.icppasm.invdecls.push(this.bemitter.generateSingletonConstructorMap(scm))
+            this.icppasm.invdecls.push(this.bemitter.generateSingletonConstructorMap(scm));
+            this.icppasm.invokenames.add(scm.inv);
         });
 
         this.icppasm.cbuffsize = this.bemitter.constsize;
