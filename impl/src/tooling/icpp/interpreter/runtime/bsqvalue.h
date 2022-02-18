@@ -608,14 +608,16 @@ public:
         }
         else
         {
-            const BSQBoxedStructType* boxedtype = dynamic_cast<const BSQBoxedStructType*>(BSQType::g_typetable[dynamic_cast<const BSQStructType*>(btype)->boxedtype]);
-            if(boxedtype == nullptr)
+            auto structbtype = dynamic_cast<const BSQStructType*>(btype);
+            if(structbtype->boxedtype == 0)
             {
                 SLPTR_STORE_UNION_INLINE_TYPE(btype, trgt);
                 btype->storeValue(SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt), src);
             }
             else
             {
+                const BSQBoxedStructType* boxedtype = dynamic_cast<const BSQBoxedStructType*>(BSQType::g_typetable[structbtype->boxedtype]);
+                
                 auto obj = Allocator::GlobalAllocator.allocateDynamic(boxedtype);
                 btype->storeValue(obj, src);
 
