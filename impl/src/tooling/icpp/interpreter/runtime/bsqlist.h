@@ -13,7 +13,7 @@
 #define LIST_LOAD_TYPE_INFO_REPR(SL) SLPTR_LOAD_UNION_INLINE_TYPE_AS(BSQListReprType, SL)
 #define LIST_LOAD_DATA(SL) SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(SLPTR_LOAD_UNION_INLINE_DATAPTR(SL))
 
-#define LIST_STORE_RESULT_REPR(R, SL) SLPTR_STORE_UNION_INLINE_TYPE(SLPTR_LOAD_HEAP_TYPE(R), SL); SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(SLPTR_LOAD_UNION_INLINE_DATAPTR(SL), R)
+#define LIST_STORE_RESULT_REPR(R, SL) SLPTR_STORE_UNION_INLINE_TYPE(GET_TYPE_META_DATA(R), SL); SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(SLPTR_LOAD_UNION_INLINE_DATAPTR(SL), R)
 #define LIST_STORE_RESULT_EMPTY(SL) SLPTR_STORE_UNION_INLINE_TYPE(BSQWellKnownType::g_typeNone, SL); SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(SLPTR_LOAD_UNION_INLINE_DATAPTR(SL), BSQNoneValue)
 
 enum class ListReprKind
@@ -71,7 +71,7 @@ public:
 
     inline static void initializePVData(void* pvinto, const std::vector<StorageLocationPtr>& vals, uint64_t entrysize)
     {
-        auto intoloc = ((uint8_t*)pvinto);
+        auto intoloc = ((uint8_t*)pvinto) + sizeof(uint64_t);
         auto fromloc = ((uint8_t*)vals.data());
         auto bytecount = sizeof(uint64_t) + (vals.size() * entrysize);
 

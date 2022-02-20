@@ -303,41 +303,21 @@ class ICPPTypeEmitter {
                 assert(entity instanceof MIRPrimitiveCollectionEntityTypeDecl, "Should be a collection type");
 
                 if(entity instanceof MIRPrimitiveMapEntityTypeDecl) {
-                    const ultype = entity.oftype;
-                    const mirtype = this.getMIRType(ultype);
-                    const fromlayout = this.getICPPTypeInfoShallow(mirtype);
-
-                    return fromlayout.createFromSizeInfo(entity.tkey);
+                    return ICPPTypeSizeInfoSimple.createByValueSizeInfo(entity.tkey, ICPP_WORD_SIZE * 3, "112", false);
                 }
                 else if(entity instanceof MIRPrimitiveStackEntityTypeDecl) {
-                    const ultype = entity.oftype;
-                    const mirtype = this.getMIRType(ultype);
-                    const fromlayout = this.getICPPTypeInfoShallow(mirtype);
-
-                    return fromlayout.createFromSizeInfo(entity.tkey);
+                    return ICPPTypeSizeInfoSimple.createByValueSizeInfo(entity.tkey, ICPP_WORD_SIZE * 2, "12", false);
                 }
                 else if(entity instanceof MIRPrimitiveQueueEntityTypeDecl) {
-                    const ultype = entity.oftype;
-                    const mirtype = this.getMIRType(ultype);
-                    const fromlayout = this.getICPPTypeInfoShallow(mirtype);
-
-                    return fromlayout.createFromSizeInfo(entity.tkey);
+                    return ICPPTypeSizeInfoSimple.createByValueSizeInfo(entity.tkey, ICPP_WORD_SIZE * 2, "12", false);
                 }
                 else if(entity instanceof MIRPrimitiveSetEntityTypeDecl) {
-                    const ultype = entity.oftype;
-                    const mirtype = this.getMIRType(ultype);
-                    const fromlayout = this.getICPPTypeInfoShallow(mirtype);
-
-                    return fromlayout.createFromSizeInfo(entity.tkey);
+                    return ICPPTypeSizeInfoSimple.createByValueSizeInfo(entity.tkey, ICPP_WORD_SIZE * 3, "112", false);
                 }
                 else {
                     assert(entity instanceof MIRPrimitiveListEntityTypeDecl, "Should be a list type");
 
-                    const ultype = (entity as MIRPrimitiveListEntityTypeDecl).oftype;
-                    const mirtype = this.getMIRType(ultype);
-                    const fromlayout = this.getICPPTypeInfoShallow(mirtype);
-
-                    return fromlayout.createFromSizeInfo(entity.tkey);
+                    return ICPPTypeSizeInfoSimple.createByValueSizeInfo(entity.tkey, ICPP_WORD_SIZE * 2, "12", false);
                 }
             }
         }
@@ -583,41 +563,21 @@ class ICPPTypeEmitter {
                 assert(entity instanceof MIRPrimitiveCollectionEntityTypeDecl, "Should be a collection type");
 
                 if(entity instanceof MIRPrimitiveMapEntityTypeDecl) {
-                    const ultype = entity.oftype;
-                    const mirtype = this.getMIRType(ultype);
-                    const fromlayout = this.getICPPLayoutInfo(mirtype);
-
-                    return fromlayout.createFromLayoutInfo(entity.tkey);
+                    return ICPPLayoutInfoFixed.createByValueLayout(entity.tkey, ICPP_WORD_SIZE * 3, "112", false);
                 }
                 else if(entity instanceof MIRPrimitiveStackEntityTypeDecl) {
-                    const ultype = entity.oftype;
-                    const mirtype = this.getMIRType(ultype);
-                    const fromlayout = this.getICPPLayoutInfo(mirtype);
-
-                    return fromlayout.createFromLayoutInfo(entity.tkey);
+                    return ICPPLayoutInfoFixed.createByValueLayout(entity.tkey, ICPP_WORD_SIZE * 2, "12", false);
                 }
                 else if(entity instanceof MIRPrimitiveQueueEntityTypeDecl) {
-                    const ultype = entity.oftype;
-                    const mirtype = this.getMIRType(ultype);
-                    const fromlayout = this.getICPPLayoutInfo(mirtype);
-
-                    return fromlayout.createFromLayoutInfo(entity.tkey);
+                    return ICPPLayoutInfoFixed.createByValueLayout(entity.tkey, ICPP_WORD_SIZE * 2, "12", false);
                 }
                 else if(entity instanceof MIRPrimitiveSetEntityTypeDecl) {
-                    const ultype = entity.oftype;
-                    const mirtype = this.getMIRType(ultype);
-                    const fromlayout = this.getICPPLayoutInfo(mirtype);
-
-                    return fromlayout.createFromLayoutInfo(entity.tkey);
+                    return ICPPLayoutInfoFixed.createByValueLayout(entity.tkey, ICPP_WORD_SIZE * 3, "112", false);
                 }
                 else {
                     assert(entity instanceof MIRPrimitiveListEntityTypeDecl, "Should be a list type");
 
-                    const ultype = (entity as MIRPrimitiveListEntityTypeDecl).oftype;
-                    const mirtype = this.getMIRType(ultype);
-                    const fromlayout = this.getICPPLayoutInfo(mirtype);
-
-                    return fromlayout.createFromLayoutInfo(entity.tkey);
+                    return ICPPLayoutInfoFixed.createByValueLayout(entity.tkey, ICPP_WORD_SIZE * 2, "12", false);
                 }
             }
         }

@@ -104,7 +104,7 @@ class ICPPTypeSizeInfo {
     }
 
     static isScalarOnlyMask(mask: RefMask): boolean {
-        return /1+/.test(mask);
+        return /^1+$/.test(mask);
     }
 
     static createByRegisterSizeInfo(tkey: MIRResolvedTypeKey, inlinedatasize: number, assigndatasize: number, inlinedmask: RefMask): ICPPTypeSizeInfo {
@@ -159,10 +159,10 @@ abstract class ICPPLayoutInfo {
 
     canScalarStackAllocate(): boolean {
         if(this.layout === ICPPLayoutCategory.Inline) {
-            return /1+/.test(this.allocinfo.inlinedmask);
+            return /^1+$/.test(this.allocinfo.inlinedmask);
         }
         else if(this.layout === ICPPLayoutCategory.UnionInline) {
-            return /51+/.test(this.allocinfo.inlinedmask);
+            return /^51+$/.test(this.allocinfo.inlinedmask);
         }
         else {
             return false;

@@ -1019,27 +1019,28 @@ std::string entityListDisplay_impl(const BSQType* btype, StorageLocationPtr data
     {
         return btype->name + "{}";
     }
-
-    auto ltype = dynamic_cast<const BSQListType*>(btype);
-    auto lflavor = BSQListOps::g_flavormap.find(ltype->etype)->second;
-
-    std::string res = btype->name + "{";
-    BSQListForwardIterator iter(LIST_LOAD_TYPE_INFO(data), LIST_LOAD_DATA(data));
-    bool first = true;
-    while(iter.valid())
+    else
     {
-        if(!first)
+        auto ltype = dynamic_cast<const BSQListType*>(btype);
+        auto lflavor = BSQListOps::g_flavormap.find(ltype->etype)->second;
+
+        std::string res = btype->name + "{";
+        BSQListForwardIterator iter(LIST_LOAD_TYPE_INFO(data), LIST_LOAD_DATA(data));
+        bool first = true;
+        while(iter.valid())
         {
-            res += ",";
+            if(!first)
+            {
+                res += ",";
+            }
+
+            res += lflavor.entrytype->fpDisplay(lflavor.entrytype, iter.getlocation());
         }
+        res += "}";
 
-        res += lflavor.entrytype->fpDisplay(lflavor.entrytype, iter.getlocation());
+        return res;
     }
-    res += "}";
-
-    return res;
 }
-
 
 std::string entityMapDisplay_impl_rec(const BSQMapTypeFlavor& mflavor, BSQMapSpineIterator& iter)
 {
@@ -1069,17 +1070,19 @@ std::string entityMapDisplay_impl(const BSQType* btype, StorageLocationPtr data)
     {
         return btype->name + "{}";
     }
-
-    auto mtype = dynamic_cast<const BSQMapType*>(btype);
-    auto mflavor = BSQMapOps::g_flavormap.find(std::make_pair(mtype->ktype, mtype->vtype))->second;
-
-    std::string res = btype->name + "{";
-    BSQMapSpineIterator iter(MAP_LOAD_TYPE_INFO(data), MAP_LOAD_REPR(data));
-    if(iter.valid())
+    else
     {
-        res += entityMapDisplay_impl_rec(mflavor, iter);
-    }
-    res += "}";
+        auto mtype = dynamic_cast<const BSQMapType*>(btype);
+        auto mflavor = BSQMapOps::g_flavormap.find(std::make_pair(mtype->ktype, mtype->vtype))->second;
 
-    return res;
+        std::string res = btype->name + "{";
+        BSQMapSpineIterator iter(MAP_LOAD_TYPE_INFO(data), MAP_LOAD_REPR(data));
+        if(iter.valid())
+        {
+            res += entityMapDisplay_impl_rec(mflavor, iter);
+        }
+        res += "}";
+
+        return res;
+    }
 }

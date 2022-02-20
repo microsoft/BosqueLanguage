@@ -103,7 +103,7 @@ void Evaluator::evalDebugOp(const DebugOp* op)
     }
     else
     {
-        auto sl =  this->evalArgument(op->arg);
+        auto sl = this->evalArgument(op->arg);
         auto oftype = SLPTR_LOAD_UNION_INLINE_TYPE(sl);
 
         auto dval = oftype->fpDisplay(oftype, SLPTR_LOAD_UNION_INLINE_DATAPTR(sl));
