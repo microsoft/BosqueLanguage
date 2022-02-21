@@ -26,7 +26,7 @@ public:
         Allocator::GlobalAllocator.ensureSpace(sizeof(GC_META_DATA_WORD) + lflavor.pv8type->allocinfo.heapsize);
 
         auto res = Allocator::GlobalAllocator.allocateSafe((params.size() <= 4) ? lflavor.pv4type : lflavor.pv8type);
-        BSQPartialVectorType::initializePVData(res, params, lflavor.entrytype->allocinfo.inlinedatasize);
+        BSQPartialVectorType::initializePVData(res, params, lflavor.entrytype);
 
         return res;
     }

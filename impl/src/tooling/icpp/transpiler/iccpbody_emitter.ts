@@ -342,7 +342,7 @@ class ICPPBodyEmitter {
 
     generateSingletonConstructorList(geninfo: { inv: string, argc: number, resulttype: MIRType }): ICPPInvokeDecl {
         const ldecl = this.assembly.entityDecls.get(geninfo.resulttype.typeID) as MIRPrimitiveListEntityTypeDecl;
-        const etype = ldecl.oftype;
+        const etype = ldecl.getTypeT().typeID;
 
         let params: ICPPFunctionParameter[] = [];
         for(let j = 0; j < geninfo.argc; ++j) {
@@ -354,7 +354,7 @@ class ICPPBodyEmitter {
 
     generateSingletonConstructorMap(geninfo: { inv: string, argc: number, resulttype: MIRType }): ICPPInvokeDecl {
         const ldecl = this.assembly.entityDecls.get(geninfo.resulttype.typeID) as MIRPrimitiveMapEntityTypeDecl;
-        const etype = ldecl.oftype;
+        const etype = ldecl.tupentrytype;
 
         let params: ICPPFunctionParameter[] = [];
         for(let j = 0; j < geninfo.argc; ++j) {

@@ -573,7 +573,7 @@ class ICPPAssembly
             ptag: ICPPParseTag.ListTag,
             tkey: icpptype.tkey,
             name: edecl.tkey,
-            etype: edecl.oftype
+            etype: edecl.getTypeT().typeID
         };
     }
 
@@ -599,7 +599,7 @@ class ICPPAssembly
             name: edecl.tkey,
             ktype: edecl.getTypeK(),
             vtype: edecl.getTypeV(),
-            etype: edecl.oftype
+            etype: edecl.tupentrytype
         };
     }
 
@@ -932,7 +932,8 @@ class ICPPAssembly
                 const ldcl = edcl as MIRPrimitiveListEntityTypeDecl;
                 return {
                     ltype: ldcl.tkey,
-                    entrytype: ldcl.oftype,
+                    reprtype: ldcl.oftype,
+                    entrytype: ldcl.getTypeT().typeID,
                     pv4type: `PartialVector4<${ldcl.getTypeT().typeID}>`,
                     pv8type: `PartialVector8<${ldcl.getTypeT().typeID}>`,
                     treetype: `ListTree<${ldcl.getTypeT().typeID}>`
@@ -948,9 +949,10 @@ class ICPPAssembly
                 const mdcl = edcl as MIRPrimitiveMapEntityTypeDecl;
                 return {
                     ltype: mdcl.tkey,
+                    reprtype: mdcl.oftype,
                     keytype: mdcl.getTypeK().typeID,
                     valuetype: mdcl.getTypeV().typeID,
-                    tupletype: mdcl.oftype,
+                    tupletype: mdcl.tupentrytype,
                     treetype: `MapTree<${mdcl.getTypeK().typeID}, ${mdcl.getTypeV().typeID}>`
                 };
             }

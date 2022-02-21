@@ -31,19 +31,21 @@ const BSQField* jsonLoadFieldDecl(json v)
 BSQListTypeFlavor jsonLoadListFlavor(json v)
 {
     auto ltype = MarshalEnvironment::g_typenameToIdMap.find(v["ltype"].get<std::string>())->second;
-    
+    auto lreprtype = MarshalEnvironment::g_typenameToIdMap.find(v["reprtype"].get<std::string>())->second;
+
     const BSQType* entrytype = BSQType::g_typetable[MarshalEnvironment::g_typenameToIdMap.find(v["entrytype"].get<std::string>())->second];
 
     const BSQPartialVectorType* pv4type = dynamic_cast<const BSQPartialVectorType*>(BSQType::g_typetable[MarshalEnvironment::g_typenameToIdMap.find(v["pv4type"].get<std::string>())->second]);
     const BSQPartialVectorType* pv8type = dynamic_cast<const BSQPartialVectorType*>(BSQType::g_typetable[MarshalEnvironment::g_typenameToIdMap.find(v["pv8type"].get<std::string>())->second]);
     const BSQListTreeType* treetype = dynamic_cast<const BSQListTreeType*>(BSQType::g_typetable[MarshalEnvironment::g_typenameToIdMap.find(v["treetype"].get<std::string>())->second]);
    
-    return BSQListTypeFlavor{ltype, entrytype, pv4type, pv8type, treetype};
+    return BSQListTypeFlavor{ltype, lreprtype, entrytype, pv4type, pv8type, treetype};
 }
 
 BSQMapTypeFlavor jsonLoadMapFlavor(json v)
 {
-    auto ltype = v["ltype"].get<BSQTypeID>();
+    auto mtype = MarshalEnvironment::g_typenameToIdMap.find(v["ltype"].get<std::string>())->second;
+    auto mreprtype = MarshalEnvironment::g_typenameToIdMap.find(v["reprtype"].get<std::string>())->second;
 
     const BSQType* keytype = BSQType::g_typetable[MarshalEnvironment::g_typenameToIdMap.find(v["keytype"].get<std::string>())->second];
     const BSQType* valuetype = BSQType::g_typetable[MarshalEnvironment::g_typenameToIdMap.find(v["valuetype"].get<std::string>())->second];
@@ -51,7 +53,7 @@ BSQMapTypeFlavor jsonLoadMapFlavor(json v)
 
     const BSQMapTreeType* treetype = dynamic_cast<const BSQMapTreeType*>(BSQType::g_typetable[MarshalEnvironment::g_typenameToIdMap.find(v["treetype"].get<std::string>())->second]);
 
-    return BSQMapTypeFlavor{ltype, keytype, valuetype, tupletype, treetype};   
+    return BSQMapTypeFlavor{mtype, mreprtype, keytype, valuetype, tupletype, treetype};   
 }
 
 void initialize(size_t cbuffsize, const RefMask cmask)

@@ -69,14 +69,16 @@ public:
         return ((uint8_t*)repr) + sizeof(uint64_t) + (i * this->entrysize);
     }
 
-    inline static void initializePVData(void* pvinto, const std::vector<StorageLocationPtr>& vals, uint64_t entrysize)
+    inline static void initializePVData(void* pvinto, const std::vector<StorageLocationPtr>& vals, const BSQType* entrytype)
     {
         auto intoloc = ((uint8_t*)pvinto) + sizeof(uint64_t);
-        auto fromloc = ((uint8_t*)vals.data());
-        auto bytecount = sizeof(uint64_t) + (vals.size() * entrysize);
 
         BSQPartialVectorType::setPVCount(pvinto, vals.size());
-        GC_MEM_COPY(intoloc, fromloc, bytecount);
+        for(size_t i = 0; i < vals.size(); ++i)
+        {
+            entrytype->storeValue(intoloc, vals[i]);
+            intoloc += entrytype->allocinfo.inlinedatasize;
+        }
     }
 
     inline static void directCopyPVData(void* pvinto, void* pvfrom, uint64_t entrysize)
@@ -155,6 +157,7 @@ public:
 struct BSQListTypeFlavor
 {
     const BSQTypeID ltype;
+    const BSQTypeID lreprtype;
 
     const BSQType* entrytype;
 
