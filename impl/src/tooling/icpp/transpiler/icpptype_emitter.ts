@@ -365,11 +365,11 @@ class ICPPTypeEmitter {
             let size = Math.max(...tl.map((t) => t.allocinfo.realdatasize));
 
             let mask: RefMask = "5";
-            for(let i = 0; i < (size - ICPP_WORD_SIZE) / ICPP_WORD_SIZE; ++i) {
+            for(let i = 0; i < (size / ICPP_WORD_SIZE); ++i) {
                 mask = mask + "1";
             }
 
-            return new ICPPLayoutInlineUnion(utype.typeID, size, mask);
+            return new ICPPLayoutInlineUnion(utype.typeID, size + ICPP_WORD_SIZE, mask);
         }
     }
 

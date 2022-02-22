@@ -29,8 +29,8 @@ public:
     const BSQTypeID entrytype;
     const ListReprKind lkind;
 
-    BSQListReprType(BSQTypeID tid, uint64_t allocsize, RefMask heapmask, std::string name, BSQTypeID entrytype, ListReprKind lkind)
-    : BSQRefType(tid, allocsize, heapmask, {}, EMPTY_KEY_CMP, nullptr, name), entrytype(entrytype), lkind(lkind)
+    BSQListReprType(BSQTypeID tid, uint64_t allocsize, RefMask heapmask, DisplayFP fpDisplay, std::string name, BSQTypeID entrytype, ListReprKind lkind)
+    : BSQRefType(tid, allocsize, heapmask, {}, EMPTY_KEY_CMP, fpDisplay, name), entrytype(entrytype), lkind(lkind)
     {;}
 
     virtual ~BSQListReprType() {;}
@@ -38,13 +38,15 @@ public:
     virtual uint64_t getCount(void* repr) const = 0;
 };
 
+std::string entityPartialVectorDisplay_impl(const BSQType* btype, StorageLocationPtr data);
+
 class BSQPartialVectorType : public BSQListReprType
 {
 public:
     const size_t entrysize;
 
     BSQPartialVectorType(BSQTypeID tid, uint64_t allocsize, RefMask heapmask, std::string name, BSQTypeID entrytype, ListReprKind lkind, size_t entrysize) 
-    : BSQListReprType(tid, allocsize, heapmask, name, entrytype, lkind), entrysize(entrysize)
+    : BSQListReprType(tid, allocsize, heapmask, entityPartialVectorDisplay_impl, name, entrytype, lkind), entrysize(entrysize)
     {;}
 
     virtual ~BSQPartialVectorType() {;}
@@ -139,11 +141,13 @@ struct BSQListTreeRepr
     uint64_t size;
 };
 
+std::string entityListTreeDisplay_impl(const BSQType* btype, StorageLocationPtr data);
+
 class BSQListTreeType : public BSQListReprType
 {
 public:
     BSQListTreeType(BSQTypeID tid, std::string name, BSQTypeID entrytype)
-    : BSQListReprType(tid, sizeof(BSQListTreeRepr), "22", name, entrytype, ListReprKind::TreeElement) 
+    : BSQListReprType(tid, sizeof(BSQListTreeRepr), "22", entityListTreeDisplay_impl, name, entrytype, ListReprKind::TreeElement) 
     {;}
 
     virtual ~BSQListTreeType() {;}
@@ -208,6 +212,11 @@ public:
 
     void advance_slow()
     {
+        if(this->curr == this->lmax)
+        {
+            return;
+        }
+
         void* rr = this->lcurr;
         while(static_cast<BSQListTreeRepr*>(this->iterstack.back())->r == rr)
         {
@@ -291,6 +300,11 @@ public:
 
     void advance_slow()
     {
+        if(this->curr < 0)
+        {
+            return;
+        }
+
         void* rr = this->lcurr;
         while(static_cast<BSQListTreeRepr*>(this->iterstack.back())->l == rr)
         {

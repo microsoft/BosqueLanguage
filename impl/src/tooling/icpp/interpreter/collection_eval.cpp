@@ -1013,6 +1013,32 @@ void* BSQMapOps::s_remove_ne(const BSQMapTypeFlavor& mflavor, void* t, const BSQ
     return res;
 }
 
+std::string entityPartialVectorDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+{
+    auto pvtype = dynamic_cast<const BSQPartialVectorType*>(btype);
+    auto lflavor = BSQListOps::g_flavormap.find(pvtype->entrytype)->second;
+    auto lv = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data);
+
+    size_t count = BSQPartialVectorType::getPVCount(lv);
+    std::string res = pvtype->name + "{";
+    for(size_t i = 0; i < count; ++i)
+    {
+        if(i != 0)
+        {
+            res += ", ";
+        }
+        res += lflavor.entrytype->fpDisplay(lflavor.entrytype, pvtype->get(lv, i));
+    }
+    res += "}";
+
+    return res;
+}
+
+std::string entityListTreeDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+{
+    return "[ListTree]";
+}
+
 std::string entityListDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
     if(LIST_LOAD_DATA(data) == BSQNoneValue)
@@ -1033,8 +1059,10 @@ std::string entityListDisplay_impl(const BSQType* btype, StorageLocationPtr data
             {
                 res += ",";
             }
+            first = false;
 
             res += lflavor.entrytype->fpDisplay(lflavor.entrytype, iter.getlocation());
+            iter.advance();
         }
         res += "}";
 
