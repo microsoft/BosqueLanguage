@@ -5,28 +5,68 @@
 
 import { exec } from "child_process";
 
-import { ICPPTest } from "./test_decls";
-import { MIRAssembly } from "../../compiler/mir_assembly";
+import { ICPPTest, TestResultKind } from "./test_decls";
 
-function generateICPPAssembly(masm: MIRAssembly, istestbuild: boolean, topts: TranspilerOptions, entrypoints: MIRInvokeKey[]): any {
-    let res: any = undefined;
-    try {
-        res = ICPPEmitter.generateICPPAssembly(masm, istestbuild, topts, entrypoints);
-    } catch(e) {
-        process.stdout.write(chalk.red(`ICPP bytecode generate error -- ${e}\n`));
-        process.exit(1);
-    }
-    return res;
-}
+const PARALLEL_COUNT = 4;
 
-function runICPPTest(exepath: string, test: ICPPTest, icppjson: {code: object, args: any[], main: string}, cb: (result: "pass" | "fail" | "error", start: Date, end: Date, info?: string) => void) {
+function runICPPTest(exepath: string, verbose: boolean, test: ICPPTest, icppjson: {code: object, args: any[], main: string}, cbpre: (test: ICPPTest) => void, cb: (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, info?: string) => void) {
     const start = new Date();
     try {
         const cmd = `${exepath} --stream`;
 
-        const proc = exec(cmd, (err, stdout, stderr) => {
+        if(verbose) {
+            cbpre(test);
+        }
+
+        const proc = exec(cmd, (err, stdout) => {
             const end = new Date();
-            cb(stdout.toString().trim());
+            let status: "error" | "success" | "failure" = "error";
+            let msg: string = "";
+            let value: any = undefined;
+
+            try {
+                const robj = JSON.parse(stdout.toString().trim());
+                status = robj["status"] as "error" | "success" | "failure";
+                msg = robj["msg"] || "No Msg";
+                value = robj["value"];
+            }
+            catch (ex) {
+                status = "error";
+                msg = `Could not parse -- ${stdout}`;
+            }
+
+            if(err !== null && stdout.length === 0) {
+                cb("error", test, start, end, err.toString());
+            }
+            else {
+                if(test.resultKind === TestResultKind.errors) {
+                    if(status === "success") {
+                        cb("pass", test, start, end);
+                    }
+                    else if (status === "failure") {
+                        cb("fail", test, start, end, msg);
+                    }
+                    else {
+                        cb("error", test, start, end, msg);
+                    }
+                }
+                else {
+                    if(status === "success") {
+                        if(value === true) {
+                            cb("pass", test, start, end);
+                        }
+                        else {
+                            cb("fail", test, start, end, JSON.stringify(value));
+                        }
+                    }
+                    else if (status === "failure") {
+                        cb("error", test, start, end, msg);
+                    }
+                    else {
+                        cb("error", test, start, end, msg);
+                    }
+                }
+            }
         });
 
         proc.stdin.setDefaultEncoding('utf-8');
@@ -34,56 +74,46 @@ function runICPPTest(exepath: string, test: ICPPTest, icppjson: {code: object, a
         proc.stdin.write("\n");
         proc.stdin.end()
     }
-    catch(ex) {
+    catch(ex: any) {
         const end = new Date();
-        cb("error", start, end, JSON.stringify(ex));
+        cb("error", test, start, end, ex.toString());
     }
 }
 
-function enqueueICPPTest(exepath: string, test: ICPPTest, masm: MIRAssembly, icppasm: any, cb: (result: "pass" | "fail" | "error", start: Date, end: Date, info?: string) => void) {
-    const start = new Date();
-
+function enqueueICPPTest(exepath: string, verbose: boolean, test: ICPPTest, icppasm: any, cbpre: (test: ICPPTest) => void, cb: (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, info?: string) => void) {
     if(!test.fuzz) {
-        workflowRunICPPFile([], )
+        runICPPTest(exepath, verbose, test, icppasm, cbpre, cb);
     }
     else {
-        xxx;
+        cb("fail", test, new Date(), new Date(), "Fuzzing isn't wired up yet");
     }
-
-    const codeinfo = [{fpath: "test.bsq", filepath: "test.bsq", contents: testsrc}];
-    workflowRunICPPFile(jargs, codeinfo, DEFAULT_TOPTS, "NSMain::main", (result: string | undefined) => {
-        const end = new Date();
-        try {
-            if(result === undefined) {
-                if(expected === undefined) {
-                    cb("pass", start, end);
-                }
-                else {
-                    cb("fail", start, end, result);
-                }
-            }
-            else {
-                if(expected === result) {
-                    cb("pass", start, end, result);
-                }
-                else {
-                    cb("fail", start, end, `Expected: ${expected} -- Result: ${result}`);
-                }
-            }
-        }
-        catch (ex) {
-            cb("error", start, end, `${ex}`);
-        }
-    });
 }
 
-function enqueueICPPTest(testsrc: string, jargs: any[], expected: string | undefined, cb: (result: "pass" | "fail" | "unknown/timeout" | "error", start: Date, end: Date, info?: string) => void) {
-    const start = new Date();
-    const end = new Date();
-    cb("fail", start, end, "Disabled");
+function generateTestResultCallback(exepath: string, icppasm: any, verbose: boolean, winfo: {worklist: ICPPTest[], cpos: number, done: number}, cbpre: (test: ICPPTest) => void, cb: (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, info?: string) => void, cbdone: () => void): (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, info?: string) => void {
+    return (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, info?: string) => {
+        cb(result, test, start, end, info);
+
+        winfo.done++;
+        if(winfo.cpos < winfo.worklist.length) {
+            enqueueICPPTest(exepath, verbose, winfo.worklist[winfo.cpos], icppasm, cbpre, generateTestResultCallback(exepath, verbose, icppasm, winfo, cbpre, cb, cbdone));
+            winfo.cpos++;
+        }
+        else {
+            if(winfo.done === winfo.worklist.length) {
+                cbdone();
+            }
+        }
+    };
 }
 
+function enqueueICPPTests(exepath: string, tests: ICPPTest[], icppasm: any, verbose: boolean, cbpre: (test: ICPPTest) => void, cb: (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, info?: string) => void, cbdone: () => void) {
+    let shared_work_info = {worklist: tests, cpos: PARALLEL_COUNT, done: 0};
+
+    for(let i = 0; i < PARALLEL_COUNT; ++i) {
+        enqueueICPPTest(exepath, verbose, tests[i], icppasm, cbpre, generateTestResultCallback(exepath, icppasm, verbose, shared_work_info, cbpre, cb, cbdone));
+    }
+}
 
 export {
-    enqueueICPPTest
+    enqueueICPPTests
 };

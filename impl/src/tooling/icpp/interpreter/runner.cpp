@@ -127,13 +127,23 @@ int main(int argc, char** argv)
     std::string input;
     parseArgs(argc, argv, mode, prog, input);
 
+    const char* outputenv = std::getenv("ICPP_OUTPUT_MODE");
+    std::string outmode(outputenv != nullptr ? outputenv : "simple");
+
     if(mode == "stream")
     {
         auto payload = getIRFromStdIn();
         if(!payload.has_value() || !payload.value().contains("code") || !payload.value().contains("args"))
         {
-            fprintf(stderr, "Failed to load JSON...\n");
-            fflush(stderr);
+            if(outmode == "simple")
+            {
+                printf("!ERROR! -- Failed to load JSON...\n");
+            }
+            else
+            {
+                printf("{\"status\": \"error:\", \"msg\": \"Failed to load JSON\"}\n");
+            }
+            fflush(stdout);
             exit(1);
         }
 
@@ -150,12 +160,29 @@ int main(int argc, char** argv)
         auto jout = res.second.dump(4);
         if(res.first)
         {
-            printf("%s\n", jout.c_str());
+            if(outmode == "simple")
+            {
+                printf("%s\n", jout.c_str());
+            }
+            else
+            {
+                printf("{\"status\": \"success:\", \"value\": %s}\n", jout.c_str());
+            }
+            fflush(stdout);
             return 0;
         }
         else
         {
-            printf("!ERROR! %s\n", jout.c_str());
+            if(outmode == "simple")
+            {
+                printf("%s\n", jout.c_str());
+            }
+            else
+            {
+                printf("{\"status\": \"failure:\", \"msg\": %s}\n", jout.c_str());
+            }
+            fflush(stdout);
+
             return 1;
         }
     }
@@ -164,8 +191,15 @@ int main(int argc, char** argv)
         auto cc = getIRFromFile(prog);
         if(!cc.has_value())
         {
-            fprintf(stderr, "Failed to load file %s\n", argv[1]);
-            fflush(stderr);
+            if(outmode == "simple")
+            {
+                printf("!ERROR! -- Failed to load file %s...\n", argv[1]);
+            }
+            else
+            {
+                printf("{\"status\": \"error:\", \"msg\": \"Failed to load file %s\"}\n", argv[1]);
+            }
+            fflush(stdout);
             exit(1);
         }
 
@@ -191,13 +225,29 @@ int main(int argc, char** argv)
         auto jout = res.second.dump(4);
         if(res.first)
         {
-            printf("> %s\n", jout.c_str());
-            printf("Elapsed time %i...\n", (int)delta_ms);
+            if(outmode == "simple")
+            {
+                printf("> %s\n", jout.c_str());
+                printf("Elapsed time %i...\n", (int)delta_ms);
+            }
+            else
+            {
+                printf("{\"status\": \"success:\", \"time\": %ims \"value\": %s}\n", (int)delta_ms, jout.c_str());
+            }
+            fflush(stdout);
             return 0;
         }
         else
         {
-            printf("!ERROR! %s\n", jout.c_str());
+            if(outmode == "simple")
+            {
+                printf("!ERROR! %s\n", jout.c_str());
+            }
+            else
+            {
+                printf("{\"status\": \"failure:\", \"msg\": %s}\n", jout.c_str());
+            }
+            fflush(stdout);
             return 1;
         }
     }

@@ -99,7 +99,7 @@ function runICPPFile(icppjson: {code: object, args: any[], main: string}, cb: (r
     try {
         const cmd = `${exepath} --stream`;
 
-        const proc = exec(cmd, (err, stdout, stderr) => {
+        const proc = exec(cmd, (err, stdout) => {
            cb(stdout.toString().trim());
         });
 

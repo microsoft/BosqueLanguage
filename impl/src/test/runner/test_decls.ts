@@ -31,20 +31,23 @@ class ICPPTest {
 
 class SymTest {
     readonly resultKind: TestResultKind;
-    readonly fuzz: boolean;
+    readonly syminput: boolean;
 
     readonly namespace: string;
     readonly invk: string;
     readonly params: MIRFunctionParameter[];
     readonly resultType: MIRType;
 
-    constructor(resultKind: TestResultKind, fuzz: boolean, namespace: string, invk: string, params: MIRFunctionParameter[], resultType: MIRType) {
+    readonly trgterror: { file: string, line: number, pos: number } | undefined;
+
+    constructor(resultKind: TestResultKind, syminput: boolean, namespace: string, invk: string, params: MIRFunctionParameter[], resultType: MIRType, trgterror: { file: string, line: number, pos: number } | undefined) {
         this.resultKind = resultKind;
-        this.fuzz = fuzz;
+        this.syminput = syminput;
         this.namespace = namespace;
         this.invk = invk;
         this.params = params;
         this.resultType = resultType;
+        this.trgterror = trgterror;
     }
 }
 
