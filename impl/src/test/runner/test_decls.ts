@@ -5,6 +5,9 @@
 
 import {MIRFunctionParameter, MIRType} from "../../compiler/mir_assembly";
 
+const PARALLEL_COUNT_ICPP = 4;
+const PARALLEL_COUNT_SMT = 4;
+
 enum TestResultKind {
     ok,
     errors
@@ -75,6 +78,7 @@ class SymTestInternalChkShouldFail {
 }
 
 export {
+    PARALLEL_COUNT_ICPP, PARALLEL_COUNT_SMT,
     TestResultKind,
     ICPPTest, SymTest, SymTestInternalChkShouldFail
 };

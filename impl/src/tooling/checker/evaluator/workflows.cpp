@@ -29,14 +29,14 @@ json workflowCheckError(std::string smt2decl, const APIModule* apimodule, const 
     if(res == z3::check_result::unknown)
     {
         return {
-            {"result", "timeout"},
+            {"status", "timeout"},
             {"time", delta_ms}
         };
     }
     else if(res == z3::check_result::unsat)
     {
         return {
-            {"result", "unreachable"},
+            {"status", "unreachable"},
             {"time", delta_ms}
         };
     }
@@ -53,7 +53,7 @@ json workflowCheckError(std::string smt2decl, const APIModule* apimodule, const 
             if(!jarg.has_value())
             {
                 return {
-                    {"result", "error"},
+                    {"status", "error"},
                     {"info", "Could not extract arg"}
                 };
             }
@@ -62,7 +62,7 @@ json workflowCheckError(std::string smt2decl, const APIModule* apimodule, const 
         }
 
         return {
-            {"result", "witness"},
+            {"status", "witness"},
             {"time", delta_ms},
             {"input", argv}
         };
@@ -90,14 +90,14 @@ json workflowTestPass(std::string smt2decl, const APIModule* apimodule, const In
     if(res == z3::check_result::unknown)
     {
         return {
-            {"result", "timeout"},
+            {"status", "timeout"},
             {"time", delta_ms}
         };
     }
     else if(res == z3::check_result::unsat)
     {
         return {
-            {"result", "pass"},
+            {"status", "pass"},
             {"time", delta_ms}
         };
     }
@@ -114,7 +114,7 @@ json workflowTestPass(std::string smt2decl, const APIModule* apimodule, const In
             if(!jarg.has_value())
             {
                 return {
-                    {"result", "error"},
+                    {"status", "error"},
                     {"info", "Could not extract arg"}
                 };
             }
@@ -123,7 +123,7 @@ json workflowTestPass(std::string smt2decl, const APIModule* apimodule, const In
         }
 
         return {
-            {"result", "witness"},
+            {"status", "witness"},
             {"time", delta_ms},
             {"input", argv}
         };
@@ -145,7 +145,7 @@ json workflowEvaluate(std::string smt2decl, const APIModule* apimodule, const In
     if(!jin.is_array() || jin.size() > apisig->argtypes.size())
     {
         return {
-            {"result", "error"},
+            {"status", "error"},
             {"info", "Bad input arguments"}
         };
     }
@@ -159,7 +159,7 @@ json workflowEvaluate(std::string smt2decl, const APIModule* apimodule, const In
         if(!ok)
         {
             return {
-                {"result", "error"},
+                {"status", "error"},
                 {"info", "Bad input arguments"}
             };
         }
@@ -174,14 +174,14 @@ json workflowEvaluate(std::string smt2decl, const APIModule* apimodule, const In
     if(res == z3::check_result::unknown)
     {
         return {
-            {"result", "timeout"},
+            {"status", "timeout"},
             {"time", delta_ms}
         };
     }
     else if(res == z3::check_result::unsat)
     {
         return {
-            {"result", "unreachable"},
+            {"status", "unreachable"},
             {"time", delta_ms}
         };
     }
@@ -195,13 +195,13 @@ json workflowEvaluate(std::string smt2decl, const APIModule* apimodule, const In
         if(!jarg.has_value())
         {
             return {
-                {"result", "error"},
+                {"status", "error"},
                 {"info", "Could not extract arg"}
             };
         }
 
         return {
-            {"result", "output"},
+            {"status", "output"},
             {"time", delta_ms},
             {"value", jarg.value()}
         };
@@ -250,10 +250,12 @@ int main(int argc, char** argv)
             json result = workflowCheckError(smt2decl, apimodule, apisig, timeout);
             
             std::cout << result << std::endl;
+            fflush(stdout);
         }
         catch(const std::exception& e)
         {
-            std::cerr << "Failed in processing... " << e.what() << std::endl;
+            std::cout << "{\"result\": \"error\", \"info\": \"" << e.what() << "\"" << std::endl;
+            fflush(stdout);
             exit(1);
         }
     }
@@ -271,10 +273,12 @@ int main(int argc, char** argv)
             json result = workflowTestPass(smt2decl, apimodule, apisig, timeout);
             
             std::cout << result << std::endl;
+            fflush(stdout);
         }
         catch(const std::exception& e)
         {
-            std::cerr << "Failed in processing... " << e.what() << std::endl;
+            std::cout << "{\"result\": \"error\", \"info\": \"" << e.what() << "\"" << std::endl;
+            fflush(stdout);
             exit(1);
         }
     }
@@ -292,10 +296,12 @@ int main(int argc, char** argv)
             json result = workflowEvaluate(smt2decl, apimodule, apisig, payload["jin"], timeout);
             
             std::cout << result << std::endl;
+            fflush(stdout);
         }
         catch(const std::exception& e)
         {
-            std::cerr << "Failed in processing... " << e.what() << std::endl;
+            std::cout << "{\"result\": \"error\", \"info\": \"" << e.what() << "\"" << std::endl;
+            fflush(stdout);
             exit(1);
         }
     }

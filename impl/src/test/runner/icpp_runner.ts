@@ -5,9 +5,7 @@
 
 import { exec } from "child_process";
 
-import { ICPPTest, TestResultKind } from "./test_decls";
-
-const PARALLEL_COUNT = 4;
+import { ICPPTest, PARALLEL_COUNT_ICPP, TestResultKind } from "./test_decls";
 
 function runICPPTest(exepath: string, verbose: boolean, test: ICPPTest, icppjson: {code: object, args: any[], main: string}, cbpre: (test: ICPPTest) => void, cb: (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, info?: string) => void) {
     const start = new Date();
@@ -18,7 +16,7 @@ function runICPPTest(exepath: string, verbose: boolean, test: ICPPTest, icppjson
             cbpre(test);
         }
 
-        const proc = exec(cmd, (err, stdout) => {
+        const proc = exec(cmd, {env: {...process.env, ICPP_OUTPUT_MODE: "json"}}, (err, stdout) => {
             const end = new Date();
             let status: "error" | "success" | "failure" = "error";
             let msg: string = "";
@@ -107,9 +105,9 @@ function generateTestResultCallback(exepath: string, verbose: boolean, winfo: {w
 }
 
 function enqueueICPPTests(exepath: string, tests: {test: ICPPTest, icppasm: any}[], verbose: boolean, cbpre: (test: ICPPTest) => void, cb: (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, info?: string) => void, cbdone: () => void) {
-    let shared_work_info = {worklist: tests, cpos: PARALLEL_COUNT, done: 0};
+    let shared_work_info = {worklist: tests, cpos: PARALLEL_COUNT_ICPP, done: 0};
 
-    for(let i = 0; i < PARALLEL_COUNT; ++i) {
+    for(let i = 0; i < PARALLEL_COUNT_ICPP; ++i) {
         enqueueICPPTest(exepath, verbose, tests[i].test, tests[i].icppasm, cbpre, generateTestResultCallback(exepath, verbose, shared_work_info, cbpre, cb, cbdone));
     }
 }

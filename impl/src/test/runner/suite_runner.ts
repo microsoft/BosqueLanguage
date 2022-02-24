@@ -120,6 +120,7 @@ function runtestsICPP(buildlevel: BuildLevel, istestbuild: boolean, topts: Trans
                 return false;
             }
 
+            xxxx; //fuzz should be different than params -- 
             //check direct/fuzz is enabled
             if(idcl.params.length === 0 && !category.includes("direct")) {
                 return false;
@@ -215,7 +216,63 @@ function outputResultsAndExit(totaltime: number, totalicpp: number, failedicpp: 
     process.exit(0);
 }
 
-function runtests(buildlevel: BuildLevel, istestbuild: boolean, topts: TranspilerOptions, vopts: VerifierOptions, files: string[], verbose: "std" | "extra" | "max", category: ("sym" | "icpp" | "err" | "chk" | "direct" | "params")[], dirs: string[]) {
+function loadUserPackageSrc(files: string[], macrodefs: string[], globalmacros: string[]): PackageConfig | undefined {
+    try {
+        let code: CodeFileInfo[] = [];
+
+        for (let i = 0; i < files.length; ++i) {
+            const realpath = Path.resolve(files[i]);
+            code.push({ srcpath: realpath, filename: files[i], contents: FS.readFileSync(realpath).toString() });
+        }
+
+        return new PackageConfig([...macrodefs, ...globalmacros], code);
+    }
+    catch (ex) {
+        return undefined;
+    }
+}
+
+function loadEntryPointInfo(files: string[]): {filename: string, namespace: string, names: string[]}[] | undefined {
+    try {
+        let epi: {filename: string, namespace: string, names: string[]}[] = [];
+
+        for(let i = 0; i < files.length; ++i) {
+            const contents = FS.readFileSync(files[i]).toString();
+
+            const namespacere = /namespace([ \t]+)(?<nsstr>(([A-Z][_a-zA-Z0-9]+)::)*([A-Z][_a-zA-Z0-9]+));/;
+            const entryre = /(entrypoint|chktest|errtest|__chktest)(\s+)function(\s+)(?<fname>([_a-z]|([_a-z][_a-zA-Z0-9]*[a-zA-Z0-9])))(\s*)\(/y;
+            
+            const ns = namespacere.exec(contents);
+            if(ns === null || ns.groups === undefined || ns.groups.nsstr === undefined) {
+                return undefined;
+            }
+            const nsstr = ns.groups.nsstr;
+
+            let names: string[] = [];
+            let mm: RegExpExecArray | null = null;
+            entryre.lastIndex = 0;
+            mm = entryre.exec(contents);
+            while(mm !== null) {
+                if(mm.groups === undefined || mm.groups.fname === undefined) {
+                    return undefined;
+                }
+                names.push(mm.groups.fname);
+
+                entryre.lastIndex += mm[0].length;
+                mm = entryre.exec(contents);
+            }
+
+            epi.push({filename: files[i], namespace: nsstr, names: names})
+        }
+
+        return epi;
+    }
+    catch (ex) {
+        return undefined;
+    }
+}
+
+function runtests(packageloads: {srcfiles: string[], macros: string[]}[], globalmacros: string[], entrypointfiles: string[], buildlevel: BuildLevel, istestbuild: boolean, topts: TranspilerOptions, vopts: VerifierOptions, files: string[], verbose: "std" | "extra" | "max", category: ("sym" | "icpp" | "err" | "chk" | "direct" | "params")[], dirs: string[]) {
     let icppdone = false;
     let totalicpp = 0;
     let failedicpp: {test: ICPPTest, info: string}[] = [];
@@ -227,6 +284,18 @@ function runtests(buildlevel: BuildLevel, istestbuild: boolean, topts: Transpile
     let errorsmt: {test: (SymTest | SymTestInternalChkShouldFail), info: string}[] = [];
 
     const start = new Date();
+
+    const usersrc = packageloads.map((psrc) => loadUserPackageSrc(psrc.srcfiles, psrc.macros, globalmacros));
+    if(usersrc.includes(undefined)) {
+        process.stdout.write(chalk.red("Failure loading user packages\n"));
+        process.exit(1);
+    }
+
+    const entrypoints = loadEntryPointInfo(entrypointfiles);
+    if(entrypoints === undefined) {
+        process.stdout.write(chalk.red("Failure loading entrypoints\n"));
+        process.exit(1);
+    }
 
     const cbpre_icpp = (tt: ICPPTest) => {
         process.stdout.write(`Starting ${tt.namespace}::${tt.invk}...\n`);
@@ -273,7 +342,7 @@ function runtests(buildlevel: BuildLevel, istestbuild: boolean, topts: Transpile
         }
     };
 
-    runtestsICPP(buildlevel, istestbuild, topts, usercode, entrypoint, verbose, category, dirs, cbpre_icpp, cb_icpp, cbdone_icpp);
+    runtestsICPP(buildlevel, istestbuild, topts, usersrc as PackageConfig[], entrypoints, verbose, category, dirs, cbpre_icpp, cb_icpp, cbdone_icpp);
 
     xxxx;
 }
