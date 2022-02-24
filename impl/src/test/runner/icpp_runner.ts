@@ -89,13 +89,13 @@ function enqueueICPPTest(exepath: string, verbose: boolean, test: ICPPTest, icpp
     }
 }
 
-function generateTestResultCallback(exepath: string, icppasm: any, verbose: boolean, winfo: {worklist: ICPPTest[], cpos: number, done: number}, cbpre: (test: ICPPTest) => void, cb: (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, info?: string) => void, cbdone: () => void): (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, info?: string) => void {
+function generateTestResultCallback(exepath: string, verbose: boolean, winfo: {worklist: {test: ICPPTest, icppasm: any}[], cpos: number, done: number}, cbpre: (test: ICPPTest) => void, cb: (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, info?: string) => void, cbdone: () => void): (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, info?: string) => void {
     return (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, info?: string) => {
         cb(result, test, start, end, info);
 
         winfo.done++;
         if(winfo.cpos < winfo.worklist.length) {
-            enqueueICPPTest(exepath, verbose, winfo.worklist[winfo.cpos], icppasm, cbpre, generateTestResultCallback(exepath, verbose, icppasm, winfo, cbpre, cb, cbdone));
+            enqueueICPPTest(exepath, verbose, winfo.worklist[winfo.cpos].test, winfo.worklist[winfo.cpos].icppasm, cbpre, generateTestResultCallback(exepath, verbose, winfo, cbpre, cb, cbdone));
             winfo.cpos++;
         }
         else {
@@ -106,11 +106,11 @@ function generateTestResultCallback(exepath: string, icppasm: any, verbose: bool
     };
 }
 
-function enqueueICPPTests(exepath: string, tests: ICPPTest[], icppasm: any, verbose: boolean, cbpre: (test: ICPPTest) => void, cb: (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, info?: string) => void, cbdone: () => void) {
+function enqueueICPPTests(exepath: string, tests: {test: ICPPTest, icppasm: any}[], verbose: boolean, cbpre: (test: ICPPTest) => void, cb: (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, info?: string) => void, cbdone: () => void) {
     let shared_work_info = {worklist: tests, cpos: PARALLEL_COUNT, done: 0};
 
     for(let i = 0; i < PARALLEL_COUNT; ++i) {
-        enqueueICPPTest(exepath, verbose, tests[i], icppasm, cbpre, generateTestResultCallback(exepath, icppasm, verbose, shared_work_info, cbpre, cb, cbdone));
+        enqueueICPPTest(exepath, verbose, tests[i].test, tests[i].icppasm, cbpre, generateTestResultCallback(exepath, verbose, shared_work_info, cbpre, cb, cbdone));
     }
 }
 

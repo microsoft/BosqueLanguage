@@ -14,14 +14,17 @@ class ICPPTest {
     readonly resultKind: TestResultKind;
     readonly fuzz: boolean;
 
+    readonly filename: string;
+
     readonly namespace: string;
     readonly invk: string;
     readonly params: MIRFunctionParameter[];
     readonly resultType: MIRType;
 
-    constructor(resultKind: TestResultKind, fuzz: boolean, namespace: string, invk: string, params: MIRFunctionParameter[], resultType: MIRType) {
+    constructor(resultKind: TestResultKind, fuzz: boolean, filename: string, namespace: string, invk: string, params: MIRFunctionParameter[], resultType: MIRType) {
         this.resultKind = resultKind;
         this.fuzz = fuzz;
+        this.filename = filename;
         this.namespace = namespace;
         this.invk = invk;
         this.params = params;
@@ -33,6 +36,8 @@ class SymTest {
     readonly resultKind: TestResultKind;
     readonly syminput: boolean;
 
+    readonly filename: string;
+
     readonly namespace: string;
     readonly invk: string;
     readonly params: MIRFunctionParameter[];
@@ -40,9 +45,10 @@ class SymTest {
 
     readonly trgterror: { file: string, line: number, pos: number } | undefined;
 
-    constructor(resultKind: TestResultKind, syminput: boolean, namespace: string, invk: string, params: MIRFunctionParameter[], resultType: MIRType, trgterror: { file: string, line: number, pos: number } | undefined) {
+    constructor(resultKind: TestResultKind, syminput: boolean, filename: string, namespace: string, invk: string, params: MIRFunctionParameter[], resultType: MIRType, trgterror: { file: string, line: number, pos: number } | undefined) {
         this.resultKind = resultKind;
         this.syminput = syminput;
+        this.filename = filename;
         this.namespace = namespace;
         this.invk = invk;
         this.params = params;
@@ -51,7 +57,24 @@ class SymTest {
     }
 }
 
+class SymTestInternalChkShouldFail {
+    readonly filename: string;
+
+    readonly namespace: string;
+    readonly invk: string;
+    readonly params: MIRFunctionParameter[];
+    readonly resultType: MIRType;
+
+    constructor(filename: string, namespace: string, invk: string, params: MIRFunctionParameter[], resultType: MIRType) {
+        this.filename = filename;
+        this.namespace = namespace;
+        this.invk = invk;
+        this.params = params;
+        this.resultType = resultType;
+    }
+}
+
 export {
     TestResultKind,
-    ICPPTest, SymTest
+    ICPPTest, SymTest, SymTestInternalChkShouldFail
 };

@@ -170,6 +170,8 @@ const AttributeStrings = [
     "chktest",
     "errtest",
 
+    "__chktest",
+
     "__internal",
     "__typedeclable",
     "__constructable",

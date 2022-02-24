@@ -123,7 +123,7 @@ function workflowEmitICPPFile(into: string, usercode: PackageConfig, istestbuild
 
     const icppjson = JSON.stringify({code: {api: massembly.emitAPIInfo(entrypoint.fkeys, istestbuild), bytecode: icppasm }, args: []}, undefined, 2);
     return emitICPPFile(icppjson, into);
-}
+} 
 
 function workflowRunICPPFile(args: any[], usercode: PackageConfig, istestbuild: boolean, topts: TranspilerOptions, entrypoint: {filename: string, name: string, fkey: MIRResolvedTypeKey}, cb: (result: string | undefined) => void) {
     const massembly = generateMASM(usercode, {filename: entrypoint.filename, names: [entrypoint.name]});

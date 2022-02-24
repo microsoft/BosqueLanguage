@@ -8,13 +8,16 @@ import * as Path from "path";
 
 import { BuildApplicationMode, BuildLevel } from "../../ast/assembly";
 import { CodeFileInfo } from "../../ast/parser";
-import { MIRAssembly, PackageConfig } from "../../compiler/mir_assembly";
-import { MIREmitter } from "../../compiler/mir_emitter";
+import { MIRAssembly, MIRInvokeDecl, MIRType, PackageConfig } from "../../compiler/mir_assembly";
+import { MIREmitter, MIRKeyGenerator } from "../../compiler/mir_emitter";
 import { MIRInvokeKey } from "../../compiler/mir_ops";
 import { ICPPEmitter } from "../../tooling/icpp/transpiler/icppdecls_emitter";
 import { TranspilerOptions } from "../../tooling/icpp/transpiler/icpp_assembly";
 import { VerifierOptions } from "../../tooling/checker/smt_exp";
 import { SMTEmitter } from "../../tooling/checker/smtdecls_emitter";
+import { ResolvedType } from "../../ast/resolved_type";
+import { ICPPTest, SymTest, SymTestInternalChkShouldFail, TestResultKind } from "./test_decls";
+import { enqueueICPPTests } from "./icpp_runner";
 
 import chalk from "chalk";
 
@@ -25,22 +28,6 @@ const icpppath: string = Path.normalize(Path.join(bosque_dir, "/build/output/icp
 const smtruntime_path = Path.join(bosque_dir, "bin/tooling/checker/runtime/smtruntime.smt2");
 const smtruntime = FS.readFileSync(smtruntime_path).toString();
 const smtpath = Path.normalize(Path.join(bosque_dir, "/build/output/chk" + (process.platform === "win32" ? ".exe" : "")));
-
-function workflowLoadUserSrc(files: string[]): CodeFileInfo[] | undefined {
-    try {
-        let code: CodeFileInfo[] = [];
-
-        for (let i = 0; i < files.length; ++i) {
-            const realpath = Path.resolve(files[i]);
-            code.push({ srcpath: realpath, filename: files[i], contents: FS.readFileSync(realpath).toString() });
-        }
-
-        return code;
-    }
-    catch (ex) {
-        return undefined;
-    }
-}
 
 function workflowLoadCoreSrc(): CodeFileInfo[] | undefined {
     try {
@@ -92,18 +79,201 @@ function generateCheckerPayload(masm: MIRAssembly, smtasm: string, timeout: numb
     return {smt2decl: smtasm, timeout: timeout, apimodule: masm.emitAPIInfo([entrypoint], true), "mainfunc": entrypoint};
 }
 
-function runtestsICPP(files: string[], verbose: "std" | "extra" | "max", category: ("sym" | "icpp" | "err" | "chk" | "direct" | "params")[], dirs: string[]) {
-    if(category.includes("icpp")) {
+function runtestsICPP(buildlevel: BuildLevel, istestbuild: boolean, topts: TranspilerOptions, usercode: PackageConfig[], entrypoint: {filename: string, namespace: string, names: string[]}[], verbose: "std" | "extra" | "max", category: ("sym" | "icpp" | "err" | "chk" | "direct" | "params")[], dirs: string[] | undefined, cbpre: (test: ICPPTest) => void, cb: (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, info?: string) => void, cbdone: (err: string | null) => void) {
+    if(!category.includes("icpp")) {
+        cbdone(null);
+        return;
+    }
 
+    const corecode = workflowLoadCoreSrc();
+    let testsuites: {testfile: string, test: ICPPTest, icppasm: any}[] = [];
+
+    //check directory is enabled
+    const filteredentry = entrypoint.filter((testpoint) => {
+        return dirs === undefined || dirs.some((dname) => testpoint.filename.startsWith(dname));
+    });
+
+    for(let i = 0; i < filteredentry.length; ++i) {
+        const {masm, errors} = generateMASMForICPP(buildlevel, usercode, corecode as CodeFileInfo[], filteredentry[i]);
+        if(masm === undefined) {
+            cbdone(errors.join("\n"));
+            return;
+        }
+
+        const entrykeys = filteredentry[i].names.map((fname) => MIRKeyGenerator.generateFunctionKeyWNamespace(filteredentry[i].namespace, fname, new Map<string, ResolvedType>(), []).keyid);
+        const icppasm = generateICPPAssembly(masm, istestbuild, topts, entrykeys);
+        if(!icppasm[0]) {
+            cbdone("Failed to generate ICPP assembly");
+        }
+
+        const runnableentries = entrykeys.filter((ekey) => {
+            const idcl = masm.invokeDecls.get(ekey);
+            if(idcl === undefined) {
+                return false;
+            }
+
+            //check test type is enabled
+            if(idcl.attributes.includes("errtest") && !category.includes("err")) {
+                return false;
+            }
+            if(idcl.attributes.includes("chktest") && !category.includes("chk")) {
+                return false;
+            }
+
+            //check direct/fuzz is enabled
+            if(idcl.params.length === 0 && !category.includes("direct")) {
+                return false;
+            }
+            if(idcl.params.length !== 0 && !category.includes("params")) {
+                return false;
+            }
+
+            return true;
+        });
+
+        const validtests = runnableentries.map((ekey) => {
+            const idcl = masm.invokeDecls.get(ekey) as MIRInvokeDecl;
+            
+            const rkind = idcl.attributes.includes("ok") ? TestResultKind.ok : TestResultKind.errors;
+            const fuzz = idcl.params.length !== 0;
+
+            return new ICPPTest(rkind, fuzz, filteredentry[i].filename, filteredentry[i].namespace, ekey, idcl.params, masm.typeMap.get(idcl.resultType) as MIRType);
+        });
+
+        validtests.forEach((test) => {
+            testsuites.push({testfile: filteredentry[i].filename, test: test, icppasm: icppasm});
+        });
+    }
+
+    if(testsuites.length === 0) {
+        cbdone(null);
+    }
+    else {
+        const tests = testsuites.map((ts) => {
+            return {test: ts.test, icppasm: ts.icppasm};
+        });
+
+        enqueueICPPTests(icpppath, tests, verbose === "max", cbpre, cb, () => cbdone(null));
     }
 }
 
-function runtestsSMT(files: string[], verbose: "std" | "extra" | "max", category: ("sym" | "icpp" | "err" | "chk" | "direct" | "params")[], dirs: string[]) {
-    if(category.includes("sym")) {
-
+function runtestsSMT(buildlevel: BuildLevel, istestbuild: boolean, vopts: VerifierOptions, usercode: PackageConfig[], entrypoint: {filename: string, namespace: string, names: string[]}[], verbose: "std" | "extra" | "max", category: ("sym" | "icpp" | "err" | "chk" | "direct" | "params")[], dirs: string[] | undefined, cbpre: (test: ICPPTest) => void, cb: (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, info?: string) => void, cbdone: (err: string | null) => void) {
+    if(!category.includes("sym")) {
+        cbdone(null);
+        return;
     }
+
+    console.log("SMT test is not implemented yet");
+    process.exit(1);
 }
 
-function runtests(files: string[], verbose: "std" | "extra" | "max", category: ("sym" | "icpp" | "err" | "chk" | "direct" | "params")[], dirs: string[]) {
-    
+function outputResultsAndExit(totaltime: number, totalicpp: number, failedicpp: {test: ICPPTest, info: string}[], erroricpp: {test: ICPPTest, info: string}[], totalsmt: number, failedsmt: {test: (SymTest | SymTestInternalChkShouldFail), info: string}[], errorsmt: {test: (SymTest | SymTestInternalChkShouldFail), info: string}[]) {
+    process.stdout.write(`Ran ${totalicpp} executable tests in ${totaltime}s ...\n`);
+    if (failedicpp.length === 0 && erroricpp.length === 0) {
+        process.stdout.write(chalk.bold("All executable tests pass!\n\n"));
+    }
+    else {
+        if(failedicpp.length !== 0) {
+            process.stdout.write(chalk.bold(`Suite had ${failedicpp.length}`) + " " + chalk.red("executable test failures") + "\n");
+
+            const rstr = failedicpp.map((tt) => `${tt.test.namespace}::${tt.test.invk} -- "${tt.info}"`).join("\n  ");
+            process.stdout.write(rstr + "\n\n");
+        }
+
+        if(erroricpp.length !== 0) {
+            process.stdout.write(chalk.bold(`Suite had ${erroricpp.length}`) + " " + chalk.magenta("executable test errors") + "\n");
+
+            const rstr = erroricpp.map((tt) => `${tt.test.namespace}::${tt.test.invk} -- "${tt.info}"`).join("\n  ");
+            process.stdout.write(rstr + "\n\n");
+        }
+    }
+
+    process.stdout.write(`Ran ${totalsmt} SMT tests...\n`);
+    if (failedsmt.length === 0 && errorsmt.length === 0) {
+        process.stdout.write(chalk.bold("All executable tests pass!\n\n"));
+    }
+    else {
+        if(failedsmt.length !== 0) {
+            process.stdout.write(chalk.bold(`Suite had ${failedsmt.length}`) + " " + chalk.red("executable test failures") + "\n");
+
+            const rstr = failedsmt.map((tt) => `${tt.test.namespace}::${tt.test.invk} -- "${tt.info}"`).join("\n  ");
+            process.stdout.write(rstr + "\n\n");
+        }
+
+        if(errorsmt.length !== 0) {
+            process.stdout.write(chalk.bold(`Suite had ${errorsmt.length}`) + " " + chalk.magenta("executable test errors") + "\n");
+
+            const rstr = errorsmt.map((tt) => `${tt.test.namespace}::${tt.test.invk} -- "${tt.info}"`).join("\n  ");
+            process.stdout.write(rstr + "\n\n");
+        }
+    }
+
+    if(failedicpp.length !== 0 || erroricpp.length !== 0 || failedsmt.length !== 0 || errorsmt.length !== 0) {
+        process.exit(1);
+    }
+
+    process.exit(0);
+}
+
+function runtests(buildlevel: BuildLevel, istestbuild: boolean, topts: TranspilerOptions, vopts: VerifierOptions, files: string[], verbose: "std" | "extra" | "max", category: ("sym" | "icpp" | "err" | "chk" | "direct" | "params")[], dirs: string[]) {
+    let icppdone = false;
+    let totalicpp = 0;
+    let failedicpp: {test: ICPPTest, info: string}[] = [];
+    let erroricpp: {test: ICPPTest, info: string}[] = [];
+
+    let smtdone = false;
+    let totalsmt = 0;
+    let failedsmt: {test: (SymTest | SymTestInternalChkShouldFail), info: string}[] = [];
+    let errorsmt: {test: (SymTest | SymTestInternalChkShouldFail), info: string}[] = [];
+
+    const start = new Date();
+
+    const cbpre_icpp = (tt: ICPPTest) => {
+        process.stdout.write(`Starting ${tt.namespace}::${tt.invk}...\n`);
+    };
+    const cb_icpp = (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, info?: string) => {
+        if(result === "pass") {
+            ;
+        }
+        else if(result === "fail") {
+            failedicpp.push({test: test, info: info || "[Missing Info]"});
+        }
+        else {
+            erroricpp.push({test: test, info: info || "[Missing Info]"});
+        }
+
+        if(verbose !== "std") {
+            let rstr = "";
+            if(result === "pass") {
+                rstr = chalk.green("pass");
+            }
+            else if(result === "fail") {
+                rstr = chalk.red("fail");
+            }
+            else {
+                rstr = chalk.magenta("error");
+            }
+
+            process.stdout.write(`Executable test ${test.namespace}::${test.invk} completed with ${rstr} in ${end.getTime() - start.getTime()}ms\n`);
+        }
+    };
+    const cbdone_icpp = (err: string | null) => {
+        if(err !== null) {
+            process.stdout.write(chalk.red("Hard failure loading ICPP tests --\n"));
+            process.stdout.write("  " + err + "\n");
+            process.exit(1);
+        }
+        else {
+            icppdone = true;
+            if(smtdone) {
+                const end = new Date();
+                const totaltime = (end.getTime() - start.getTime()) / 1000;
+                outputResultsAndExit(totaltime, totalicpp, failedicpp, erroricpp, totalsmt, failedsmt, errorsmt);
+            }
+        }
+    };
+
+    runtestsICPP(buildlevel, istestbuild, topts, usercode, entrypoint, verbose, category, dirs, cbpre_icpp, cb_icpp, cbdone_icpp);
+
+    xxxx;
 }
