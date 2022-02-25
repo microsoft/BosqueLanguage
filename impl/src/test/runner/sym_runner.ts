@@ -157,7 +157,7 @@ function generateTestResultCallback(exepath: string, verbose: boolean, winfo: {w
     };
 }
 
-function enqueueICPPTests(exepath: string, tests: {test: SymTest | SymTestInternalChkShouldFail, cpayload: any}[], verbose: boolean, cbpre: (test: SymTest | SymTestInternalChkShouldFail) => void, cb: (result: "pass" | "fail" | "error", test: SymTest | SymTestInternalChkShouldFail, start: Date, end: Date, info?: string) => void, cbdone: () => void) {
+function enqueueSymTests(exepath: string, tests: {test: SymTest | SymTestInternalChkShouldFail, cpayload: any}[], verbose: boolean, cbpre: (test: SymTest | SymTestInternalChkShouldFail) => void, cb: (result: "pass" | "fail" | "error", test: SymTest | SymTestInternalChkShouldFail, start: Date, end: Date, info?: string) => void, cbdone: () => void) {
     let shared_work_info = {worklist: tests, cpos: PARALLEL_COUNT_SMT, done: 0};
 
     for(let i = 0; i < PARALLEL_COUNT_SMT; ++i) {
@@ -172,5 +172,5 @@ function enqueueICPPTests(exepath: string, tests: {test: SymTest | SymTestIntern
 }
 
 export {
-    enqueueICPPTests
+    enqueueSymTests
 };

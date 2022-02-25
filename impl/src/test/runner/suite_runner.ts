@@ -16,10 +16,14 @@ import { TranspilerOptions } from "../../tooling/icpp/transpiler/icpp_assembly";
 import { VerifierOptions } from "../../tooling/checker/smt_exp";
 import { SMTEmitter } from "../../tooling/checker/smtdecls_emitter";
 import { ResolvedType } from "../../ast/resolved_type";
-import { ICPPTest, SymTest, SymTestInternalChkShouldFail, TestResultKind } from "./test_decls";
+import { ICPPTest, SMT_TIMEOUT, SMT_VOPTS_CHK, SymTest, SymTestInternalChkShouldFail, TestResultKind } from "./test_decls";
 import { enqueueICPPTests } from "./icpp_runner";
+import { enqueueSymTests } from "./sym_runner";
 
 import chalk from "chalk";
+
+type Verbosity = "std" | "extra" | "max";
+type Category = "sym" | "icpp" | "err" | "chk" | "fuzz" | "symexec";
 
 const bosque_dir: string = Path.normalize(Path.join(__dirname, "../../../../"));
 
@@ -79,7 +83,7 @@ function generateCheckerPayload(masm: MIRAssembly, smtasm: string, timeout: numb
     return {smt2decl: smtasm, timeout: timeout, apimodule: masm.emitAPIInfo([entrypoint], true), "mainfunc": entrypoint};
 }
 
-function runtestsICPP(buildlevel: BuildLevel, istestbuild: boolean, topts: TranspilerOptions, usercode: PackageConfig[], entrypoint: {filename: string, namespace: string, names: string[]}[], verbose: "std" | "extra" | "max", category: ("sym" | "icpp" | "err" | "chk" | "direct" | "params")[], dirs: string[] | undefined, cbpre: (test: ICPPTest) => void, cb: (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, info?: string) => void, cbdone: (err: string | null) => void) {
+function runtestsICPP(buildlevel: BuildLevel, istestbuild: boolean, topts: TranspilerOptions, usercode: PackageConfig[], entrypoint: {filename: string, namespace: string, names: string[]}[], verbose: Verbosity, category: Category[], dirs: string[] | undefined, cbpre: (test: ICPPTest) => void, cb: (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, info?: string) => void, cbdone: (err: string | null) => void) {
     if(!category.includes("icpp")) {
         cbdone(null);
         return;
@@ -100,14 +104,14 @@ function runtestsICPP(buildlevel: BuildLevel, istestbuild: boolean, topts: Trans
             return;
         }
 
-        const entrykeys = filteredentry[i].names.map((fname) => MIRKeyGenerator.generateFunctionKeyWNamespace(filteredentry[i].namespace, fname, new Map<string, ResolvedType>(), []).keyid);
-        const icppasm = generateICPPAssembly(masm, istestbuild, topts, entrykeys);
+        const entrykeys = filteredentry[i].names.map((fname) => [fname, MIRKeyGenerator.generateFunctionKeyWNamespace(filteredentry[i].namespace, fname, new Map<string, ResolvedType>(), []).keyid]);
+        const icppasm = generateICPPAssembly(masm, istestbuild, topts, entrykeys.map((kp) => kp[1]));
         if(!icppasm[0]) {
             cbdone("Failed to generate ICPP assembly");
         }
 
         const runnableentries = entrykeys.filter((ekey) => {
-            const idcl = masm.invokeDecls.get(ekey);
+            const idcl = masm.invokeDecls.get(ekey[1]);
             if(idcl === undefined) {
                 return false;
             }
@@ -120,12 +124,8 @@ function runtestsICPP(buildlevel: BuildLevel, istestbuild: boolean, topts: Trans
                 return false;
             }
 
-            xxxx; //fuzz should be different than params -- 
-            //check direct/fuzz is enabled
-            if(idcl.params.length === 0 && !category.includes("direct")) {
-                return false;
-            }
-            if(idcl.params.length !== 0 && !category.includes("params")) {
+            //check fuzz is enabled
+            if(idcl.params.length !== 0 && !category.includes("fuzz")) {
                 return false;
             }
 
@@ -133,16 +133,20 @@ function runtestsICPP(buildlevel: BuildLevel, istestbuild: boolean, topts: Trans
         });
 
         const validtests = runnableentries.map((ekey) => {
-            const idcl = masm.invokeDecls.get(ekey) as MIRInvokeDecl;
+            const idcl = masm.invokeDecls.get(ekey[1]) as MIRInvokeDecl;
             
-            const rkind = idcl.attributes.includes("ok") ? TestResultKind.ok : TestResultKind.errors;
+            const rkind = idcl.attributes.includes("chktest") ? TestResultKind.ok : TestResultKind.errors;
             const fuzz = idcl.params.length !== 0;
 
-            return new ICPPTest(rkind, fuzz, filteredentry[i].filename, filteredentry[i].namespace, ekey, idcl.params, masm.typeMap.get(idcl.resultType) as MIRType);
+            return {
+                testfile: filteredentry[i].filename,
+                test: new ICPPTest(rkind, fuzz, filteredentry[i].filename, filteredentry[i].namespace, ekey[0], ekey[1], idcl.params, masm.typeMap.get(idcl.resultType) as MIRType),
+                icppasm: icppasm
+            };
         });
 
-        validtests.forEach((test) => {
-            testsuites.push({testfile: filteredentry[i].filename, test: test, icppasm: icppasm});
+        validtests.forEach((tt) => {
+            testsuites.push(tt);
         });
     }
 
@@ -158,14 +162,100 @@ function runtestsICPP(buildlevel: BuildLevel, istestbuild: boolean, topts: Trans
     }
 }
 
-function runtestsSMT(buildlevel: BuildLevel, istestbuild: boolean, vopts: VerifierOptions, usercode: PackageConfig[], entrypoint: {filename: string, namespace: string, names: string[]}[], verbose: "std" | "extra" | "max", category: ("sym" | "icpp" | "err" | "chk" | "direct" | "params")[], dirs: string[] | undefined, cbpre: (test: ICPPTest) => void, cb: (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, info?: string) => void, cbdone: (err: string | null) => void) {
+function runtestsSMT(istestbuild: boolean, usercode: PackageConfig[], entrypoint: {filename: string, namespace: string, names: string[]}[], verbose: Verbosity, category: Category[], dirs: string[] | undefined, cbpre: (test: ICPPTest) => void, cb: (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, info?: string) => void, cbdone: (err: string | null) => void) {
     if(!category.includes("sym")) {
         cbdone(null);
         return;
     }
 
-    console.log("SMT test is not implemented yet");
-    process.exit(1);
+    const corecode = workflowLoadCoreSrc();
+    let testsuites: {testfile: string, test: ICPPTest, icppasm: any}[] = [];
+
+    //check directory is enabled
+    const filteredentry = entrypoint.filter((testpoint) => {
+        return dirs === undefined || dirs.some((dname) => testpoint.filename.startsWith(dname));
+    });
+
+    for(let i = 0; i < filteredentry.length; ++i) {
+        const {masm, errors} = generateMASMForSMT(usercode, corecode as CodeFileInfo[], {filename: filteredentry[i].filename, names: filteredentry[i].names});
+        if(masm === undefined) {
+            cbdone(errors.join("\n"));
+            return;
+        }
+
+        const entrykeys = filteredentry[i].names.map((fname) => [fname, MIRKeyGenerator.generateFunctionKeyWNamespace(filteredentry[i].namespace, fname, new Map<string, ResolvedType>(), []).keyid]);
+        const runnableentries = entrykeys.filter((ekey) => {
+            const idcl = masm.invokeDecls.get(ekey[1]);
+            if(idcl === undefined) {
+                return false;
+            }
+
+            //check test type is enabled
+            if(idcl.attributes.includes("errtest") && !category.includes("err")) {
+                return false;
+            }
+            if(idcl.attributes.includes("chktest") && !category.includes("chk")) {
+                return false;
+            }
+
+            //check symexec is enabled
+            if(idcl.params.length === 0 && !category.includes("symexec")) {
+                return false;
+            }
+
+            return true;
+        });
+
+        const noerrorpos = {file: "[INGORE]", line: -1, pos: -1};
+        const validtests = runnableentries.map((ekey) => {
+            const idcl = masm.invokeDecls.get(ekey[1]) as MIRInvokeDecl;
+            
+            if(idcl.attributes.includes("__chktest")) {
+                const smtasm = generateSMTPayload(masm, istestbuild, SMT_VOPTS_CHK, noerrorpos, ekey[1]);
+                if(smtasm === undefined) {
+                    cbdone("Failed to generate SMT assembly");
+                }
+                
+                const smtpayload = generateCheckerPayload(masm, smtasm as string, SMT_TIMEOUT, ekey[1]);
+                return {
+                    testfile: filteredentry[i].filename,
+                    test: new SymTestInternalChkShouldFail(TestResultKind.ok, filteredentry[i].filename, filteredentry[i].namespace, ekey[0], ekey[1], idcl.params, masm.typeMap.get(idcl.resultType) as MIRType, noerrorpos),
+                    cpayload: smtpayload
+                };
+            }
+            else {
+                const rkind = idcl.attributes.includes("chktest") ? TestResultKind.ok : TestResultKind.errors;
+
+                xxxx;
+            if(rkind === TestResultKind.ok) {
+            const icppasm = generateSMTPayload(masm, istestbuild, vopts, entrykeys);
+            if(!icppasm[0]) {
+                cbdone("Failed to generate ICPP assembly");
+            }
+
+            return new ICPPTest(rkind, fuzz, filteredentry[i].filename, filteredentry[i].namespace, ekey, idcl.params, masm.typeMap.get(idcl.resultType) as MIRType);
+            }
+            else {
+                xxxx;
+            }
+        }
+        });
+
+        validtests.forEach((tt) => {
+            testsuites.push(tt);
+        });
+    }
+
+    if(testsuites.length === 0) {
+        cbdone(null);
+    }
+    else {
+        const tests = testsuites.map((ts) => {
+            return {test: ts.test, icppasm: ts.icppasm};
+        });
+
+        enqueueSymTests(icpppath, tests, verbose === "max", cbpre, cb, () => cbdone(null));
+    }
 }
 
 function outputResultsAndExit(totaltime: number, totalicpp: number, failedicpp: {test: ICPPTest, info: string}[], erroricpp: {test: ICPPTest, info: string}[], totalsmt: number, failedsmt: {test: (SymTest | SymTestInternalChkShouldFail), info: string}[], errorsmt: {test: (SymTest | SymTestInternalChkShouldFail), info: string}[]) {
@@ -272,7 +362,7 @@ function loadEntryPointInfo(files: string[]): {filename: string, namespace: stri
     }
 }
 
-function runtests(packageloads: {srcfiles: string[], macros: string[]}[], globalmacros: string[], entrypointfiles: string[], buildlevel: BuildLevel, istestbuild: boolean, topts: TranspilerOptions, vopts: VerifierOptions, files: string[], verbose: "std" | "extra" | "max", category: ("sym" | "icpp" | "err" | "chk" | "direct" | "params")[], dirs: string[]) {
+function runtests(packageloads: {srcfiles: string[], macros: string[]}[], globalmacros: string[], entrypointfiles: string[], buildlevel: BuildLevel, istestbuild: boolean, topts: TranspilerOptions, vopts: VerifierOptions, files: string[], verbose: Verbosity, category: Category[], dirs: string[]) {
     let icppdone = false;
     let totalicpp = 0;
     let failedicpp: {test: ICPPTest, info: string}[] = [];
@@ -298,7 +388,7 @@ function runtests(packageloads: {srcfiles: string[], macros: string[]}[], global
     }
 
     const cbpre_icpp = (tt: ICPPTest) => {
-        process.stdout.write(`Starting ${tt.namespace}::${tt.invk}...\n`);
+        process.stdout.write(`Starting ${tt.namespace}::${tt.fname}...\n`);
     };
     const cb_icpp = (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, info?: string) => {
         if(result === "pass") {
@@ -323,7 +413,7 @@ function runtests(packageloads: {srcfiles: string[], macros: string[]}[], global
                 rstr = chalk.magenta("error");
             }
 
-            process.stdout.write(`Executable test ${test.namespace}::${test.invk} completed with ${rstr} in ${end.getTime() - start.getTime()}ms\n`);
+            process.stdout.write(`Executable test ${test.namespace}::${test.fname} completed with ${rstr} in ${end.getTime() - start.getTime()}ms\n`);
         }
     };
     const cbdone_icpp = (err: string | null) => {
