@@ -16,7 +16,7 @@ import { TranspilerOptions } from "../../tooling/icpp/transpiler/icpp_assembly";
 import { VerifierOptions } from "../../tooling/checker/smt_exp";
 import { SMTEmitter } from "../../tooling/checker/smtdecls_emitter";
 import { ResolvedType } from "../../ast/resolved_type";
-import { ICPPTest, SMT_TIMEOUT, SMT_VOPTS_CHK, SymTest, SymTestInternalChkShouldFail, TestResultKind } from "./test_decls";
+import { ICPPTest, SMT_TIMEOUT, SMT_VOPTS_CHK, SMT_VOPTS_ERR, SymTest, SymTestInternalChkShouldFail, TestResultKind } from "./test_decls";
 import { enqueueICPPTests } from "./icpp_runner";
 import { enqueueSymTests } from "./sym_runner";
 
@@ -162,14 +162,14 @@ function runtestsICPP(buildlevel: BuildLevel, istestbuild: boolean, topts: Trans
     }
 }
 
-function runtestsSMT(istestbuild: boolean, usercode: PackageConfig[], entrypoint: {filename: string, namespace: string, names: string[]}[], verbose: Verbosity, category: Category[], dirs: string[] | undefined, cbpre: (test: ICPPTest) => void, cb: (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, info?: string) => void, cbdone: (err: string | null) => void) {
+function runtestsSMT(istestbuild: boolean, usercode: PackageConfig[], entrypoint: {filename: string, namespace: string, names: string[]}[], verbose: Verbosity, category: Category[], dirs: string[] | undefined, cbpre: (test: SymTest | SymTestInternalChkShouldFail) => void, cb: (result: "pass" | "fail" | "error", test: SymTest | SymTestInternalChkShouldFail, start: Date, end: Date, info?: string) => void, cbdone: (err: string | null) => void) {
     if(!category.includes("sym")) {
         cbdone(null);
         return;
     }
 
     const corecode = workflowLoadCoreSrc();
-    let testsuites: {testfile: string, test: ICPPTest, icppasm: any}[] = [];
+    let testsuites: {testfile: string, test: SymTest | SymTestInternalChkShouldFail, cpayload: any}[] = [];
 
     //check directory is enabled
     const filteredentry = entrypoint.filter((testpoint) => {
@@ -217,32 +217,48 @@ function runtestsSMT(istestbuild: boolean, usercode: PackageConfig[], entrypoint
                 }
                 
                 const smtpayload = generateCheckerPayload(masm, smtasm as string, SMT_TIMEOUT, ekey[1]);
-                return {
+                return [{
                     testfile: filteredentry[i].filename,
-                    test: new SymTestInternalChkShouldFail(TestResultKind.ok, filteredentry[i].filename, filteredentry[i].namespace, ekey[0], ekey[1], idcl.params, masm.typeMap.get(idcl.resultType) as MIRType, noerrorpos),
+                    test: new SymTestInternalChkShouldFail(filteredentry[i].filename, filteredentry[i].namespace, ekey[0], ekey[1], idcl.params, masm.typeMap.get(idcl.resultType) as MIRType),
                     cpayload: smtpayload
-                };
+                }];
             }
             else {
-                const rkind = idcl.attributes.includes("chktest") ? TestResultKind.ok : TestResultKind.errors;
+                if(idcl.attributes.includes("chktest")) {
+                    const smtasm = generateSMTPayload(masm, istestbuild, SMT_VOPTS_CHK, noerrorpos, ekey[1]);
+                    if(smtasm === undefined) {
+                        cbdone("Failed to generate SMT assembly");
+                    }
+                
+                    const smtpayload = generateCheckerPayload(masm, smtasm as string, SMT_TIMEOUT, ekey[1]);
+                    return [{
+                        testfile: filteredentry[i].filename,
+                        test: new SymTest(TestResultKind.ok, filteredentry[i].filename, filteredentry[i].namespace, ekey[0], ekey[1], idcl.params, masm.typeMap.get(idcl.resultType) as MIRType, noerrorpos),
+                        cpayload: smtpayload
+                    }];
+                }
+                else {
+                    const errors = SMTEmitter.generateSMTAssemblyAllErrors(masm, istestbuild, SMT_VOPTS_ERR, ekey[1]);
 
-                xxxx;
-            if(rkind === TestResultKind.ok) {
-            const icppasm = generateSMTPayload(masm, istestbuild, vopts, entrykeys);
-            if(!icppasm[0]) {
-                cbdone("Failed to generate ICPP assembly");
-            }
+                    return errors.map((errpos) => {
+                        const smtasm = generateSMTPayload(masm, istestbuild, SMT_VOPTS_ERR, errpos, ekey[1]);
+                        if(smtasm === undefined) {
+                            cbdone("Failed to generate SMT assembly");
+                        }
 
-            return new ICPPTest(rkind, fuzz, filteredentry[i].filename, filteredentry[i].namespace, ekey, idcl.params, masm.typeMap.get(idcl.resultType) as MIRType);
+                        const smtpayload = generateCheckerPayload(masm, smtasm as string, SMT_TIMEOUT, ekey[1]);
+                        return {
+                            testfile: filteredentry[i].filename,
+                            test: new SymTest(TestResultKind.errors, filteredentry[i].filename, filteredentry[i].namespace, ekey[0], ekey[1], idcl.params, masm.typeMap.get(idcl.resultType) as MIRType, errpos),
+                            cpayload: smtpayload
+                        };
+                    });
+                }
             }
-            else {
-                xxxx;
-            }
-        }
         });
 
         validtests.forEach((tt) => {
-            testsuites.push(tt);
+            testsuites.push(...tt);
         });
     }
 
@@ -251,10 +267,10 @@ function runtestsSMT(istestbuild: boolean, usercode: PackageConfig[], entrypoint
     }
     else {
         const tests = testsuites.map((ts) => {
-            return {test: ts.test, icppasm: ts.icppasm};
+            return {test: ts.test, cpayload: ts.cpayload};
         });
 
-        enqueueSymTests(icpppath, tests, verbose === "max", cbpre, cb, () => cbdone(null));
+        enqueueSymTests(smtpath, tests, verbose === "max", cbpre, cb, () => cbdone(null));
     }
 }
 
@@ -267,14 +283,14 @@ function outputResultsAndExit(totaltime: number, totalicpp: number, failedicpp: 
         if(failedicpp.length !== 0) {
             process.stdout.write(chalk.bold(`Suite had ${failedicpp.length}`) + " " + chalk.red("executable test failures") + "\n");
 
-            const rstr = failedicpp.map((tt) => `${tt.test.namespace}::${tt.test.invk} -- "${tt.info}"`).join("\n  ");
+            const rstr = failedicpp.map((tt) => `${tt.test.namespace}::${tt.test.fname} -- "${tt.info}"`).join("\n  ");
             process.stdout.write(rstr + "\n\n");
         }
 
         if(erroricpp.length !== 0) {
             process.stdout.write(chalk.bold(`Suite had ${erroricpp.length}`) + " " + chalk.magenta("executable test errors") + "\n");
 
-            const rstr = erroricpp.map((tt) => `${tt.test.namespace}::${tt.test.invk} -- "${tt.info}"`).join("\n  ");
+            const rstr = erroricpp.map((tt) => `${tt.test.namespace}::${tt.test.fname} -- "${tt.info}"`).join("\n  ");
             process.stdout.write(rstr + "\n\n");
         }
     }
@@ -287,14 +303,14 @@ function outputResultsAndExit(totaltime: number, totalicpp: number, failedicpp: 
         if(failedsmt.length !== 0) {
             process.stdout.write(chalk.bold(`Suite had ${failedsmt.length}`) + " " + chalk.red("executable test failures") + "\n");
 
-            const rstr = failedsmt.map((tt) => `${tt.test.namespace}::${tt.test.invk} -- "${tt.info}"`).join("\n  ");
+            const rstr = failedsmt.map((tt) => `${tt.test.namespace}::${tt.test.fname} -- "${tt.info}"`).join("\n  ");
             process.stdout.write(rstr + "\n\n");
         }
 
         if(errorsmt.length !== 0) {
             process.stdout.write(chalk.bold(`Suite had ${errorsmt.length}`) + " " + chalk.magenta("executable test errors") + "\n");
 
-            const rstr = errorsmt.map((tt) => `${tt.test.namespace}::${tt.test.invk} -- "${tt.info}"`).join("\n  ");
+            const rstr = errorsmt.map((tt) => `${tt.test.namespace}::${tt.test.fname} -- "${tt.info}"`).join("\n  ");
             process.stdout.write(rstr + "\n\n");
         }
     }
@@ -322,7 +338,7 @@ function loadUserPackageSrc(files: string[], macrodefs: string[], globalmacros: 
     }
 }
 
-function loadEntryPointInfo(files: string[]): {filename: string, namespace: string, names: string[]}[] | undefined {
+function loadEntryPointInfo(files: string[], istestbuild: boolean): {filename: string, namespace: string, names: string[]}[] | undefined {
     try {
         let epi: {filename: string, namespace: string, names: string[]}[] = [];
 
@@ -346,7 +362,10 @@ function loadEntryPointInfo(files: string[]): {filename: string, namespace: stri
                 if(mm.groups === undefined || mm.groups.fname === undefined) {
                     return undefined;
                 }
-                names.push(mm.groups.fname);
+
+                if(mm[0].startsWith("entrypoint") || istestbuild) {
+                    names.push(mm.groups.fname);
+                }
 
                 entryre.lastIndex += mm[0].length;
                 mm = entryre.exec(contents);
@@ -381,7 +400,7 @@ function runtests(packageloads: {srcfiles: string[], macros: string[]}[], global
         process.exit(1);
     }
 
-    const entrypoints = loadEntryPointInfo(entrypointfiles);
+    const entrypoints = loadEntryPointInfo(entrypointfiles, istestbuild);
     if(entrypoints === undefined) {
         process.stdout.write(chalk.red("Failure loading entrypoints\n"));
         process.exit(1);
@@ -391,6 +410,8 @@ function runtests(packageloads: {srcfiles: string[], macros: string[]}[], global
         process.stdout.write(`Starting ${tt.namespace}::${tt.fname}...\n`);
     };
     const cb_icpp = (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, info?: string) => {
+        totalicpp++;
+        
         if(result === "pass") {
             ;
         }
@@ -434,5 +455,56 @@ function runtests(packageloads: {srcfiles: string[], macros: string[]}[], global
 
     runtestsICPP(buildlevel, istestbuild, topts, usersrc as PackageConfig[], entrypoints, verbose, category, dirs, cbpre_icpp, cb_icpp, cbdone_icpp);
 
-    xxxx;
+    const cbpre_smt = (tt: SymTest | SymTestInternalChkShouldFail) => {
+        process.stdout.write(`Starting ${tt.namespace}::${tt.fname}...\n`);
+    };
+    const cb_smt = (result: "pass" | "fail" | "error", test: SymTest | SymTestInternalChkShouldFail, start: Date, end: Date, info?: string) => {
+        totalsmt++;
+
+        if(result === "pass") {
+            ;
+        }
+        else if(result === "fail") {
+            failedsmt.push({test: test, info: info || "[Missing Info]"});
+        }
+        else {
+            errorsmt.push({test: test, info: info || "[Missing Info]"});
+        }
+
+        if(verbose !== "std") {
+            let rstr = "";
+            if(result === "pass") {
+                rstr = chalk.green("pass");
+            }
+            else if(result === "fail") {
+                rstr = chalk.red("fail");
+            }
+            else {
+                rstr = chalk.magenta("error");
+            }
+
+            process.stdout.write(`Symbolic test ${test.namespace}::${test.fname} completed with ${rstr} in ${end.getTime() - start.getTime()}ms\n`);
+        }
+    };
+    const cbdone_smt = (err: string | null) => {
+        if(err !== null) {
+            process.stdout.write(chalk.red("Hard failure loading Symbolic tests --\n"));
+            process.stdout.write("  " + err + "\n");
+            process.exit(1);
+        }
+        else {
+            smtdone = true;
+            if(icppdone) {
+                const end = new Date();
+                const totaltime = (end.getTime() - start.getTime()) / 1000;
+                outputResultsAndExit(totaltime, totalicpp, failedicpp, erroricpp, totalsmt, failedsmt, errorsmt);
+            }
+        }
+    };
+
+    runtestsSMT(istestbuild, usersrc as PackageConfig[], entrypoints, verbose, category, dirs, cbpre_smt, cb_smt, cbdone_smt);
 }
+
+export {
+    runtests
+};
