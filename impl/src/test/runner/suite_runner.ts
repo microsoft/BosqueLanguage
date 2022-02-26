@@ -83,7 +83,7 @@ function generateCheckerPayload(masm: MIRAssembly, smtasm: string, timeout: numb
     return {smt2decl: smtasm, timeout: timeout, apimodule: masm.emitAPIInfo([entrypoint], true), "mainfunc": entrypoint};
 }
 
-function runtestsICPP(buildlevel: BuildLevel, istestbuild: boolean, topts: TranspilerOptions, usercode: PackageConfig[], entrypoint: {filename: string, namespace: string, names: string[]}[], verbose: Verbosity, category: Category[], dirs: string[] | undefined, cbpre: (test: ICPPTest) => void, cb: (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, info?: string) => void, cbdone: (err: string | null) => void) {
+function runtestsICPP(buildlevel: BuildLevel, istestbuild: boolean, topts: TranspilerOptions, usercode: PackageConfig[], entrypoint: {filename: string, namespace: string, names: string[]}[], verbose: Verbosity, category: Category[], dirs: string[], cbpre: (test: ICPPTest) => void, cb: (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, info?: string) => void, cbdone: (err: string | null) => void) {
     if(!category.includes("icpp")) {
         cbdone(null);
         return;
@@ -94,7 +94,7 @@ function runtestsICPP(buildlevel: BuildLevel, istestbuild: boolean, topts: Trans
 
     //check directory is enabled
     const filteredentry = entrypoint.filter((testpoint) => {
-        return dirs === undefined || dirs.some((dname) => testpoint.filename.startsWith(dname));
+        return dirs.includes("*") || dirs.some((dname) => testpoint.filename.startsWith(dname));
     });
 
     for(let i = 0; i < filteredentry.length; ++i) {
@@ -162,7 +162,7 @@ function runtestsICPP(buildlevel: BuildLevel, istestbuild: boolean, topts: Trans
     }
 }
 
-function runtestsSMT(istestbuild: boolean, usercode: PackageConfig[], entrypoint: {filename: string, namespace: string, names: string[]}[], verbose: Verbosity, category: Category[], dirs: string[] | undefined, cbpre: (test: SymTest | SymTestInternalChkShouldFail) => void, cb: (result: "pass" | "fail" | "error", test: SymTest | SymTestInternalChkShouldFail, start: Date, end: Date, info?: string) => void, cbdone: (err: string | null) => void) {
+function runtestsSMT(istestbuild: boolean, usercode: PackageConfig[], entrypoint: {filename: string, namespace: string, names: string[]}[], verbose: Verbosity, category: Category[], dirs: string[], cbpre: (test: SymTest | SymTestInternalChkShouldFail) => void, cb: (result: "pass" | "fail" | "error", test: SymTest | SymTestInternalChkShouldFail, start: Date, end: Date, info?: string) => void, cbdone: (err: string | null) => void) {
     if(!category.includes("sym")) {
         cbdone(null);
         return;
@@ -173,7 +173,7 @@ function runtestsSMT(istestbuild: boolean, usercode: PackageConfig[], entrypoint
 
     //check directory is enabled
     const filteredentry = entrypoint.filter((testpoint) => {
-        return dirs === undefined || dirs.some((dname) => testpoint.filename.startsWith(dname));
+        return dirs.includes("*") || dirs.some((dname) => testpoint.filename.startsWith(dname));
     });
 
     for(let i = 0; i < filteredentry.length; ++i) {
@@ -381,7 +381,7 @@ function loadEntryPointInfo(files: string[], istestbuild: boolean): {filename: s
     }
 }
 
-function runtests(packageloads: {srcfiles: string[], macros: string[]}[], globalmacros: string[], entrypointfiles: string[], buildlevel: BuildLevel, istestbuild: boolean, topts: TranspilerOptions, vopts: VerifierOptions, files: string[], verbose: Verbosity, category: Category[], dirs: string[]) {
+function runtests(packageloads: {srcfiles: string[], macros: string[]}[], globalmacros: string[], entrypointfiles: string[], buildlevel: BuildLevel, istestbuild: boolean, topts: TranspilerOptions, verbose: Verbosity, category: Category[], dirs: string[]) {
     let icppdone = false;
     let totalicpp = 0;
     let failedicpp: {test: ICPPTest, info: string}[] = [];
@@ -506,5 +506,6 @@ function runtests(packageloads: {srcfiles: string[], macros: string[]}[], global
 }
 
 export {
+    Verbosity, Category,
     runtests
 };

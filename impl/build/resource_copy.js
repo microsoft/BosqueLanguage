@@ -23,6 +23,6 @@ process.stdout.write(`Copying resources...\n`);
 
 copyResourceDir("core");
 copyResourceDir("tooling/checker/runtime");
-//copyResourceDir("test/tests");
+copyResourceDir("test/bsqunit/tests");
 
 process.stdout.write(`done!\n`);
