@@ -78,22 +78,31 @@ function runICPPTest(exepath: string, verbose: boolean, test: ICPPTest, icppjson
     }
 }
 
-function enqueueICPPTest(exepath: string, verbose: boolean, test: ICPPTest, icppasm: any, cbpre: (test: ICPPTest) => void, cb: (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, info?: string) => void) {
+function enqueueICPPTest(exepath: string, verbose: boolean, test: ICPPTest, apiinfo: any, icppasm: any, cbpre: (test: ICPPTest) => void, cb: (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, info?: string) => void) {
     if(!test.fuzz) {
-        runICPPTest(exepath, verbose, test, icppasm, cbpre, cb);
+        const icppjson = {
+            code: {
+                api: apiinfo, 
+                bytecode: icppasm 
+            }, 
+            args: [], 
+            main: test.invkey
+        };
+
+        runICPPTest(exepath, verbose, test, icppjson, cbpre, cb);
     }
     else {
         cb("fail", test, new Date(), new Date(), "Fuzzing isn't wired up yet");
     }
 }
 
-function generateTestResultCallback(exepath: string, verbose: boolean, winfo: {worklist: {test: ICPPTest, icppasm: any}[], cpos: number, done: number}, cbpre: (test: ICPPTest) => void, cb: (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, info?: string) => void, cbdone: () => void): (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, info?: string) => void {
+function generateTestResultCallback(exepath: string, verbose: boolean, winfo: {worklist: {test: ICPPTest, apiinfo: any, icppasm: any}[], cpos: number, done: number}, cbpre: (test: ICPPTest) => void, cb: (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, info?: string) => void, cbdone: () => void): (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, info?: string) => void {
     return (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, info?: string) => {
         cb(result, test, start, end, info);
 
         winfo.done++;
         if(winfo.cpos < winfo.worklist.length) {
-            enqueueICPPTest(exepath, verbose, winfo.worklist[winfo.cpos].test, winfo.worklist[winfo.cpos].icppasm, cbpre, generateTestResultCallback(exepath, verbose, winfo, cbpre, cb, cbdone));
+            enqueueICPPTest(exepath, verbose, winfo.worklist[winfo.cpos].test, winfo.worklist[winfo.cpos].apiinfo, winfo.worklist[winfo.cpos].icppasm, cbpre, generateTestResultCallback(exepath, verbose, winfo, cbpre, cb, cbdone));
             winfo.cpos++;
         }
         else {
@@ -104,11 +113,11 @@ function generateTestResultCallback(exepath: string, verbose: boolean, winfo: {w
     };
 }
 
-function enqueueICPPTests(exepath: string, tests: {test: ICPPTest, icppasm: any}[], verbose: boolean, cbpre: (test: ICPPTest) => void, cb: (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, info?: string) => void, cbdone: () => void) {
+function enqueueICPPTests(exepath: string, tests: {test: ICPPTest, apiinfo: any, icppasm: any}[], verbose: boolean, cbpre: (test: ICPPTest) => void, cb: (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, info?: string) => void, cbdone: () => void) {
     let shared_work_info = {worklist: tests, cpos: PARALLEL_COUNT_ICPP, done: 0};
 
     for(let i = 0; i < Math.min(tests.length, PARALLEL_COUNT_ICPP); ++i) {
-        enqueueICPPTest(exepath, verbose, tests[i].test, tests[i].icppasm, cbpre, generateTestResultCallback(exepath, verbose, shared_work_info, cbpre, cb, cbdone));
+        enqueueICPPTest(exepath, verbose, tests[i].test, tests[i].apiinfo, tests[i].icppasm, cbpre, generateTestResultCallback(exepath, verbose, shared_work_info, cbpre, cb, cbdone));
     }
 }
 

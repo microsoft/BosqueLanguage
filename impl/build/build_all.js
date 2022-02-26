@@ -33,7 +33,7 @@ function doneop(iserror, msg) {
 }
 
 exec("tsc -p tsconfig.json", {cwd: tscdir}, (err, stdout, stderr) => {
-    donecopy = true;
+    donets = true;
     doneop(err === null, err !== null ? err : "done tsc..."); 
 });
 

@@ -166,7 +166,7 @@ int main(int argc, char** argv)
             }
             else
             {
-                printf("{\"status\": \"success:\", \"value\": %s}\n", jout.c_str());
+                printf("{\"status\": \"success\", \"value\": %s}\n", jout.c_str());
             }
             fflush(stdout);
             return 0;
@@ -179,7 +179,7 @@ int main(int argc, char** argv)
             }
             else
             {
-                printf("{\"status\": \"failure:\", \"msg\": %s}\n", jout.c_str());
+                printf("{\"status\": \"failure\", \"msg\": %s}\n", jout.c_str());
             }
             fflush(stdout);
 
@@ -232,7 +232,7 @@ int main(int argc, char** argv)
             }
             else
             {
-                printf("{\"status\": \"success:\", \"time\": %ims \"value\": %s}\n", (int)delta_ms, jout.c_str());
+                printf("{\"status\": \"success\", \"time\": %ims \"value\": %s}\n", (int)delta_ms, jout.c_str());
             }
             fflush(stdout);
             return 0;
@@ -245,7 +245,7 @@ int main(int argc, char** argv)
             }
             else
             {
-                printf("{\"status\": \"failure:\", \"msg\": %s}\n", jout.c_str());
+                printf("{\"status\": \"failure\", \"msg\": %s}\n", jout.c_str());
             }
             fflush(stdout);
             return 1;

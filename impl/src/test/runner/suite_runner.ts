@@ -90,7 +90,7 @@ function runtestsICPP(buildlevel: BuildLevel, istestbuild: boolean, topts: Trans
     }
 
     const corecode = workflowLoadCoreSrc();
-    let testsuites: {testfile: string, test: ICPPTest, icppasm: any}[] = [];
+    let testsuites: {testfile: string, test: ICPPTest, apiinfo: any, icppasm: any}[] = [];
 
     //check directory is enabled
     const filteredentry = entrypoint.filter((testpoint) => {
@@ -109,6 +109,8 @@ function runtestsICPP(buildlevel: BuildLevel, istestbuild: boolean, topts: Trans
         if(!icppasm[0]) {
             cbdone("Failed to generate ICPP assembly");
         }
+
+        const apiinfo = masm.emitAPIInfo(entrykeys.map((ekey) => ekey[1]), istestbuild);
 
         const runnableentries = entrykeys.filter((ekey) => {
             const idcl = masm.invokeDecls.get(ekey[1]);
@@ -141,6 +143,7 @@ function runtestsICPP(buildlevel: BuildLevel, istestbuild: boolean, topts: Trans
             return {
                 testfile: filteredentry[i].filename,
                 test: new ICPPTest(rkind, fuzz, filteredentry[i].filename, filteredentry[i].namespace, ekey[0], ekey[1], idcl.params, masm.typeMap.get(idcl.resultType) as MIRType),
+                apiinfo: apiinfo,
                 icppasm: icppasm[1]
             };
         });
@@ -155,7 +158,7 @@ function runtestsICPP(buildlevel: BuildLevel, istestbuild: boolean, topts: Trans
     }
     else {
         const tests = testsuites.map((ts) => {
-            return {test: ts.test, icppasm: ts.icppasm};
+            return {test: ts.test, apiinfo: ts.apiinfo, icppasm: ts.icppasm};
         });
 
         enqueueICPPTests(icpppath, tests, verbose === "max", cbpre, cb, () => cbdone(null));
@@ -233,7 +236,7 @@ function runtestsSMT(istestbuild: boolean, usercode: PackageConfig[], entrypoint
                     const smtpayload = generateCheckerPayload(masm, smtasm as string, SMT_TIMEOUT, ekey[1]);
                     return [{
                         testfile: filteredentry[i].filename,
-                        test: new SymTest(TestResultKind.ok, filteredentry[i].filename, filteredentry[i].namespace, ekey[0], ekey[1], idcl.params, masm.typeMap.get(idcl.resultType) as MIRType, noerrorpos),
+                        test: new SymTest(TestResultKind.ok, filteredentry[i].filename, filteredentry[i].namespace, ekey[0], ekey[1], idcl.params, masm.typeMap.get(idcl.resultType) as MIRType, undefined),
                         cpayload: smtpayload
                     }];
                 }
@@ -284,14 +287,14 @@ function outputResultsAndExit(totaltime: number, totalicpp: number, failedicpp: 
             process.stdout.write(chalk.bold(`Suite had ${failedicpp.length}`) + " " + chalk.red("executable test failures") + "\n");
 
             const rstr = failedicpp.map((tt) => `${tt.test.namespace}::${tt.test.fname} -- "${tt.info}"`).join("\n  ");
-            process.stdout.write(rstr + "\n\n");
+            process.stdout.write("  " + rstr + "\n\n");
         }
 
         if(erroricpp.length !== 0) {
             process.stdout.write(chalk.bold(`Suite had ${erroricpp.length}`) + " " + chalk.magenta("executable test errors") + "\n");
 
             const rstr = erroricpp.map((tt) => `${tt.test.namespace}::${tt.test.fname} -- "${tt.info}"`).join("\n  ");
-            process.stdout.write(rstr + "\n\n");
+            process.stdout.write("  " + rstr + "\n\n");
         }
     }
 
@@ -304,14 +307,14 @@ function outputResultsAndExit(totaltime: number, totalicpp: number, failedicpp: 
             process.stdout.write(chalk.bold(`Suite had ${failedsmt.length}`) + " " + chalk.red("executable test failures") + "\n");
 
             const rstr = failedsmt.map((tt) => `${tt.test.namespace}::${tt.test.fname} -- "${tt.info}"`).join("\n  ");
-            process.stdout.write(rstr + "\n\n");
+            process.stdout.write("  " + rstr + "\n\n");
         }
 
         if(errorsmt.length !== 0) {
             process.stdout.write(chalk.bold(`Suite had ${errorsmt.length}`) + " " + chalk.magenta("executable test errors") + "\n");
 
             const rstr = errorsmt.map((tt) => `${tt.test.namespace}::${tt.test.fname} -- "${tt.info}"`).join("\n  ");
-            process.stdout.write(rstr + "\n\n");
+            process.stdout.write("  " + rstr + "\n\n");
         }
     }
 
