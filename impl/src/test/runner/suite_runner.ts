@@ -25,7 +25,7 @@ import chalk from "chalk";
 type Verbosity = "std" | "extra" | "max";
 type Category = "sym" | "icpp" | "err" | "chk" | "fuzz" | "symexec";
 
-const bosque_dir: string = Path.normalize(Path.join(__dirname, "../../../../"));
+const bosque_dir: string = Path.normalize(Path.join(__dirname, "../../../"));
 
 const icpppath: string = Path.normalize(Path.join(bosque_dir, "/build/output/icpp" + (process.platform === "win32" ? ".exe" : "")));
 
@@ -141,7 +141,7 @@ function runtestsICPP(buildlevel: BuildLevel, istestbuild: boolean, topts: Trans
             return {
                 testfile: filteredentry[i].filename,
                 test: new ICPPTest(rkind, fuzz, filteredentry[i].filename, filteredentry[i].namespace, ekey[0], ekey[1], idcl.params, masm.typeMap.get(idcl.resultType) as MIRType),
-                icppasm: icppasm
+                icppasm: icppasm[1]
             };
         });
 
@@ -346,7 +346,7 @@ function loadEntryPointInfo(files: string[], istestbuild: boolean): {filename: s
             const contents = FS.readFileSync(files[i]).toString();
 
             const namespacere = /namespace([ \t]+)(?<nsstr>(([A-Z][_a-zA-Z0-9]+)::)*([A-Z][_a-zA-Z0-9]+));/;
-            const entryre = /(entrypoint|chktest|errtest|__chktest)(\s+)function(\s+)(?<fname>([_a-z]|([_a-z][_a-zA-Z0-9]*[a-zA-Z0-9])))(\s*)\(/y;
+            const entryre = /(entrypoint|chktest|errtest|__chktest)(\s+)function(\s+)(?<fname>([_a-z]|([_a-z][_a-zA-Z0-9]*[a-zA-Z0-9])))(\s*)\(/g;
             
             const ns = namespacere.exec(contents);
             if(ns === null || ns.groups === undefined || ns.groups.nsstr === undefined) {

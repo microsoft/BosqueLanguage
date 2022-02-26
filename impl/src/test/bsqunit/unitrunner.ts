@@ -10,8 +10,11 @@ import { Category, runtests } from "../runner/suite_runner";
 
 const testroot = Path.normalize(Path.join(__dirname, "tests"));
 
-const testfiles = FS.readdirSync(testroot).filter((ff) => ff.endsWith(".bsqtest"));
-//TODO: maybe we want to also read 1 level of directories as well to make grouping some tests easier later (like collections)
+const testfiles = FS.readdirSync(testroot)
+    .filter((ff) => ff.endsWith(".bsqtest"))
+    .map((ff) => Path.join(testroot, ff));
+
+//TODO: maybe we want to also read recursive in directories as well to make grouping some tests easier later (like collections)
 
 const pckg = {srcfiles: testfiles, macros: []};
 

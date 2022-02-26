@@ -160,7 +160,7 @@ function generateTestResultCallback(exepath: string, verbose: boolean, winfo: {w
 function enqueueSymTests(exepath: string, tests: {test: SymTest | SymTestInternalChkShouldFail, cpayload: any}[], verbose: boolean, cbpre: (test: SymTest | SymTestInternalChkShouldFail) => void, cb: (result: "pass" | "fail" | "error", test: SymTest | SymTestInternalChkShouldFail, start: Date, end: Date, info?: string) => void, cbdone: () => void) {
     let shared_work_info = {worklist: tests, cpos: PARALLEL_COUNT_SMT, done: 0};
 
-    for(let i = 0; i < PARALLEL_COUNT_SMT; ++i) {
+    for(let i = 0; i < Math.min(tests.length, PARALLEL_COUNT_SMT); ++i) {
         const ttest = tests[i].test;
         if(ttest instanceof SymTest) {
             enqueueSymTest(exepath, verbose, ttest, tests[i].cpayload, cbpre, generateTestResultCallback(exepath, verbose, shared_work_info, cbpre, cb, cbdone));

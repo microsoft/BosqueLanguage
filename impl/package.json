@@ -21,7 +21,7 @@
     },
     "scripts": {
         "build": "node ./build/build_all.js",
-        "test": "tsc -p tsconfig.json && node ./build/resource_copy.js && node ./build/evaluator_build.js && node ./bin/test/test_runner.js"
+        "test": "node ./build/build_all.js && node ./bin/test/bsqunit/unitrunner.js"
     },
     "files": [
         "bin/*"
