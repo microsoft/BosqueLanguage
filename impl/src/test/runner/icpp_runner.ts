@@ -7,7 +7,7 @@ import { exec } from "child_process";
 
 import { ICPPTest, PARALLEL_COUNT_ICPP, TestResultKind } from "./test_decls";
 
-function runICPPTest(exepath: string, verbose: boolean, test: ICPPTest, icppjson: {code: object, args: any[], main: string}, cbpre: (test: ICPPTest) => void, cb: (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, info?: string) => void) {
+function runICPPTest(exepath: string, verbose: boolean, test: ICPPTest, icppjson: {code: object, args: any[], main: string}, cbpre: (test: ICPPTest) => void, cb: (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, icpptime: number, info?: string) => void) {
     const start = new Date();
     try {
         const cmd = `${exepath} --stream`;
@@ -21,12 +21,14 @@ function runICPPTest(exepath: string, verbose: boolean, test: ICPPTest, icppjson
             let status: "error" | "success" | "failure" = "error";
             let msg: string = "";
             let value: any = undefined;
+            let icpptime: number = -1;
 
             try {
                 const robj = JSON.parse(stdout.toString().trim());
                 status = robj["status"] as "error" | "success" | "failure";
                 msg = robj["msg"] || "No Msg";
                 value = robj["value"];
+                icpptime = robj["time"] || 0;
             }
             catch (ex) {
                 status = "error";
@@ -34,34 +36,34 @@ function runICPPTest(exepath: string, verbose: boolean, test: ICPPTest, icppjson
             }
 
             if(err !== null && stdout.length === 0) {
-                cb("error", test, start, end, err.toString());
+                cb("error", test, start, end, icpptime, err.toString());
             }
             else {
                 if(test.resultKind === TestResultKind.errors) {
                     if(status === "success") {
-                        cb("pass", test, start, end);
+                        cb("pass", test, start, end, icpptime);
                     }
                     else if (status === "failure") {
-                        cb("fail", test, start, end, msg);
+                        cb("fail", test, start, end, icpptime, msg);
                     }
                     else {
-                        cb("error", test, start, end, msg);
+                        cb("error", test, start, end, icpptime, msg);
                     }
                 }
                 else {
                     if(status === "success") {
                         if(value === true) {
-                            cb("pass", test, start, end);
+                            cb("pass", test, start, end, icpptime);
                         }
                         else {
-                            cb("fail", test, start, end, JSON.stringify(value));
+                            cb("fail", test, start, end, icpptime, JSON.stringify(value));
                         }
                     }
                     else if (status === "failure") {
-                        cb("error", test, start, end, msg);
+                        cb("error", test, start, end, icpptime, msg);
                     }
                     else {
-                        cb("error", test, start, end, msg);
+                        cb("error", test, start, end, icpptime, msg);
                     }
                 }
             }
@@ -78,7 +80,7 @@ function runICPPTest(exepath: string, verbose: boolean, test: ICPPTest, icppjson
     }
 }
 
-function enqueueICPPTest(exepath: string, verbose: boolean, test: ICPPTest, apiinfo: any, icppasm: any, cbpre: (test: ICPPTest) => void, cb: (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, info?: string) => void) {
+function enqueueICPPTest(exepath: string, verbose: boolean, test: ICPPTest, apiinfo: any, icppasm: any, cbpre: (test: ICPPTest) => void, cb: (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, icpptime: number, info?: string) => void) {
     if(!test.fuzz) {
         const icppjson = {
             code: {
@@ -92,13 +94,13 @@ function enqueueICPPTest(exepath: string, verbose: boolean, test: ICPPTest, apii
         runICPPTest(exepath, verbose, test, icppjson, cbpre, cb);
     }
     else {
-        cb("fail", test, new Date(), new Date(), "Fuzzing isn't wired up yet");
+        cb("fail", test, new Date(), new Date(), -1, "Fuzzing isn't wired up yet");
     }
 }
 
-function generateTestResultCallback(exepath: string, verbose: boolean, winfo: {worklist: {test: ICPPTest, apiinfo: any, icppasm: any}[], cpos: number, done: number}, cbpre: (test: ICPPTest) => void, cb: (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, info?: string) => void, cbdone: () => void): (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, info?: string) => void {
-    return (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, info?: string) => {
-        cb(result, test, start, end, info);
+function generateTestResultCallback(exepath: string, verbose: boolean, winfo: {worklist: {test: ICPPTest, apiinfo: any, icppasm: any}[], cpos: number, done: number}, cbpre: (test: ICPPTest) => void, cb: (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, icpptime: number, info?: string) => void, cbdone: () => void): (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, icpptime: number, info?: string) => void {
+    return (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, icpptime: number, info?: string) => {
+        cb(result, test, start, end, icpptime, info);
 
         winfo.done++;
         if(winfo.cpos < winfo.worklist.length) {
@@ -113,7 +115,7 @@ function generateTestResultCallback(exepath: string, verbose: boolean, winfo: {w
     };
 }
 
-function enqueueICPPTests(exepath: string, tests: {test: ICPPTest, apiinfo: any, icppasm: any}[], verbose: boolean, cbpre: (test: ICPPTest) => void, cb: (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, info?: string) => void, cbdone: () => void) {
+function enqueueICPPTests(exepath: string, tests: {test: ICPPTest, apiinfo: any, icppasm: any}[], verbose: boolean, cbpre: (test: ICPPTest) => void, cb: (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, icpptime: number, info?: string) => void, cbdone: () => void) {
     let shared_work_info = {worklist: tests, cpos: PARALLEL_COUNT_ICPP, done: 0};
 
     for(let i = 0; i < Math.min(tests.length, PARALLEL_COUNT_ICPP); ++i) {

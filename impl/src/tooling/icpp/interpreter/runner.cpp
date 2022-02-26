@@ -156,7 +156,11 @@ int main(int argc, char** argv)
         Evaluator runner;
         loadAssembly(jcode["bytecode"], runner);
 
+        auto start = std::chrono::system_clock::now();
         auto res = run(runner, api, jmain, jargs);
+        auto end = std::chrono::system_clock::now();
+
+        auto delta_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
         auto jout = res.second.dump(4);
         if(res.first)
         {
@@ -166,7 +170,7 @@ int main(int argc, char** argv)
             }
             else
             {
-                printf("{\"status\": \"success\", \"value\": %s}\n", jout.c_str());
+                printf("{\"status\": \"success\", \"time\": %i, \"value\": %s}\n", delta_ms, jout.c_str());
             }
             fflush(stdout);
             return 0;
@@ -179,7 +183,7 @@ int main(int argc, char** argv)
             }
             else
             {
-                printf("{\"status\": \"failure\", \"msg\": %s}\n", jout.c_str());
+                printf("{\"status\": \"failure\", \"time\": %i, \"msg\": %s}\n", delta_ms, jout.c_str());
             }
             fflush(stdout);
 
@@ -232,7 +236,7 @@ int main(int argc, char** argv)
             }
             else
             {
-                printf("{\"status\": \"success\", \"time\": %ims \"value\": %s}\n", (int)delta_ms, jout.c_str());
+                printf("{\"status\": \"success\", \"time\": %i \"value\": %s}\n", (int)delta_ms, jout.c_str());
             }
             fflush(stdout);
             return 0;

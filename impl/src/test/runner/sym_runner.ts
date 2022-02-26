@@ -7,7 +7,7 @@ import { exec } from "child_process";
 
 import { SymTest, SymTestInternalChkShouldFail, PARALLEL_COUNT_SMT, TestResultKind } from "./test_decls";
 
-function runSymTest(exepath: string, verbose: boolean, test: SymTest, cpayload: object, cbpre: (test: SymTest | SymTestInternalChkShouldFail) => void, cb: (result: "pass" | "fail" | "error", test: SymTest | SymTestInternalChkShouldFail, start: Date, end: Date, info?: string) => void) {
+function runSymTest(exepath: string, verbose: boolean, test: SymTest, cpayload: object, cbpre: (test: SymTest | SymTestInternalChkShouldFail) => void, cb: (result: "pass" | "fail" | "error", test: SymTest | SymTestInternalChkShouldFail, start: Date, end: Date, smttime: number, info?: string) => void) {
     const start = new Date();
     try {
         const cmd = `${exepath} --${test.trgterror !== undefined ? "errorchk" : "passchk"}`;
@@ -21,12 +21,14 @@ function runSymTest(exepath: string, verbose: boolean, test: SymTest, cpayload: 
             let status: "error" | "timeout" | "pass" | "unreachable" | "witness";
             let info: string = "";
             let witness: any = undefined;
+            let smttime: number = -1;
 
             try {
                 const robj = JSON.parse(stdout.toString().trim());
                 status = robj["status"] as "error" | "timeout" | "pass" | "unreachable" | "witness";
                 info = robj["info"] || "No Msg";
                 witness = robj["witness"];
+                smttime = robj["time"] || 0;
             }
             catch (ex) {
                 status = "error";
@@ -34,29 +36,29 @@ function runSymTest(exepath: string, verbose: boolean, test: SymTest, cpayload: 
             }
 
             if(err !== null && stdout.length === 0) {
-                cb("error", test, start, end, err.toString());
+                cb("error", test, start, end, smttime, err.toString());
             }
             else {
                 if(test.resultKind === TestResultKind.errors) {
                     if(status === "unreachable") {
-                        cb("pass", test, start, end);
+                        cb("pass", test, start, end, smttime);
                     }
                     else if (status === "witness") {
-                        cb("fail", test, start, end, JSON.stringify(witness));
+                        cb("fail", test, start, end, smttime, JSON.stringify(witness));
                     }
                     else {
-                        cb("error", test, start, end, (status === "timeout" ? "[TIMEOUT]" : "") + info);
+                        cb("error", test, start, end, smttime, (status === "timeout" ? "[TIMEOUT]" : "") + info);
                     }
                 }
                 else {
                     if(status === "pass") {
-                        cb("pass", test, start, end);
+                        cb("pass", test, start, end, smttime);
                     }
                     else if (status === "witness") {
-                        cb("fail", test, start, end, JSON.stringify(witness));
+                        cb("fail", test, start, end, smttime, JSON.stringify(witness));
                     }
                     else {
-                        cb("error", test, start, end, (status === "timeout" ? "[TIMEOUT]" : "") + info);
+                        cb("error", test, start, end, smttime, (status === "timeout" ? "[TIMEOUT]" : "") + info);
                     }
                 }
             }
@@ -73,7 +75,7 @@ function runSymTest(exepath: string, verbose: boolean, test: SymTest, cpayload: 
     }
 }
 
-function runSymTestShouldFail(exepath: string, verbose: boolean, test: SymTestInternalChkShouldFail, cpayload: object, cbpre: (test: SymTest | SymTestInternalChkShouldFail) => void, cb: (result: "pass" | "fail" | "error", test: SymTest | SymTestInternalChkShouldFail, start: Date, end: Date, info?: string) => void) {
+function runSymTestShouldFail(exepath: string, verbose: boolean, test: SymTestInternalChkShouldFail, cpayload: object, cbpre: (test: SymTest | SymTestInternalChkShouldFail) => void, cb: (result: "pass" | "fail" | "error", test: SymTest | SymTestInternalChkShouldFail, start: Date, end: Date, smttime: number, info?: string) => void) {
     const start = new Date();
     try {
         const cmd = `${exepath} --passchk`;
@@ -87,12 +89,14 @@ function runSymTestShouldFail(exepath: string, verbose: boolean, test: SymTestIn
             let status: "error" | "timeout" | "pass" | "witness";
             let info: string = "";
             let witness: any = undefined;
+            let smttime: number = -1;
 
             try {
                 const robj = JSON.parse(stdout.toString().trim());
                 status = robj["status"] as "error" | "timeout" | "pass" | "witness";
                 info = robj["info"] || "No Msg";
                 witness = robj["witness"];
+                smttime = robj["time"] || 0;
             }
             catch (ex) {
                 status = "error";
@@ -100,17 +104,17 @@ function runSymTestShouldFail(exepath: string, verbose: boolean, test: SymTestIn
             }
 
             if(err !== null && stdout.length === 0) {
-                cb("error", test, start, end, err.toString());
+                cb("error", test, start, end, smttime, err.toString());
             }
             else {
                 if (status === "pass") {
-                    cb("fail", test, start, end, "Expected to find failing witness");
+                    cb("fail", test, start, end, smttime, "Expected to find failing witness");
                 }
                 else if (status === "witness") {
-                    cb("pass", test, start, end, JSON.stringify(witness));
+                    cb("pass", test, start, end, smttime, JSON.stringify(witness));
                 }
                 else {
-                    cb("error", test, start, end, (status === "timeout" ? "[TIMEOUT]" : "") + info);
+                    cb("error", test, start, end, smttime, (status === "timeout" ? "[TIMEOUT]" : "") + info);
                 }
             }
         });
@@ -126,17 +130,17 @@ function runSymTestShouldFail(exepath: string, verbose: boolean, test: SymTestIn
     }
 }
 
-function enqueueSymTest(exepath: string, verbose: boolean, test: SymTest, icppasm: any, cbpre: (test: SymTest | SymTestInternalChkShouldFail) => void, cb: (result: "pass" | "fail" | "error", test: SymTest | SymTestInternalChkShouldFail, start: Date, end: Date, info?: string) => void) {
+function enqueueSymTest(exepath: string, verbose: boolean, test: SymTest, icppasm: any, cbpre: (test: SymTest | SymTestInternalChkShouldFail) => void, cb: (result: "pass" | "fail" | "error", test: SymTest | SymTestInternalChkShouldFail, start: Date, end: Date, smttime: number, info?: string) => void) {
     runSymTest(exepath, verbose, test, icppasm, cbpre, cb);
 }
 
-function enqueueSymTestInternalChkShouldFail(exepath: string, verbose: boolean, test: SymTestInternalChkShouldFail, icppasm: any, cbpre: (test: SymTest | SymTestInternalChkShouldFail) => void, cb: (result: "pass" | "fail" | "error", test: SymTest | SymTestInternalChkShouldFail, start: Date, end: Date, info?: string) => void) {
+function enqueueSymTestInternalChkShouldFail(exepath: string, verbose: boolean, test: SymTestInternalChkShouldFail, icppasm: any, cbpre: (test: SymTest | SymTestInternalChkShouldFail) => void, cb: (result: "pass" | "fail" | "error", test: SymTest | SymTestInternalChkShouldFail, start: Date, end: Date, smttime: number, info?: string) => void) {
     runSymTestShouldFail(exepath, verbose, test, icppasm, cbpre, cb);
 }
 
-function generateTestResultCallback(exepath: string, verbose: boolean, winfo: {worklist: {test: SymTest | SymTestInternalChkShouldFail, cpayload: any}[], cpos: number, done: number}, cbpre: (test: SymTest | SymTestInternalChkShouldFail) => void, cb: (result: "pass" | "fail" | "error", test: SymTest | SymTestInternalChkShouldFail, start: Date, end: Date, info?: string) => void, cbdone: () => void): (result: "pass" | "fail" | "error", test: SymTest | SymTestInternalChkShouldFail, start: Date, end: Date, info?: string) => void {
-    return (result: "pass" | "fail" | "error", test: SymTest | SymTestInternalChkShouldFail, start: Date, end: Date, info?: string) => {
-        cb(result, test, start, end, info);
+function generateTestResultCallback(exepath: string, verbose: boolean, winfo: {worklist: {test: SymTest | SymTestInternalChkShouldFail, cpayload: any}[], cpos: number, done: number}, cbpre: (test: SymTest | SymTestInternalChkShouldFail) => void, cb: (result: "pass" | "fail" | "error", test: SymTest | SymTestInternalChkShouldFail, start: Date, end: Date, smttime: number, info?: string) => void, cbdone: () => void): (result: "pass" | "fail" | "error", test: SymTest | SymTestInternalChkShouldFail, start: Date, end: Date, smttime: number, info?: string) => void {
+    return (result: "pass" | "fail" | "error", test: SymTest | SymTestInternalChkShouldFail, start: Date, end: Date, smttime: number, info?: string) => {
+        cb(result, test, start, end, smttime, info);
 
         winfo.done++;
         if(winfo.cpos < winfo.worklist.length) {
@@ -157,7 +161,7 @@ function generateTestResultCallback(exepath: string, verbose: boolean, winfo: {w
     };
 }
 
-function enqueueSymTests(exepath: string, tests: {test: SymTest | SymTestInternalChkShouldFail, cpayload: any}[], verbose: boolean, cbpre: (test: SymTest | SymTestInternalChkShouldFail) => void, cb: (result: "pass" | "fail" | "error", test: SymTest | SymTestInternalChkShouldFail, start: Date, end: Date, info?: string) => void, cbdone: () => void) {
+function enqueueSymTests(exepath: string, tests: {test: SymTest | SymTestInternalChkShouldFail, cpayload: any}[], verbose: boolean, cbpre: (test: SymTest | SymTestInternalChkShouldFail) => void, cb: (result: "pass" | "fail" | "error", test: SymTest | SymTestInternalChkShouldFail, start: Date, end: Date, smttime: number, info?: string) => void, cbdone: () => void) {
     let shared_work_info = {worklist: tests, cpos: PARALLEL_COUNT_SMT, done: 0};
 
     for(let i = 0; i < Math.min(tests.length, PARALLEL_COUNT_SMT); ++i) {

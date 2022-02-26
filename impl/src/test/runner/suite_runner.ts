@@ -83,7 +83,7 @@ function generateCheckerPayload(masm: MIRAssembly, smtasm: string, timeout: numb
     return {smt2decl: smtasm, timeout: timeout, apimodule: masm.emitAPIInfo([entrypoint], true), "mainfunc": entrypoint};
 }
 
-function runtestsICPP(buildlevel: BuildLevel, istestbuild: boolean, topts: TranspilerOptions, usercode: PackageConfig[], entrypoint: {filename: string, namespace: string, names: string[]}[], verbose: Verbosity, category: Category[], dirs: string[], cbpre: (test: ICPPTest) => void, cb: (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, info?: string) => void, cbdone: (err: string | null) => void) {
+function runtestsICPP(buildlevel: BuildLevel, istestbuild: boolean, topts: TranspilerOptions, usercode: PackageConfig[], entrypoint: {filename: string, namespace: string, names: string[]}[], verbose: Verbosity, category: Category[], dirs: string[], cbpre: (test: ICPPTest) => void, cb: (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, icpptime: number, info?: string) => void, cbdone: (err: string | null) => void) {
     if(!category.includes("icpp")) {
         cbdone(null);
         return;
@@ -165,7 +165,7 @@ function runtestsICPP(buildlevel: BuildLevel, istestbuild: boolean, topts: Trans
     }
 }
 
-function runtestsSMT(istestbuild: boolean, usercode: PackageConfig[], entrypoint: {filename: string, namespace: string, names: string[]}[], verbose: Verbosity, category: Category[], dirs: string[], cbpre: (test: SymTest | SymTestInternalChkShouldFail) => void, cb: (result: "pass" | "fail" | "error", test: SymTest | SymTestInternalChkShouldFail, start: Date, end: Date, info?: string) => void, cbdone: (err: string | null) => void) {
+function runtestsSMT(istestbuild: boolean, usercode: PackageConfig[], entrypoint: {filename: string, namespace: string, names: string[]}[], verbose: Verbosity, category: Category[], dirs: string[], cbpre: (test: SymTest | SymTestInternalChkShouldFail) => void, cb: (result: "pass" | "fail" | "error", test: SymTest | SymTestInternalChkShouldFail, start: Date, end: Date, smttime: number, info?: string) => void, cbdone: (err: string | null) => void) {
     if(!category.includes("sym")) {
         cbdone(null);
         return;
@@ -277,10 +277,16 @@ function runtestsSMT(istestbuild: boolean, usercode: PackageConfig[], entrypoint
     }
 }
 
-function outputResultsAndExit(totaltime: number, totalicpp: number, failedicpp: {test: ICPPTest, info: string}[], erroricpp: {test: ICPPTest, info: string}[], totalsmt: number, failedsmt: {test: (SymTest | SymTestInternalChkShouldFail), info: string}[], errorsmt: {test: (SymTest | SymTestInternalChkShouldFail), info: string}[]) {
-    process.stdout.write(`Ran ${totalicpp} executable tests in ${totaltime}s ...\n`);
+function outputResultsAndExit(verbose: Verbosity, totaltime: number, totalicpp: number, failedicpp: {test: ICPPTest, info: string}[], erroricpp: {test: ICPPTest, info: string}[], totalsmt: number, failedsmt: {test: (SymTest | SymTestInternalChkShouldFail), info: string}[], errorsmt: {test: (SymTest | SymTestInternalChkShouldFail), info: string}[]) {
+    if(verbose !== "std") {
+        process.stdout.write("\n");   
+    }
+    
+    process.stdout.write(`Ran ${totalicpp + totalsmt} tests in ${totaltime}s ...\n\n`);
+    
+    process.stdout.write(`Ran ${totalicpp} executable tests ...\n`);
     if (failedicpp.length === 0 && erroricpp.length === 0) {
-        process.stdout.write(chalk.bold("All executable tests pass!\n\n"));
+        process.stdout.write(chalk.green(chalk.bold("All executable tests pass!\n\n")));
     }
     else {
         if(failedicpp.length !== 0) {
@@ -300,7 +306,7 @@ function outputResultsAndExit(totaltime: number, totalicpp: number, failedicpp: 
 
     process.stdout.write(`Ran ${totalsmt} SMT tests...\n`);
     if (failedsmt.length === 0 && errorsmt.length === 0) {
-        process.stdout.write(chalk.bold("All executable tests pass!\n\n"));
+        process.stdout.write(chalk.green(chalk.bold("All executable tests pass!\n\n")));
     }
     else {
         if(failedsmt.length !== 0) {
@@ -412,7 +418,7 @@ function runtests(packageloads: {srcfiles: string[], macros: string[]}[], global
     const cbpre_icpp = (tt: ICPPTest) => {
         process.stdout.write(`Starting ${tt.namespace}::${tt.fname}...\n`);
     };
-    const cb_icpp = (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, info?: string) => {
+    const cb_icpp = (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, icpptime: number, info?: string) => {
         totalicpp++;
         
         if(result === "pass") {
@@ -437,7 +443,7 @@ function runtests(packageloads: {srcfiles: string[], macros: string[]}[], global
                 rstr = chalk.magenta("error");
             }
 
-            process.stdout.write(`Executable test ${test.namespace}::${test.fname} completed with ${rstr} in ${end.getTime() - start.getTime()}ms\n`);
+            process.stdout.write(`Executable test ${test.namespace}::${test.fname} completed with ${rstr} in ${icpptime}ms (${end.getTime() - start.getTime()}ms elapsed)\n`);
         }
     };
     const cbdone_icpp = (err: string | null) => {
@@ -451,7 +457,7 @@ function runtests(packageloads: {srcfiles: string[], macros: string[]}[], global
             if(smtdone) {
                 const end = new Date();
                 const totaltime = (end.getTime() - start.getTime()) / 1000;
-                outputResultsAndExit(totaltime, totalicpp, failedicpp, erroricpp, totalsmt, failedsmt, errorsmt);
+                outputResultsAndExit(verbose, totaltime, totalicpp, failedicpp, erroricpp, totalsmt, failedsmt, errorsmt);
             }
         }
     };
@@ -461,7 +467,7 @@ function runtests(packageloads: {srcfiles: string[], macros: string[]}[], global
     const cbpre_smt = (tt: SymTest | SymTestInternalChkShouldFail) => {
         process.stdout.write(`Starting ${tt.namespace}::${tt.fname}...\n`);
     };
-    const cb_smt = (result: "pass" | "fail" | "error", test: SymTest | SymTestInternalChkShouldFail, start: Date, end: Date, info?: string) => {
+    const cb_smt = (result: "pass" | "fail" | "error", test: SymTest | SymTestInternalChkShouldFail, start: Date, end: Date, smtime: number, info?: string) => {
         totalsmt++;
 
         if(result === "pass") {
@@ -486,7 +492,7 @@ function runtests(packageloads: {srcfiles: string[], macros: string[]}[], global
                 rstr = chalk.magenta("error");
             }
 
-            process.stdout.write(`Symbolic test ${test.namespace}::${test.fname} completed with ${rstr} in ${end.getTime() - start.getTime()}ms\n`);
+            process.stdout.write(`Symbolic test ${test.namespace}::${test.fname} completed with ${rstr} in ${smtime}ms (${end.getTime() - start.getTime()}ms elapsed)\n`);
         }
     };
     const cbdone_smt = (err: string | null) => {
@@ -500,7 +506,7 @@ function runtests(packageloads: {srcfiles: string[], macros: string[]}[], global
             if(icppdone) {
                 const end = new Date();
                 const totaltime = (end.getTime() - start.getTime()) / 1000;
-                outputResultsAndExit(totaltime, totalicpp, failedicpp, erroricpp, totalsmt, failedsmt, errorsmt);
+                outputResultsAndExit(verbose, totaltime, totalicpp, failedicpp, erroricpp, totalsmt, failedsmt, errorsmt);
             }
         }
     };
