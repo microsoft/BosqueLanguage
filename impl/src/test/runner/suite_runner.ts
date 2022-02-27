@@ -391,12 +391,10 @@ function loadEntryPointInfo(files: string[], istestbuild: boolean): {filename: s
 }
 
 function runtests(packageloads: {srcfiles: string[], macros: string[]}[], globalmacros: string[], entrypointfiles: string[], buildlevel: BuildLevel, istestbuild: boolean, topts: TranspilerOptions, verbose: Verbosity, category: Category[], dirs: string[]) {
-    let icppdone = false;
     let totalicpp = 0;
     let failedicpp: {test: ICPPTest, info: string}[] = [];
     let erroricpp: {test: ICPPTest, info: string}[] = [];
 
-    let smtdone = false;
     let totalsmt = 0;
     let failedsmt: {test: (SymTest | SymTestInternalChkShouldFail), info: string}[] = [];
     let errorsmt: {test: (SymTest | SymTestInternalChkShouldFail), info: string}[] = [];
@@ -414,55 +412,6 @@ function runtests(packageloads: {srcfiles: string[], macros: string[]}[], global
         process.stdout.write(chalk.red("Failure loading entrypoints\n"));
         process.exit(1);
     }
-
-    const cbpre_icpp = (tt: ICPPTest) => {
-        process.stdout.write(`Starting ${tt.namespace}::${tt.fname}...\n`);
-    };
-    const cb_icpp = (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, icpptime: number, info?: string) => {
-        totalicpp++;
-        
-        if(result === "pass") {
-            ;
-        }
-        else if(result === "fail") {
-            failedicpp.push({test: test, info: info || "[Missing Info]"});
-        }
-        else {
-            erroricpp.push({test: test, info: info || "[Missing Info]"});
-        }
-
-        if(verbose !== "std") {
-            let rstr = "";
-            if(result === "pass") {
-                rstr = chalk.green("pass");
-            }
-            else if(result === "fail") {
-                rstr = chalk.red("fail");
-            }
-            else {
-                rstr = chalk.magenta("error");
-            }
-
-            process.stdout.write(`Executable test ${test.namespace}::${test.fname} completed with ${rstr} in ${icpptime}ms (${end.getTime() - start.getTime()}ms elapsed)\n`);
-        }
-    };
-    const cbdone_icpp = (err: string | null) => {
-        if(err !== null) {
-            process.stdout.write(chalk.red("Hard failure loading ICPP tests --\n"));
-            process.stdout.write("  " + err + "\n");
-            process.exit(1);
-        }
-        else {
-            icppdone = true;
-            if(smtdone) {
-                const end = new Date();
-                const totaltime = (end.getTime() - start.getTime()) / 1000;
-                outputResultsAndExit(verbose, totaltime, totalicpp, failedicpp, erroricpp, totalsmt, failedsmt, errorsmt);
-            }
-        }
-    };
-
-    runtestsICPP(buildlevel, istestbuild, topts, usersrc as PackageConfig[], entrypoints, verbose, category, dirs, cbpre_icpp, cb_icpp, cbdone_icpp);
 
     const cbpre_smt = (tt: SymTest | SymTestInternalChkShouldFail) => {
         process.stdout.write(`Starting ${tt.namespace}::${tt.fname}...\n`);
@@ -502,16 +451,55 @@ function runtests(packageloads: {srcfiles: string[], macros: string[]}[], global
             process.exit(1);
         }
         else {
-            smtdone = true;
-            if(icppdone) {
-                const end = new Date();
-                const totaltime = (end.getTime() - start.getTime()) / 1000;
-                outputResultsAndExit(verbose, totaltime, totalicpp, failedicpp, erroricpp, totalsmt, failedsmt, errorsmt);
-            }
+            const end = new Date();
+            const totaltime = (end.getTime() - start.getTime()) / 1000;
+            outputResultsAndExit(verbose, totaltime, totalicpp, failedicpp, erroricpp, totalsmt, failedsmt, errorsmt);
         }
     };
 
-    runtestsSMT(istestbuild, usersrc as PackageConfig[], entrypoints, verbose, category, dirs, cbpre_smt, cb_smt, cbdone_smt);
+    const cbpre_icpp = (tt: ICPPTest) => {
+        process.stdout.write(`Starting ${tt.namespace}::${tt.fname}...\n`);
+    };
+    const cb_icpp = (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, icpptime: number, info?: string) => {
+        totalicpp++;
+        
+        if(result === "pass") {
+            ;
+        }
+        else if(result === "fail") {
+            failedicpp.push({test: test, info: info || "[Missing Info]"});
+        }
+        else {
+            erroricpp.push({test: test, info: info || "[Missing Info]"});
+        }
+
+        if(verbose !== "std") {
+            let rstr = "";
+            if(result === "pass") {
+                rstr = chalk.green("pass");
+            }
+            else if(result === "fail") {
+                rstr = chalk.red("fail");
+            }
+            else {
+                rstr = chalk.magenta("error");
+            }
+
+            process.stdout.write(`Executable test ${test.namespace}::${test.fname} completed with ${rstr} in ${icpptime}ms (${end.getTime() - start.getTime()}ms elapsed)\n`);
+        }
+    };
+    const cbdone_icpp = (err: string | null) => {
+        if(err !== null) {
+            process.stdout.write(chalk.red("Hard failure loading ICPP tests --\n"));
+            process.stdout.write("  " + err + "\n");
+            process.exit(1);
+        }
+        else {
+            runtestsSMT(istestbuild, usersrc as PackageConfig[], entrypoints, verbose, category, dirs, cbpre_smt, cb_smt, cbdone_smt);
+        }
+    };
+
+    runtestsICPP(buildlevel, istestbuild, topts, usersrc as PackageConfig[], entrypoints, verbose, category, dirs, cbpre_icpp, cb_icpp, cbdone_icpp);
 }
 
 export {
