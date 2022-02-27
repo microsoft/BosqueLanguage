@@ -6,7 +6,13 @@
 #pragma once
 
 #include "common.h"
-#include "runtime/environment.h"
+#include "runtime/bsqop.h"
+#include "runtime/bsqinvoke.h"
+
+#include "runtime/bsqvalue.h"
+#include "runtime/bsqlist.h"
+
+#include "collection_eval.h"
 
 class EvaluatorFrame
 {
@@ -18,7 +24,6 @@ public:
     int64_t dbg_line;
 #endif
 
-    StorageLocationPtr* argsbase;
     uint8_t* scalarbase;
     uint8_t* mixedbase;
     BSQBool* argmask;
@@ -31,21 +36,39 @@ public:
 
 class Evaluator
 {
+public:
+    static jmp_buf g_entrybuff;
+    static EvaluatorFrame g_callstack[BSQ_MAX_STACK];
+    static uint8_t* g_constantbuffer;
+
+    static std::map<BSQTypeID, const BSQRegex*> g_validators;
+    static std::map<std::string, const BSQRegex*> g_regexs;
+
+    static inline StorageLocationPtr evalParameterInfo(ParameterInfo pinfo, uint8_t* scalarbase, uint8_t* mixedbase)
+    {
+        if(pinfo.kind == ArgumentTag::ScalarVal)
+        {
+            return scalarbase + pinfo.poffset;
+        }
+        else 
+        {
+            return mixedbase + pinfo.poffset;
+        }
+    }
+
 private:
     EvaluatorFrame* cframe = nullptr;
     int32_t cpos = 0;
-    static EvaluatorFrame g_callstack[BSQ_MAX_STACK];
 
 #ifdef BSQ_DEBUG_BUILD
     template <bool isbultin>
-    inline void pushFrame(const std::string* dbg_file, const std::string* dbg_function, StorageLocationPtr* argsbase, uint8_t* scalarbase, uint8_t* mixedbase, BSQBool* argmask, BSQBool* masksbase, const std::vector<InterpOp*>* ops)
+    inline void pushFrame(const std::string* dbg_file, const std::string* dbg_function, uint8_t* scalarbase, uint8_t* mixedbase, BSQBool* argmask, BSQBool* masksbase, const std::vector<InterpOp*>* ops)
     {
         this->cpos++;
         auto cf = Evaluator::g_callstack + this->cpos;
         cf->dbg_file = dbg_file;
         cf->dbg_function = dbg_function;
         cf->dbg_prevline = 0;
-        cf->argsbase = argsbase;
         cf->scalarbase = scalarbase;
         cf->mixedbase = mixedbase;
         cf->argmask = argmask;
@@ -63,11 +86,10 @@ private:
     }
 #else
     template <bool isbultin>
-    inline void pushFrame(StorageLocationPtr* argsbase, uint8_t* scalarbase, uint8_t* mixedbase, BSQBool* argmask, BSQBool* masksbase, const std::vector<InterpOp*>* ops) 
+    inline void pushFrame(uint8_t* scalarbase, uint8_t* mixedbase, BSQBool* argmask, BSQBool* masksbase, const std::vector<InterpOp*>* ops) 
     {
         this->cpos++;
         auto cf = Evaluator::g_callstack + cpos;
-        cf->argsbase = argsbase;
         cf->scalarbase = scalarbase;
         cf->mixedbase = mixedbase;
         cf->argmask = argmask;
@@ -152,22 +174,18 @@ private:
 
     inline StorageLocationPtr evalConstArgument(Argument arg)
     {
-        return (StorageLocationPtr)(Environment::g_constantbuffer + arg.location);
+        return (StorageLocationPtr)(Evaluator::g_constantbuffer + arg.location);
     }
 
     inline StorageLocationPtr evalArgument(Argument arg)
     {
-        if(arg.kind == ArgumentTag::LocalScalar)
+        if(arg.kind == ArgumentTag::ScalarVal)
         {
             return this->cframe->scalarbase + arg.location;
         }
-        else if(arg.kind == ArgumentTag::LocalMixed)
+        else if(arg.kind == ArgumentTag::MixedVal)
         {
             return this->cframe->mixedbase + arg.location;
-        }
-        else if(arg.kind == ArgumentTag::Argument)
-        {
-            return this->cframe->argsbase[arg.location];
         }
         else 
         {
@@ -177,7 +195,7 @@ private:
 
     inline StorageLocationPtr evalTargetVar(TargetVar trgt)
     {
-        if(trgt.kind == ArgumentTag::LocalScalar)
+        if(trgt.kind == ArgumentTag::ScalarVal)
         {
             return this->cframe->scalarbase + trgt.offset;
         }
@@ -306,11 +324,7 @@ private:
     void evalConstructorRecordFromEphemeralListOp(const ConstructorRecordFromEphemeralListOp* op);
     void evalEphemeralListExtendOp(const EphemeralListExtendOp* op);
     void evalConstructorEphemeralListOp(const ConstructorEphemeralListOp* op);
-
-    void evalConstructorPrimaryCollectionEmptyOp(const ConstructorPrimaryCollectionEmptyOp* op);
-    void evalConstructorPrimaryCollectionSingletonsOp(const ConstructorPrimaryCollectionSingletonsOp* op);
-    void evalConstructorPrimaryCollectionCopiesOp(const ConstructorPrimaryCollectionCopiesOp* op);
-    void evalConstructorPrimaryCollectionMixedOp(const ConstructorPrimaryCollectionMixedOp* op);
+    void evalConstructorEntityDirectOp(const ConstructorEntityDirectOp* op);
 
     void evalPrefixNotOp(const PrefixNotOp* op);
     void evalAllTrueOp(const AllTrueOp* op);
@@ -325,13 +339,8 @@ private:
     template <bool isGuarded>
     void evalBinKeyEqVirtualOp(const BinKeyEqVirtualOp* op);
     
-    template <bool isGuarded>
     void evalBinKeyLessFastOp(const BinKeyLessFastOp* op);
-    
-    template <bool isGuarded>
     void evalBinKeyLessStaticOp(const BinKeyLessStaticOp* op);
-    
-    template <bool isGuarded>
     void evalBinKeyLessVirtualOp(const BinKeyLessVirtualOp* op);
 
     template <bool isGuarded>
@@ -339,6 +348,9 @@ private:
 
     template <bool isGuarded>
     void evalIsSomeOp(const TypeIsSomeOp* op);
+
+    template <bool isGuarded>
+    void evalIsNothingOp(const TypeIsNothingOp* op);
 
     template <bool isGuarded>
     void evalTypeTagIsOp(const TypeTagIsOp* op);
@@ -364,15 +376,109 @@ private:
     void evaluateBody(StorageLocationPtr resultsl, const BSQType* restype, Argument resarg);
     
     void invoke(const BSQInvokeDecl* call, const std::vector<Argument>& args, StorageLocationPtr resultsl, BSQBool* optmask);
-    void invokePCode(BSQPCodeOperator& pc, const std::vector<StorageLocationPtr>& args, StorageLocationPtr resultsl);
-
-    void invokePrelude(const BSQInvokeBodyDecl* invk, void* argsbase, uint8_t* cstack, uint8_t* maskslots, BSQBool* optmask);
-    void invokePrimitivePrelude(const BSQInvokePrimitiveDecl* invk, void* argsbase, uint8_t* cstack, uint8_t* maskslots);
+    void vinvoke(const BSQInvokeBodyDecl* call, StorageLocationPtr rcvr, const std::vector<Argument>& args, StorageLocationPtr resultsl, BSQBool* optmask);
+    
+    void invokePrelude(const BSQInvokeBodyDecl* invk, uint8_t* cstack, uint8_t* maskslots, BSQBool* optmask);
     void invokePostlude();
 
-    void evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, StorageLocationPtr resultsl, const BSQType* restype);
+    void evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const std::vector<StorageLocationPtr>& params, StorageLocationPtr resultsl, const BSQType* restype);
 
 public:
     void invokeGlobalCons(const BSQInvokeBodyDecl* invk, StorageLocationPtr resultsl, const BSQType* restype, Argument resarg);
-    void invokeMain(const BSQInvokeBodyDecl* invk, const std::vector<void*>& argslocs, StorageLocationPtr resultsl, const BSQType* restype, Argument resarg);
+
+    uint8_t* prepareMainStack(const BSQInvokeBodyDecl* invk);
+    void invokeMain(const BSQInvokeBodyDecl* invk, StorageLocationPtr resultsl, const BSQType* restype, Argument resarg);
+
+    void linvoke(const BSQInvokeBodyDecl* call, const std::vector<StorageLocationPtr>& args, StorageLocationPtr resultsl);
+    bool iinvoke(const BSQInvokeBodyDecl* call, const std::vector<StorageLocationPtr>& args, BSQBool* optmask);
+    void cinvoke(const BSQInvokeBodyDecl* call, const std::vector<StorageLocationPtr>& args, BSQBool* optmask, StorageLocationPtr resultsl);
+};
+
+class ICPPParseJSON : public ApiManagerJSON<StorageLocationPtr, Evaluator>
+{
+private:
+    std::vector<std::pair<void*, const BSQType*>> tuplestack;
+    std::vector<std::pair<void*, const BSQType*>> recordstack;
+    std::vector<std::pair<void*, const BSQType*>> entitystack;
+    std::vector<BSQBool*> entitymaskstack;
+
+    std::vector<std::pair<const BSQType*, uint64_t>> containerstack;
+
+    std::vector<std::list<StorageLocationPtr>> parsecontainerstack;
+    std::vector<std::list<StorageLocationPtr>::iterator> parsecontainerstackiter;
+
+public:
+    ICPPParseJSON(): 
+        ApiManagerJSON(), tuplestack(), recordstack(), entitystack(), entitymaskstack(), containerstack(), parsecontainerstack(), parsecontainerstackiter()
+    {;}
+
+    virtual ~ICPPParseJSON() {;}
+
+    virtual bool checkInvokeOk(const std::string& checkinvoke, StorageLocationPtr value, Evaluator& ctx) override final;
+
+    virtual bool parseNoneImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
+    virtual bool parseNothingImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
+    virtual bool parseBoolImpl(const APIModule* apimodule, const IType* itype, bool b, StorageLocationPtr value, Evaluator& ctx) override final;
+    virtual bool parseNatImpl(const APIModule* apimodule, const IType* itype, uint64_t n, StorageLocationPtr value, Evaluator& ctx) override final;
+    virtual bool parseIntImpl(const APIModule* apimodule, const IType* itype, int64_t i, StorageLocationPtr value, Evaluator& ctx) override final;
+    virtual bool parseBigNatImpl(const APIModule* apimodule, const IType* itype, std::string n, StorageLocationPtr value, Evaluator& ctx) override final;
+    virtual bool parseBigIntImpl(const APIModule* apimodule, const IType* itype, std::string i, StorageLocationPtr value, Evaluator& ctx) override final;
+    virtual bool parseFloatImpl(const APIModule* apimodule, const IType* itype, std::string f, StorageLocationPtr value, Evaluator& ctx) override final;
+    virtual bool parseDecimalImpl(const APIModule* apimodule, const IType* itype, std::string d, StorageLocationPtr value, Evaluator& ctx) override final;
+    virtual bool parseRationalImpl(const APIModule* apimodule, const IType* itype, std::string n, uint64_t d, StorageLocationPtr value, Evaluator& ctx) override final;
+    virtual bool parseStringImpl(const APIModule* apimodule, const IType* itype, std::string s, StorageLocationPtr value, Evaluator& ctx) override final;
+    virtual bool parseByteBufferImpl(const APIModule* apimodule, const IType* itype, uint8_t compress, uint8_t format, std::vector<uint8_t>& data, StorageLocationPtr value, Evaluator& ctx) override final;
+    virtual bool parseDateTimeImpl(const APIModule* apimodule, const IType* itype, DateTime t, StorageLocationPtr value, Evaluator& ctx) override final;
+    virtual bool parseTickTimeImpl(const APIModule* apimodule, const IType* itype, uint64_t t, StorageLocationPtr value, Evaluator& ctx) override final;
+    virtual bool parseLogicalTimeImpl(const APIModule* apimodule, const IType* itype, uint64_t j, StorageLocationPtr value, Evaluator& ctx) override final;
+    virtual bool parseUUIDImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, StorageLocationPtr value, Evaluator& ctx) override final;
+    virtual bool parseContentHashImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, StorageLocationPtr value, Evaluator& ctx) override final;
+    
+    virtual void prepareParseTuple(const APIModule* apimodule, const IType* itype, Evaluator& ctx) override final;
+    virtual StorageLocationPtr getValueForTupleIndex(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t i, Evaluator& ctx) override final;
+    virtual void completeParseTuple(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
+
+    virtual void prepareParseRecord(const APIModule* apimodule, const IType* itype, Evaluator& ctx) override final;
+    virtual StorageLocationPtr getValueForRecordProperty(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, std::string pname, Evaluator& ctx) override final;
+    virtual void completeParseRecord(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
+
+    virtual void prepareParseContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t count, Evaluator& ctx) override final;
+    virtual StorageLocationPtr getValueForContainerElementParse(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t i, Evaluator& ctx) override final;
+    virtual void completeParseContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
+
+    virtual void prepareParseEntity(const APIModule* apimodule, const IType* itype, Evaluator& ctx) override final;
+    virtual void prepareParseEntityMask(const APIModule* apimodule, const IType* itype, Evaluator& ctx) override final;
+    virtual StorageLocationPtr getValueForEntityField(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, std::pair<std::string, std::string> fnamefkey, Evaluator& ctx) override final;
+    virtual void completeParseEntity(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
+
+    virtual void setMaskFlag(const APIModule* apimodule, StorageLocationPtr flagloc, size_t i, bool flag, Evaluator& ctx) override final;
+
+    virtual StorageLocationPtr parseUnionChoice(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t pick, Evaluator& ctx) override final;
+
+    virtual std::optional<bool> extractBoolImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
+    virtual std::optional<uint64_t> extractNatImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
+    virtual std::optional<int64_t> extractIntImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
+    virtual std::optional<std::string> extractBigNatImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
+    virtual std::optional<std::string> extractBigIntImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
+    virtual std::optional<std::string> extractFloatImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
+    virtual std::optional<std::string> extractDecimalImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
+    virtual std::optional<std::pair<std::string, uint64_t>> extractRationalImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
+    virtual std::optional<std::string> extractStringImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
+    virtual std::optional<std::pair<std::vector<uint8_t>, std::pair<uint8_t, uint8_t>>> extractByteBufferImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
+    virtual std::optional<DateTime> extractDateTimeImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
+    virtual std::optional<uint64_t> extractTickTimeImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
+    virtual std::optional<uint64_t> extractLogicalTimeImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
+    virtual std::optional<std::vector<uint8_t>> extractUUIDImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
+    virtual std::optional<std::vector<uint8_t>> extractContentHashImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
+    
+    virtual StorageLocationPtr extractValueForTupleIndex(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t i, Evaluator& ctx) override final;
+    virtual StorageLocationPtr extractValueForRecordProperty(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, std::string pname, Evaluator& ctx) override final;
+    virtual StorageLocationPtr extractValueForEntityField(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, std::pair<std::string, std::string> fnamefkey, Evaluator& ctx) override final;
+
+    virtual void prepareExtractContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
+    virtual std::optional<size_t> extractLengthForContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
+    virtual StorageLocationPtr extractValueForContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t i, Evaluator& ctx) override final;
+    virtual void completeExtractContainer(const APIModule* apimodule, const IType* itype, Evaluator& ctx) override final;
+
+    virtual std::optional<size_t> extractUnionChoice(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, Evaluator& ctx) override final;
 };

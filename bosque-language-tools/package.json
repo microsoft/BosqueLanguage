@@ -23,7 +23,9 @@
                     "bosque"
                 ],
                 "extensions": [
-                    ".bsq"
+                    ".bsq",
+                    ".bsqtest",
+                    ".bsqapi"
                 ],
                 "configuration": "./language-configuration.json"
             }

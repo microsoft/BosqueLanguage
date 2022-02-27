@@ -9,13 +9,14 @@ import { exec } from "child_process";
 
 import { MIRAssembly, PackageConfig } from "../../../compiler/mir_assembly";
 import { MIREmitter } from "../../../compiler/mir_emitter";
-import { MIRInvokeKey } from "../../../compiler/mir_ops";
+import { MIRInvokeKey, MIRResolvedTypeKey } from "../../../compiler/mir_ops";
 
-import { ICPPAssembly, TranspilerOptions } from "./icpp_assembly";
+import { TranspilerOptions } from "./icpp_assembly";
 import { ICPPEmitter } from "./icppdecls_emitter";
 import { CodeFileInfo } from "../../../ast/parser";
 
 import chalk from "chalk";
+import { BuildApplicationMode } from "../../../ast/assembly";
 
 const bosque_dir: string = Path.normalize(Path.join(__dirname, "../../../../"));
 const exepath: string = Path.normalize(Path.join(bosque_dir, "/build/output/icpp" + (process.platform === "win32" ? ".exe" : "")));
@@ -29,7 +30,7 @@ function workflowLoadUserSrc(files: string[]): CodeFileInfo[] | undefined {
 
         for (let i = 0; i < files.length; ++i) {
             const realpath = Path.resolve(files[i]);
-            code.push({ fpath: realpath, contents: FS.readFileSync(realpath).toString() });
+            code.push({ srcpath: realpath, filename: files[i], contents: FS.readFileSync(realpath).toString() });
         }
 
         return code;
@@ -43,11 +44,11 @@ function workflowLoadCoreSrc(): CodeFileInfo[] | undefined {
     try {
         let code: CodeFileInfo[] = [];
 
-        const coredir = Path.join(bosque_dir, "bin/core/execute");
+        const coredir = Path.join(bosque_dir, "bin/core");
         const corefiles = FS.readdirSync(coredir);
         for (let i = 0; i < corefiles.length; ++i) {
             const cfpath = Path.join(coredir, corefiles[i]);
-            code.push({ fpath: cfpath, contents: FS.readFileSync(cfpath).toString() });
+            code.push({ srcpath: cfpath, filename: corefiles[i], contents: FS.readFileSync(cfpath).toString() });
         }
 
         return code;
@@ -57,23 +58,11 @@ function workflowLoadCoreSrc(): CodeFileInfo[] | undefined {
     }
 }
 
-function generateMASM(usercode: CodeFileInfo[], entrypoint: string): MIRAssembly {
+function generateMASM(usercode: PackageConfig, entrypoint: {filename: string, names: string[]}): MIRAssembly {
     const corecode = workflowLoadCoreSrc() as CodeFileInfo[];
-    const code = [...corecode, ...usercode];
+    const coreconfig = new PackageConfig(["EXEC_LIBS"], corecode);
 
-    let namespace = "NSMain";
-    let entryfunc = "main";
-    const cpos = entrypoint.indexOf("::");
-    if(cpos === -1) {
-        entryfunc = entrypoint;
-    }
-    else {
-        namespace = entrypoint.slice(0, cpos);
-        entryfunc = entrypoint.slice(cpos + 2);
-    }
-
-    const macros: string[] = [];
-    const { masm, errors } = MIREmitter.generateMASM(new PackageConfig(), "debug", macros, {namespace: namespace, names: [entryfunc]}, true, code);
+    const { masm, errors } = MIREmitter.generateMASM(BuildApplicationMode.Executable, [coreconfig, usercode], "debug", entrypoint);
     if (errors.length !== 0) {
         for (let i = 0; i < errors.length; ++i) {
             process.stdout.write(chalk.red(`Parse error -- ${errors[i]}\n`));
@@ -85,10 +74,10 @@ function generateMASM(usercode: CodeFileInfo[], entrypoint: string): MIRAssembly
     return masm as MIRAssembly;
 }
 
-function generateICPPAssembly(masm: MIRAssembly, topts: TranspilerOptions, entrypoint: MIRInvokeKey): ICPPAssembly | undefined {
-    let res: ICPPAssembly | undefined = undefined;
+function generateICPPAssembly(masm: MIRAssembly, istestbuild: boolean, topts: TranspilerOptions, entrypoints: MIRInvokeKey[]): any {
+    let res: any = undefined;
     try {
-        res = ICPPEmitter.generateICPPAssembly(masm, topts, entrypoint);
+        res = ICPPEmitter.generateICPPAssembly(masm, istestbuild, topts, entrypoints);
     } catch(e) {
         process.stdout.write(chalk.red(`ICPP bytecode generate error -- ${e}\n`));
         process.exit(1);
@@ -106,12 +95,12 @@ function emitICPPFile(cfile: string, into: string): boolean {
     }
 }
 
-function runICPPFile(icppjson: {code: object, args: any[]}, cb: (result: string | undefined) => void) {
+function runICPPFile(icppjson: {code: object, args: any[], main: string}, cb: (result: string | undefined) => void) {
     try {
         const cmd = `${exepath} --stream`;
 
-        const proc = exec(cmd, (err, stdout, stderr) => {
-            cb(stdout.toString().trim());
+        const proc = exec(cmd, (err, stdout) => {
+           cb(stdout.toString().trim());
         });
 
         proc.stdin.setDefaultEncoding('utf-8');
@@ -124,27 +113,27 @@ function runICPPFile(icppjson: {code: object, args: any[]}, cb: (result: string 
     }
 }
 
-function workflowEmitICPPFile(into: string, usercode: CodeFileInfo[], topts: TranspilerOptions, entrypoint: MIRInvokeKey): boolean {
-    const massembly = generateMASM(usercode, entrypoint);
-    const icppasm = generateICPPAssembly(massembly, topts, "NSMain::main");
+function workflowEmitICPPFile(into: string, usercode: PackageConfig, istestbuild: boolean, topts: TranspilerOptions, entrypoint: {filename: string, names: string[], fkeys: MIRResolvedTypeKey[]}): boolean {
+    const massembly = generateMASM(usercode, {filename: entrypoint.filename, names: entrypoint.names});
+    const icppasm = generateICPPAssembly(massembly, istestbuild, topts, entrypoint.fkeys);
             
     if (icppasm === undefined) {
         return false;
     }
 
-    const icppjson = JSON.stringify(icppasm.jsonEmit(), undefined, 2);
+    const icppjson = JSON.stringify({code: {api: massembly.emitAPIInfo(entrypoint.fkeys, istestbuild), bytecode: icppasm }, args: []}, undefined, 2);
     return emitICPPFile(icppjson, into);
-}
+} 
 
-function workflowRunICPPFile(args: any[], usercode: CodeFileInfo[], topts: TranspilerOptions, entrypoint: MIRInvokeKey, cb: (result: string | undefined) => void) {
-    const massembly = generateMASM(usercode, entrypoint);
-    const icppasm = generateICPPAssembly(massembly, topts, "NSMain::main");
+function workflowRunICPPFile(args: any[], usercode: PackageConfig, istestbuild: boolean, topts: TranspilerOptions, entrypoint: {filename: string, name: string, fkey: MIRResolvedTypeKey}, cb: (result: string | undefined) => void) {
+    const massembly = generateMASM(usercode, {filename: entrypoint.filename, names: [entrypoint.name]});
+    const icppasm = generateICPPAssembly(massembly, istestbuild, topts, [entrypoint.fkey]);
             
     if (icppasm === undefined) {
         return undefined;
     }
 
-    return runICPPFile({code: icppasm.jsonEmit(), args: args}, cb);
+    return runICPPFile({code: {api: massembly.emitAPIInfo([entrypoint.fkey], istestbuild), bytecode: icppasm }, args: args, main: entrypoint.fkey}, cb);
 }
 
 export {

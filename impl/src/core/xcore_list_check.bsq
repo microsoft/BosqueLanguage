@@ -1,0 +1,1551 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+//The core namespace implements the primitive concepts used in the bosque core language
+namespace Core;
+
+#if CHECK_LIBS
+internal entity ListOps provides Some {
+    function s_empty<T>(l: ListRepr<T>): Bool {
+        return l === none;
+    }
+
+    function s_size<T>(l: ListRepr<T>): Nat {
+        if(l === none) {
+            return 0n;
+        }
+        elif(l.is<Vector1<T>>()) {
+            return 1n;
+        }
+        elif(l.is<Vector2<T>>()) {
+            return 2n;
+        }
+        elif(l.is<Vector3<T>>()) {
+            return 3n;
+        }
+        else {
+            return l.count[recursive]();
+        }
+    }
+
+    function s_range<T unique Int | Nat>(start: T, end: T, one: T, count: Nat): ListRepr<T> {
+        if(start == end) {
+            return none;
+        }
+        else {
+            if(count == 1n) {
+                return Vector1<T>{start};
+            }
+            elif(count == 2n) {
+                return Vector2<T>{start, end};
+            }
+            elif(count == 3n) {
+                return Vector3<T>{start, start + one, end};
+            }
+            else {
+                return RecList<T>::range[recursive](start, one, count);
+            }
+        }
+    }
+
+    function s_fill<T>(count: Nat, v: T): ListRepr<T> {
+        if(count == 0n) {
+            return none;
+        }
+        elif(count == 1n) {
+            return Vector1<T>{v};
+        }
+        elif(count == 2n) {
+            return Vector2<T>{v, v};
+        }
+        elif(count == 3n) {
+            return Vector3<T>{v, v, v};
+        }
+        else {
+            return RecList<T>::fill[recursive](count, v);
+        }
+    }
+
+    function s_zip_index<T>(l: ListRepr<T>): ListRepr<[Nat, T]> {
+        if(l === none) {
+            return none;
+        }
+        elif(l.is<Vector1<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector1<T>>(l);
+            return Vector1<T>{[0, ll.v0]};
+        }
+        elif(l.is<Vector2<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
+            return Vector2<T>{[0, ll.v0], [1, ll.v1]};
+        }
+        elif(l.is<Vector3<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
+            return Vector3<T>{[0, ll.v0], [1, ll.v1], [2, ll.v2]};
+        }
+        else {
+            return l.zip_index[recursive]();
+        }
+    }
+
+    function s_zip<T, U>(l1: ListRepr<T>, l2: ListRepr<U>): ListRepr<[T, U]> {
+        if(\/(l1 === none, l2 === none)) {
+            return none;
+        }
+        elif(/\(l1.is<Vector1<T>>(), l2.is<Vector1<U>>())) {
+            let ll1 = s_safeAs<ListRepr<T>, Vector1<T>>(l1);
+            let ll2 = s_safeAs<ListRepr<U>, Vector1<U>>(l2);
+
+            return Vector1<[T, U]>{[l11.v0, l12.v0]};
+        }
+        elif(/\(l1.is<Vector2<T>>(), l2.is<Vector2<U>>())) {
+            let ll1 = s_safeAs<ListRepr<T>, Vector2<T>>(l1);
+            let ll2 = s_safeAs<ListRepr<U>, Vector2<U>>(l2);
+
+            return Vector2<[T, U]>{[l1.v0, l2.v0], [l1.v1, l2.v1]};
+        }
+        elif(/\(l1.is<Vector3<T>>(), l2.is<Vector3<U>>())) {
+            let ll1 = s_safeAs<ListRepr<T>, Vector3<T>>(l1);
+            let ll2 = s_safeAs<ListRepr<U>, Vector3<U>>(l2);
+
+            return Vector3<[T, U]>{[l1.v0, l2.v0], [l1.v1, l2.v1], [l1.v2, l2.v2]};
+        }
+        else {
+            let ll1 = s_safeAs<ListRepr<T>, RecList<T>>(l1);
+            let ll2 = s_safeAs<ListRepr<U>, RecList<U>>(l2);
+
+            return ll1.zip<U>[recursive](ll2);
+        }
+    }
+
+    function s_append<T>(l: ListRepr<T>, r: ListRepr<T>): ListRepr<T> {
+        if(/\(l === none, r === none)) {
+            return none;
+        }
+        elif(l === none) {
+            return r;
+        }
+        elif(r === none) {
+            return l;
+        }
+        elif(/\(l.is<Vector1<T>>(), r.is<Vector1<T>>())) {
+            let ll = s_safeAs<ListRepr<T>, Vector1<T>>(l);
+            let rr = s_safeAs<ListRepr<T>, Vector1<T>>(r);
+
+            return Vector2<T>{ll.v0, rr.v0};
+        }
+        elif(/\(l.is<Vector1<T>>(), r.is<Vector2<T>>())) {
+            let ll = s_safeAs<ListRepr<T>, Vector1<T>>(l);
+            let rr = s_safeAs<ListRepr<T>, Vector2<T>>(r);
+
+            return Vector3<T>{ll.v0, rr.v0, rr.v1};
+        }
+        elif(/\(l.is<Vector2<T>>(), r.is<Vector1<T>>())) {
+            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
+            let rr = s_safeAs<ListRepr<T>, Vector1<T>>(r);
+
+            return Vector3<T>{ll.v0, ll.v1, rr.v0};
+        }
+        else {
+            let ll = RecList<T>::s_ensure_list(l);
+            let rr = RecList<T>::s_ensure_list(r);
+
+            return RecList<T>::s_append[recursive](ll, rr); 
+        }
+    }
+
+    recursive function s_concatrec<T>(ll: ListRepr<List<T>>): ListRepr<T> {
+        let count = ListOps::s_size<List<T>>(ll);
+        if(count == 1) {
+            return ListOps::s_safe_get<List<T>>(ll, 0n);
+        }
+        else {
+            let lr = ListOps::s_slice_front<List<T>>(ll, 1n);
+            let ltail = List<T>::s_concat(lr);
+
+            return ListOps::s_append<T>(ListOps::s_safe_get<List<T>>(ll, 0n), ltail);
+        }
+    }
+
+    function s_concat(ll: ListRepr<List<T>>): ListRepr<T> {
+        let count = ListOps::s_size<List<T>>(ll);
+        if(count == 1) {
+            return ListOps::s_safe_get<List<T>>(ll, start);
+        }
+        else { 
+            let lr = ListOps::s_slice_front<List<T>>(ll, 1n);
+            let ltail = ListOps::s_concatrec<T>(lr);
+
+            return ListOps::s_append<T>(ListOps::s_safe_get<List<T>>(ll, 0n), ltail);
+        }
+    }
+
+    function s_slice_start<T>(l: ListRepr<T>, start: Nat): ListRepr<T> {
+        if(start == 0) {
+            return l;
+        }
+
+        if(l === none) {
+            return none;
+        }
+        elif(l.is<Vector1<T>>()) {
+            return none;
+        }
+        elif(l.is<Vector2<T>>()) {
+            if(start == 2) {
+                return none;
+            }
+            else {
+                return Vector1<T>{l.v1};
+            }
+        }
+        elif(l.is<Vector3<T>>()) {
+            if(start == 3) {
+                return none;
+            }
+            elif(start == 2) {
+                return Vector1<T>{l.v2};
+            }
+            else {
+                return Vector2<T>{l.v1, l.v2};
+            }
+        }
+        else {
+            if(start == l.count()) {
+                return none;
+            }
+            else {
+                let lle = RecList<T>::s_slice_start[recursive](l, start);
+                return RecList<T>::s_ensure_repr(lle);
+            }
+        }
+    }
+
+    function s_slice_end<T>(l: ListRepr<T>, end: Nat): ListRepr<T> {
+        if(end == 0) {
+            return none;
+        }
+
+        if(l === none) {
+            return none;
+        }
+        elif(l.is<Vector1<T>>()) {
+            return l;
+        }
+        elif(l.is<Vector2<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
+            if(end == 2) {
+                return l;
+            }
+            else {
+                return Vector1<T>{ll.v0};
+            }
+        }
+        elif(l.is<Vector3<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
+            if(end == 3) {
+                return l;
+            }
+            elif(end == 2) {
+                return Vector2<T>{ll.v0, ll.v1};
+            }
+            else {
+                return Vector1<T>{ll.v0};
+            }
+        }
+        else {
+            if(end == l.count()) {
+                return l;
+            }
+            else {
+                let lle = RecList<T>::s_slice_end[recursive](l, end);
+                return RecList<T>::s_ensure_repr(lle);
+            }
+        }
+    }
+
+    function s_safe_get<T>(l: ListRepr<T>, i: Nat): T {
+        assert(l !== none);
+
+        if(l.is<Vector1<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector1<T>>(l);
+            return ll.v0;
+        }
+        elif(l.is<Vector2<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
+            if(i == 0) {
+                return ll.v0;
+            }
+            else {
+                return ll.v1;
+            }
+        }
+        elif(l.is<Vector3<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
+            if(i == 0) {
+                return ll.v0;
+            }
+            elif(i == 1) {
+                return ll.v1;
+            }
+            else {
+                return ll.v2;
+            }
+        }
+        else {
+            return l.safe_get[recursive](i);
+        }
+    }
+
+    recursive? function s_has_pred<T>(l: ListRepr<T>, p: recursive? pred(_: T) -> Bool): Bool {
+        if(l === none) {
+            return false;
+        }
+        elif(l.is<Vector1<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector1<T>>(l);
+            return p[recursive?](ll.v0);
+        }
+        elif(l.is<Vector2<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
+            return \/(p[recursive?](ll.v0), p[recursive?](ll.v1));
+        }
+        elif(l.is<Vector3<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
+            return \/(p[recursive?](ll.v0), p[recursive?](ll.v1), p[recursive?](ll.v2));
+        }
+        else {
+            return l.has_pred[recursive](p);
+        }
+    }
+
+    recursive? function s_has_pred_idx<T>(l: ListRepr<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
+        if(l === none) {
+            return false;
+        }
+        elif(l.is<Vector1<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector1<T>>(l);
+            return p[recursive?](ll.v0, 0n);
+        }
+        elif(l.is<Vector2<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
+            return \/(p[recursive?](ll.v0, 0n), p[recursive?](ll.v1, 1n));
+        }
+        elif(l.is<Vector3<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
+            return \/(p[recursive?](ll.v0, 0n), p[recursive?](ll.v1, 1n), p[recursive?](ll.v2, 2n));
+        }
+        else {
+            return l.has_pred_idx[recursive](0n, p);
+        }
+    }
+
+    recursive? function s_find_pred<T>(l: ListRepr<T>, p: recursive? pred(_: T) -> Bool): Nat? {
+        if(l === none) {
+            return none;
+        }
+        elif(l.is<Vector1<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector1<T>>(l);
+            if(p[recursive?](ll.v0)) {
+                return 0n;
+            }
+            else {
+                return none;
+            }
+        }
+        elif(l.is<Vector2<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
+            if(p[recursive?](ll.v0)) {
+                return 0n;
+            }
+            elif(p[recursive?](ll.v1)) {
+                return 1n;
+            }
+            else {
+                return none;
+            }
+        }
+        elif(l.is<Vector3<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
+            if(p[recursive?](ll.v0)) {
+                return 0n;
+            }
+            elif(p[recursive?](ll.v1)) {
+                return 1n;
+            }
+            elif(p[recursive?](ll.v2)) {
+                return 2n;
+            }
+            else {
+                return none;
+            }
+        }
+        else {
+            return l.find_pred[recursive](p);
+        }
+    }
+
+    recursive? function s_find_pred_idx<T>(l: ListRepr<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
+        if(l === none) {
+            return none;
+        }
+        elif(l.is<Vector1<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector1<T>>(l);
+            if(p[recursive?](ll.v0, 0n)) {
+                return 0n;
+            }
+            else {
+                return none;
+            }
+        }
+        elif(l.is<Vector2<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
+            if(p[recursive?](ll.v0, 0n)) {
+                return 0n;
+            }
+            elif(p[recursive?](ll.v1, 1n)) {
+                return 1n;
+            }
+            else {
+                return none;
+            }
+        }
+        elif(l.is<Vector3<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
+            if(p[recursive?](ll.v0, 0n)) {
+                return 0n;
+            }
+            elif(p[recursive?](ll.v1, 1n)) {
+                return 1n;
+            }
+            elif(p[recursive?](ll.v2, 2n)) {
+                return 2n;
+            }
+            else {
+                return none;
+            }
+        }
+        else {
+            return l.find_pred_idx[recursive](0n, p);
+        }
+    }
+
+    recursive? function s_find_last_pred<T>(l: ListRepr<T>, p: recursive? pred(_: T) -> Bool): Nat? {
+        if(l === none) {
+            return none;
+        }
+        elif(l.is<Vector1<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector1<T>>(l);
+            if(p[recursive?](ll.v0)) {
+                return 0n;
+            }
+            else {
+                return none;
+            }
+        }
+        elif(l.is<Vector2<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
+            if(p[recursive?](ll.v1)) {
+                return 1n;
+            }
+            elif(p[recursive?](ll.v0)) {
+                return 0n;
+            }
+            else {
+                return none;
+            }
+        }
+        elif(l.is<Vector3<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
+            if(p[recursive?](ll.v2)) {
+                return 2n;
+            }
+            elif(p[recursive?](ll.v1)) {
+                return 1n;
+            }
+            elif(p[recursive?](ll.v0)) {
+                return 0n;
+            }
+            else {
+                return none;
+            }
+        }
+        else {
+            return l.find_last_pred[recursive?](0n, p);
+        }
+    }
+
+    recursive? function s_find_last_pred_idx<T>(l: ListRepr<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
+        if(l === none) {
+            return none;
+        }
+        elif(l.is<Vector1<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector1<T>>(l);
+            if(p[recursive?](ll.v0, 0n)) {
+                return 0n;
+            }
+            else {
+                return none;
+            }
+        }
+        elif(l.is<Vector2<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
+            if(p[recursive?](ll.v1, 1n)) {
+                return 1n;
+            }
+            elif(p[recursive?](ll.v0, 0n)) {
+                return 0n;
+            }
+            else {
+                return none;
+            }
+        }
+        elif(l.is<Vector3<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
+            if(p[recursive?](ll.v2, 2n)) {
+                return 2n;
+            }
+            elif(p[recursive?](ll.v1, 1n)) {
+                return 1n;
+            }
+            elif(p[recursive?](ll.v0, 0n)) {
+                return 0n;
+            }
+            else {
+                return none;
+            }
+        }
+        else {
+            return l.find_last_pred_idx[recursive?](0n, p);
+        }
+    }
+
+    recursive? function s_filter_pred<T>(l: ListRepr<T>, p: recursive? pred(_: T) -> Bool): ListRepr<T> {
+        if(l === none) {
+            return none;
+        }
+        elif(l.is<Vector1<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector1<T>>(l);
+
+            let v0 = ll.v0;
+            let p0 = p[recursive?](v0);
+
+            if(p0) {
+                return l;
+            }
+            else {
+                return none;
+            }
+        }
+        elif(l.is<Vector2<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
+
+            let v0 = ll.v0;
+            let p0 = p[recursive?](v0);
+            let v1 = ll.v1;
+            let p1 = p[recursive?](v1);
+
+            if(/\(p0, p1)) {
+                return l;
+            }
+            elif(p0) {
+                return Vector1<T>{v0};
+            }
+            elif(p1) {
+                return Vector1<T>{v1};
+            }
+            else {
+                return none;
+            }
+        }
+        elif(l.is<Vector3<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
+
+            let v0 = ll.v0;
+            let p0 = p[recursive?](v0);
+            let v1 = ll.v1;
+            let p1 = p[recursive?](v1);
+            let v2 = ll.v2;
+            let p2 = p[recursive?](v2);
+
+            if(/\(p0, p1, p2)) {
+                return l;
+            }
+            elif(/\(p0, p1)) {
+                return Vector2<T>{v0, v1};
+            }
+            elif(/\(p0, p2)) {
+                return Vector2<T>{v0, v2};
+            }
+            elif(/\(p1, p2)) {
+                return Vector2<T>{v1, v2};
+            }
+            elif(p0) {
+                return Vector1<T>{v0};
+            }
+            elif(p1) {
+                return Vector1<T>{v1};
+            }
+            elif(p2) {
+                return Vector1<T>{v2};
+            }
+            else {
+                return none;
+            }
+        }
+        else {
+            let lle = l.filter_pred[recursive](p);
+            return RecList<T>::s_ensure_repr(lle);
+        }
+    }
+
+    recursive? function s_filter_pred_idx<T>(l: ListRepr<T>, p: recursive? pred(_: T, _: Nat) -> Bool): ListRepr<T> {
+        if(l === none) {
+            return none;
+        }
+        elif(l.is<Vector1<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector1<T>>(l);
+
+            let v0 = ll.v0;
+            let p0 = p[recursive?](v0, 0n);
+
+            if(p0) {
+                return l;
+            }
+            else {
+                return none;
+            }
+        }
+        elif(l.is<Vector2<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
+
+            let v0 = ll.v0;
+            let p0 = p[recursive?](v0, 0n);
+            let v1 = ll.v1;
+            let p1 = p[recursive?](v1, 1n);
+
+            if(/\(p0, p1)) {
+                return l;
+            }
+            elif(p0) {
+                return Vector1<T>{v0};
+            }
+            elif(p1) {
+                return Vector1<T>{v1};
+            }
+            else {
+                return none;
+            }
+        }
+        elif(l.is<Vector3<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
+
+            let v0 = ll.v0;
+            let p0 = p[recursive?](v0, 0n);
+            let v1 = ll.v1;
+            let p1 = p[recursive?](v1, 1n);
+            let v2 = ll.v2;
+            let p2 = p[recursive?](v2, 2n);
+
+            if(/\(p0, p1, p2)) {
+                return l;
+            }
+            elif(/\(p0, p1)) {
+                return Vector2<T>{v0, v1};
+            }
+            elif(/\(p0, p2)) {
+                return Vector2<T>{v0, v2};
+            }
+            elif(/\(p1, p2)) {
+                return Vector2<T>{v1, v2};
+            }
+            elif(p0) {
+                return Vector1<T>{v0};
+            }
+            elif(p1) {
+                return Vector1<T>{v1};
+            }
+            elif(p2) {
+                return Vector1<T>{v2};
+            }
+            else {
+                return none;
+            }
+        }
+        else {
+            let lle = l.filter_pred_idx[recursive](0n, p);
+            return RecList<T>::s_ensure_repr(lle);
+        }
+    }
+
+    recursive? function s_map<T, U>(l: ListRepr<T>, f: recursive? fn(_: T) -> U): ListRepr<U> {
+        if(l === none) {
+            return none;
+        }
+        elif(l.is<Vector1<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector1<T>>(l);
+            return Vector1<U>{f[recursive?](ll.v0)};
+        }
+        elif(l.is<Vector2<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
+            return Vector2<U>{f[recursive?](ll.v0), f[recursive?](ll.v1)};
+        }
+        elif(l.is<Vector3<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
+            return Vector3<U>{f[recursive?](ll.v0), f[recursive?](ll.v1), f[recursive?](ll.v2)};
+        }
+        else {
+            return l.map[recursive](f);
+        }
+    }
+
+    recursive? function s_map_idx<T, U>(l: ListRepr<T>, f: recursive? fn(_: T, _: Nat) -> U): ListRepr<U> {
+        if(l === none) {
+            return none;
+        }
+        elif(l.is<Vector1<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector1<T>>(l);
+            return Vector1<U>{f[recursive?](ll.v0, 0n)};
+        }
+        elif(l.is<Vector2<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
+            return Vector2<U>{f[recursive?](ll.v0, 0n), f[recursive?](ll.v1, 1n)};
+        }
+        elif(l.is<Vector3<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
+            return Vector3<U>{f[recursive?](ll.v0, 0n), f[recursive?](ll.v1, 1n), f[recursive?](ll.v2, 2n)};
+        }
+        else {
+            return l.map_idx[recursive](0n, f);
+        }
+    }
+
+    recursive? function s_min_arg<T, U unique Orderable>(l: ListRepr<T>, f: recursive? fn(v: T) -> U): Nat {
+        if(l === none) {
+            return 0n;
+        }
+        elif(l.is<Vector1<T>>()) {
+            return 0n;
+        }
+        elif(l.is<Vector2<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
+            if(f[recursive?](ll.v1) < f[recursive?](ll.v0)) {
+                return 1n;
+            }
+            else {
+                return 0n;
+            }
+        }
+        elif(l.is<Vector3<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
+            let lt21 = f[recursive?](ll.v2) < f[recursive?](ll.v1);
+            let lt20 = f[recursive?](ll.v2) < f[recursive?](ll.v0);
+            let lt10 = f[recursive?](ll.v1) < f[recursive?](ll.v0);
+            if(/\(lt21, lt20)) {
+                return 2n;
+            }
+            elif(lt10) {
+                return 1n;
+            }
+            else {
+                return 0n;
+            }
+        }
+        else {
+            return l.min_arg[recursive](f);
+        }
+    }
+
+    recursive? function s_max_arg<T, U unique Orderable>(l: ListRepr<T>, f: recursive? fn(v: T) -> U): Nat {
+        if(l === none) {
+            return 0n;
+        }
+        elif(l.is<Vector1<T>>()) {
+            return 0n;
+        }
+        elif(l.is<Vector2<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
+            if(f[recursive?](l.v1) > f[recursive?](ll.v0)) {
+                return 1n;
+            }
+            else {
+                return 0n;
+            }
+        }
+        elif(l.is<Vector3<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
+            let gt21 = f[recursive?](ll.v2) > f[recursive?](ll.v1);
+            let gt20 = f[recursive?](ll.v2) > f[recursive?](ll.v0);
+            let gt10 = f[recursive?](ll.v1) > f[recursive?](ll.v0);
+            if(/\(gt21, gt20)) {
+                return 2n;
+            }
+            elif(gt10) {
+                return 1n;
+            }
+            else {
+                return 0n;
+            }
+        }
+        else {
+            return l.max_arg[recursive](f);
+        }
+    }
+
+    function s_sum<T unique Algebraic>(l: ListRepr<T>): T {
+        if(l === none) {
+            return T::zero;
+        }
+        elif(l.is<Vector1<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector1<T>>(l);
+            return ll.v0;
+        }
+        elif(l.is<Vector2<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
+            return ll.v0 + ll.v1;
+        }
+        elif(l.is<Vector3<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
+            return ll.v0 + ll.v1 + ll.v2;
+        }
+        else {
+            return l.sum[recursive]();
+        }
+    }
+
+    recursive? function s_sort<T>(l: ListRepr<T>, cmp: recursive? pred(_: T, _: T) -> Bool): ListRepr<T> {
+        if(l === none) {
+            return none;
+        }
+        elif(l.is<Vector1<T>>()) {
+            return l;
+        }
+        elif(l.is<Vector2<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
+            if(!cmp[recursive?](ll.v1, ll.v0)) {
+                return l;
+            }
+            else {
+                return List<T>{ll.v1, ll.v0};
+            }
+        }
+        elif(l.is<Vector3<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
+            let l10 = cmp[recursive?](ll.v1, ll.v0);
+            let l20 = cmp[recursive?](ll.v2, ll.v0);
+            let l21 = cmp[recursive?](ll.v2, ll.v1);
+
+            if(/\(l20, l21)) {
+                if(l10) {
+                    return Vector3<T>{ll.v2, ll.v1, ll.v0};
+                }
+                else {
+                    return Vector3<T>{ll.v2, ll.v0, ll.v1};
+                }
+            }
+            elif(/\(l10, !l21)) {
+                if(l20) {
+                    return Vector3<T>{ll.v1, ll.v2, ll.v0};
+                }
+                else {
+                    return Vector3<T>{ll.v1, ll.v0, ll.v2};
+                }
+            }
+            else {
+                if(l21) {
+                    return Vector3<T>{ll.v0, ll.v2, ll.v1};
+                }
+                else {
+                    return Vector3<T>{ll.v0, ll.v1, ll.v2};
+                }
+            }
+        }
+        else {
+            return l.sort[recursive](eq);
+        }
+    }
+
+    recursive? function s_unique_from_sorted<T>(l: ListRepr<T>, eq: recursive? pred(_: T, _: T) -> Bool): ListRepr<T> {
+        if(l === none) {
+            return none;
+        }
+        elif(l.is<Vector1<T>>()) {
+            return l;
+        }
+        elif(l.is<Vector2<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
+            if(eq[recursive?](ll.v0, ll.v1)) {
+                return Vector1<T>{ll.v0};
+            }
+            else {
+                return l;
+            }
+        }
+        elif(l.is<Vector3<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
+            let eq01 = eq[recursive?](ll.v0, ll.v1);
+            let eq02 = eq[recursive?](ll.v0, ll.v2);
+            let eq12 = eq[recursive?](ll.v1, ll.v2);
+            
+
+            if(/\(eq01, eq02)) {
+                return Vector1<T>{ll.v0};
+            }
+            elif(eq01) {
+                return Vector2<T>{ll.v0, ll.v2};
+            }
+            elif(eq02) {
+                return Vector2<T>{ll.v0, ll.v1};
+            }
+            elif(eq12) {
+                return Vector2<T>{ll.v0, ll.v1};
+            }
+            else {
+                return l;
+            }
+        }
+        else {
+            let lle = l.unique_from_sorted[recursive](eq);
+            return RecList<T>::s_ensure_repr(lle);
+        }
+    }
+    
+    function s_reverse(l: ListRepr<T>): ListRepr<T> {
+        if(l === none) {
+            return none;
+        }
+        elif(l.is<Vector1<T>>()) {
+            return l;
+        }
+        elif(l.is<Vector2<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
+            return Vector2<T>{ll.v1, ll.v0};
+        }
+        elif(l.is<Vector3<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
+            return Vector3<T>{ll.v2, ll.v1, ll.v0};
+        }
+        else {
+            return l.reverse[recursive]();
+        }
+    }
+
+    recursive? function s_reduce<T, U>(init: U, op: recursive? fn(_: U, _: T) -> U): U {
+        if(l === none) {
+            return init;
+        }
+        elif(l.is<Vector1<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector1<T>>(l);
+            return op[recursive?](init, ll.v0);
+        }
+        elif(l.is<Vector2<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
+            return op[recursive?](op[recursive?](init, ll.v0), ll.v1);
+        }
+        elif(l.is<Vector3<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
+            return op[recursive?](op[recursive?](op[recursive?](init, ll.v0), ll.v1), ll.v2);
+        }
+        else {
+            return l.reduce<U>[recursive](init, op);
+        }
+    }
+
+    recursive? function s_reduce_idx<T, U>(init: U, op: recursive? fn(_: U, _: T, _: Nat) -> U): U {
+        if(l === none) {
+            return init;
+        }
+        elif(l.is<Vector1<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector1<T>>(l);
+            return op[recursive?](init, ll.v0, 0n);
+        }
+        elif(l.is<Vector2<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
+            return op[recursive?](op[recursive?](init, ll.v0, 0n), ll.v1, 1n);
+        }
+        elif(l.is<Vector3<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
+            return op[recursive?](op[recursive?](op[recursive?](init, ll.v0, 0n), ll.v1, 1n), ll.v2, 2n);
+        }
+        else {
+            return l.reduce_idx<U>[recursive?](init, 0n, op);
+        }
+    }
+
+    recursive? function s_transduce<T, E, U>(env: E, op: recursive? fn(_: T, _: T) -> (|E, U|)): (|E, ListRepr<U>|) {
+        if(l === none) {
+            return (|env, none|);
+        }
+        elif(l.is<Vector1<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector1<T>>(l);
+            let e0, v0 = op[recursive?](env, ll.v0);
+            return (|e0, Vector1<U>{v0}|);
+        }
+        elif(l.is<Vector2<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
+            let e0, v0 = op[recursive?](env, ll.v0);
+            let e1, v1 = op[recursive?](e0, ll.v1);
+            return (|e1, Vector2<U>{v0, v1}|);
+        }
+        elif(l.is<Vector3<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
+            let e0, v0 = op[recursive?](env, ll.v0);
+            let e1, v1 = op[recursive?](e0, ll.v1);
+            let e2, v2 = op[recursive?](e1, ll.v2);
+            return (|e2, Vector2<U>{v0, v1, v2}|);
+        }
+        else {
+            return l.transduce<E, U>[recursive](env, op);
+        }
+    }
+
+    recursive? function s_transduce_idx<T, E, U>(env: E, op: recursive? fn(_: E, _: T, _: Nat) -> (|E, U|)): (|E, ListRepr<U>|) {
+        if(l === none) {
+            return (|env, none|);
+        }
+        elif(l.is<Vector1<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector1<T>>(l);
+            let e0, v0 = op[recursive?](env, ll.v0, 0n);
+            return (|e0, Vector1<U>{v0}|);
+        }
+        elif(l.is<Vector2<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
+            let e0, v0 = op[recursive?](env, ll.v0, 0n);
+            let e1, v1 = op[recursive?](e0, ll.v1, 1n);
+            return (|e1, Vector2<U>{v0, v1}|);
+        }
+        elif(l.is<Vector3<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
+            let e0, v0 = op[recursive?](env, ll.v0, 0n);
+            let e1, v1 = op[recursive?](e0, ll.v1, 1n);
+            let e2, v2 = op[recursive?](e1, ll.v2, 2n);
+            return e2, Vector2<U>{v0, v1, v2};
+        }
+        else {
+            return l.transduce_idx<E, U>[recursive](env, 0n, op);
+        }
+    }
+}
+
+internal entity RecList<T> provides Some {
+    field head: T;
+    field tail: RecList<T>?;
+
+    function s_ensure_list(l: Vector1<T> | Vector2<T> | Vector3<T> | RecList<T>): RecList<T> {
+        if(l.is<RecList<T>>()) {
+            return l;
+        }
+        else {
+            if(l.is<Vector1<T>>()) {
+                return RecList<T>{l.v0, none};
+            }
+            elif(l.is<Vector2<T>>()) {
+                return RecList<T>{l.v0, RecList<T>{l.v1, none}};
+            }
+            else {
+                return RecList<T>{l.v0, RecList<T>{l.v1,  RecList<T>{l.v2, none}}};
+            }
+        }
+    }
+
+    function s_ensure_repr(l: RecList<T>?): ListRepr<T> {
+        if(l === none) {
+            return none;
+        }
+        else {
+            let hh1 = l.head;
+            let tl1 = l.tail;
+            if(tl1 === none) {
+                return Vector1<T>{hh1};
+            }
+            else {
+                let hh2 = tl1.head;
+                let tl2 = tl1.tail;
+
+                if(tl2 === none) {
+                    return Vector2<T>{hh1, hh2};
+                }
+                else {
+                    if(tl2.tail === none) {
+                        return Vector3<T>{hh1, hh2, tl2.head};
+                    }
+                    else {
+                        return l;
+                    }
+                }
+            }
+        }
+    }
+
+    recursive method count(): Nat {
+        let tl = this.tail;
+        if(tl === none) {
+            return 1;
+        }
+        else {
+            return 1 + tl.count[recursive]();
+        }
+    }
+
+    recursive function {when T unique Int | Nat} range(start: T, one: T, count: Nat): RecList<T>? {
+        if(count == 0) {
+            return none;
+        }
+        else {
+            let ntl = RecList<T>::range[recursive](start + one, one, count - 1);
+            return RecList<T>{start, ntl};
+        }
+    }
+
+    recursive function fill(count: Nat, v: T): RecList<T>? {
+        if(count == 0) {
+            return none;
+        }
+        else {
+            let ntl = RecList<T>::fill[recursive](count - 1n, v);
+            return RecList<T>{v, ntl};
+        }
+    }
+
+    recursive method zip_index(idx: Nat): RecList<[Nat, T]> {
+        let tl = this.tail;
+        let hh = this.head;
+
+        let nh = [idx, hh];
+        if(tl === none) {
+            return RecList<[Nat, T]>{nh, none};
+        }
+        else {
+            let ntl = tl.zip_index[recursive](idx + 1n);
+            return RecList<[Nat, T]>{nh, ntl};
+        }
+    }
+
+    recursive method zip<U>(ol: RecList<U>): RecList<[T, U]> {
+        let tt = this.tail;
+        let th = this.head;
+
+        let ot = ol.tail;
+        let oh = ol.head;
+
+        let nh = [th, oh];
+        if(\/(tt === none, ot === none)) {
+            return RecList<[T, U]>{nh, none};
+        }
+        else {
+            let ntl = tt.zip<U>[recursive](ot);
+            return RecList<[T, U]>{nh, ntl};
+        }
+    }
+
+    recursive function s_append(l: RecList<T>?, r: RecList<T>): RecList<T> {
+        if(l == none) {
+            return r;
+        }
+        else {
+            return RecList<T>{l.head, RecList<T>::s_append[recursive](l.tail, r)};
+        }
+    }
+
+    recursive function s_slice_start(l: RecList<T>?, idx: Nat): RecList<T>? {
+        if(l == none) {
+            return none;
+        }
+        elif(idx == 0) {
+            return l;
+        }
+        else {
+            return RecList<T>::s_slice_start[recursive](l.tail, idx - 1);
+        }
+    }
+
+    recursive function s_slice_end(l: RecList<T>?, idx: Nat): RecList<T>? {
+        if(l == none) {
+            return none;
+        }
+        elif(idx == 0) {
+            return none;
+        }
+        else {
+            return RecList<T>{l.head, RecList<T>::s_slice_end[recursive](l.tail, idx - 1)};
+        }
+    }
+
+    recursive method safe_get(i: Nat): T {
+        if(i == 0) {
+            return this.head;
+        }
+        else {
+            let tl = this.tail;
+            assert(tl !== none);
+
+            return tl.safe_get[recursive](i - 1);
+        }
+    }
+
+    recursive method has_pred(p: recursive? pred(_: T) -> Bool): Bool {
+        if(p[recursive?](this.head)) {
+            return true;
+        }
+        else {
+            let tl = this.tail;
+            if(tl === none) {
+                return false;
+            }
+            else {
+                return tl.has_pred[recursive](p);
+            }
+        }
+    }
+
+    recursive method has_pred_idx(idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
+        if(p[recursive?](this.head, idx)) {
+            return true;
+        }
+        else {
+            let tl = this.tail;
+            if(tl === none) {
+                return false;
+            }
+            else {
+                return tl.has_pred_idx[recursive](idx + 1n, p);
+            }
+        }
+    }
+
+    recursive method find_pred(idx: Nat, p: recursive? pred(_: T) -> Bool): Nat? {
+        if(p[recursive?](this.head)) {
+            return idx;
+        }
+        else {
+            let tl = this.tail;
+            if(tl === none) {
+                return none;
+            }
+            else {
+                return tl.find_pred[recursive](idx + 1n, p);
+            }
+        }
+    }
+
+    recursive method find_pred_idx(idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
+        if(p[recursive?](this.head, idx)) {
+            return idx;
+        }
+        else {
+            let tl = this.tail;
+            if(tl === none) {
+                return none;
+            }
+            else {
+                return tl.find_pred_idx[recursive](idx + 1n, p);
+            }
+        }
+    }
+
+    recursive method find_last_pred(idx: Nat, p: recursive? pred(_: T) -> Bool): Nat? {
+        let tl = this.tail;
+
+        if(tl === none) {
+            if(p[recursive?](this.head)) {
+                return idx;
+            }
+            else {
+                return none;
+            }
+        }
+        else {
+            let tres = tl.find_last_pred_idx[recursive](idx + 1n, p);
+
+            if(tres !== none) {
+                return tres;
+            }
+            else {
+                if(p[recursive?](this.head)) {
+                    return idx;
+                }
+                else {
+                    return none;
+                }
+            }
+        }
+    }
+
+    recursive method find_last_pred_idx(idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
+        let tl = this.tail;
+
+        if(tl === none) {
+            if(p[recursive?](this.head, idx)) {
+                return idx;
+            }
+            else {
+                return none;
+            }
+        }
+        else {
+            let tres = tl.find_last_pred_idx[recursive](idx + 1n, p);
+
+            if(tres !== none) {
+                return tres;
+            }
+            else {
+                if(p[recursive?](this.head, idx)) {
+                    return idx;
+                }
+                else {
+                    return none;
+                }
+            }
+        }
+    }
+
+    recursive method filter_pred(p: recursive? pred(_: T) -> Bool): RecList<T>? {
+        let tl = this.tail;
+        let hh = this.head;
+
+        let ph = p[recursive?](hh);
+        if(tl === none) {
+            if(ph) {
+                return RecList<T>{hh, none};
+            }
+            else {
+                return none;
+            }
+        }
+        else {
+            let ntl = tl.filter_pred[recursive](p);
+            if(ph) {
+                return RecList<T>{hh, ntl};
+            }
+            else {
+                return ntl;
+            }
+        }
+    }
+
+    recursive method filter_pred_idx(idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): RecList<T>? {
+        let tl = this.tail;
+        let hh = this.head;
+
+        let ph = p[recursive?](hh, idx);
+        if(tl === none) {
+            if(ph) {
+                return RecList<T>{hh, none};
+            }
+            else {
+                return none;
+            }
+        }
+        else {
+            let ntl = tl.filter_pred_idx[recursive](idx + 1n, p);
+            if(ph) {
+                return RecList<T>{hh, ntl};
+            }
+            else {
+                return ntl;
+            }
+        }
+    }
+
+    recursive method map<U>(f: recursive? fn(_: T) -> U): RecList<U> {
+        let tl = this.tail;
+        let hh = this.head;
+
+        let nh = f[recursive?](hh);
+        if(tl === none) {
+            return RecList<U>{nh, none};
+        }
+        else {
+            let ntl = tl.map<U>[recursive](f);
+            return RecList<U>{nh, ntl};
+        }
+    }
+
+    recursive method map_idx<U>(idx: Nat, f: recursive? fn(_: T, _: Nat) -> U): RecList<U> {
+        let tl = this.tail;
+        let hh = this.head;
+
+        let nh = f[recursive?](hh, idx);
+        if(tl === none) {
+            return RecList<U>{nh, none};
+        }
+        else {
+            let ntl = tl.map<U>[recursive](idx + 1n, f);
+            return RecList<U>{nh, ntl};
+        }
+    }
+
+    recursive method min_arg<U unique Orderable>(idx: Nat, f: recursive? fn(v: T) -> U): Nat, U {
+        let tl = this.tail;
+        let hh = this.head;
+        let hu = f[recursive?](hh);
+
+        if(tl === none) {
+            return idx, hu;
+        }
+        else {
+            let ntl, ntu = tl.min_arg<U>[recursive](idx + 1n, f);
+            if(ntu < hu) {
+                return ntl, ntu;
+            }
+            else {
+                return idx, hu;
+            }
+        }
+    }
+
+    recursive method max_arg<U unique Orderable>(idx: Nat, f: recursive? fn(v: T) -> U): Nat, U {
+        let tl = this.tail;
+        let hh = this.head;
+        let hu = f[recursive?](hh);
+
+        if(tl === none) {
+            return idx, hu;
+        }
+        else {
+            let ntl, ntu = tl.min_arg<U>[recursive](idx + 1n, f);
+            if(ntu > hu) {
+                return ntl, ntu;
+            }
+            else {
+                return idx, hu;
+            }
+        }
+    }
+
+    recursive method {when T unique Algebraic} sum(): T {
+        let tl = this.tail;
+        let hh = this.head;
+
+        if(tl === none) {
+            return hh;
+        }
+        else {
+            return hh + tl.sum[recursive]();
+        }
+    }
+
+    recursive method sort(cmp: recursive? pred(_: T, _: T) -> Bool): RecList<T> {
+        let tl = this.tail;
+        let hh = this.head;
+
+        if(tl === none) {
+            return this;
+        }
+        else {
+            let ntl = tl.sort[recursive](cmp);
+            return ntl.sort_insert[recursive](hh, cmp);
+        }
+    }
+
+    recursive method sort_insert(v: T, cmp: recursive? pred(_: T, _: T) -> Bool): RecList<T> {
+        let tl = this.tail;
+        let hh = this.head;
+
+        if(!cmp[recursive?](hh, v)) {
+            return RecList<T>{v, this};
+        }
+        else {
+            if(tl === none) {
+                return RecList<T>{hh, RecList<T>{v, none}};
+            }
+            else {
+                let ntl = tl.sort_insert[recursive](v, cmp);
+                return RecList<T>{hh, ntl};
+            }
+        }
+    }
+
+    recursive method unique_from_sorted(prev: T, eq: recursive? pred(_: T, _: T) -> Bool): RecList<T>? {
+        let tl = this.tail;
+        let hh = this.head;
+
+        if(eq[recursive?](prev, hh)) {
+            if(tl === none) {
+                return none;
+            }
+            else {
+                return tl.unique_from_sorted[recursive](prev, eq);
+            }
+        }
+        else {
+            if(tl === none) {
+                return RecList<T>{hh, none};
+            }
+            else {
+                let tll = tl.unique_from_sorted[recursive](hh, eq);
+                return RecList<T>{hh, tll};
+            }
+        }
+    }
+    
+    recursive method reverse(rl: RecList<T>): RecList<T> {
+        let tl = this.tail;
+        let hh = this.head;
+
+        if(tl === none) {
+            return RecList<T>{hh, rl};
+        }
+        else {
+            return tl.reverse[recursive](RecList<T>{hh, rl});
+        }
+    }
+
+    recursive method reduce<U>(uu: U, op: recursive? fn(_: U, _: T) -> U): U {
+        let tl = this.tail;
+        let hh = this.head;
+
+        let nu = op[recursive?](uu, hh);
+        if(tl === none) {
+            return nu;
+        }
+        else {
+            return tl.reduce<U>[recursive](nu, op);
+        }
+    }
+
+    recursive function reduce_idx<U>(init: U, idx: Nat, op: recursive? fn(_: U, _: T, _: Nat) -> U): U {
+        let tl = this.tail;
+        let hh = this.head;
+
+        let nu = op[recursive?](uu, hh, idx);
+        if(tl === none) {
+            return nu;
+        }
+        else {
+            return tl.reduce_idx<U>[recursive](nu, idx + 1n, op);
+        }
+    }
+
+    recursive function transduce<E, U>(env: E, op: recursive? fn(_: E, _: T) -> (|E, U|)): (|E, RecList<U>|) {
+        let tl = this.tail;
+        let hh = this.head;
+
+        let nenv, nu = op[recursive?](env, hh);
+        if(tl === none) {
+            return (|nenv, RecList<U>{nu, none}|);
+        }
+        else {
+            let tlenv, tll = tl.transduce<U>[recursive](nenv, op);
+            return (|tlenv, RecList<U>{nu, tll}|);
+        }
+    }
+
+    recursive function s_transduce_idx<E, U>(env: E, idx: Nat, op: recursive? fn(_: E, _: T, _: Nat) -> (|E, U|)): (|E, RecList<U>|) {
+        let tl = this.tail;
+        let hh = this.head;
+
+        let nenv, nu = op[recursive?](env, hh, idx);
+        if(tl === none) {
+            return (|nenv, RecList<U>{nu, none}|);
+        }
+        else {
+            let tlenv, tll = tl.transduce_idx<U>[recursive](nenv, idx + 1n, op);
+            return (|tlenv, RecList<U>{nu, tll}|);
+        }
+    }
+}
+
+internal typedef ListRepr<T> = None | Vector1<T> | Vector2<T> | Vector3<T> | RecList<T>;
+
+#endif

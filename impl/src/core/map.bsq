@@ -1,0 +1,93 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+//The core namespace implements the primitive concepts used in the bosque core language
+namespace Core;
+
+__internal entity Map<K grounded KeyType, V> provides Some, Expandoable<[K, V]>, APIType when K grounded APIType && V grounded APIType, TestableType when K grounded TestableType && V grounded TestableType {
+    private function s_into(m: MapRepr<K, V>): Map<K, V> = special_inject;
+    method value(): MapRepr<K, V> = special_extract;
+
+    method empty(): Bool {
+        return MapOps::s_empty<K, V>(this.value());
+    }
+
+    method size(): Nat {
+        return MapOps::s_size<K, V>(this.value());
+    }
+
+    method has(key: K): Bool {
+        return MapOps::s_has<K, V>(this.value(), key);
+    }
+
+    method get(key: K): V {
+        let e = MapOps::s_find<K, V>(this.value(), key);
+
+        assert e !== none;
+        return e.1;
+    }
+
+    method getOrNone(key: K): V? {
+        let e = MapOps::s_find<K, V>(this.value(), key);
+        if(e === none) {
+            return none;
+        }
+        else {
+            return e.1;
+        }
+    }
+
+    method getOption(key: K): Option<V> {
+        let e = MapOps::s_find<K, V>(this.value(), key);
+        if(e === none) {
+            return nothing;
+        }
+        else {
+            return something(e.1);
+        }
+    }
+
+    method getTry(key: K, out? v: V): Bool {
+        let e = MapOps::s_find<K, V>(this.value(), key);
+        if(e === none) {
+            return false;
+        }
+        else {
+            v = e.1;
+            return true;
+        }
+    }
+
+    method union(m: Map<K, V>): Map<K, V> {
+        return Map<K, V>::s_into(MapOps::s_union<K, V>(this.value(), m.value()));
+    }
+
+    recursive? method submap(p: recursive? pred(k: K, v: V) -> Bool): Map<K, V> {
+        return Map<K, V>::s_into(MapOps::s_submap<K, V>(this.value(), p));
+    }
+
+    recursive? method remap<U=?>(f: recursive? fn(k: K, v: V) -> U): Map<K, U> {
+        return Map<K, U>::s_into(MapOps::s_remap<K, V, U>(this.value(), f));
+    }
+
+    method add(k: K, v: V): Map<K, V> {
+        return Map<K, V>::s_into(MapOps::s_add<K, V>(this.value(), k, v));
+    }
+
+    method set(k: K, v: V): Map<K, V> {
+        assert !this.empty();
+        return Map<K, V>::s_into(MapOps::s_set<K, V>(this.value(), k, v));
+    }
+
+    method remove(k: K): Map<K, V> {
+        assert !this.empty();
+        return Map<K, V>::s_into(MapOps::s_remove<K, V>(this.value(), k));
+    }
+
+    //
+    //TODO: ref versions of the add/remove/set operators
+    //
+}
+

@@ -9,7 +9,7 @@
 
 import * as assert from "assert";
 import { MIRBasicBlock, MIROpTag, MIRInvokeKey, MIRInvokeFixedFunction, MIRBody, MIRInvokeVirtualOperator, MIRInvokeVirtualFunction, MIREntityUpdate } from "./mir_ops";
-import { MIRAssembly, MIRConstantDecl, MIRInvokeBodyDecl, MIRInvokeDecl, MIRInvokePrimitiveDecl, MIRObjectEntityTypeDecl, MIRType } from "./mir_assembly";
+import { MIRAssembly, MIRConstantDecl, MIRConstructableEntityTypeDecl, MIRDataBufferInternalEntityTypeDecl, MIRDataStringInternalEntityTypeDecl, MIRInvokeBodyDecl, MIRInvokeDecl, MIRInvokePrimitiveDecl, MIRObjectEntityTypeDecl, MIRType } from "./mir_assembly";
 
 type CallGNode = {
     invoke: MIRInvokeKey,
@@ -102,7 +102,7 @@ function processBodyInfo(bkey: MIRInvokeKey, binfo: MIRBody[], assembly: MIRAsse
     return cn;
 }
 
-function constructCallGraphInfo(entryPoints: MIRInvokeKey[], assembly: MIRAssembly): CallGInfo {
+function constructCallGraphInfo(entryPoints: MIRInvokeKey[], assembly: MIRAssembly, istestbuild: boolean): CallGInfo {
     let invokes = new Map<MIRInvokeKey, CallGNode>();
 
     assembly.invokeDecls.forEach((ivk, ikey) => {
@@ -120,6 +120,35 @@ function constructCallGraphInfo(entryPoints: MIRInvokeKey[], assembly: MIRAssemb
     entryPoints.forEach((ivk) => {
         roots.push(invokes.get(ivk) as CallGNode);
         topoVisit(invokes.get(ivk) as CallGNode, [], tordered, invokes);
+    });
+
+    const apitype = assembly.typeMap.get("APIType") as MIRType;
+    const testtype = assembly.typeMap.get("TestableType") as MIRType;
+    assembly.entityDecls.forEach((ee) => {
+        if(assembly.subtypeOf(assembly.typeMap.get(ee.tkey) as MIRType, apitype) || (istestbuild && assembly.subtypeOf(assembly.typeMap.get(ee.tkey) as MIRType, testtype))) {
+            if (ee instanceof MIRObjectEntityTypeDecl && ee.validatefunc !== undefined) {
+                roots.push(invokes.get(ee.validatefunc) as CallGNode);
+                topoVisit(invokes.get(ee.validatefunc) as CallGNode, [], tordered, invokes);
+
+                roots.push(invokes.get(ee.consfunc as MIRInvokeKey) as CallGNode);
+                topoVisit(invokes.get(ee.consfunc as MIRInvokeKey) as CallGNode, [], tordered, invokes);
+            }
+            else if (ee instanceof MIRConstructableEntityTypeDecl && ee.validatefunc !== undefined) {
+                roots.push(invokes.get(ee.validatefunc) as CallGNode);
+                topoVisit(invokes.get(ee.validatefunc) as CallGNode, [], tordered, invokes);
+            }
+            else if (ee instanceof MIRDataStringInternalEntityTypeDecl) {
+                roots.push(invokes.get(ee.accepts) as CallGNode);
+                topoVisit(invokes.get(ee.accepts) as CallGNode, [], tordered, invokes);
+            }
+            else if (ee instanceof MIRDataBufferInternalEntityTypeDecl) {
+                roots.push(invokes.get(ee.accepts) as CallGNode);
+                topoVisit(invokes.get(ee.accepts) as CallGNode, [], tordered, invokes);
+            }
+            else {
+                ;
+            }
+        }
     });
 
     assembly.constantDecls.forEach((cdecl: MIRConstantDecl) => {
@@ -196,8 +225,8 @@ function isBodySafe(ikey: MIRInvokeKey, masm: MIRAssembly, errorTrgtPos: { file:
     }
 }
 
-function markSafeCalls(entryPoints: MIRInvokeKey[], masm: MIRAssembly, errorTrgtPos?: { file: string, line: number, pos: number }): Map<MIRInvokeKey, { safe: boolean, trgt: boolean }> {
-    const cginfo = constructCallGraphInfo(entryPoints, masm);
+function markSafeCalls(entryPoints: MIRInvokeKey[], masm: MIRAssembly, istestbuild: boolean, errorTrgtPos?: { file: string, line: number, pos: number }): Map<MIRInvokeKey, { safe: boolean, trgt: boolean }> {
+    const cginfo = constructCallGraphInfo(entryPoints, masm, istestbuild);
     const rcg = [...cginfo.topologicalOrder].reverse();
 
     const etrgt = errorTrgtPos || { file: "[IGNORE ERROR TARGETING]", line: -1, pos: -1 };
