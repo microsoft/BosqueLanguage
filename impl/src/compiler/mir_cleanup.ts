@@ -5,7 +5,7 @@
 
 import * as assert from "assert";
 
-import { MIRArgument, MIRAssertCheck, MIRConvertValue, MIRDebug, MIRGuard, MIRMaskGuard, MIROp, MIROpTag, MIRRegisterArgument, MIRArgGuard, MIRLoadConst, MIRTupleHasIndex, MIRRecordHasProperty, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadField, MIRTupleProjectToEphemeral, MIRRecordProjectToEphemeral, MIREntityProjectToEphemeral, MIRTupleUpdate, MIRRecordUpdate, MIREntityUpdate, MIRResolvedTypeKey, MIRLoadFromEpehmeralList, MIRMultiLoadFromEpehmeralList, MIRSliceEpehmeralList, MIRInvokeFixedFunction, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRConstructorEphemeralList, MIREphemeralListExtend, MIRConstructorPrimaryCollectionSingletons, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionMixed, MIRBinKeyEq, MIRBinKeyLess, MIRPrefixNotOp, MIRIsTypeOf, MIRJumpCond, MIRJumpNone, MIRRegisterAssign, MIRReturnAssign, MIRReturnAssignOfCons, MIRPhi, MIRBody, MIRBasicBlock, MIRStatmentGuard, MIRJump, MIRInject, MIRGuardedOptionInject, MIRExtract } from "./mir_ops";
+import { MIRArgument, MIRAssertCheck, MIRConvertValue, MIRDebug, MIRGuard, MIRMaskGuard, MIROp, MIROpTag, MIRRegisterArgument, MIRArgGuard, MIRLoadConst, MIRTupleHasIndex, MIRRecordHasProperty, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadField, MIRTupleProjectToEphemeral, MIRRecordProjectToEphemeral, MIREntityProjectToEphemeral, MIRTupleUpdate, MIRRecordUpdate, MIREntityUpdate, MIRResolvedTypeKey, MIRLoadFromEpehmeralList, MIRMultiLoadFromEpehmeralList, MIRSliceEpehmeralList, MIRInvokeFixedFunction, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRConstructorEphemeralList, MIREphemeralListExtend, MIRConstructorPrimaryCollectionSingletons, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionMixed, MIRBinKeyEq, MIRBinKeyLess, MIRPrefixNotOp, MIRIsTypeOf, MIRJumpCond, MIRJumpNone, MIRRegisterAssign, MIRReturnAssign, MIRReturnAssignOfCons, MIRPhi, MIRBody, MIRBasicBlock, MIRStatmentGuard, MIRJump, MIRInject, MIRGuardedOptionInject, MIRExtract, MIRLogicAction, MIRConstructorEntityDirect } from "./mir_ops";
 
 function getEmptyBlocks(b: MIRBody): MIRBasicBlock[] {
     return [...b.body].filter((b) => b[0] !== "entry" && b[0] !== "exit" && b[0] !== "returnassign" && b[1].ops.length === 0).map((b) => b[1]);
@@ -275,6 +275,11 @@ function propagateAssignForOp(op: MIROp, propMap: Map<string, MIRArgument>) {
             tc.args = propagateAssign_RemapArgs(tc.args, propMap);
             break;
         }
+        case MIROpTag.MIRConstructorEntityDirect: {
+            const tc = op as MIRConstructorEntityDirect;
+            tc.args = propagateAssign_RemapArgs(tc.args, propMap);
+            break;
+        }
         case MIROpTag.MIREphemeralListExtend: {
             const pse = op as MIREphemeralListExtend;
             pse.arg = propagateAssign_Remap(pse.arg, propMap);
@@ -310,12 +315,16 @@ function propagateAssignForOp(op: MIROp, propMap: Map<string, MIRArgument>) {
             const bl = op as MIRBinKeyLess;
             bl.lhs = propagateAssign_Remap(bl.lhs, propMap);
             bl.rhs = propagateAssign_Remap(bl.rhs, propMap);
-            bl.sguard = propagateAssign_RemapStatementGuard(bl.sguard, propMap);
             break;
         }
         case MIROpTag.MIRPrefixNotOp: {
             const pfx = op as MIRPrefixNotOp;
             pfx.arg = propagateAssign_Remap(pfx.arg, propMap);
+            break;
+        }
+        case MIROpTag.MIRLogicAction: {
+            const cc = op as MIRLogicAction;
+            cc.args = propagateAssign_RemapArgs(cc.args, propMap);
             break;
         }
         case MIROpTag.MIRIsTypeOf: {

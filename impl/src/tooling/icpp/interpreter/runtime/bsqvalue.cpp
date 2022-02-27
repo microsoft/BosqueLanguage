@@ -4,187 +4,269 @@
 //-------------------------------------------------------------------------------------------------------
 
 #include "bsqvalue.h"
-#include "environment.h"
 
-const BSQType* BSQType::g_typeNone = new BSQNoneType();
-const BSQType* BSQType::g_typeBool = new BSQBoolType();
-const BSQType* BSQType::g_typeNat = new BSQNatType();
-const BSQType* BSQType::g_typeInt = new BSQIntType();
-const BSQType* BSQType::g_typeBigNat = new BSQBigNatType();
-const BSQType* BSQType::g_typeBigInt = new BSQBigIntType();
-const BSQType* BSQType::g_typeFloat = new BSQFloatType();
-const BSQType* BSQType::g_typeDecimal = new BSQDecimalType();
-const BSQType* BSQType::g_typeRational = new BSQRationalType();
+const BSQField** BSQField::g_fieldtable = nullptr;
 
-const BSQType* BSQType::g_typeStringKRepr16 = new BSQStringKReprType<16>(BSQ_TYPE_ID_STRINGREPR_K16);
-const BSQType* BSQType::g_typeStringKRepr32 = new BSQStringKReprType<32>(BSQ_TYPE_ID_STRINGREPR_K32); 
-const BSQType* BSQType::g_typeStringKRepr64 = new BSQStringKReprType<64>(BSQ_TYPE_ID_STRINGREPR_K64);
-const BSQType* BSQType::g_typeStringKRepr96 = new BSQStringKReprType<96>(BSQ_TYPE_ID_STRINGREPR_K96);
-const BSQType* BSQType::g_typeStringKRepr128 = new BSQStringKReprType<128>(BSQ_TYPE_ID_STRINGREPR_K128);
-const BSQType* BSQType::g_typeStringKRepr256 = new BSQStringKReprType<256>(BSQ_TYPE_ID_STRINGREPR_K256);
-const std::pair<size_t, const BSQType*> BSQType::g_typeStringKCons[6] = {std::make_pair((size_t)16, BSQType::g_typeStringKRepr16), std::make_pair((size_t)32, BSQType::g_typeStringKRepr32), std::make_pair((size_t)64, BSQType::g_typeStringKRepr64), std::make_pair((size_t)96, BSQType::g_typeStringKRepr96), std::make_pair((size_t)128, BSQType::g_typeStringKRepr128), std::make_pair((size_t)256, BSQType::g_typeStringKRepr256) };
+const BSQType* BSQWellKnownType::g_typeNone = CONS_BSQ_NONE_TYPE();
+const BSQType* BSQWellKnownType::g_typeNothing = CONS_BSQ_NOTHING_TYPE();
+const BSQType* BSQWellKnownType::g_typeBool = CONS_BSQ_BOOL_TYPE();
+const BSQType* BSQWellKnownType::g_typeNat = CONS_BSQ_NAT_TYPE(BSQ_TYPE_ID_NAT, "Nat");
+const BSQType* BSQWellKnownType::g_typeInt = CONS_BSQ_INT_TYPE(BSQ_TYPE_ID_INT, "Int");
+const BSQType* BSQWellKnownType::g_typeBigNat = CONS_BSQ_BIG_NAT_TYPE(BSQ_TYPE_ID_BIGNAT, "BigNat");
+const BSQType* BSQWellKnownType::g_typeBigInt = CONS_BSQ_BIG_INT_TYPE(BSQ_TYPE_ID_BIGINT, "BigInt");
+const BSQType* BSQWellKnownType::g_typeFloat = CONS_BSQ_FLOAT_TYPE(BSQ_TYPE_ID_FLOAT, "Float");
+const BSQType* BSQWellKnownType::g_typeDecimal = CONS_BSQ_DECIMAL_TYPE(BSQ_TYPE_ID_DECIMAL, "Decimal");
+const BSQType* BSQWellKnownType::g_typeRational = CONS_BSQ_RATIONAL_TYPE(BSQ_TYPE_ID_RATIONAL, "Rational");
 
-const BSQType* BSQType::g_typeStringConcatRepr = new BSQStringConcatReprType();
-const BSQType* BSQType::g_typeStringSliceRepr = new BSQStringSliceReprType();
+const BSQType* BSQWellKnownType::g_typeStringKRepr16 = new BSQStringKReprType<16>(BSQ_TYPE_ID_STRINGREPR_K16);
+const BSQType* BSQWellKnownType::g_typeStringKRepr32 = new BSQStringKReprType<32>(BSQ_TYPE_ID_STRINGREPR_K32); 
+const BSQType* BSQWellKnownType::g_typeStringKRepr64 = new BSQStringKReprType<64>(BSQ_TYPE_ID_STRINGREPR_K64);
+const BSQType* BSQWellKnownType::g_typeStringKRepr96 = new BSQStringKReprType<96>(BSQ_TYPE_ID_STRINGREPR_K96);
+const BSQType* BSQWellKnownType::g_typeStringKRepr128 = new BSQStringKReprType<128>(BSQ_TYPE_ID_STRINGREPR_K128);
+const std::pair<size_t, const BSQType*> BSQWellKnownType::g_typeStringKCons[5] = {std::make_pair((size_t)16, BSQWellKnownType::g_typeStringKRepr16), std::make_pair((size_t)32, BSQWellKnownType::g_typeStringKRepr32), std::make_pair((size_t)64, BSQWellKnownType::g_typeStringKRepr64), std::make_pair((size_t)96, BSQWellKnownType::g_typeStringKRepr96), std::make_pair((size_t)128, BSQWellKnownType::g_typeStringKRepr128) };
 
-const BSQType* BSQType::g_typeString = new BSQStringType();
-const BSQType* BSQType::g_typeStringPos = new BSQStringIteratorType();
-const BSQType* BSQType::g_typeByteBuffer = new BSQByteBufferType();
-const BSQType* BSQType::g_typeISOTime = new BSQISOTimeType();
-const BSQType* BSQType::g_typeLogicalTime = new BSQLogicalTimeType();
-const BSQType* BSQType::g_typeUUID = new BSQUUIDType();
-const BSQType* BSQType::g_typeContentHash = new BSQContentHashType();
-const BSQType* BSQType::g_typeRegex = new BSQRegexType();
+const BSQType* BSQWellKnownType::g_typeStringTreeRepr = new BSQStringTreeReprType();
 
-static std::regex re_numberino_n("^[+]?(0|[1-9][0-9]*)$");
-static std::regex re_numberino_i("^[-+]?(0|[1-9][0-9]*)$");
-static std::regex re_numberino_f("^[-+]?(0|[1-9][0-9]*)|([0-9]+\\.[0-9]+)([eE][-+]?[0-9]+)?$");
+const BSQType* BSQWellKnownType::g_typeString = CONS_BSQ_STRING_TYPE(BSQ_TYPE_ID_STRING, "String");
 
-std::optional<uint64_t> parseToUnsignedNumber(json j)
+const BSQType* BSQWellKnownType::g_typeByteBufferLeaf = CONS_BSQ_BYTE_BUFFER_LEAF_TYPE();
+const BSQType* BSQWellKnownType::g_typeByteBufferNode = CONS_BSQ_BYTE_BUFFER_NODE_TYPE();
+const BSQType* BSQWellKnownType::g_typeByteBuffer = CONS_BSQ_BYTE_BUFFER_TYPE(BSQ_TYPE_ID_BYTEBUFFER, "BytBuffer");
+const BSQType* BSQWellKnownType::g_typeDateTime = CONS_BSQ_DATE_TIME_TYPE(BSQ_TYPE_ID_DATETIME, "DateTime");
+const BSQType* BSQWellKnownType::g_typeTickTime = CONS_BSQ_TICK_TIME_TYPE(BSQ_TYPE_ID_TICKTIME, "TickTime");
+const BSQType* BSQWellKnownType::g_typeLogicalTime = CONS_BSQ_LOGICAL_TIME_TYPE(BSQ_TYPE_ID_LOGICALTIME, "LogicalTime");
+const BSQType* BSQWellKnownType::g_typeUUID = CONS_BSQ_UUID_TYPE(BSQ_TYPE_ID_UUID, "UUID");
+const BSQType* BSQWellKnownType::g_typeContentHash = CONS_BSQ_CONTENT_HASH_TYPE(BSQ_TYPE_ID_CONTENTHASH, "ContentHash");
+const BSQType* BSQWellKnownType::g_typeRegex = CONS_BSQ_REGEX_TYPE();
+
+std::map<BSQRecordPropertyID, std::string> BSQRecordInfo::g_propertynamemap;
+
+std::string tupleDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
-    std::optional<uint64_t> nval = std::nullopt;
-    if(j.is_number_unsigned() || j.is_string())
-    { 
-        if(j.is_number_unsigned())
+    const BSQTupleInfo* ttype = dynamic_cast<const BSQTupleInfo*>(btype);
+    std::string res = "[";
+    for(size_t i = 0; i < ttype->idxoffsets.size(); ++i)
+    {
+        if(i != 0)
         {
-            nval = j.get<uint64_t>();
+            res += ", ";
+        }
+
+        auto itype = BSQType::g_typetable[ttype->ttypes[i]];
+        auto idata = btype->indexStorageLocationOffset(data, ttype->idxoffsets[i]);
+        res += itype->fpDisplay(itype, idata);
+    }
+    res += "]";
+
+    return res;
+}
+
+std::string recordDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+{
+    const BSQRecordInfo* ttype = dynamic_cast<const BSQRecordInfo*>(btype);
+    std::string res = "{";
+    for(size_t i = 0; i < ttype->properties.size(); ++i)
+    {
+        if(i != 0)
+        {
+            res += ", ";
+        }
+
+        res += BSQRecordInfo::g_propertynamemap[ttype->properties[i]] + ":";
+
+        auto itype = BSQType::g_typetable[ttype->rtypes[i]];
+        auto idata = btype->indexStorageLocationOffset(data, ttype->propertyoffsets[i]);
+        res += itype->fpDisplay(itype, idata);
+    }
+    res += "}";
+
+    return res;
+}
+
+std::string entityDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+{
+    const BSQEntityInfo* ttype = dynamic_cast<const BSQEntityInfo*>(btype);
+    std::string res = btype->name + "{";
+    for(size_t i = 0; i < ttype->fields.size(); ++i)
+    {
+        if(i != 0)
+        {
+            res += ", ";
+        }
+
+        res += BSQField::g_fieldtable[ttype->fields[i]]->fname + ":";
+
+        auto itype = BSQType::g_typetable[BSQField::g_fieldtable[ttype->fields[i]]->declaredType];
+        auto idata = btype->indexStorageLocationOffset(data, ttype->fieldoffsets[i]);
+        res += itype->fpDisplay(itype, idata);
+    }
+    res += "}";
+
+    return res;
+}
+
+std::string constructableEntityDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+{
+    const BSQType* oftype = BSQType::g_typetable[dynamic_cast<const BSQConstructableEntityInfo*>(btype)->oftype];
+
+    return btype->name + "{" + oftype->fpDisplay(oftype, data) + "}";
+}
+
+std::string ephemeralDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+{
+    const BSQEphemeralListType* ttype = dynamic_cast<const BSQEphemeralListType*>(btype);
+    std::string res = "@(|";
+    for(size_t i = 0; i < ttype->idxoffsets.size(); ++i)
+    {
+        if(i != 0)
+        {
+            res += ", ";
+        }
+
+        auto itype = BSQType::g_typetable[ttype->etypes[i]];
+        auto idata = SLPTR_INDEX_DATAPTR(data, ttype->idxoffsets[i]);
+        res += itype->fpDisplay(itype, idata);
+    }
+    res += "|)";
+
+    return res;
+}
+
+std::string unionDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+{
+    auto rtype = dynamic_cast<const BSQUnionType*>(btype)->getVType(data);
+    return rtype->fpDisplay(rtype, dynamic_cast<const BSQUnionType*>(btype)->getVData_NoAlloc(data));
+}
+
+int unionInlineKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2)
+{
+    auto tdiff = SLPTR_LOAD_UNION_INLINE_TYPE(data1)->tid - SLPTR_LOAD_UNION_INLINE_TYPE(data2)->tid;
+    if(tdiff != 0)
+    {
+        return tdiff;
+    }
+    else
+    {
+        auto tt = SLPTR_LOAD_UNION_INLINE_TYPE(data1);
+        return tt->fpkeycmp(tt, SLPTR_LOAD_UNION_INLINE_DATAPTR(data1), SLPTR_LOAD_UNION_INLINE_DATAPTR(data2));
+    }
+}
+
+int unionRefKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2)
+{
+    auto tdiff = SLPTR_LOAD_HEAP_TYPE(data1)->tid - SLPTR_LOAD_HEAP_TYPE(data2)->tid;
+    if(tdiff != 0)
+    {
+        return tdiff;
+    }
+    else
+    {
+        auto tt = SLPTR_LOAD_HEAP_TYPE(data1);
+        return tt->fpkeycmp(tt, data1, data2);
+    }
+}
+
+void coerce(const BSQType* from, const BSQType* into, StorageLocationPtr trgt, StorageLocationPtr src)
+{
+    if(into->tkind == BSQTypeLayoutKind::UnionUniversal)
+    {
+        const BSQUnionUniversalType* uutype = dynamic_cast<const BSQUnionUniversalType*>(into);
+        if(from->tkind == BSQTypeLayoutKind::UnionUniversal)
+        {
+            uutype->coerceFromUnionUniversal(dynamic_cast<const BSQUnionType*>(from), trgt, src);
+        }
+        else if(from->tkind == BSQTypeLayoutKind::UnionInline)
+        {
+            uutype->coerceFromUnionInline(dynamic_cast<const BSQUnionType*>(from), trgt, src);
+        }
+        else if(from->tkind == BSQTypeLayoutKind::UnionRef)
+        {
+            uutype->coerceFromUnionRef(dynamic_cast<const BSQUnionType*>(from), trgt, src);
         }
         else
         {
-            std::string sstr = j.get<std::string>();
-            if(std::regex_match(sstr, re_numberino_n))
-            {
-                try
-                {
-                    nval = std::stoull(sstr);
-                }
-                catch(...)
-                {
-                    ;
-                }
-            }
+            uutype->coerceFromAtomic(from, trgt, src);
         }
     }
+    else if(into->tkind == BSQTypeLayoutKind::UnionInline)
+    {
+        const BSQUnionInlineType* iltype = dynamic_cast<const BSQUnionInlineType*>(into);
 
-    return nval;
-}
-
-std::optional<int64_t> parseToSignedNumber(json j)
-{
-    std::optional<int64_t> nval = std::nullopt;
-    if(j.is_number_integer() || j.is_string())
-    { 
-        if(j.is_number_integer())
+        if(from->tkind == BSQTypeLayoutKind::UnionUniversal)
         {
-            nval = j.get<int64_t>();
+            iltype->coerceFromUnionUniversal(dynamic_cast<const BSQUnionType*>(from), trgt, src);
+        }
+        else if(from->tkind == BSQTypeLayoutKind::UnionInline)
+        {
+            iltype->coerceFromUnionInline(dynamic_cast<const BSQUnionType*>(from), trgt, src);
+        }
+        else if(from->tkind == BSQTypeLayoutKind::UnionRef)
+        {
+            iltype->coerceFromUnionRef(dynamic_cast<const BSQUnionType*>(from), trgt, src);
         }
         else
         {
-            std::string sstr = j.get<std::string>();
-            if(std::regex_match(sstr, re_numberino_i))
-            {
-                try
-                {
-                    nval = std::stoll(sstr);
-                }
-                catch(...)
-                {
-                    ;
-                }
-            }
+            iltype->coerceFromAtomic(from, trgt, src);
         }
     }
+    else if(into->tkind == BSQTypeLayoutKind::UnionRef)
+    {
+        const BSQUnionRefType* urtype = dynamic_cast<const BSQUnionRefType*>(into);
 
-    return nval;
-}
-
-std::optional<std::string> parseToBigUnsignedNumber(json j)
-{
-    std::optional<std::string> nval = std::nullopt;
-    if(j.is_number_unsigned() || j.is_string())
-    { 
-        if(j.is_number_unsigned())
+        if(from->tkind == BSQTypeLayoutKind::UnionUniversal)
         {
-            nval = std::to_string(j.get<uint64_t>());
+            urtype->coerceFromUnionUniversal(dynamic_cast<const BSQUnionType*>(from), trgt, src);
+        }
+        else if(from->tkind == BSQTypeLayoutKind::UnionInline)
+        {
+            urtype->coerceFromUnionInline(dynamic_cast<const BSQUnionType*>(from), trgt, src);
+        }
+        else if(from->tkind == BSQTypeLayoutKind::UnionRef)
+        {
+            urtype->coerceFromUnionRef(dynamic_cast<const BSQUnionType*>(from), trgt, src);
         }
         else
         {
-            std::string sstr = j.get<std::string>();
-            if(std::regex_match(sstr, re_numberino_n))
-            {
-                nval = sstr;
-            }
+            urtype->coerceFromAtomic(from, trgt, src);
         }
     }
-
-    return nval;
-}
-
-std::optional<std::string> parseToBigSignedNumber(json j)
-{
-    std::optional<std::string> nval = std::nullopt;
-    if(j.is_number_integer() || j.is_string())
-    { 
-        if(j.is_number_integer())
+    else
+    {
+        if(from->tkind == BSQTypeLayoutKind::UnionUniversal)
         {
-            nval = std::to_string(j.get<uint64_t>());
+            dynamic_cast<const BSQUnionUniversalType*>(from)->extractToAtomic(into, trgt, src);
+        }
+        else if(from->tkind == BSQTypeLayoutKind::UnionInline)
+        {
+            dynamic_cast<const BSQUnionInlineType*>(from)->extractToAtomic(into, trgt, src);
         }
         else
         {
-            std::string sstr = j.get<std::string>();
-            if(std::regex_match(sstr, re_numberino_i))
-            {
-                nval = sstr;
-            }
+            BSQ_INTERNAL_ASSERT(from->tkind == BSQTypeLayoutKind::UnionRef);
+
+            dynamic_cast<const BSQUnionRefType*>(from)->extractToAtomic(into, trgt, src);
         }
     }
-
-    return nval;
 }
 
-std::optional<std::string> parseToRealNumber(json j)
+std::pair<const BSQType*, StorageLocationPtr> extractFromUnionVCall(const BSQUnionType* fromlayout, const BSQType* intoflow, StorageLocationPtr trgt, StorageLocationPtr src)
 {
-    std::optional<std::string> nval = std::nullopt;
-    if(j.is_number() || j.is_string())
-    { 
-        if(j.is_number())
-        {
-            nval = std::to_string(j.get<double>());
-        }
-        else
-        {
-            std::string sstr = j.get<std::string>();
-            if(std::regex_match(sstr, re_numberino_f))
-            {
-                nval = sstr;
-            }
-        }
-    }
+    coerce(fromlayout, intoflow, trgt, src);
 
-    return nval;
+    if(intoflow->tkind == BSQTypeLayoutKind::UnionInline)
+    {
+        return std::make_pair(SLPTR_LOAD_UNION_INLINE_TYPE(trgt), SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt));
+    }
+    else 
+    {
+        BSQ_INTERNAL_ASSERT(intoflow->tkind == BSQTypeLayoutKind::UnionRef);
+
+        return std::make_pair(SLPTR_LOAD_HEAP_TYPE(trgt), trgt);
+    }
 }
 
-std::optional<std::string> parseToDecimalNumber(json j)
-{
-    std::optional<std::string> nval = std::nullopt;
-    if(j.is_number() || j.is_string())
-    { 
-        if(j.is_number())
-        {
-            nval = std::to_string(j.get<double>());
-        }
-        else
-        {
-            std::string sstr = j.get<std::string>();
-            if(std::regex_match(sstr, re_numberino_f))
-            {
-                nval = sstr;
-            }
-        }
-    }
-
-    return nval;
-}
+////
+//Primitive value representations
 
 std::string entityNoneDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
@@ -196,17 +278,14 @@ int entityNoneKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, Storag
     return 0;
 }
 
-bool entityNoneJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
+std::string entityNothingDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
-    if(!j.is_null())
-    {
-        return false;
-    }
-    else
-    {
-        dynamic_cast<const BSQNoneType*>(BSQType::g_typeNone)->storeValueDirect(sl, BSQNoneValue);
-        return true;
-    }
+    return "nothing";
+}
+
+int entityNothingKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2)
+{
+    return 0;
 }
 
 std::string entityBoolDisplay_impl(const BSQType* btype, StorageLocationPtr data)
@@ -228,22 +307,9 @@ int entityBoolKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, Storag
     }
 }
 
-bool entityBoolJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
-{
-    if(!j.is_boolean())
-    {
-        return false;
-    }
-    else
-    {
-        dynamic_cast<const BSQBoolType*>(BSQType::g_typeBool)->storeValueDirect(sl, j.get<bool>() ? BSQTRUE : BSQFALSE);
-        return true;
-    }
-}
-
 std::string entityNatDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
-    return std::to_string(SLPTR_LOAD_CONTENTS_AS(BSQNat, data)) + "n";
+    return std::to_string(SLPTR_LOAD_CONTENTS_AS(BSQNat, data)) + ((btype->name == "Nat") ? "n" : ("_" + btype->name));
 }
 
 int entityNatKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2)
@@ -260,23 +326,9 @@ int entityNatKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, Storage
     }
 }
 
-bool entityNatJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
-{
-    auto uval = parseToUnsignedNumber(j);
-    if(!uval.has_value())
-    {
-        return false;
-    }
-    else
-    {
-        dynamic_cast<const BSQNatType*>(BSQType::g_typeNat)->storeValueDirect(sl, uval.value());
-        return true;
-    }
-}
-
 std::string entityIntDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
-    return std::to_string(SLPTR_LOAD_CONTENTS_AS(BSQInt, data)) + "i";
+    return std::to_string(SLPTR_LOAD_CONTENTS_AS(BSQInt, data)) + ((btype->name == "Int") ? "i" : ("_" + btype->name));
 }
 
 int entityIntKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2)
@@ -293,23 +345,9 @@ int entityIntKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, Storage
     }
 }
 
-bool entityIntJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
-{
-    auto ival = parseToSignedNumber(j);
-    if(!ival.has_value())
-    {
-        return false;
-    }
-    else
-    {
-        dynamic_cast<const BSQIntType*>(BSQType::g_typeInt)->storeValueDirect(sl, ival.value());
-        return true;
-    }
-}
-
 std::string entityBigNatDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
-    return std::to_string(SLPTR_LOAD_CONTENTS_AS(BSQBigNat, data)) + "N";
+    return std::to_string(SLPTR_LOAD_CONTENTS_AS(BSQBigNat, data)) + ((btype->name == "BigNat") ? "N" : ("_" + btype->name));
 }
 
 int entityBigNatKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2)
@@ -326,21 +364,9 @@ int entityBigNatKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, Stor
     }
 }
 
-bool entityBigNatJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
-{
-    auto bnval = parseToBigUnsignedNumber(j);
-    if(!bnval.has_value())
-    {
-        return false;
-    }
-
-    dynamic_cast<const BSQBigNatType*>(BSQType::g_typeBigNat)->storeValueDirect(sl, std::stoull(bnval.value()));
-    return true;
-}
-
 std::string entityBigIntDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
-    return std::to_string(SLPTR_LOAD_CONTENTS_AS(BSQBigInt, data)) + "I";
+    return std::to_string(SLPTR_LOAD_CONTENTS_AS(BSQBigInt, data)) + ((btype->name == "BigInt") ? "I" : ("_" + btype->name));
 }
 
 int entityBigIntKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2)
@@ -357,364 +383,207 @@ int entityBigIntKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, Stor
     }
 }
 
-bool entityBigIntJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
-{
-    auto bival = parseToBigUnsignedNumber(j);
-    if(!bival.has_value())
-    {
-        return false;
-    }
-
-    dynamic_cast<const BSQBigIntType*>(BSQType::g_typeBigInt)->storeValueDirect(sl, std::stoll(bival.value()));
-    return true;
-}
-
 std::string entityFloatDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
-    return std::to_string(SLPTR_LOAD_CONTENTS_AS(BSQFloat, data)) + "f";
-}
-
-bool entityFloatJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
-{
-    auto fval = parseToRealNumber(j);
-    if(!fval.has_value())
-    {
-        return false;
-    }
-
-    dynamic_cast<const BSQFloatType*>(BSQType::g_typeFloat)->storeValueDirect(sl, std::stod(fval.value()));
-    return true;
+    return std::to_string(SLPTR_LOAD_CONTENTS_AS(BSQFloat, data)) + ((btype->name == "Float") ? "f" : ("_" + btype->name));
 }
 
 std::string entityDecimalDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
-    return std::to_string(SLPTR_LOAD_CONTENTS_AS(BSQDecimal, data)) + "d";
-}
-
-bool entityDecimalJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
-{
-    auto dval = parseToDecimalNumber(j);
-    if(!dval.has_value())
-    {
-        return false;
-    }
-
-    dynamic_cast<const BSQDecimalType*>(BSQType::g_typeDecimal)->storeValueDirect(sl, std::stod(dval.value()));
-    return true;
+    return std::to_string(SLPTR_LOAD_CONTENTS_AS(BSQDecimal, data)) + ((btype->name == "Decmial") ? "d" : ("_" + btype->name));
 }
 
 std::string entityRationalDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
     auto rval = SLPTR_LOAD_CONTENTS_AS(BSQRational, data);
 
-    auto numtype = dynamic_cast<const BSQBigIntType*>(BSQType::g_typeBigInt);
-    auto denomtype = dynamic_cast<const BSQNatType*>(BSQType::g_typeNat);
-
-    return numtype->fpDisplay(numtype, &rval.numerator) + "/" + denomtype->fpDisplay(denomtype, &rval.denominator) + "R";
-}
-
-bool entityRationalJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
-{
-    if(!j.is_array() || j.size() != 2)
-    {
-        return false;
-    }
-
-    auto numtype = dynamic_cast<const BSQBigIntType*>(BSQType::g_typeBigInt);
-    auto denomtype = dynamic_cast<const BSQNatType*>(BSQType::g_typeNat);
-
-    BSQRational rr;
-    auto oknum = numtype->consops.fpJSONParse(numtype, j[0], &rr.numerator);
-    auto okdenom = denomtype->consops.fpJSONParse(denomtype, j[1], &rr.denominator);
-
-    if(!oknum || !okdenom)
-    {
-        return false;
-    }
-
-    dynamic_cast<const BSQRationalType*>(BSQType::g_typeRational)->storeValueDirect(sl, rr);
-    return true;
+    return std::to_string(rval.numerator) + "/" + std::to_string(rval.denominator) + ((btype->name == "Rational") ? "R" : ("_" + btype->name));
 }
 
 std::string entityStringReprDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
-    BSQStringIterator iter;
-    BSQStringType::initializeIteratorBegin(&iter, SLPTR_LOAD_CONTENTS_AS(BSQString, data));
+    BSQStringForwardIterator iter((BSQString*)data, 0);
 
     std::string res = "\"";
-    while(iteratorIsValid(&iter))
+    while(iter.valid())
     {
-        res += (char)iteratorGetCodePoint(&iter);
-        incrementStringIterator_codePoint(&iter);
+        res += (char)iter.get();
+        iter.advance();
     }
     res += "\"";
 
     return res;
 }
 
-void BSQStringKReprTypeAbstract::initializeIterPositionWSlice(BSQStringIterator* iter, void* data, int64_t minpos, int64_t maxpos, int64_t pos)
-{
-    iter->cbuff = data;
-
-    iter->minpos = (int16_t)minpos;
-    iter->maxpos = (int16_t)maxpos;
-    iter->cpos = (int16_t)pos;
-}
-
-void BSQStringKReprTypeAbstract::initializeIterPosition(BSQStringIterator* iter, void* data, int64_t pos) const
-{
-    iter->cbuff = data;
-
-    iter->minpos = 0;
-    iter->maxpos = (int16_t)BSQStringKReprTypeAbstract::getUTF8ByteCount(data);
-    iter->cpos = (int16_t)pos;
-}
-
-void* BSQStringKReprTypeAbstract::slice(void* data, uint64_t nstart, uint64_t nend) const
+void* BSQStringKReprTypeAbstract::slice(StorageLocationPtr data, uint64_t nstart, uint64_t nend) const
 {
     if((nstart == 0) & (nend == this->utf8ByteCount(data)))
     {
-        return data;
+        return SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data);
     }
 
-    Allocator::GlobalAllocator.pushRoot(&data);
+    auto kreprtype = BSQStringKReprTypeAbstract::selectKReprForSize(nend - nstart);
+    auto res = Allocator::GlobalAllocator.allocateDynamic(kreprtype);
 
-    auto res = Allocator::GlobalAllocator.allocateDynamic(BSQType::g_typeStringSliceRepr);
+    auto frombuff = BSQStringKReprTypeAbstract::getUTF8Bytes(SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data)) + nstart;
 
-    ((BSQStringSliceRepr*)res)->srepr = data;
-    ((BSQStringSliceRepr*)res)->start = nstart;
-    ((BSQStringSliceRepr*)res)->end = nend;
-
-    Allocator::GlobalAllocator.popRoot();
-    return data;
-}
-
-void BSQStringSliceReprType::initializeIterPosition(BSQStringIterator* iter, void* data, int64_t pos) const
-{
-    auto slicerepr = (BSQStringSliceRepr*)data;
-    BSQStringKReprTypeAbstract::initializeIterPositionWSlice(iter, slicerepr->srepr, (int64_t)slicerepr->start, (int64_t)slicerepr->end, pos + (int64_t)slicerepr->start);
-}
-
-void* BSQStringSliceReprType::slice(void* data, uint64_t nstart, uint64_t nend) const
-{
-    if((nstart == 0) & (nend == this->utf8ByteCount(data)))
-    {
-        return data;
-    }
-
-    Allocator::GlobalAllocator.pushRoot(&data);
-
-    auto res = Allocator::GlobalAllocator.allocateDynamic(BSQType::g_typeStringSliceRepr);
-
-    ((BSQStringSliceRepr*)res)->srepr = ((BSQStringSliceRepr*)data)->srepr;
-    ((BSQStringSliceRepr*)res)->start = ((BSQStringSliceRepr*)data)->start + nstart;
-    ((BSQStringSliceRepr*)res)->end = ((BSQStringSliceRepr*)data)->end - nend;
-
-    Allocator::GlobalAllocator.popRoot();
+    *res = BSQStringKReprTypeAbstract::getUTF8ByteCount(SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data));
+    GC_MEM_COPY(BSQStringKReprTypeAbstract::getUTF8Bytes(res), frombuff, nend - nstart);
+    
     return res;
 }
 
-
-void BSQStringConcatReprType::initializeIterPosition(BSQStringIterator* iter, void* data, int64_t pos) const
-{
-    auto concatrepr = (BSQStringConcatRepr*)data;
-    auto s1size = (int64_t)concatrepr->size;
-    if(pos < s1size)
-    {
-        auto s1type = GET_TYPE_META_DATA_AS(BSQStringReprType, concatrepr->srepr1);
-        s1type->initializeIterPosition(iter, concatrepr->srepr1, pos);
-    }
-    else
-    {
-        auto s2type = GET_TYPE_META_DATA_AS(BSQStringReprType, concatrepr->srepr2);
-        s2type->initializeIterPosition(iter, concatrepr->srepr2, pos - s1size);
-    }
-}
-
-void* BSQStringConcatReprType::slice(void* data, uint64_t nstart, uint64_t nend) const
+void* BSQStringTreeReprType::slice(StorageLocationPtr data, uint64_t nstart, uint64_t nend) const
 {
     if((nstart == 0) & (nend == this->utf8ByteCount(data)))
     {
-        return data;
+        return SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data);
     }
 
-    auto s1type = GET_TYPE_META_DATA_AS(BSQStringReprType, ((BSQStringConcatRepr*)data)->srepr1);
-    auto s2type = GET_TYPE_META_DATA_AS(BSQStringReprType, ((BSQStringConcatRepr*)data)->srepr2);
+    auto s1type = GET_TYPE_META_DATA_AS(BSQStringReprType, ((BSQStringTreeRepr*)data)->srepr1);
+    auto s2type = GET_TYPE_META_DATA_AS(BSQStringReprType, ((BSQStringTreeRepr*)data)->srepr2);
 
-    Allocator::GlobalAllocator.pushRoot(&data);
-        
+    void** stck = (void**)BSQ_STACK_SPACE_ALLOC(sizeof(void*) * 4);
+    GC_MEM_ZERO(stck, sizeof(void*) * 4);
+
+    GCStack::pushFrame(stck, "2222");
+
     void* res = nullptr;
-    auto s1size = s1type->utf8ByteCount(((BSQStringConcatRepr*)data)->srepr1);
+    auto s1size = s1type->utf8ByteCount(((BSQStringTreeRepr*)data)->srepr1);
     if(nend <= s1size)
     {
-        res = s1type->slice(((BSQStringConcatRepr*)data)->srepr1, nstart, nend);
+        stck[0] = ((BSQStringTreeRepr*)data)->srepr1;
+        res = s1type->slice(stck, nstart, nend);
     }
     else if(s1size <= nstart)
     {
-        res = s2type->slice(((BSQStringConcatRepr*)data)->srepr2, nstart - s1size, nend - s1size);
+        stck[0] = ((BSQStringTreeRepr*)data)->srepr2;
+        res = s2type->slice(stck, nstart - s1size, nend - s1size);
     }
     else
     {
-        res = Allocator::GlobalAllocator.allocateDynamic(BSQType::g_typeStringConcatRepr);
-        Allocator::GlobalAllocator.pushRoot(&res);
+        auto s1 = ((BSQStringTreeRepr*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data))->srepr1;
+        stck[0] = s1;
+        stck[1] = s1type->slice(stck, nstart, s1type->utf8ByteCount(s1));
 
-        ((BSQStringConcatRepr*)res)->srepr1 = s1type->slice(((BSQStringConcatRepr*)data)->srepr1, nstart, s1type->utf8ByteCount(((BSQStringConcatRepr*)data)->srepr1));
-        ((BSQStringConcatRepr*)res)->srepr2 = s2type->slice(((BSQStringConcatRepr*)data)->srepr2, 0, nend - s1type->utf8ByteCount(((BSQStringConcatRepr*)data)->srepr1));
-        ((BSQStringConcatRepr*)res)->size = nend - nstart;
+        auto s2 = ((BSQStringTreeRepr*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data))->srepr2;
+        stck[2] = s2;
+        stck[3] = s2type->slice(stck + 2, 0, nend - s1type->utf8ByteCount(s2));
 
-        Allocator::GlobalAllocator.popRoot(); 
+        res = Allocator::GlobalAllocator.allocateDynamic(BSQWellKnownType::g_typeStringTreeRepr);
+        *((BSQStringTreeRepr*)res) = {stck[1], stck[3], nend - nstart};
     }
 
-    Allocator::GlobalAllocator.popRoot();
+    GCStack::popFrame();
     return res;
 }
 
-std::string entityStringBSQStringIteratorDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+void initializeForwardIterRecProcess(int64_t pos, void* data, BSQStringForwardIterator* iter)
 {
-    return "[String Iterator]";
-}
-
-bool iteratorIsValid(const BSQStringIterator* iter)
-{
-    return iter->statusflag != g_invalidIterFlag;
-}
-
-bool iteratorLess(const BSQStringIterator* iter1, const BSQStringIterator* iter2)
-{
-    return iter1->strpos < iter2->strpos;
-}
-
-bool iteratorEqual(const BSQStringIterator* iter1, const BSQStringIterator* iter2)
-{
-    return iter1->strpos == iter2->strpos;
-}
-
-uint8_t iteratorGetUTF8Byte(const BSQStringIterator* iter)
-{
-    assert(iteratorIsValid(iter));
-
-    if(IS_INLINE_STRING(&iter->str))
+    auto stype = GET_TYPE_META_DATA_AS(BSQStringReprType, data);
+    if(stype->tid != BSQ_TYPE_ID_STRINGREPR_TREE)
     {
-        return *(BSQInlineString::utf8Bytes(iter->str.u_inlineString) + iter->cpos);
+        iter->cbuff = BSQStringKReprTypeAbstract::getUTF8Bytes(data);
+        iter->maxpos = (int16_t)BSQStringKReprTypeAbstract::getUTF8ByteCount(data);
+        iter->cpos = (uint16_t)pos;
     }
     else
     {
-        return *(BSQStringKReprTypeAbstract::getUTF8Bytes(iter->cbuff) + iter->cpos);
-    }
-}
+        auto tsdata = static_cast<BSQStringTreeRepr*>(data);
 
-void initializeStringIterPosition(BSQStringIterator* iter, int64_t pos)
-{
-    auto ssize = (int64_t)BSQStringType::utf8ByteCount(iter->str);
-    if((pos == -1) | (pos == ssize) | (ssize == 0))
-    {
-        iter->cbuff = nullptr;
-        iter->statusflag = g_invalidIterFlag;
-    }
-    else
-    {
-        if (IS_INLINE_STRING(&iter->str))
+        auto s1size = GET_TYPE_META_DATA_AS(BSQStringReprType, tsdata->srepr1)->utf8ByteCount(tsdata->srepr1);
+        if(pos < s1size)
         {
-            iter->cbuff = nullptr;
-            iter->minpos = 0;
-            iter->maxpos = (int16_t)BSQInlineString::utf8ByteCount(iter->str.u_inlineString);
-            iter->cpos = (int16_t)pos;
+            initializeForwardIterRecProcess(pos, tsdata->srepr1, iter);
         }
         else
         {
-            GET_TYPE_META_DATA_AS(BSQStringReprType, iter->str.u_data)->initializeIterPosition(iter, iter->str.u_data, pos);
+            initializeForwardIterRecProcess(pos - s1size, tsdata->srepr2, iter);
         }
-        iter->statusflag = g_validIterFlag;
     }
 }
 
-void incrementStringIterator_utf8byte(BSQStringIterator* iter)
+void BSQStringForwardIterator::initializeIteratorPosition(int64_t curr)
 {
-    iter->strpos++;
-    iter->cpos++;
-    
-    if(iter->strpos == 0 || iter->cpos == iter->maxpos)
+    if(curr == this->strmax)
     {
-        initializeStringIterPosition(iter, iter->strpos);
+        this->cbuff = nullptr;
+        this->maxpos = 0;
+        this->cpos = 0;
     }
-}
-
-void decrementStringIterator_utf8byte(BSQStringIterator* iter)
-{
-    iter->strpos--;
-    iter->cpos--;
-    
-    if(iter->strpos == BSQStringType::utf8ByteCount(iter->str) - 1 || iter->cpos < iter->minpos)
+    else if(IS_INLINE_STRING(this->sstr))
     {
-        initializeStringIterPosition(iter, iter->strpos);
-    }
-}
-
-uint32_t iteratorGetCodePoint(BSQStringIterator* iter)
-{
-    assert(iteratorIsValid(iter));
-
-    auto utfbyte = iteratorGetUTF8Byte(iter);
-    if((utfbyte & 0x8) == 0)
-    {
-        return utfbyte;
+        this->cbuff = BSQInlineString::utf8Bytes(this->sstr->u_inlineString);
+        this->maxpos = (int16_t)BSQInlineString::utf8ByteCount(this->sstr->u_inlineString);
+        this->cpos = (int16_t)curr;
     }
     else
     {
-        //not implemented
-        assert(false);
-        return 0;
+        initializeForwardIterRecProcess(curr, this->sstr->u_data, this);
     }
 }
 
-void incrementStringIterator_codePoint(BSQStringIterator* iter)
+void BSQStringForwardIterator::increment_utf8byte()
 {
-    assert(iteratorIsValid(iter));
-
-    auto utfbyte = iteratorGetUTF8Byte(iter);
-    if((utfbyte & 0x8) == 0)
+    this->curr++;
+    this->cpos++;
+    
+    if(this->cpos == this->maxpos)
     {
-        incrementStringIterator_utf8byte(iter);
+        this->initializeIteratorPosition(this->curr);
+    }
+}
+
+void initializeReverseIterRecProcess(int64_t pos, void* data, BSQStringReverseIterator* iter)
+{
+    auto stype = GET_TYPE_META_DATA_AS(BSQStringReprType, data);
+    if(stype->tid != BSQ_TYPE_ID_STRINGREPR_TREE)
+    {
+        iter->cbuff = BSQStringKReprTypeAbstract::getUTF8Bytes(data);
+        iter->cpos = (int16_t)pos;
     }
     else
     {
-        //not implemented
-        assert(false);
-    }
-}
+        auto tsdata = static_cast<BSQStringTreeRepr*>(data);
 
-void decrementStringIterator_codePoint(BSQStringIterator* iter)
-{
-    assert(iteratorIsValid(iter));
-
-    decrementStringIterator_utf8byte(iter);
-    if(iter->strpos != -1)
-    {
-        assert(iteratorIsValid(iter));
-
-        auto utfbyte = iteratorGetUTF8Byte(iter);
-        if((utfbyte & 0x8) != 0)
+        auto s1size = GET_TYPE_META_DATA_AS(BSQStringReprType, tsdata->srepr1)->utf8ByteCount(tsdata->srepr1);
+        if(pos < s1size)
         {
-            //not implemented
-            assert(false);
+            initializeReverseIterRecProcess(pos, tsdata->srepr1, iter);
+        }
+        else
+        {
+            initializeReverseIterRecProcess(pos - s1size, tsdata->srepr2, iter);
         }
     }
 }
 
-void BSQStringIteratorType::registerIteratorGCRoots(BSQStringIterator* iter)
+void BSQStringReverseIterator::initializeIteratorPosition(int64_t curr)
 {
-    if(!IS_INLINE_STRING(&iter->str))
+    if(curr == -1)
     {
-        Allocator::GlobalAllocator.pushRoot(&(iter->str.u_data));
-        Allocator::GlobalAllocator.pushRoot(&(iter->cbuff));
+        this->cbuff = nullptr;
+        this->cpos = -1;
+    }
+    else if(IS_INLINE_STRING(this->sstr))
+    {
+        this->cbuff = BSQInlineString::utf8Bytes(this->sstr->u_inlineString);
+        this->cpos = (int16_t)curr;
+    }
+    else
+    {
+        initializeReverseIterRecProcess(curr, this->sstr->u_data, this);
     }
 }
-    
-void BSQStringIteratorType::releaseIteratorGCRoots(BSQStringIterator* iter)
+
+void BSQStringReverseIterator::increment_utf8byte()
 {
-    if(!IS_INLINE_STRING(&iter->str))
+    this->curr--;
+    this->cpos--;
+    
+    if(this->cpos == -1)
     {
-        Allocator::GlobalAllocator.popRoots<2>();
+        this->initializeIteratorPosition(this->curr);
     }
 }
 
@@ -723,15 +592,13 @@ std::string entityStringDisplay_impl(const BSQType* btype, StorageLocationPtr da
     BSQString str = SLPTR_LOAD_CONTENTS_AS(BSQString, data);
 
     std::string res;
-    res.reserve((size_t)BSQStringType::utf8ByteCount(str));
+    res.reserve((size_t)BSQStringImplType::utf8ByteCount(str));
 
-    BSQStringIterator iter;
-    BSQStringType::initializeIteratorBegin(&iter, str);
-    
-    while(iteratorIsValid(&iter))
+    BSQStringForwardIterator iter(&str, 0);
+    while(iter.valid())
     {
-        res.push_back((char)iteratorGetUTF8Byte(&iter));
-        incrementStringIterator_utf8byte(&iter);
+        res.push_back((char)iter.get());
+        iter.advance();
     }
 
     return "\"" + res + "\"";
@@ -739,92 +606,21 @@ std::string entityStringDisplay_impl(const BSQType* btype, StorageLocationPtr da
 
 int entityStringKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2)
 {
-    return BSQStringType::keycmp(SLPTR_LOAD_CONTENTS_AS(BSQString, data1), SLPTR_LOAD_CONTENTS_AS(BSQString, data2));
+    return BSQStringImplType::keycmp(SLPTR_LOAD_CONTENTS_AS(BSQString, data1), SLPTR_LOAD_CONTENTS_AS(BSQString, data2));
 }
 
-bool entityStringJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
+uint8_t* BSQStringImplType::boxInlineString(BSQInlineString istr)
 {
-    if(!j.is_string())
-    {
-        return false;
-    }
-    else
-    {
-        auto sstr = j.get<std::string>();
-        BSQString s = g_emptyString;
-        if(sstr.size() == 0)
-        {
-            //already empty
-        }
-        else if(sstr.size() < 16) 
-        {
-            s.u_inlineString = BSQInlineString::create((const uint8_t*)sstr.c_str(), sstr.size());
-        }
-        else if(sstr.size() <= 256)
-        {
-            auto stp = std::find_if(BSQType::g_typeStringKCons, BSQType::g_typeStringKCons + sizeof(BSQType::g_typeStringKCons), [&sstr](const std::pair<size_t, const BSQType*>& cc) {
-                return cc.first > sstr.size();
-            });
-            s.u_data = Allocator::GlobalAllocator.allocateDynamic(stp->second);
-            BSQ_MEM_COPY(s.u_data, sstr.c_str(), sstr.size());
-        }
-        else
-        {
-            //
-            //TODO: split the string into multiple parts
-            //
-            assert(false);
-        }
-        
-        dynamic_cast<const BSQStringType*>(BSQType::g_typeString)->storeValueDirect(sl, s);
-        return true;
-    }
-}
-
-uint8_t* BSQStringType::boxInlineString(BSQInlineString istr)
-{
-    auto res = (uint8_t*)Allocator::GlobalAllocator.allocateSafe(BSQType::g_typeStringKRepr16);
+    auto res = (uint8_t*)Allocator::GlobalAllocator.allocateSafe(BSQWellKnownType::g_typeStringKRepr16);
     *res = (uint8_t)BSQInlineString::utf8ByteCount(istr);
     BSQ_MEM_COPY(res + 1, BSQInlineString::utf8Bytes(istr), *res);
 
     return res;
 }
 
-void initializeIteratorMin(BSQStringIterator* iter, BSQString str)
+int BSQStringImplType::keycmp(BSQString v1, BSQString v2)
 {
-    iter->str = str;
-    iter->strpos = -1;
-    iter->cbuff = nullptr;
-}
-
-void initializeIteratorMax(BSQStringIterator* iter, BSQString str)
-{
-    iter->str = str;
-    iter->strpos = BSQStringType::utf8ByteCount(str);
-    iter->cbuff = nullptr;
-}
-
-void BSQStringType::initializeIteratorBegin(BSQStringIterator* iter, BSQString str)
-{
-    iter->str = str;
-    iter->strpos = 0;
-    iter->cbuff = nullptr;
-
-    initializeStringIterPosition(iter, iter->strpos);
-}
-
-void BSQStringType::initializeIteratorEnd(BSQStringIterator* iter, BSQString str)
-{
-    iter->str = str;
-    iter->strpos = BSQStringType::utf8ByteCount(str) - 1;
-    iter->cbuff = nullptr;
-
-    initializeStringIterPosition(iter, iter->strpos);
-}
-
-int BSQStringType::keycmp(BSQString v1, BSQString v2)
-{
-    if(BSQStringType::empty(v1) & BSQStringType::empty(v2))
+    if(BSQStringImplType::empty(v1) & BSQStringImplType::empty(v2))
     {
         return 0;
     }
@@ -834,7 +630,7 @@ int BSQStringType::keycmp(BSQString v1, BSQString v2)
     }
     else
     {
-        auto bdiff = BSQStringType::utf8ByteCount(v1) - BSQStringType::utf8ByteCount(v2);
+        auto bdiff = BSQStringImplType::utf8ByteCount(v1) - BSQStringImplType::utf8ByteCount(v2);
         if(bdiff != 0)
         {
             return bdiff < 0 ? -1 : 1;
@@ -845,19 +641,19 @@ int BSQStringType::keycmp(BSQString v1, BSQString v2)
             //TODO: we want to add some order magic where we intern longer concat strings in sorted tree and can then just compare pointer equality or parent order instead of looking at full data 
             //
 
-            BSQStringIterator iter1;
-            BSQStringType::initializeIteratorBegin(&iter1, v1);
+            BSQStringForwardIterator iter1(&v1, 0);
+            BSQStringForwardIterator iter2(&v2, 0);
 
-            BSQStringIterator iter2;
-            BSQStringType::initializeIteratorBegin(&iter2, v2);
-
-            while(iteratorIsValid(&iter1) && iteratorIsValid(&iter2))
+            while(iter1.valid() & iter2.valid())
             {
-                auto diff = iteratorGetUTF8Byte(&iter1) - iteratorGetUTF8Byte(&iter2);
+                auto diff = iter1.get_byte() - iter2.get_byte();
                 if(diff != 0)
                 {
                     return diff;
                 }
+
+                iter1.advance_byte();
+                iter2.advance_byte();
             }
 
             return 0;
@@ -865,33 +661,33 @@ int BSQStringType::keycmp(BSQString v1, BSQString v2)
     }
 }
 
-BSQString BSQStringType::concat2(StorageLocationPtr s1, StorageLocationPtr s2)
+BSQString BSQStringImplType::concat2(StorageLocationPtr s1, StorageLocationPtr s2)
 {
     //
     //TODO: want to rebalance here later
     //
 
-    Allocator::GlobalAllocator.ensureSpace(std::max(sizeof(BSQStringConcatRepr), (sizeof(BSQStringKReprType<32>))));
+    Allocator::GlobalAllocator.ensureSpace(std::max(sizeof(BSQStringTreeRepr), (sizeof(BSQStringKReprType<32>))));
 
     BSQString str1 = SLPTR_LOAD_CONTENTS_AS(BSQString, s1);
     BSQString str2 = SLPTR_LOAD_CONTENTS_AS(BSQString, s2);
 
-    if(BSQStringType::empty(str1) & BSQStringType::empty(str2))
+    if(BSQStringImplType::empty(str1) & BSQStringImplType::empty(str2))
     {
         return g_emptyString;
     }
-    else if(BSQStringType::empty(str1))
+    else if(BSQStringImplType::empty(str1))
     {
         return str2;
     }
-    else if(BSQStringType::empty(str2))
+    else if(BSQStringImplType::empty(str2))
     {
         return str1;
     }
     else
     {
-        auto len1 = BSQStringType::utf8ByteCount(str1);
-        auto len2 = BSQStringType::utf8ByteCount(str2);
+        auto len1 = BSQStringImplType::utf8ByteCount(str1);
+        auto len2 = BSQStringImplType::utf8ByteCount(str2);
 
         BSQString res;
         if(IS_INLINE_STRING(&str1) & IS_INLINE_STRING(&str2))
@@ -906,7 +702,7 @@ BSQString BSQStringType::concat2(StorageLocationPtr s1, StorageLocationPtr s2)
             {
                 assert(len1 + len2 <= 30);
 
-                auto crepr = (uint8_t*)Allocator::GlobalAllocator.allocateSafe(BSQType::g_typeStringKRepr32);
+                auto crepr = (uint8_t*)Allocator::GlobalAllocator.allocateSafe(BSQWellKnownType::g_typeStringKRepr32);
                 uint8_t* curr = BSQStringKReprTypeAbstract::getUTF8Bytes(crepr);
 
                 *crepr = (uint8_t)(len1 + len2);
@@ -920,37 +716,35 @@ BSQString BSQStringType::concat2(StorageLocationPtr s1, StorageLocationPtr s2)
         {
             if(len1 + len2 < 32)
             {
-                auto crepr = (uint8_t*)Allocator::GlobalAllocator.allocateSafe(BSQType::g_typeStringKRepr32);
+                auto crepr = (uint8_t*)Allocator::GlobalAllocator.allocateSafe(BSQWellKnownType::g_typeStringKRepr32);
                 uint8_t* curr = BSQStringKReprTypeAbstract::getUTF8Bytes(crepr);
 
                 *crepr = (uint8_t)(len1 + len2);
 
-                BSQStringIterator iter1;
-                BSQStringType::initializeIteratorBegin(&iter1, str1);
-                while(iteratorIsValid(&iter1))
+                BSQStringForwardIterator iter1(&str1, 0);
+                while(iter1.valid())
                 {
-                    *curr = iteratorGetUTF8Byte(&iter1);
+                    *curr = iter1.get_byte();
                     curr++;
-                    incrementStringIterator_utf8byte(&iter1);
+                    iter1.advance_byte();
                 }
 
-                BSQStringIterator iter2;
-                BSQStringType::initializeIteratorBegin(&iter2, str2);
-                while(iteratorIsValid(&iter2))
+                BSQStringForwardIterator iter2(&str2, 0);
+                while(iter2.valid())
                 {
-                    *curr = iteratorGetUTF8Byte(&iter2);
+                    *curr = iter2.get_byte();
                     curr++;
-                    incrementStringIterator_utf8byte(&iter2);
+                    iter2.advance_byte();
                 }
 
                 res.u_data = crepr;
             }
             else
             {
-                auto crepr = (BSQStringConcatRepr*)Allocator::GlobalAllocator.allocateSafe(BSQType::g_typeStringConcatRepr);
+                auto crepr = (BSQStringTreeRepr*)Allocator::GlobalAllocator.allocateSafe(BSQWellKnownType::g_typeStringTreeRepr);
                 crepr->size = (uint64_t)(len1 + len2);
-                crepr->srepr1 = IS_INLINE_STRING(s1) ? BSQStringType::boxInlineString(str1.u_inlineString) : str1.u_data;
-                crepr->srepr2 = IS_INLINE_STRING(s2) ? BSQStringType::boxInlineString(str2.u_inlineString) : str2.u_data;
+                crepr->srepr1 = IS_INLINE_STRING(s1) ? BSQStringImplType::boxInlineString(str1.u_inlineString) : str1.u_data;
+                crepr->srepr2 = IS_INLINE_STRING(s2) ? BSQStringImplType::boxInlineString(str2.u_inlineString) : str2.u_data;
                 
                 res.u_data = crepr;
             }
@@ -960,7 +754,7 @@ BSQString BSQStringType::concat2(StorageLocationPtr s1, StorageLocationPtr s2)
     }
 }
 
-BSQString BSQStringType::slice(StorageLocationPtr str, StorageLocationPtr startpos, StorageLocationPtr endpos)
+BSQString BSQStringImplType::slice(StorageLocationPtr str, int64_t startpos, int64_t endpos)
 {
     //
     //TODO: want to rebalance here later
@@ -968,22 +762,20 @@ BSQString BSQStringType::slice(StorageLocationPtr str, StorageLocationPtr startp
 
     Allocator::GlobalAllocator.ensureSpace(sizeof(BSQStringKReprType<32>));
 
-    auto istart = SLPTR_LOAD_CONTENTS_AS(BSQStringIterator, startpos);
-    auto iend = SLPTR_LOAD_CONTENTS_AS(BSQStringIterator, endpos);
     auto rstr = SLPTR_LOAD_CONTENTS_AS(BSQString, str);
 
-    if(istart.strpos >= iend.strpos)
+    if(startpos >= endpos)
     {
         return g_emptyString;
     }
     else
     {
-        int64_t dist = iend.strpos - istart.strpos;
+        int64_t dist = endpos - startpos;
 
         BSQString res = {0};
         if(IS_INLINE_STRING(&rstr))
         {
-            res.u_inlineString = BSQInlineString::create(BSQInlineString::utf8Bytes(rstr.u_inlineString) + istart.strpos, (uint64_t)dist);
+            res.u_inlineString = BSQInlineString::create(BSQInlineString::utf8Bytes(rstr.u_inlineString) + startpos, (uint64_t)dist);
         }
         else
         {
@@ -991,24 +783,30 @@ BSQString BSQStringType::slice(StorageLocationPtr str, StorageLocationPtr startp
             {
                 BSQInlineString::utf8ByteCount_Initialize(res.u_inlineString, (uint64_t)dist);
                 uint8_t* curr = BSQInlineString::utf8Bytes(res.u_inlineString);
-                while(iteratorLess(&istart, &iend))
+
+                BSQStringForwardIterator iter(&rstr, startpos);
+                while(startpos < endpos)
                 {
-                    *curr = iteratorGetUTF8Byte(&istart);
+                    *curr = iter.get_byte();
+                    iter.advance_byte();
                 }
             }
             else if(dist < 32)
             {
-                res.u_data = Allocator::GlobalAllocator.allocateSafe(BSQType::g_typeStringKRepr32);
+                res.u_data = Allocator::GlobalAllocator.allocateSafe(BSQWellKnownType::g_typeStringKRepr32);
                 uint8_t* curr = BSQStringKReprTypeAbstract::getUTF8Bytes(res.u_data);
-                while(iteratorLess(&istart, &iend))
+               
+                BSQStringForwardIterator iter(&rstr, startpos);
+                while(startpos < endpos)
                 {
-                    *curr = iteratorGetUTF8Byte(&istart);
+                    *curr = iter.get_byte();
+                    iter.advance_byte();
                 }
             }
             else
             {
                 auto reprtype = GET_TYPE_META_DATA_AS(BSQStringReprType, rstr.u_data);
-                res.u_data = reprtype->slice(rstr.u_data, (uint64_t)istart.strpos, (uint64_t)iend.strpos);
+                res.u_data = reprtype->slice(rstr.u_data, startpos, endpos);
             }
         }
 
@@ -1016,38 +814,101 @@ BSQString BSQStringType::slice(StorageLocationPtr str, StorageLocationPtr startp
     }
 }
 
+std::string entityByteBufferLeafDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+{
+    return "[ByteBufferEntry]"; 
+}
+
+std::string entityByteBufferNodeDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+{
+    return "[ByteBufferNode]";   
+}
+
 std::string entityByteBufferDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
-    return "[Byte Buffer]";
+    BSQByteBuffer* bbuff = SLPTR_LOAD_CONTENTS_AS(BSQByteBuffer*, data);
+    std::string bstr;
+    bstr.reserve(bbuff->bytecount * 5);
+
+    bstr += "[";
+    BSQByteBufferNode* curr = bbuff->bytes;
+    bool first = true;
+    while(curr != nullptr)
+    {
+        for(size_t i = 0; i < curr->bytecount; ++i)
+        {
+            if(!first) 
+            {
+                bstr += ", ";
+            }
+            first = false;
+            bstr += std::to_string(curr->bytes->bytes[i]);
+        }
+
+        curr = curr->next;
+    }
+    bstr += "]";
+
+    return bstr;
 }
 
-
-std::string entityBufferDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+std::string emitDateTimeRaw_v(uint16_t y, uint8_t m, uint8_t d, uint8_t hh, uint8_t mm)
 {
-    return "[Buffer]";
+    struct tm dt = {0};
+    dt.tm_year = y + 1900;
+    dt.tm_mon = m;
+    dt.tm_mday = d;
+    dt.tm_hour = hh;
+    dt.tm_min = mm;
+
+    char sstrt[20] = {0};
+    size_t dtlen = strftime(sstrt, 20, "%Y-%m-%dT%H:%M", &dt);
+    std::string res(sstrt, sstrt + dtlen);
+
+    return res;
 }
 
-
-std::string entityDataBufferDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+std::string entityDateTimeDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
-    return "[Data Buffer]";
+    BSQDateTime* t = SLPTR_LOAD_CONTENTS_AS(BSQDateTime*, data);
+
+    if(t->tzoffset == 0)
+    {
+        auto tstr = emitDateTimeRaw_v(t->year, t->month, t->day, t->hour, t->min) + "Z"; 
+        return tstr + ((btype->name == "DateTime") ? "" : ("_" + btype->name));
+    }
+    else
+    {
+        auto hh = t->tzoffset / 60;
+        auto mm = std::abs(t->tzoffset) % 60;
+        char sstrt[16] = {0};
+        sprintf(sstrt, "%+02d:%0d", hh, mm);
+        std::string tzstr(sstrt, sstrt + 10);
+
+        auto tstr = emitDateTimeRaw_v(t->year, t->month, t->day, t->hour, t->min) + tzstr;
+
+        std::string rstr;
+        if(t->tzname.empty())
+        {
+            rstr = tstr;
+        }
+        else
+        {
+            rstr = tstr + "(" + t->tzname  + ")";
+        }
+
+        return rstr + ((btype->name == "DateTime") ? "" : ("_" + btype->name));
+    }
 }
 
-std::string entityISOTimeDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+std::string entityTickTimeDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
-    assert(false);
-    return "[ISO TIME]";
-}
-
-bool entityISOTimeJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
-{
-    assert(false);
-    return false;
+    return "T" + std::to_string(SLPTR_LOAD_CONTENTS_AS(BSQTickTime, data)) + ((btype->name == "TickTime") ? "ns" : ("_" + btype->name));
 }
 
 std::string entityLogicalTimeDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
-    return std::to_string(SLPTR_LOAD_CONTENTS_AS(BSQLogicalTime, data)) + ":LogicalTime";
+    return "L" + std::to_string(SLPTR_LOAD_CONTENTS_AS(BSQLogicalTime, data)) + ((btype->name == "LogicalTime") ? "" : ("_" + btype->name));
 }
 
 int entityLogicalTimeKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2)
@@ -1064,31 +925,30 @@ int entityLogicalTimeKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1,
     }
 }
 
-bool entityLogicalTimeJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
-{
-    std::optional<std::string> nval = parseToBigUnsignedNumber(j);
-    if(!nval.has_value())
-    {
-        return false;
-    }
-
-    dynamic_cast<const BSQLogicalTimeType*>(BSQType::g_typeLogicalTime)->storeValueDirect(sl, std::stoull(nval.value()));
-    return true;
-}
-
 std::string entityUUIDDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
-    assert(false);
-    return "[UUID]";
+    auto uuid = SLPTR_LOAD_CONTENTS_AS(BSQUUID, data);
+
+    unsigned int bb4 = *reinterpret_cast<const uint32_t*>(uuid.bytes);
+    unsigned int bb2_1 = *reinterpret_cast<const uint16_t*>(uuid.bytes + 4);
+    unsigned int bb2_2 = *reinterpret_cast<const uint16_t*>(uuid.bytes + 6);
+    unsigned int bb2_3 = *reinterpret_cast<const uint16_t*>(uuid.bytes + 8);
+    unsigned int bb6 = *reinterpret_cast<const uint64_t*>(uuid.bytes + 10) & 0xFFFFFFFFFFFF;
+    
+    char sstrt[64] = {0};
+    sprintf(sstrt, "%06x-%04x-%04x-%04x-%08x", bb4, bb2_1, bb2_2, bb2_3, bb6);
+    std::string res(sstrt, sstrt + 36);
+
+    return res;
 }
 
 int entityUUIDKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2)
 {
-    auto v1 = (BSQUUID*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data1);
-    auto v2 = (BSQUUID*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data2);
+    auto v1 = SLPTR_LOAD_CONTENTS_AS(BSQUUID, data1);
+    auto v2 = SLPTR_LOAD_CONTENTS_AS(BSQUUID, data2);
 
-    auto cmp = std::mismatch(v1->bytes, v1->bytes + sizeof(v1->bytes), v2->bytes);
-    if(cmp.first == v1->bytes + sizeof(v1->bytes))
+    auto cmp = std::mismatch(v1.bytes, v1.bytes + sizeof(v1.bytes), v2.bytes);
+    if(cmp.first == v1.bytes + sizeof(v1.bytes))
     {
         return 0;
     }
@@ -1098,16 +958,21 @@ int entityUUIDKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, Storag
     }
 }
 
-bool entityUUIDJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
-{
-    assert(false);
-    return false;
-}
-
 std::string entityContentHashDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
-    assert(false);
-    return "[ContentHash]";
+    auto v1 = (BSQContentHash*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data);
+
+    std::string rr = "0x";
+    for(auto iter = v1->bytes; iter < v1->bytes + sizeof(v1->bytes); ++iter)
+    {
+        char sstrt[8] = {0};
+        sprintf(sstrt, "%02x", *iter);
+
+        std::string ss(sstrt, sstrt + 2);
+        rr += ss;
+    }
+
+    return rr;
 }
 
 int entityContentHashKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2)
@@ -1126,522 +991,14 @@ int entityContentHashKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1,
     }
 }
 
-bool entityContentHashJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
-{
-    assert(false);
-    return false;
-}
-
-BSQRegexOpt* BSQRegexOpt::parse(json j)
-{
-   auto tag = j["tag"].get<std::string>();
-    if(tag == "Literal")
-    {
-        return BSQLiteralRe::parse(j);
-    }
-    else if(tag == "CharClass")
-    {
-        return BSQCharClassRe::parse(j);
-    }
-    else if(tag == "CharRange")
-    {
-        return BSQCharRangeRe::parse(j);
-    }
-    else if(tag == "StarRepeat")
-    {
-        return BSQStarRepeatRe::parse(j);
-    }
-    else if(tag == "PlusRepeat")
-    {
-        return BSQPlusRepeatRe::parse(j);
-    }
-    else if(tag == "RangeRepeat")
-    {
-        return BSQRangeRepeatRe::parse(j);
-    }
-    else if(tag == "Optional")
-    {
-        return BSQOptionalRe::parse(j);
-    }
-    else if(tag == "Alternation")
-    {
-        return BSQAlternationRe::parse(j);
-    }
-    else
-    {
-        return BSQSequenceRe::parse(j);
-    }
-}
-
-bool BSQLiteralRe::match(BSQStringIterator iter, const std::vector<const BSQRegexOpt*>& continuation) const
-{
-    if(!iteratorIsValid(&iter))
-    {
-        return false;
-    }
-
-
-    auto curr = this->litstr.cbegin();
-    while(iteratorIsValid(&iter) && curr != this->litstr.cend())
-    {
-        if(iteratorGetUTF8Byte(&iter) != *curr)
-        {
-            return false;
-        }
-
-        incrementStringIterator_utf8byte(&iter);
-        curr++;
-    }
-
-    if(curr != this->litstr.cend())
-    {
-        return false;
-    }
-    else
-    {
-        if(continuation.empty())
-        {
-            return !iteratorIsValid(&iter);
-        }
-        else 
-        {
-            std::vector<const BSQRegexOpt*> ncontinue(continuation.cbegin() + 1, continuation.cend());
-            return continuation[0]->match(iter, ncontinue);
-        }
-    }
-}
-
-size_t BSQLiteralRe::mconsume() const
-{
-    return this->litstr.size();
-}
-
-BSQLiteralRe* BSQLiteralRe::parse(json j)
-{
-    auto litstr = j["litstr"].get<std::string>();
-    std::vector<uint8_t> utf8;
-    std::transform(litstr.cbegin(), litstr.cend(), std::back_inserter(utf8), [](const char cc) {
-        return (uint8_t)cc;
-    });
-
-    return new BSQLiteralRe(j["restr"].get<std::string>(), j["escstr"].get<std::string>(), utf8);
-}
-
-bool BSQCharRangeRe::match(BSQStringIterator iter, const std::vector<const BSQRegexOpt*>& continuation) const
-{
-    if(!iteratorIsValid(&iter))
-    {
-        return false;
-    }
-    
-    auto cp = iteratorGetCodePoint(&iter);
-    incrementStringIterator_codePoint(&iter);
-    if(this->low <= (uint32_t)cp && (uint32_t)cp <= this->high)
-    {
-        if(continuation.empty())
-        {
-            return !iteratorIsValid(&iter);
-        }
-        else
-        {
-            std::vector<const BSQRegexOpt*> ncontinue(continuation.cbegin() + 1, continuation.cend());
-            return continuation[0]->match(iter, ncontinue);
-        }
-    }
-    else
-    {
-        return false;
-    }
-}
-
-size_t BSQCharRangeRe::mconsume() const
-{
-    return 1;
-}
-
-BSQCharRangeRe* BSQCharRangeRe::parse(json j)
-{
-    auto lb = j["lb"].get<uint64_t>();
-    auto ub = j["ub"].get<uint64_t>();
-
-    return new BSQCharRangeRe(lb, ub);
-}
-
-bool BSQCharClassRe::match(BSQStringIterator iter, const std::vector<const BSQRegexOpt*>& continuation) const
-{
-    if(!iteratorIsValid(&iter))
-    {
-        return false;
-    }
-
-    auto cp = iteratorGetCodePoint(&iter);
-    incrementStringIterator_codePoint(&iter);
-
-    if(this->kind == SpecialCharKind::Wildcard)
-    {
-        if(continuation.empty())
-        {
-            return !iteratorIsValid(&iter);
-        }
-        else
-        {
-            std::vector<const BSQRegexOpt*> ncontinue(continuation.cbegin() + 1, continuation.cend());
-            return continuation[0]->match(iter, ncontinue);
-        }
-    }
-    else
-    {
-        char ws_char[] = {' ', '\n', '\r', '\t' };
-        if((cp == ' ') | (cp == '\n') | (cp == '\r') | (cp == '\t'))
-        {
-            if(continuation.empty())
-            {
-                return !iteratorIsValid(&iter);
-            }
-            else
-            {
-                std::vector<const BSQRegexOpt*> ncontinue(continuation.cbegin() + 1, continuation.cend());
-                return continuation[0]->match(iter, ncontinue);
-            }
-        }
-        else
-        {
-            return false;
-        }
-    }
-}
-
-size_t BSQCharClassRe::mconsume() const
-{
-    return 1;
-}
-
-BSQCharClassRe* BSQCharClassRe::parse(json j)
-{
-    auto kind = j["kind"].get<SpecialCharKind>();
-
-    return new BSQCharClassRe(kind);
-}
-
-bool BSQStarRepeatRe::match(BSQStringIterator iter, const std::vector<const BSQRegexOpt*>& continuation) const
-{
-    if(continuation.empty())
-    {
-        if(!iteratorIsValid(&iter))
-        {
-            return true; //empty match at end 
-        }
-    }
-    else
-    {
-        std::vector<const BSQRegexOpt*> nextcontinue(continuation.cbegin() + 1, continuation.cend());
-        if(continuation[0]->match(iter, nextcontinue))
-        {
-            return true;
-        }
-    }
-
-    auto mxiter = (BSQStringType::utf8ByteCount(iter.str) - iter.strpos) / std::max((size_t)1, this->mconsume());
-    std::vector<const BSQRegexOpt*> matchcontinue;
-    for(size_t i = 1; i < mxiter; ++i)
-    {
-        std::vector<const BSQRegexOpt*> rcontinue(matchcontinue.cbegin(), matchcontinue.cend());
-        std::copy(continuation.cbegin(), continuation.cend(), std::back_inserter(rcontinue));
-
-        if(this->opt->match(iter, rcontinue))
-        {
-            return true;
-        }
-        matchcontinue.push_back(this->opt);
-    }
-        
-    return false;
-}
-
-size_t BSQStarRepeatRe::mconsume() const
-{
-    return 0;
-}
-
-BSQStarRepeatRe* BSQStarRepeatRe::parse(json j)
-{
-    auto repeat = BSQRegexOpt::parse(j["repeat"]);
-
-    return new BSQStarRepeatRe(repeat);
-}
-
-bool BSQPlusRepeatRe::match(BSQStringIterator iter, const std::vector<const BSQRegexOpt*>& continuation) const
-{
-    auto mxiter = (BSQStringType::utf8ByteCount(iter.str) - iter.strpos) / std::max((size_t)1, this->mconsume());
-    std::vector<const BSQRegexOpt*> matchcontinue;
-    for(size_t i = 1; i < mxiter; ++i)
-    {
-        std::vector<const BSQRegexOpt*> rcontinue(matchcontinue.cbegin(), matchcontinue.cend());
-        std::copy(continuation.cbegin(), continuation.cend(), std::back_inserter(rcontinue));
-
-        if(this->opt->match(iter, rcontinue))
-        {
-            return true;
-        }
-        matchcontinue.push_back(this->opt);
-    }
-        
-    return false;
-}
-
-size_t BSQPlusRepeatRe::mconsume() const
-{
-    return this->opt->mconsume();
-}
-
-BSQPlusRepeatRe* BSQPlusRepeatRe::parse(json j)
-{
-    auto repeat = BSQRegexOpt::parse(j["repeat"]);
-
-    return new BSQPlusRepeatRe(repeat);
-}
-
-bool BSQRangeRepeatRe::match(BSQStringIterator iter, const std::vector<const BSQRegexOpt*>& continuation) const
-{
-    if (this->low == 0)
-    {
-        if (continuation.empty())
-        {
-            if (!iteratorIsValid(&iter))
-            {
-                return true; //empty match at end
-            }
-        }
-        else
-        {
-            std::vector<const BSQRegexOpt *> nextcontinue(continuation.cbegin() + 1, continuation.cend());
-            if (continuation[0]->match(iter, nextcontinue))
-            {
-                return true;
-            }
-        }
-    }
-
-    std::vector<const BSQRegexOpt*> matchcontinue;
-    for(size_t i = (size_t)this->low; i <= (size_t)this->high; ++i)
-    {
-        std::vector<const BSQRegexOpt*> rcontinue(matchcontinue.cbegin(), matchcontinue.cend());
-        std::copy(continuation.cbegin(), continuation.cend(), std::back_inserter(rcontinue));
-
-        if(this->opt->match(iter, rcontinue))
-        {
-            return true;
-        }
-        matchcontinue.push_back(this->opt);
-    }
-        
-    return false;
-}
-
-size_t BSQRangeRepeatRe::mconsume() const
-{
-    return this->opt->mconsume() * (size_t)this->low;
-}
-
-BSQRangeRepeatRe* BSQRangeRepeatRe::parse(json j)
-{
-    auto min = j["min"].get<uint64_t>();
-    auto max = j["max"].get<uint64_t>();
-    auto repeat = BSQRegexOpt::parse(j["repeat"]);
-
-    return new BSQRangeRepeatRe(min, max, repeat);
-}
-
-bool BSQOptionalRe::match(BSQStringIterator iter, const std::vector<const BSQRegexOpt*>& continuation) const
-{
-    if(continuation.empty())
-    {
-        if(!iteratorIsValid(&iter))
-        {
-            return true; //empty match at end 
-        }
-    }
-    else
-    {
-        std::vector<const BSQRegexOpt*> nextcontinue(continuation.cbegin() + 1, continuation.cend());
-        if(continuation[0]->match(iter, nextcontinue))
-        {
-            return true;
-        }
-    }
-
-    return this->opt->match(iter, continuation);
-}
-
-size_t BSQOptionalRe::mconsume() const
-{
-    return 0;
-}
-
-BSQOptionalRe* BSQOptionalRe::parse(json j)
-{
-    auto opt = BSQRegexOpt::parse(j["opt"]);
-
-    return new BSQOptionalRe(opt);
-}
-
-bool BSQAlternationRe::match(BSQStringIterator iter, const std::vector<const BSQRegexOpt*>& continuation) const
-{
-    for(size_t i = 0; i < this->opts.size(); ++i)
-    {
-        if(this->opts[i]->match(iter, continuation))
-        {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-size_t BSQAlternationRe::mconsume() const
-{
-    std::vector<size_t> ml;
-    std::transform(this->opts.cbegin(), this->opts.cend(), std::back_inserter(ml), [](const BSQRegexOpt* opt) {
-        return opt->mconsume();
-    });
-
-    std::sort(ml.begin(), ml.end());
-    return ml[0];
-}
-
-BSQAlternationRe* BSQAlternationRe::parse(json j)
-{
-    std::vector<const BSQRegexOpt*> opts;
-    auto jopts = j["opts"];
-    std::transform(jopts.cbegin(), jopts.cend(), std::back_inserter(opts), [](json arg) {
-        return BSQRegexOpt::parse(arg);
-    });
-
-    return new BSQAlternationRe(opts);
-}
-
-bool BSQSequenceRe::match(BSQStringIterator iter, const std::vector<const BSQRegexOpt*>& continuation) const
-{
-    std::vector<const BSQRegexOpt*> rcontinuation(this->opts.cbegin() + 1, this->opts.cend());
-    std::copy(continuation.cbegin(), continuation.cend(), std::back_inserter(rcontinuation));
-
-    return this->opts[0]->match(iter, rcontinuation);
-}
-
-size_t BSQSequenceRe::mconsume() const
-{
-    std::vector<size_t> ml;
-    std::transform(this->opts.cbegin(), this->opts.cend(), std::back_inserter(ml), [](const BSQRegexOpt* opt) {
-        return opt->mconsume();
-    });
-
-    return std::accumulate(ml.begin(), ml.end(), (size_t)0);
-}
-
-BSQSequenceRe* BSQSequenceRe::parse(json j)
-{
-    std::vector<const BSQRegexOpt*> elems;
-    auto jopts = j["elems"];
-    std::transform(jopts.cbegin(), jopts.cend(), std::back_inserter(elems), [](json arg) {
-        return BSQRegexOpt::parse(arg);
-    });
-
-    return new BSQSequenceRe(elems);
-}
-
-BSQRegex* bsqRegexJSONParse_impl(json j)
-{
-    auto restr = j["restr"].get<std::string>();
-    auto re = BSQRegexOpt::parse(j["re"]);
-
-    return new BSQRegex(restr, re);
-}
-
 std::string entityRegexDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
     return ((BSQRegex*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data))->restr;
 }
 
-std::string entityValidatorDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+std::string entityEnumDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
-    return btype->name + ((BSQRegex*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data))->restr;
+    auto val = SLPTR_LOAD_CONTENTS_AS(uint64_t, data);
+    return btype->name + "::" + static_cast<const BSQEnumType*>(btype)->enumnames[val];
 }
 
-std::string entityStringOfDisplay_impl(const BSQType* btype, StorageLocationPtr data)
-{
-    return btype->name + entityStringDisplay_impl(BSQType::g_typetable[BSQ_TYPE_ID_STRING], data);
-}
-
-bool entityStringOfJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
-{
-    if(!j.is_string())
-    {
-        return false;
-    }
-    else
-    {
-        const BSQRegex* vre = dynamic_cast<const BSQValidatorType*>(BSQType::g_typetable[dynamic_cast<const BSQStringOfType*>(btype)->validator])->re;
-
-        //
-        //TODO: need to propagate the invariant call info and then check here -- for now pretend there are no additional checks
-        //
-
-        return BSQType::g_typeString->consops.fpJSONParse(BSQType::g_typeString, j, sl);
-    }
-}
-
-std::string entityDataStringDisplay_impl(const BSQType* btype, StorageLocationPtr data)
-{
-    return btype->name + entityStringDisplay_impl(BSQType::g_typetable[BSQ_TYPE_ID_STRING], data);
-}
-
-bool entityDataStringJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
-{
-    //
-    //TODO: need to propagate the invariant call info and then check here -- for now pretend there are no additional checks
-    //
-
-    return BSQType::g_typeString->consops.fpJSONParse(BSQType::g_typeString, j, sl);
-}
-
-std::string entityTypedNumberDisplay_impl(const BSQType* btype, StorageLocationPtr data)
-{
-    auto utype = BSQType::g_typetable[dynamic_cast<const BSQTypedNumberTypeAbstract*>(btype)->underlying];
-    return btype->name + utype->fpDisplay(utype, data);
-}
-
-bool entityTypedNumberJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
-{
-    //
-    //TODO: need to propagate the invariant call info and then check here -- for now pretend there are no additional checks
-    //
-    
-    auto utype = BSQType::g_typetable[dynamic_cast<const BSQTypedNumberTypeAbstract*>(btype)->underlying];
-    return utype->consops.fpJSONParse(utype, j, sl);
-}
-
-std::string enumDisplay_impl(const BSQType* btype, StorageLocationPtr data)
-{
-    auto underlying = dynamic_cast<const BSQEnumType*>(btype)->underlying;
-    return "(" + btype->name + ")" + underlying->fpDisplay(underlying, data);
-}
-
-bool enumJSONParse_impl(const BSQType* btype, json j, StorageLocationPtr sl)
-{
-    if(!j.is_string())
-    {
-        return false;
-    }
-    else
-    {
-        auto ename = j.get<std::string>();
-
-        auto etype = dynamic_cast<const BSQEnumType*>(btype);
-        auto cpos = std::find_if(etype->enuminvs.cbegin(), etype->enuminvs.cend(), [&ename](const std::pair<std::string, uint32_t>& entry) {
-            return entry.first == ename;
-        })->second;
-    
-        etype->underlying->storeValue(sl, Environment::g_constantbuffer + cpos);
-        return true;
-    }
-}

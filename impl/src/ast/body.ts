@@ -169,6 +169,8 @@ enum ExpressionTag {
     CallNamespaceFunctionOrOperatorExpression = "CallNamespaceFunctionOrOperatorExpression",
     CallStaticFunctionOrOperatorExpression = "CallStaticFunctionOrOperatorExpression",
 
+    LogicActionExpression = "LogicActionExpression",
+
     IsTypeExpression = "IsTypeExpression",
     AsTypeExpression = "AsTypeExpression",
 
@@ -577,6 +579,18 @@ class CallStaticFunctionOrOperatorExpression extends Expression {
     }
 }
 
+
+class LogicActionExpression extends Expression {
+    readonly opkind: "/\\" | "\\/";
+    readonly args: Arguments;
+
+    constructor(sinfo: SourceInfo, opkind: "/\\" | "\\/", args: Arguments) {
+        super(ExpressionTag.LogicActionExpression, sinfo);
+        this.opkind = opkind;
+        this.args = args;
+    }
+}
+
 class IsTypeExpression extends Expression {
     readonly arg: Expression;
     readonly oftype: TypeSignature;
@@ -949,7 +963,6 @@ enum StatementTag {
 
     AbortStatement = "AbortStatement",
     AssertStatement = "AssertStatement", //assert(x > 0)
-    CheckStatement = "CheckStatement", //check(x > 0)
     ValidateStatement = "ValidateStatement", //validate exp else err -> if (!exp) return Result<INVOKE_RESULT>@error(err);
 
     DebugStatement = "DebugStatement", //print an arg or if empty attach debugger
@@ -1183,15 +1196,6 @@ class AssertStatement extends Statement {
     }
 }
 
-class CheckStatement extends Statement {
-    readonly cond: Expression;
-
-    constructor(sinfo: SourceInfo, cond: Expression) {
-        super(StatementTag.CheckStatement, sinfo);
-        this.cond = cond;
-    }
-}
-
 class ValidateStatement extends Statement {
     readonly cond: Expression;
     readonly err: Expression;
@@ -1253,6 +1257,7 @@ export {
     ConstructorPrimaryExpression, ConstructorPrimaryWithFactoryExpression, ConstructorTupleExpression, ConstructorRecordExpression, ConstructorEphemeralValueList, 
     ConstructorPCodeExpression, SpecialConstructorExpression,
     CallNamespaceFunctionOrOperatorExpression, CallStaticFunctionOrOperatorExpression,
+    LogicActionExpression,
     IsTypeExpression, AsTypeExpression,
     PostfixOpTag, PostfixOperation, PostfixOp,
     PostfixAccessFromIndex, PostfixProjectFromIndecies, PostfixAccessFromName, PostfixProjectFromNames, PostfixModifyWithIndecies, PostfixModifyWithNames,
@@ -1268,7 +1273,7 @@ export {
     StructuredAssignment, StructuredAssignementPrimitive, IgnoreTermStructuredAssignment, VariableDeclarationStructuredAssignment, VariableAssignmentStructuredAssignment, StructuredVariableAssignmentStatement, 
     TupleStructuredAssignment, RecordStructuredAssignment, NominalStructuredAssignment, ValueListStructuredAssignment,
     ReturnStatement, YieldStatement,
-    IfElseStatement, AbortStatement, AssertStatement, CheckStatement, ValidateStatement, DebugStatement, NakedCallStatement,
+    IfElseStatement, AbortStatement, AssertStatement, ValidateStatement, DebugStatement, NakedCallStatement,
     SwitchGuard, MatchGuard, WildcardSwitchGuard, LiteralSwitchGuard, WildcardMatchGuard, TypeMatchGuard, StructureMatchGuard, SwitchEntry, MatchEntry, SwitchStatement, MatchStatement,
     BlockStatement, BodyImplementation
 };

@@ -15,8 +15,10 @@
         "src/ast/*.ts",
         "src/type_checker/*.ts",
         "src/compiler/*.ts",
-        "src/tooling/verifier/*.ts",
-        "src/runtimes/bsqcheck.ts",
-        "src/test/*.ts"
+        "src/tooling/checker/*.ts",
+        "src/tooling/icpp/transpiler/*.ts",
+        "src/test/*.ts",
+        "src/test/runner/*.ts",
+        "src/test/bsqunit/*.ts"
     ]
 }

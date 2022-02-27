@@ -1,0 +1,50 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+namespace Main;
+
+////////
+//
+function add2(x: Nat, y: Nat): Nat {
+    return x + y;
+}
+
+chktest function add2_1(): Bool {
+    return add2(2n, 3n) == 5n;
+}
+
+chktest function add2_2(): Bool {
+    return add2(x=2n, y=3n) == 5n;
+}
+
+chktest function add2_3(): Bool {
+    return add2(y=2n, 5n) == 7n;
+}
+
+chktest function add2_x(x: Nat): Bool {
+    return add2(2n, x) > x;
+}
+
+__chktest function add2_x_fail(x: Nat): Bool {
+    return add2(5n, x) > 5n;
+}
+
+////////
+//
+function allPositive(...args: List<Int>): Bool {
+    return args.allOf(fn(x) => x >= 0i);
+}
+
+chktest function allpositive_1(): Bool {
+    return allPositive(1, 3, 4);
+}
+
+chktest function allpositive_2(): Bool {
+    return !allPositive(1, 3, -1);
+}
+
+__chktest function allpositive_x_fail(x: Int): Bool {
+    return allPositive(1, x, 4);
+}

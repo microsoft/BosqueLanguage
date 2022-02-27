@@ -3,12 +3,12 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { MIRAssembly, MIREntityType, MIREphemeralListType, MIRFieldDecl, MIRInvokeBodyDecl, MIRInvokeDecl, MIRInvokePrimitiveDecl, MIRRecordType, MIRRecordTypeEntry, MIRTupleType, MIRType } from "../../../compiler/mir_assembly";
+import { MIRAssembly, MIREntityType, MIREphemeralListType, MIRFieldDecl, MIRInvokeBodyDecl, MIRInvokeDecl, MIRInvokePrimitiveDecl, MIRPrimitiveCollectionEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRRecordType, MIRTupleType, MIRType } from "../../../compiler/mir_assembly";
 import { ICPPTypeEmitter } from "./icpptype_emitter";
-import { MIRAbort, MIRArgGuard, MIRArgument, MIRAssertCheck, MIRBasicBlock, MIRBinKeyEq, MIRBinKeyLess, MIRConstantArgument, MIRConstantBigInt, MIRConstantBigNat, MIRConstantDataString, MIRConstantDecimal, MIRConstantFalse, MIRConstantFloat, MIRConstantInt, MIRConstantNat, MIRConstantNone, MIRConstantRational, MIRConstantRegex, MIRConstantString, MIRConstantStringOf, MIRConstantTrue, MIRConstantTypedNumber, MIRConstructorEphemeralList, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionMixed, MIRConstructorPrimaryCollectionSingletons, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConvertValue, MIRDeclareGuardFlagLocation, MIREntityProjectToEphemeral, MIREntityUpdate, MIREphemeralListExtend, MIRFieldKey, MIRGlobalKey, MIRGlobalVariable, MIRGuard, MIRInvokeFixedFunction, MIRInvokeKey, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRIsTypeOf, MIRJump, MIRJumpCond, MIRJumpNone, MIRLoadConst, MIRLoadField, MIRLoadFromEpehmeralList, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadUnintVariableValue, MIRMaskGuard, MIRMultiLoadFromEpehmeralList, MIROp, MIROpTag, MIRPhi, MIRPrefixNotOp, MIRRecordHasProperty, MIRRecordProjectToEphemeral, MIRRecordUpdate, MIRRegisterArgument, MIRRegisterAssign, MIRResolvedTypeKey, MIRReturnAssign, MIRReturnAssignOfCons, MIRSetConstantGuardFlag, MIRSliceEpehmeralList, MIRStatmentGuard, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRTupleHasIndex, MIRTupleProjectToEphemeral, MIRTupleUpdate } from "../../../compiler/mir_ops";
-import { Argument, ArgumentTag, EMPTY_CONST_POSITION, ICPPGuard, ICPPOp, ICPPOpEmitter, ICPPStatementGuard, OpCodeTag, TargetVar } from "./icpp_exp";
+import { MIRAbort, MIRArgGuard, MIRArgument, MIRAssertCheck, MIRBasicBlock, MIRBinKeyEq, MIRBinKeyLess, MIRConstantArgument, MIRConstantBigInt, MIRConstantBigNat, MIRConstantDataString, MIRConstantDecimal, MIRConstantFalse, MIRConstantFloat, MIRConstantInt, MIRConstantNat, MIRConstantNone, MIRConstantNothing, MIRConstantRational, MIRConstantRegex, MIRConstantString, MIRConstantStringOf, MIRConstantTrue, MIRConstantTypedNumber, MIRConstructorEntityDirect, MIRConstructorEphemeralList, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionMixed, MIRConstructorPrimaryCollectionSingletons, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConvertValue, MIRDebug, MIRDeclareGuardFlagLocation, MIREntityProjectToEphemeral, MIREntityUpdate, MIREphemeralListExtend, MIRExtract, MIRFieldKey, MIRGlobalKey, MIRGlobalVariable, MIRGuard, MIRGuardedOptionInject, MIRInject, MIRInvokeFixedFunction, MIRInvokeKey, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRIsTypeOf, MIRJump, MIRJumpCond, MIRJumpNone, MIRLoadConst, MIRLoadField, MIRLoadFromEpehmeralList, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadUnintVariableValue, MIRLogicAction, MIRMaskGuard, MIRMultiLoadFromEpehmeralList, MIROp, MIROpTag, MIRPhi, MIRPrefixNotOp, MIRRecordHasProperty, MIRRecordProjectToEphemeral, MIRRecordUpdate, MIRRegisterArgument, MIRRegisterAssign, MIRResolvedTypeKey, MIRReturnAssign, MIRReturnAssignOfCons, MIRSetConstantGuardFlag, MIRSliceEpehmeralList, MIRStatmentGuard, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRTupleHasIndex, MIRTupleProjectToEphemeral, MIRTupleUpdate, MIRVarLifetimeEnd, MIRVarLifetimeStart } from "../../../compiler/mir_ops";
+import { Argument, ArgumentTag, EMPTY_CONST_POSITION, ICPPGuard, ICPPOp, ICPPOpEmitter, ICPPStatementGuard, OpCodeTag, ParameterInfo, TargetVar } from "./icpp_exp";
 import { SourceInfo } from "../../../ast/parser";
-import { ICPPFunctionParameter, ICPPInvokeBodyDecl, ICPPInvokeDecl, ICPPInvokePrimitiveDecl, ICPPPCode, ICPPType, ICPPTypeEntity, ICPPTypeEphemeralList,  ICPPTypeRecord, ICPPTypeTuple, RefMask, TranspilerOptions, UNIVERSAL_SIZE } from "./icpp_assembly";
+import { ICPPEntityLayoutInfo, ICPPEphemeralListLayoutInfo, ICPPFunctionParameter, ICPPInvokeBodyDecl, ICPPInvokeDecl, ICPPInvokePrimitiveDecl, ICPPLayoutInfo, ICPPPCode, ICPPRecordLayoutInfo, ICPPTupleLayoutInfo, RefMask, TranspilerOptions, UNIVERSAL_TOTAL_SIZE } from "./icpp_assembly";
 
 import * as assert from "assert";
 import { topologicalOrder } from "../../../compiler/mir_info";
@@ -26,18 +26,17 @@ class ICPPBodyEmitter {
     currentFile: string = "[No File]";
     currentRType: MIRType;
 
-    private argsMap: Map<string, number> = new Map<string, number>();
     private scalarStackMap: Map<string, number> = new Map<string, number>();
     private scalarStackSize: number = 0;
-    private scalarStackLayout: {offset: number, name: string, storage: ICPPType}[] = [];
+    private scalarStackLayout: {offset: number, name: string, storage: ICPPLayoutInfo}[] = [];
     private mixedStackMap: Map<string, number> = new Map<string, number>();
     private mixedStackSize: number = 0;
-    private mixedStackLayout: {offset: number, name: string, storage: ICPPType}[] = [];
+    private mixedStackLayout: {offset: number, name: string, storage: ICPPLayoutInfo}[] = [];
 
     literalMap: Map<string, number> = new Map<string, number>();
     constMap: Map<MIRGlobalKey, number> = new Map<MIRGlobalKey, number>();
-    constsize: number = UNIVERSAL_SIZE;
-    constlayout: {offset: number, storage: ICPPType, value: string, isliteral: boolean}[] = [];
+    constsize: number = UNIVERSAL_TOTAL_SIZE;
+    constlayout: {offset: number, storage: ICPPLayoutInfo, value: string, isliteral: boolean}[] = [];
     
     private maskMap: Map<string, number> = new Map<string, number>();
     private masksize: number = 0;
@@ -54,6 +53,9 @@ class ICPPBodyEmitter {
     requiredUpdateVirtualRecord: { inv: string, argflowtype: MIRType, updates: [string, MIRResolvedTypeKey][], resulttype: MIRType }[] = [];
     requiredUpdateVirtualEntity: { inv: string, argflowtype: MIRType, updates: [MIRFieldKey, MIRResolvedTypeKey][], resulttype: MIRType }[] = [];
 
+    requiredSingletonConstructorsList: { inv: string, argc: number, resulttype: MIRType }[] = [];
+    requiredSingletonConstructorsMap: { inv: string, argc: number, resulttype: MIRType }[] = [];
+
     //
     //TODO: need to implement (and integrate) the code that generates these functions
     //
@@ -61,56 +63,95 @@ class ICPPBodyEmitter {
     requiredRecordMerge: { inv: string, args: {layout: MIRType, flow: MIRType}[], resulttype: MIRType }[] = [];
 
     private getStackInfoForArgVar(vname: string): Argument {
-        if(this.argsMap.has(vname)) {
-            return ICPPOpEmitter.genParameterArgument(this.argsMap.get(vname) as number);
+        if (this.scalarStackMap.has(vname)) {
+            return ICPPOpEmitter.genScalarArgument(this.scalarStackMap.get(vname) as number);
         }
         else {
-            if(this.scalarStackMap.has(vname)) {
-                return ICPPOpEmitter.genLocalScalarArgument(this.scalarStackMap.get(vname) as number);
-            }
-            else {
-                return ICPPOpEmitter.genLocalMixedArgument(this.mixedStackMap.get(vname) as number);
-            }
+            return ICPPOpEmitter.genMixedArgument(this.mixedStackMap.get(vname) as number);
         }
     }
 
-    private getStackInfoForTargetVar(vname: string, oftype: ICPPType): TargetVar {
+    private getStackInfoForTargetVar(vname: string, oftype: ICPPLayoutInfo): TargetVar {
         //
         //TODO: later we should make this an abstract index and do "register allocation" on the live ranges -- will also need to convert this to offsets at emit time (or something)
         //
-        if(oftype.allocinfo.isScalarOnlyInline()) {
-            const trgt = { kind: ArgumentTag.LocalScalar, offset: this.scalarStackSize };
+        if(oftype.canScalarStackAllocate()) {
+            if(this.scalarStackMap.has(vname)) {
+                return { kind: ArgumentTag.ScalarVal, offset: this.scalarStackMap.get(vname) as number };
+            }
+            else {
+                const trgt = { kind: ArgumentTag.ScalarVal, offset: this.scalarStackSize };
 
-            this.scalarStackLayout.push({ offset: this.scalarStackSize, name: vname, storage: oftype });
-            this.scalarStackMap.set(vname, this.scalarStackSize);
-            this.scalarStackSize = this.scalarStackSize + oftype.allocinfo.inlinedatasize;
+                this.scalarStackLayout.push({ offset: this.scalarStackSize, name: vname, storage: oftype });
+                this.scalarStackMap.set(vname, this.scalarStackSize);
+                this.scalarStackSize = this.scalarStackSize + oftype.allocinfo.inlinedatasize;
 
-            return trgt;
+                return trgt;
+            }
         }
         else {
-            const trgt = { kind: ArgumentTag.LocalMixed, offset: this.mixedStackSize };
+            if(this.mixedStackMap.has(vname)) {
+                return { kind: ArgumentTag.MixedVal, offset: this.mixedStackMap.get(vname) as number };
+            }
+            else {
+                const trgt = { kind: ArgumentTag.MixedVal, offset: this.mixedStackSize };
 
-            this.mixedStackLayout.push({ offset: this.mixedStackSize, name: vname, storage: oftype });
-            this.mixedStackMap.set(vname, this.mixedStackSize);
-            this.mixedStackSize = this.mixedStackSize + oftype.allocinfo.inlinedatasize;
+                this.mixedStackLayout.push({ offset: this.mixedStackSize, name: vname, storage: oftype });
+                this.mixedStackMap.set(vname, this.mixedStackSize);
+                this.mixedStackSize = this.mixedStackSize + oftype.allocinfo.inlinedatasize;
 
-            return trgt;
+                return trgt;
+            }
         }
     }
 
-    private generateScratchVarInfo(oftype: ICPPType): [TargetVar, Argument] {
-        if (oftype.allocinfo.isScalarOnlyInline()) {
-            const trgt = { kind: ArgumentTag.LocalScalar, offset: this.scalarStackSize };
+    private getStackInfoForArgumentVar(pname: string, oftype: ICPPLayoutInfo): ParameterInfo {
+        //
+        //TODO: later we should make this an abstract index and do "register allocation" on the live ranges -- will also need to convert this to offsets at emit time (or something)
+        //
+        if(oftype.canScalarStackAllocate()) {
+            if(this.scalarStackMap.has(pname)) {
+                return { kind: ArgumentTag.ScalarVal, poffset: this.scalarStackMap.get(pname) as number };
+            }
+            else {
+                const trgt = { kind: ArgumentTag.ScalarVal, poffset: this.scalarStackSize };
+
+                this.scalarStackLayout.push({ offset: this.scalarStackSize, name: pname, storage: oftype });
+                this.scalarStackMap.set(pname, this.scalarStackSize);
+                this.scalarStackSize = this.scalarStackSize + oftype.allocinfo.inlinedatasize;
+
+                return trgt;
+            }
+        }
+        else {
+            if (this.mixedStackMap.has(pname)) {
+                return { kind: ArgumentTag.MixedVal, poffset: this.mixedStackMap.get(pname) as number };
+            }
+            else {
+                const trgt = { kind: ArgumentTag.MixedVal, poffset: this.mixedStackSize };
+
+                this.mixedStackLayout.push({ offset: this.mixedStackSize, name: pname, storage: oftype });
+                this.mixedStackMap.set(pname, this.mixedStackSize);
+                this.mixedStackSize = this.mixedStackSize + oftype.allocinfo.inlinedatasize;
+
+                return trgt;
+            }
+        }
+    }
+
+    private generateScratchVarInfo(oftype: ICPPLayoutInfo): [TargetVar, Argument] {
+        if (oftype.canScalarStackAllocate()) {
+            const trgt = { kind: ArgumentTag.ScalarVal, offset: this.scalarStackSize };
 
             const vname = `@scalar_scratch_${this.scalarStackLayout.length}`;
             this.scalarStackLayout.push({ offset: this.scalarStackSize, name: vname, storage: oftype });
             this.scalarStackMap.set(vname, this.scalarStackSize);
             this.scalarStackSize = this.scalarStackSize + oftype.allocinfo.inlinedatasize;
 
-            return [trgt, ICPPOpEmitter.genLocalScalarArgument(trgt.offset)];
+            return [trgt, ICPPOpEmitter.genScalarArgument(trgt.offset)];
         }
         else {
-            const trgt = { kind: ArgumentTag.LocalMixed, offset: this.mixedStackSize };
+            const trgt = { kind: ArgumentTag.MixedVal, offset: this.mixedStackSize };
 
             const vname = `@mixed_scratch_${this.mixedStackLayout.length}`;
             this.mixedStackLayout.push({ offset: this.mixedStackSize, name: vname, storage: oftype });
@@ -118,7 +159,7 @@ class ICPPBodyEmitter {
             this.mixedStackSize = this.mixedStackSize + oftype.allocinfo.inlinedatasize;
 
 
-            return [trgt, ICPPOpEmitter.genLocalMixedArgument(trgt.offset)];
+            return [trgt, ICPPOpEmitter.genMixedArgument(trgt.offset)];
         }
     }
 
@@ -128,10 +169,10 @@ class ICPPBodyEmitter {
 
     private getStorageTargetForPhi(vname: MIRRegisterArgument): TargetVar {
         if(this.scalarStackMap.has(vname.nameID)) {
-            return { kind: ArgumentTag.LocalScalar, offset: this.scalarStackMap.get(vname.nameID) as number };
+            return { kind: ArgumentTag.ScalarVal, offset: this.scalarStackMap.get(vname.nameID) as number };
         }
         else {
-            return { kind: ArgumentTag.LocalMixed, offset:  this.mixedStackMap.get(vname.nameID) as number };
+            return { kind: ArgumentTag.MixedVal, offset:  this.mixedStackMap.get(vname.nameID) as number };
         }
     }
 
@@ -145,56 +186,64 @@ class ICPPBodyEmitter {
 
     private generateProjectVirtualTupleInvName(argflowtype: MIRType, indecies: number[], resulttype: MIRType): string {
         const idxs = indecies.map((idx) => `${idx}`).join(",");
-        return `$TupleProject_${argflowtype.trkey}.[${idxs}]->${resulttype.trkey}`;
+        return `$TupleProject_${argflowtype.typeID}.[${idxs}]->${resulttype.typeID}`;
     }
 
     private generateProjectVirtualRecordInvName(argflowtype: MIRType, properties: string[], resulttype: MIRType): string {
         const pnames = properties.join(",");
-        return `$RecordProject_${argflowtype.trkey}.{${pnames}}->${resulttype.trkey}`;
+        return `$RecordProject_${argflowtype.typeID}.{${pnames}}->${resulttype.typeID}`;
     }
 
     private generateProjectVirtualEntityInvName(argflowtype: MIRType, fields: MIRFieldKey[], resulttype: MIRType): string {
         const fkeys = fields.join(",");
-        return `$EntityProject_${argflowtype.trkey}.{${fkeys}}->${resulttype.trkey}`;
+        return `$EntityProject_${argflowtype.typeID}.{${fkeys}}->${resulttype.typeID}`;
     }
 
     private generateUpdateVirtualTupleInvName(argflowtype: MIRType, indecies: [number, MIRResolvedTypeKey][], resulttype: MIRType): string {
         const idxs = indecies.map((idx) => `(${idx[0]} ${idx[1]})`).join(",");
-        return `$TupleUpdate_${argflowtype.trkey}.[${idxs}]->${resulttype.trkey}`;
+        return `$TupleUpdate_${argflowtype.typeID}.[${idxs}]->${resulttype.typeID}`;
     }
 
     private generateUpdateVirtualRecordInvName(argflowtype: MIRType, properties: [string, MIRResolvedTypeKey][], resulttype: MIRType): string {
         const pnames = properties.map((pname) => `(${pname[0]} ${pname[1]})`).join(",");
-        return `$RecordUpdate_${argflowtype.trkey}.{${pnames}}->${resulttype.trkey}`;
+        return `$RecordUpdate_${argflowtype.typeID}.{${pnames}}->${resulttype.typeID}`;
     }
 
     private generateUpdateEntityWithInvariantName(oftype: MIRType, fields: [MIRFieldKey, MIRResolvedTypeKey][], resulttype: MIRType): string {
         const fnames = fields.map((fname) => `(${fname[0]} ${fname[1]})`).join(",");
-        return `$EntityUpdateDirectWithInvariantCheck_${oftype.trkey}.{${fnames}}->${resulttype.trkey}`;
+        return `$EntityUpdateDirectWithInvariantCheck_${oftype.typeID}.{${fnames}}->${resulttype.typeID}`;
     }
 
     private generateUpdateVirtualEntityInvName(argflowtype: MIRType, fields: [MIRFieldKey, MIRResolvedTypeKey][], resulttype: MIRType): string {
         const fnames = fields.map((fname) => `(${fname[0]} ${fname[1]})`).join(",");
-        return `$EntityUpdate_${argflowtype.trkey}.{${fnames}}->${resulttype.trkey}`;
+        return `$EntityUpdate_${argflowtype.typeID}.{${fnames}}->${resulttype.typeID}`;
+    }
+
+    private generateSingletonConstructorsList(argc: number, resulttype: MIRType): string {
+        return `$ListSingletonCons->${resulttype.typeID}#${argc}`;
+    }
+
+    private generateSingletonConstructorsMap(argc: number, resulttype: MIRType): string {
+        return `$MapSingletonCons->${resulttype.typeID}#${argc}`;
     }
 
     private generateTupleAppendInvName(args: { flow: MIRType, layout: MIRType }[], resulttype: MIRType): string {
-        const anames = args.map((fl) => `(${fl.flow.trkey} ${fl.layout.trkey})`).join(",");
-        return `$TupleAppend_{${anames}}->${resulttype.trkey}`;
+        const anames = args.map((fl) => `(${fl.flow.typeID} ${fl.layout.typeID})`).join(",");
+        return `$TupleAppend_{${anames}}->${resulttype.typeID}`;
     }
 
     private generateRecordMergeInvName(args: { flow: MIRType, layout: MIRType }[], resulttype: MIRType): string {
-        const mnames = args.map((fl) => `(${fl.flow.trkey} ${fl.layout.trkey})`).join(",");
-        return `$RecordMerge_{${mnames}}->${resulttype.trkey}`;
+        const mnames = args.map((fl) => `(${fl.flow.typeID} ${fl.layout.typeID})`).join(",");
+        return `$RecordMerge_{${mnames}}->${resulttype.typeID}`;
     }
 
     generateProjectTupleIndexVirtual(geninfo: { inv: string, argflowtype: MIRType, indecies: number[], resulttype: MIRType }, sinfo: SourceInfo, tupletype: MIRType): ICPPInvokeDecl {
-        const rtype = this.typegen.getICPPTypeData(geninfo.resulttype) as ICPPTypeEphemeralList;
-        const name = geninfo.inv + `@${tupletype.trkey}`;
+        const name = geninfo.inv + `@${tupletype.typeID}`;
 
-        const icpptuple = this.typegen.getICPPTypeData(tupletype) as ICPPTypeTuple;
-        const params = [new ICPPFunctionParameter("arg", icpptuple)];
-        const parg = ICPPOpEmitter.genParameterArgument(0);
+        const icpptuple = this.typegen.getICPPLayoutInfo(tupletype) as ICPPTupleLayoutInfo;
+        const params = [new ICPPFunctionParameter("arg", tupletype.typeID)];
+        const parg = icpptuple.canScalarStackAllocate() ? ICPPOpEmitter.genScalarArgument(0) : ICPPOpEmitter.genMixedArgument(0);
+        const paraminfo = [{kind: (icpptuple.canScalarStackAllocate() ? ArgumentTag.ScalarVal : ArgumentTag.MixedVal), poffset: 0}];
 
         let ops: ICPPOp[] = [];
         let pargs: Argument[] = [];
@@ -202,32 +251,32 @@ class ICPPBodyEmitter {
             const tupleidxtype = this.typegen.getMIRType(icpptuple.ttypes[idx]);
             const elidxtype = (geninfo.resulttype.options[0] as MIREphemeralListType).entries[i];
 
-            const [ltrgt, larg] = this.generateScratchVarInfo(this.typegen.getICPPTypeData(tupleidxtype));
-            ops.push(ICPPOpEmitter.genLoadTupleIndexDirectOp(sinfo, ltrgt, tupleidxtype.trkey, parg, icpptuple.tkey, icpptuple.idxoffsets[idx], idx));
+            const [ltrgt, larg] = this.generateScratchVarInfo(this.typegen.getICPPLayoutInfo(tupleidxtype));
+            ops.push(ICPPOpEmitter.genLoadTupleIndexDirectOp(sinfo, ltrgt, tupleidxtype.typeID, parg, icpptuple.tkey, icpptuple.idxoffsets[idx], idx));
 
-            if(tupleidxtype.trkey === elidxtype.trkey) {
+            if(tupleidxtype.typeID === elidxtype.typeID) {
                 pargs.push(larg);
             }
             else {
-                const [ctrgt, carg] = this.generateScratchVarInfo(this.typegen.getICPPTypeData(elidxtype));
+                const [ctrgt, carg] = this.generateScratchVarInfo(this.typegen.getICPPLayoutInfo(elidxtype));
                 ops.push(this.typegen.coerce(sinfo, larg, tupleidxtype, ctrgt, elidxtype, ICPPOpEmitter.genNoStatmentGuard()));
                 pargs.push(carg);
             }
         });
 
-        const rt = this.getStackInfoForTargetVar("$$return", this.typegen.getICPPTypeData(this.typegen.getMIRType(geninfo.resulttype.trkey)));
-        ops.push(ICPPOpEmitter.genConstructorEphemeralListOp(sinfo, rt, geninfo.resulttype.trkey, pargs));
+        const rt = this.getStackInfoForTargetVar("$$return", this.typegen.getICPPLayoutInfo(this.typegen.getMIRType(geninfo.resulttype.typeID)));
+        ops.push(ICPPOpEmitter.genConstructorEphemeralListOp(sinfo, rt, geninfo.resulttype.typeID, pargs));
         
-        return new ICPPInvokeBodyDecl(name, name, "[GENERATED]", sinfo, false, params, rtype, this.getStackInfoForArgVar("$$return"), this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), 0, ops, 0);
+        return new ICPPInvokeBodyDecl(name, name, "[GENERATED]", sinfo, false, params, paraminfo, geninfo.resulttype.typeID, this.getStackInfoForArgVar("$$return"), this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), 0, ops, 0);
     }
 
     generateProjectRecordPropertyVirtual(geninfo: { inv: string, argflowtype: MIRType, properties: string[], resulttype: MIRType }, sinfo: SourceInfo, recordtype: MIRType): ICPPInvokeDecl {
-        const rtype = this.typegen.getICPPTypeData(geninfo.resulttype) as ICPPTypeEphemeralList;
-        const name = geninfo.inv + `@${recordtype.trkey}`;
+        const name = geninfo.inv + `@${recordtype.typeID}`;
 
-        const icpprecord = this.typegen.getICPPTypeData(recordtype) as ICPPTypeRecord;
-        const params = [new ICPPFunctionParameter("arg", icpprecord)];
-        const parg = ICPPOpEmitter.genParameterArgument(0);
+        const icpprecord = this.typegen.getICPPLayoutInfo(recordtype) as ICPPRecordLayoutInfo;
+        const params = [new ICPPFunctionParameter("arg", recordtype.typeID)];
+        const parg = icpprecord.canScalarStackAllocate() ? ICPPOpEmitter.genScalarArgument(0) : ICPPOpEmitter.genMixedArgument(0);
+        const paraminfo = [{kind: (icpprecord.canScalarStackAllocate() ? ArgumentTag.ScalarVal : ArgumentTag.MixedVal), poffset: 0}];
 
         let ops: ICPPOp[] = [];
         let pargs: Argument[] = [];
@@ -237,32 +286,32 @@ class ICPPBodyEmitter {
             const recordpnametype = this.typegen.getMIRType(icpprecord.propertytypes[pidx]);
             const elidxtype = (geninfo.resulttype.options[0] as MIREphemeralListType).entries[i];
 
-            const [ltrgt, larg] = this.generateScratchVarInfo(this.typegen.getICPPTypeData(recordpnametype));
-            ops.push(ICPPOpEmitter.genLoadRecordPropertyDirectOp(sinfo, ltrgt, recordpnametype.trkey, parg, icpprecord.tkey, icpprecord.propertyoffsets[pidx], pname));
+            const [ltrgt, larg] = this.generateScratchVarInfo(this.typegen.getICPPLayoutInfo(recordpnametype));
+            ops.push(ICPPOpEmitter.genLoadRecordPropertyDirectOp(sinfo, ltrgt, recordpnametype.typeID, parg, icpprecord.tkey, icpprecord.propertyoffsets[pidx], pname));
 
-            if(recordpnametype.trkey === elidxtype.trkey) {
+            if(recordpnametype.typeID === elidxtype.typeID) {
                 pargs.push(larg);
             }
             else {
-                const [ctrgt, carg] = this.generateScratchVarInfo(this.typegen.getICPPTypeData(elidxtype));
+                const [ctrgt, carg] = this.generateScratchVarInfo(this.typegen.getICPPLayoutInfo(elidxtype));
                 ops.push(this.typegen.coerce(sinfo, larg, recordpnametype, ctrgt, elidxtype, ICPPOpEmitter.genNoStatmentGuard()));
                 pargs.push(carg);
             }
         });
 
-        const rt = this.getStackInfoForTargetVar("$$return", this.typegen.getICPPTypeData(this.typegen.getMIRType(geninfo.resulttype.trkey)));
-        ops.push(ICPPOpEmitter.genConstructorEphemeralListOp(sinfo, rt, geninfo.resulttype.trkey, pargs));
+        const rt = this.getStackInfoForTargetVar("$$return", this.typegen.getICPPLayoutInfo(this.typegen.getMIRType(geninfo.resulttype.typeID)));
+        ops.push(ICPPOpEmitter.genConstructorEphemeralListOp(sinfo, rt, geninfo.resulttype.typeID, pargs));
         
-        return new ICPPInvokeBodyDecl(name, name, "[GENERATED]", sinfo, false, params, rtype, this.getStackInfoForArgVar("$$return"), this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), 0, ops, 0);
+        return new ICPPInvokeBodyDecl(name, name, "[GENERATED]", sinfo, false, params, paraminfo, geninfo.resulttype.typeID, this.getStackInfoForArgVar("$$return"), this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), 0, ops, 0);
     }
 
     generateProjectEntityFieldVirtual(geninfo: { inv: string, argflowtype: MIRType, fields: MIRFieldDecl[], resulttype: MIRType }, sinfo: SourceInfo, entitytype: MIRType): ICPPInvokeDecl {
-        const rtype = this.typegen.getICPPTypeData(geninfo.resulttype) as ICPPTypeEphemeralList;
-        const name = geninfo.inv + `@${entitytype.trkey}`;
+        const name = geninfo.inv + `@${entitytype.typeID}`;
 
-        const icppentity = this.typegen.getICPPTypeData(entitytype) as ICPPTypeEntity;
-        const params = [new ICPPFunctionParameter("arg", icppentity)];
-        const parg = ICPPOpEmitter.genParameterArgument(0);
+        const icppentity = this.typegen.getICPPLayoutInfo(entitytype) as ICPPEntityLayoutInfo;
+        const params = [new ICPPFunctionParameter("arg", entitytype.typeID)];
+        const parg = icppentity.canScalarStackAllocate() ? ICPPOpEmitter.genScalarArgument(0) : ICPPOpEmitter.genMixedArgument(0);
+        const paraminfo = [{kind: (icppentity.canScalarStackAllocate() ? ArgumentTag.ScalarVal : ArgumentTag.MixedVal), poffset: 0}];
 
         let ops: ICPPOp[] = [];
         let pargs: Argument[] = [];
@@ -272,23 +321,47 @@ class ICPPBodyEmitter {
             const entityfieldtype = this.typegen.getMIRType(f.declaredType);
             const elidxtype = (geninfo.resulttype.options[0] as MIREphemeralListType).entries[i];
 
-            const [ltrgt, larg] = this.generateScratchVarInfo(this.typegen.getICPPTypeData(entityfieldtype));
-            ops.push(ICPPOpEmitter.genLoadEntityFieldDirectOp(sinfo, ltrgt, entityfieldtype.trkey, parg, icppentity.tkey, icppentity.fieldoffsets[fidx], f.fkey));
+            const [ltrgt, larg] = this.generateScratchVarInfo(this.typegen.getICPPLayoutInfo(entityfieldtype));
+            ops.push(ICPPOpEmitter.genLoadEntityFieldDirectOp(sinfo, ltrgt, entityfieldtype.typeID, parg, icppentity.tkey, icppentity.fieldoffsets[fidx], f.fkey));
 
-            if(entityfieldtype.trkey === elidxtype.trkey) {
+            if(entityfieldtype.typeID === elidxtype.typeID) {
                 pargs.push(larg);
             }
             else {
-                const [ctrgt, carg] = this.generateScratchVarInfo(this.typegen.getICPPTypeData(elidxtype));
+                const [ctrgt, carg] = this.generateScratchVarInfo(this.typegen.getICPPLayoutInfo(elidxtype));
                 ops.push(this.typegen.coerce(sinfo, larg, entityfieldtype, ctrgt, elidxtype, ICPPOpEmitter.genNoStatmentGuard()));
                 pargs.push(carg);
             }
         });
 
-        const rt = this.getStackInfoForTargetVar("$$return", this.typegen.getICPPTypeData(this.typegen.getMIRType(geninfo.resulttype.trkey)));
-        ops.push(ICPPOpEmitter.genConstructorEphemeralListOp(sinfo, rt, geninfo.resulttype.trkey, pargs));
+        const rt = this.getStackInfoForTargetVar("$$return", this.typegen.getICPPLayoutInfo(this.typegen.getMIRType(geninfo.resulttype.typeID)));
+        ops.push(ICPPOpEmitter.genConstructorEphemeralListOp(sinfo, rt, geninfo.resulttype.typeID, pargs));
         
-        return new ICPPInvokeBodyDecl(name, name, "[GENERATED]", sinfo, false, params, rtype, this.getStackInfoForArgVar("$$return"), this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), 0, ops, 0);
+        return new ICPPInvokeBodyDecl(name, name, "[GENERATED]", sinfo, false, params, paraminfo, geninfo.resulttype.typeID, this.getStackInfoForArgVar("$$return"), this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), 0, ops, 0);
+    }
+
+    generateSingletonConstructorList(geninfo: { inv: string, argc: number, resulttype: MIRType }): ICPPInvokeDecl {
+        const ldecl = this.assembly.entityDecls.get(geninfo.resulttype.typeID) as MIRPrimitiveListEntityTypeDecl;
+        const etype = ldecl.getTypeT().typeID;
+
+        let params: ICPPFunctionParameter[] = [];
+        for(let j = 0; j < geninfo.argc; ++j) {
+            params.push(new ICPPFunctionParameter(`arg${j}`, etype));
+        }
+        
+        return new ICPPInvokePrimitiveDecl(geninfo.inv, geninfo.inv, "[Generated]", new SourceInfo(-1, -1, -1 ,-1), false, params, geninfo.resulttype.typeID, geninfo.resulttype.typeID, "s_list_build_k", new Map<string, MIRResolvedTypeKey>().set("T", etype), new Map<string, ICPPPCode>());
+    }
+
+    generateSingletonConstructorMap(geninfo: { inv: string, argc: number, resulttype: MIRType }): ICPPInvokeDecl {
+        const ldecl = this.assembly.entityDecls.get(geninfo.resulttype.typeID) as MIRPrimitiveMapEntityTypeDecl;
+        const etype = ldecl.tupentrytype;
+
+        let params: ICPPFunctionParameter[] = [];
+        for(let j = 0; j < geninfo.argc; ++j) {
+            params.push(new ICPPFunctionParameter(`arg${j}`, etype));
+        }
+        
+        return new ICPPInvokePrimitiveDecl(geninfo.inv, geninfo.inv, "[Generated]", new SourceInfo(-1, -1, -1 ,-1), false, params, geninfo.resulttype.typeID, geninfo.resulttype.typeID, "s_map_build_k", new Map<string, MIRResolvedTypeKey>().set("K", ldecl.getTypeK().typeID).set("V", ldecl.getTypeV().typeID), new Map<string, ICPPPCode>());
     }
 
     constructor(assembly: MIRAssembly, typegen: ICPPTypeEmitter, vopts: TranspilerOptions) {
@@ -297,28 +370,28 @@ class ICPPBodyEmitter {
        
         this.vopts = vopts;
 
-        this.currentRType = typegen.getMIRType("NSCore::None");
+        this.currentRType = typegen.getMIRType("None");
 
-        this.constlayout.push({ offset: 0, storage: this.typegen.getICPPTypeData(this.typegen.getMIRType("NSCore::None")), value: "None", isliteral: true });
-        this.constsize = UNIVERSAL_SIZE;
+        this.constlayout.push({ offset: 0, storage: this.typegen.getICPPLayoutInfo(this.typegen.getMIRType("None")), value: "None", isliteral: true });
+        this.constsize = UNIVERSAL_TOTAL_SIZE;
 
-        this.registerSpecialLiteralValue("none", "NSCore::None");
-        this.registerSpecialLiteralValue("true", "NSCore::Bool");
-        this.registerSpecialLiteralValue("false", "NSCore::Bool");
+        this.registerSpecialLiteralValue("none", "None");
+        this.registerSpecialLiteralValue("nothing", "Nothing");
+        this.registerSpecialLiteralValue("true", "Bool");
+        this.registerSpecialLiteralValue("false", "Bool");
 
         this.assembly.constantDecls.forEach((cdecl) => {
-            const decltype = this.typegen.getICPPTypeData(this.typegen.getMIRType(cdecl.declaredType));
+            const decltype = this.typegen.getICPPLayoutInfo(this.typegen.getMIRType(cdecl.declaredType));
             this.constlayout.push({ offset: this.constsize, storage: decltype, value: cdecl.gkey, isliteral: false });
 
             this.constsize += decltype.allocinfo.inlinedatasize;
         });
     }
 
-    initializeBodyGen(srcFile: string, rtype: MIRType, argsmap: Map<string, number>) {
+    initializeBodyGen(srcFile: string, rtype: MIRType) {
         this.currentFile = srcFile;
         this.currentRType = rtype;
 
-        this.argsMap = argsmap;
         this.scalarStackMap = new Map<string, number>();
         this.scalarStackSize = 0;
         this.scalarStackLayout = [];
@@ -333,7 +406,7 @@ class ICPPBodyEmitter {
 
     private registerSpecialLiteralValue(vlit: string, vtype: MIRResolvedTypeKey) {
         if (!this.literalMap.has(vlit)) {
-            const ttype = this.typegen.getICPPTypeData(this.typegen.getMIRType(vtype));
+            const ttype = this.typegen.getICPPLayoutInfo(this.typegen.getMIRType(vtype));
             this.literalMap.set(vlit, this.constsize);
             this.constlayout.push({ offset: this.constsize, storage: ttype, value: vlit, isliteral: true });
             this.constsize += ttype.allocinfo.inlinedatasize;
@@ -348,6 +421,9 @@ class ICPPBodyEmitter {
         if (cval instanceof MIRConstantNone) {
             return this.getSpecialLiteralValue("none");
         }
+        else if(cval instanceof MIRConstantNothing) {
+            return this.getSpecialLiteralValue("nothing");
+        }
         else if (cval instanceof MIRConstantTrue) {
             return this.getSpecialLiteralValue("true");
         }
@@ -355,53 +431,53 @@ class ICPPBodyEmitter {
             return this.getSpecialLiteralValue("false");
         }
         else if (cval instanceof MIRConstantInt) {
-            this.registerSpecialLiteralValue(cval.value, "NSCore::Int");
+            this.registerSpecialLiteralValue(cval.value, "Int");
             return this.getSpecialLiteralValue(cval.value);
         }
         else if (cval instanceof MIRConstantNat) {
-            this.registerSpecialLiteralValue(cval.value, "NSCore::Nat");
+            this.registerSpecialLiteralValue(cval.value, "Nat");
             return this.getSpecialLiteralValue(cval.value);
         }
         else if (cval instanceof MIRConstantBigInt) {
-            this.registerSpecialLiteralValue(cval.value, "NSCore::BigInt");
+            this.registerSpecialLiteralValue(cval.value, "BigInt");
             return this.getSpecialLiteralValue(cval.value);
         }
         else if (cval instanceof MIRConstantBigNat) {
-            this.registerSpecialLiteralValue(cval.value, "NSCore::BigNat");
+            this.registerSpecialLiteralValue(cval.value, "BigNat");
             return this.getSpecialLiteralValue(cval.value);
         }
         else if (cval instanceof MIRConstantRational) {
-            this.registerSpecialLiteralValue(cval.value, "NSCore::Rational");
+            this.registerSpecialLiteralValue(cval.value, "Rational");
             return this.getSpecialLiteralValue(cval.value);
         }
         else if (cval instanceof MIRConstantFloat) {
-            this.registerSpecialLiteralValue(cval.value, "NSCore::Float");
+            this.registerSpecialLiteralValue(cval.value, "Float");
             return this.getSpecialLiteralValue(cval.value);
         }
         else if (cval instanceof MIRConstantDecimal) {
-            this.registerSpecialLiteralValue(cval.value, "NSCore::Decimal");
+            this.registerSpecialLiteralValue(cval.value, "Decimal");
             return this.getSpecialLiteralValue(cval.value);
         }
         else if (cval instanceof MIRConstantString) {
-            this.registerSpecialLiteralValue(cval.value, "NSCore::String");
+            this.registerSpecialLiteralValue(cval.value, "String");
             return this.getSpecialLiteralValue(cval.value);
         }
         else if (cval instanceof MIRConstantTypedNumber) {
             return this.constantToICPP(cval.value);
         }
         else if (cval instanceof MIRConstantStringOf) {
-            this.registerSpecialLiteralValue(cval.value, "NSCore::String");
+            this.registerSpecialLiteralValue(cval.value, "String");
             return this.getSpecialLiteralValue(cval.value);
         }
         else if (cval instanceof MIRConstantDataString) {
-            this.registerSpecialLiteralValue(cval.value, "NSCore::String");
+            this.registerSpecialLiteralValue(cval.value, "String");
             return this.getSpecialLiteralValue(cval.value);
         }
         else {
             assert(cval instanceof MIRConstantRegex);
 
             const rval = (cval as MIRConstantRegex).value;
-            this.registerSpecialLiteralValue(rval.restr, "NSCore::Regex");
+            this.registerSpecialLiteralValue(rval.restr, "Regex");
             return this.getSpecialLiteralValue(rval.restr);
         }
     }
@@ -419,7 +495,7 @@ class ICPPBodyEmitter {
     }
 
     trgtToICPPTargetLocation(trgt: MIRRegisterArgument, oftype: MIRResolvedTypeKey): TargetVar {
-        return this.getStackInfoForTargetVar(trgt.nameID, this.typegen.getICPPTypeData(this.typegen.getMIRType(oftype)));
+        return this.getStackInfoForTargetVar(trgt.nameID, this.typegen.getICPPLayoutInfo(this.typegen.getMIRType(oftype)));
     }
 
     generateGuardToInfo(gg: MIRGuard): ICPPGuard {
@@ -444,34 +520,66 @@ class ICPPBodyEmitter {
         else {
             const gg = this.generateGuardToInfo(sguard.guard);
             const dvar = sguard.defaultvar !== undefined ? this.argToICPPLocation(sguard.defaultvar) : ICPPOpEmitter.genConstArgument(EMPTY_CONST_POSITION);
+
             return ICPPOpEmitter.genStatmentGuard(gg, sguard.usedefault === "defaultontrue", dvar);
         }
     }
 
     generateNoneCheck(sinfo: SourceInfo, trgt: MIRRegisterArgument, arg: MIRArgument, argtype: MIRType): ICPPOp {
-        if (this.typegen.isType(argtype, "NSCore::None")) {
-            return ICPPOpEmitter.genDirectAssignOp(sinfo, this.trgtToICPPTargetLocation(trgt, "NSCore::Bool"), "NSCore::Bool", this.getSpecialLiteralValue("true"), ICPPOpEmitter.genNoStatmentGuard());
+        if (this.typegen.isType(argtype, "None")) {
+            return ICPPOpEmitter.genDirectAssignOp(sinfo, this.trgtToICPPTargetLocation(trgt, "Bool"), "Bool", this.getSpecialLiteralValue("true"), ICPPOpEmitter.genNoStatmentGuard());
         }
-        else if (!this.assembly.subtypeOf(this.typegen.getMIRType("NScore::None"), argtype)) {
-            return ICPPOpEmitter.genDirectAssignOp(sinfo, this.trgtToICPPTargetLocation(trgt, "NSCore::Bool"), "NSCore::Bool", this.getSpecialLiteralValue("false"), ICPPOpEmitter.genNoStatmentGuard());
+        else if (!this.assembly.subtypeOf(this.typegen.getMIRType("None"), argtype)) {
+            return ICPPOpEmitter.genDirectAssignOp(sinfo, this.trgtToICPPTargetLocation(trgt, "Bool"), "Bool", this.getSpecialLiteralValue("false"), ICPPOpEmitter.genNoStatmentGuard());
         }
         else {
-            return ICPPOpEmitter.genTypeIsNoneOp(sinfo, this.trgtToICPPTargetLocation(trgt, "NSCore::Bool"), this.argToICPPLocation(arg), argtype.trkey, ICPPOpEmitter.genNoStatmentGuard());
+            return ICPPOpEmitter.genTypeIsNoneOp(sinfo, this.trgtToICPPTargetLocation(trgt, "Bool"), this.argToICPPLocation(arg), argtype.typeID, ICPPOpEmitter.genNoStatmentGuard());
         }
     }
 
     generateSomeCheck(sinfo: SourceInfo, trgt: MIRRegisterArgument, arg: MIRArgument, argtype: MIRType): ICPPOp {
-        if (this.typegen.isType(argtype, "NSCore::None")) {
-            return ICPPOpEmitter.genDirectAssignOp(sinfo, this.trgtToICPPTargetLocation(trgt, "NSCore::Bool"), "NSCore::Bool", this.getSpecialLiteralValue("false"), ICPPOpEmitter.genNoStatmentGuard());
+        if (this.typegen.isType(argtype, "None")) {
+            return ICPPOpEmitter.genDirectAssignOp(sinfo, this.trgtToICPPTargetLocation(trgt, "Bool"), "Bool", this.getSpecialLiteralValue("false"), ICPPOpEmitter.genNoStatmentGuard());
         }
-        else if (!this.assembly.subtypeOf(this.typegen.getMIRType("NScore::None"), argtype)) {
-            return ICPPOpEmitter.genDirectAssignOp(sinfo, this.trgtToICPPTargetLocation(trgt, "NSCore::Bool"), "NSCore::Bool", this.getSpecialLiteralValue("true"), ICPPOpEmitter.genNoStatmentGuard());
+        else if (!this.assembly.subtypeOf(this.typegen.getMIRType("None"), argtype)) {
+            return ICPPOpEmitter.genDirectAssignOp(sinfo, this.trgtToICPPTargetLocation(trgt, "Bool"), "Bool", this.getSpecialLiteralValue("true"), ICPPOpEmitter.genNoStatmentGuard());
         }
         else {
-            return ICPPOpEmitter.genTypeIsSomeOp(sinfo, this.trgtToICPPTargetLocation(trgt, "NSCore::Bool"), this.argToICPPLocation(arg), argtype.trkey, ICPPOpEmitter.genNoStatmentGuard());
+            return ICPPOpEmitter.genTypeIsSomeOp(sinfo, this.trgtToICPPTargetLocation(trgt, "Bool"), this.argToICPPLocation(arg), argtype.typeID, ICPPOpEmitter.genNoStatmentGuard());
         }
     }
     
+    generateNothingCheck(sinfo: SourceInfo, trgt: MIRRegisterArgument, arg: MIRArgument, argtype: MIRType): ICPPOp {
+        if (this.typegen.isType(argtype, "Nothing")) {
+            return ICPPOpEmitter.genDirectAssignOp(sinfo, this.trgtToICPPTargetLocation(trgt, "Bool"), "Bool", this.getSpecialLiteralValue("true"), ICPPOpEmitter.genNoStatmentGuard());
+        }
+        else if (!this.assembly.subtypeOf(this.typegen.getMIRType("Nothing"), argtype)) {
+            return ICPPOpEmitter.genDirectAssignOp(sinfo, this.trgtToICPPTargetLocation(trgt, "Bool"), "Bool", this.getSpecialLiteralValue("false"), ICPPOpEmitter.genNoStatmentGuard());
+        }
+        else {
+            return ICPPOpEmitter.genTypeIsNothingOp(sinfo, this.trgtToICPPTargetLocation(trgt, "Bool"), this.argToICPPLocation(arg), argtype.typeID, ICPPOpEmitter.genNoStatmentGuard());
+        }
+    }
+
+    processDebugOp(op: MIRDebug): ICPPOp {
+        if(op.value === undefined) {
+            return ICPPOpEmitter.genDebugOp(op.sinfo, undefined);
+        }
+        else {
+            return ICPPOpEmitter.genDebugOp(op.sinfo, this.argToICPPLocation(op.value));
+        }
+    }
+    
+    processVarLifetimeStart(op: MIRVarLifetimeStart): ICPPOp {
+        const tv = this.getStackInfoForTargetVar(op.name, this.typegen.getICPPLayoutInfo(this.typegen.getMIRType(op.rtype)));
+
+        return ICPPOpEmitter.genVarLifetimeStartOp(op.sinfo, { kind: tv.kind, location: tv.offset }, op.rtype, op.name);
+    }
+    
+    processVarLifetimeEnd(op: MIRVarLifetimeEnd): ICPPOp {
+        return ICPPOpEmitter.genVarLifetimeEndOp(op.sinfo, op.name);
+    }
+
     processAbort(op: MIRAbort): ICPPOp {
         return ICPPOpEmitter.genAbortOp(op.sinfo, op.info);
     }
@@ -508,16 +616,33 @@ class ICPPBodyEmitter {
         return this.typegen.coerce(op.sinfo, this.argToICPPLocation(op.src), this.typegen.getMIRType(op.srctypelayout), this.trgtToICPPTargetLocation(op.trgt, op.intotype), this.typegen.getMIRType(op.intotype), this.generateStatmentGuardInfo(op.sguard));
     }
 
+    processInject(op: MIRInject): ICPPOp {
+        const intotype = this.typegen.getMIRType(op.intotype);
+        return this.typegen.coerceEquivReprs(op.sinfo, this.argToICPPLocation(op.src), this.trgtToICPPTargetLocation(op.trgt, op.intotype), intotype, ICPPOpEmitter.genNoStatmentGuard());
+    }
+
+    processGuardedOptionInject(op: MIRGuardedOptionInject): ICPPOp {
+        const sguard = this.generateStatmentGuardInfo(op.sguard);
+
+        const intotype = this.typegen.getMIRType(op.optiontype);
+        return this.typegen.coerce(op.sinfo, this.argToICPPLocation(op.src), this.typegen.getMIRType(op.somethingtype), this.trgtToICPPTargetLocation(op.trgt, op.optiontype), intotype, sguard);
+    }
+
+    processExtract(op: MIRExtract): ICPPOp {
+        const intotype = this.typegen.getMIRType(op.intotype);
+        return this.typegen.coerceEquivReprs(op.sinfo, this.argToICPPLocation(op.src), this.trgtToICPPTargetLocation(op.trgt, op.intotype), intotype, ICPPOpEmitter.genNoStatmentGuard());
+    }
+
     processLoadConst(op: MIRLoadConst): ICPPOp {
         return ICPPOpEmitter.genLoadConstOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.consttype), this.argToICPPLocation(op.src), op.consttype);
     }
 
     processTupleHasIndex(op: MIRTupleHasIndex): ICPPOp {
-        return ICPPOpEmitter.genTupleHasIndexOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), this.argToICPPLocation(op.arg), op.arglayouttype, op.idx);
+        return ICPPOpEmitter.genTupleHasIndexOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), this.argToICPPLocation(op.arg), op.arglayouttype, op.idx);
     }
 
     processRecordHasProperty(op: MIRRecordHasProperty): ICPPOp {
-        return ICPPOpEmitter.genRecordHasPropertyOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), this.argToICPPLocation(op.arg), op.arglayouttype, op.pname);
+        return ICPPOpEmitter.genRecordHasPropertyOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), this.argToICPPLocation(op.arg), op.arglayouttype, op.pname);
     }
 
     processLoadTupleIndex(op: MIRLoadTupleIndex): ICPPOp {
@@ -525,7 +650,7 @@ class ICPPBodyEmitter {
             return ICPPOpEmitter.genLoadTupleIndexVirtualOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.resulttype), op.resulttype, this.argToICPPLocation(op.arg), op.arglayouttype, op.idx);
         }
         else {
-            const icppargt = this.typegen.getICPPTypeData(this.typegen.getMIRType(op.argflowtype)) as ICPPTypeTuple;
+            const icppargt = this.typegen.getICPPLayoutInfo(this.typegen.getMIRType(op.argflowtype)) as ICPPTupleLayoutInfo;
             return ICPPOpEmitter.genLoadTupleIndexDirectOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.resulttype), op.resulttype, this.argToICPPLocation(op.arg), op.arglayouttype, icppargt.idxoffsets[op.idx], op.idx);
         }
     }
@@ -537,7 +662,7 @@ class ICPPBodyEmitter {
             return ICPPOpEmitter.genLoadTupleIndexSetGuardVirtualOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.resulttype), op.resulttype, this.argToICPPLocation(op.arg), op.arglayouttype, op.idx, guard);
         }
         else {
-            const icppargt = this.typegen.getICPPTypeData(this.typegen.getMIRType(op.argflowtype)) as ICPPTypeTuple;
+            const icppargt = this.typegen.getICPPLayoutInfo(this.typegen.getMIRType(op.argflowtype)) as ICPPTupleLayoutInfo;
             return ICPPOpEmitter.genLoadTupleIndexSetGuardDirectOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.resulttype), op.resulttype, this.argToICPPLocation(op.arg), op.arglayouttype, icppargt.idxoffsets[op.idx], op.idx, guard);
         }
     }
@@ -547,7 +672,7 @@ class ICPPBodyEmitter {
             return ICPPOpEmitter.genLoadRecordPropertyVirtualOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.resulttype), op.resulttype, this.argToICPPLocation(op.arg), op.arglayouttype, op.pname);
         }
         else {
-            const icppargt = this.typegen.getICPPTypeData(this.typegen.getMIRType(op.argflowtype)) as ICPPTypeRecord;
+            const icppargt = this.typegen.getICPPLayoutInfo(this.typegen.getMIRType(op.argflowtype)) as ICPPRecordLayoutInfo;
             const slotidx = icppargt.propertynames.indexOf(op.pname);
 
             return ICPPOpEmitter.genLoadRecordPropertyDirectOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.resulttype), op.resulttype, this.argToICPPLocation(op.arg), op.arglayouttype, icppargt.propertyoffsets[slotidx], op.pname);
@@ -561,7 +686,7 @@ class ICPPBodyEmitter {
             return ICPPOpEmitter.genLoadRecordPropertySetGuardVirtualOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.resulttype), op.resulttype, this.argToICPPLocation(op.arg), op.arglayouttype, op.pname, guard);
         }
         else {
-            const icppargt = this.typegen.getICPPTypeData(this.typegen.getMIRType(op.argflowtype)) as ICPPTypeRecord;
+            const icppargt = this.typegen.getICPPLayoutInfo(this.typegen.getMIRType(op.argflowtype)) as ICPPRecordLayoutInfo;
             const slotidx = icppargt.propertynames.indexOf(op.pname);
 
             return ICPPOpEmitter.genLoadRecordPropertySetGuardDirectOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.resulttype), op.resulttype, this.argToICPPLocation(op.arg), op.arglayouttype, icppargt.propertyoffsets[slotidx], op.pname, guard);
@@ -573,7 +698,7 @@ class ICPPBodyEmitter {
             return ICPPOpEmitter.genLoadEntityFieldVirtualOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.resulttype), op.resulttype, this.argToICPPLocation(op.arg), op.arglayouttype, op.field);
         }
         else {
-            const icppargt = this.typegen.getICPPTypeData(this.typegen.getMIRType(op.argflowtype)) as ICPPTypeEntity;
+            const icppargt = this.typegen.getICPPLayoutInfo(this.typegen.getMIRType(op.argflowtype)) as ICPPEntityLayoutInfo;
             const slotidx = icppargt.fieldnames.indexOf(op.field);
 
             return ICPPOpEmitter.genLoadEntityFieldDirectOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.resulttype), op.resulttype, this.argToICPPLocation(op.arg), op.arglayouttype, icppargt.fieldoffsets[slotidx], op.field);
@@ -597,11 +722,11 @@ class ICPPBodyEmitter {
             let sametypes = true;
             for(let i = 0; i < op.indecies.length; ++i) {
                 const idx = op.indecies[i];
-                sametypes = sametypes && ((argflowtype.options[0] as MIRTupleType).entries[idx].type.trkey === (resulttype.options[0] as MIREphemeralListType).entries[i].trkey);
+                sametypes = sametypes && ((argflowtype.options[0] as MIRTupleType).entries[idx].typeID === (resulttype.options[0] as MIREphemeralListType).entries[i].typeID);
             }
 
             if(sametypes) {
-                const tuptype = this.typegen.getICPPTypeData(this.typegen.getMIRType((argflowtype.options[0] as MIRTupleType).trkey)) as ICPPTypeTuple;
+                const tuptype = this.typegen.getICPPLayoutInfo(this.typegen.getMIRType((argflowtype.options[0] as MIRTupleType).typeID)) as ICPPTupleLayoutInfo;
                 
                 let idxs: [number, number, MIRResolvedTypeKey][] = [];
                 op.indecies.forEach((idx) => {
@@ -641,12 +766,12 @@ class ICPPBodyEmitter {
             let sametypes = true;
             for(let i = 0; i < op.properties.length; ++i) {
                 const pname = op.properties[i];
-                const pentry = (argflowtype.options[0] as MIRRecordType).entries.find((entry) => entry.name === pname) as MIRRecordTypeEntry;
-                sametypes = sametypes && (pentry.type.trkey === (resulttype.options[0] as MIREphemeralListType).entries[i].trkey);
+                const pentry = (argflowtype.options[0] as MIRRecordType).entries.find((entry) => entry.pname === pname) as {pname: string, ptype: MIRType};
+                sametypes = sametypes && (pentry.ptype.typeID === (resulttype.options[0] as MIREphemeralListType).entries[i].typeID);
             }
 
             if(sametypes) {
-                const rectype = this.typegen.getICPPTypeData(this.typegen.getMIRType((argflowtype.options[0] as MIRRecordType).trkey)) as ICPPTypeRecord;
+                const rectype = this.typegen.getICPPLayoutInfo(this.typegen.getMIRType((argflowtype.options[0] as MIRRecordType).typeID)) as ICPPRecordLayoutInfo;
                 
                 let props: [string, number, MIRResolvedTypeKey][] = [];
                 op.properties.forEach((pname) => {
@@ -688,15 +813,15 @@ class ICPPBodyEmitter {
             for(let i = 0; i < op.fields.length; ++i) {
                 const fkey = op.fields[i];
                 const fentry = this.assembly.fieldDecls.get(fkey) as MIRFieldDecl;
-                sametypes = sametypes && (fentry.declaredType === (resulttype.options[0] as MIREphemeralListType).entries[i].trkey);
+                sametypes = sametypes && (fentry.declaredType === (resulttype.options[0] as MIREphemeralListType).entries[i].typeID);
             }
 
             if(sametypes) {
-                const etype = this.typegen.getICPPTypeData(this.typegen.getMIRType((argflowtype.options[0] as MIREntityType).trkey)) as ICPPTypeEntity;
+                const etype = this.typegen.getICPPLayoutInfo(this.typegen.getMIRType((argflowtype.options[0] as MIREntityType).typeID)) as ICPPEntityLayoutInfo;
                 
                 let fields: [MIRFieldKey, number, MIRResolvedTypeKey][] = [];
                 op.fields.forEach((fkey) => {
-                    const fentryidx = etype.fieldnames.findIndex((fn) => fn === fkey);
+                    const fentryidx = etype.fieldnames.findIndex((fname) => fname === fkey);
                     fields.push([fkey, etype.fieldoffsets[fentryidx], etype.fieldtypes[fentryidx]]);
                 });
 
@@ -727,17 +852,17 @@ class ICPPBodyEmitter {
                 this.requiredUpdateVirtualTuple.push(geninfo);
             }
             
-            return ICPPOpEmitter.genInvokeVirtualFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.argflowtype), resulttype.trkey, icall, op.arglayouttype, [this.argToICPPLocation(op.arg)], -1);
+            return ICPPOpEmitter.genInvokeVirtualFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.argflowtype), resulttype.typeID, icall, op.arglayouttype, [this.argToICPPLocation(op.arg)], -1);
         }
         else {
             let sametypes = true;
             for (let i = 0; i < op.updates.length; ++i) {
                 const idx = op.updates[i][0];
-                sametypes = sametypes && ((argflowtype.options[0] as MIRTupleType).entries[idx].type.trkey === op.updates[i][2]);
+                sametypes = sametypes && ((argflowtype.options[0] as MIRTupleType).entries[idx].typeID === op.updates[i][2]);
             }
 
             if (sametypes) {
-                const tuptype = this.typegen.getICPPTypeData(this.typegen.getMIRType((argflowtype.options[0] as MIRTupleType).trkey)) as ICPPTypeTuple;
+                const tuptype = this.typegen.getICPPLayoutInfo(this.typegen.getMIRType((argflowtype.options[0] as MIRTupleType).typeID)) as ICPPTupleLayoutInfo;
 
                 let idxs: [number, number, MIRResolvedTypeKey, Argument][] = [];
                 op.updates.forEach((upd) => {
@@ -745,7 +870,7 @@ class ICPPBodyEmitter {
                     idxs.push([idx, tuptype.idxoffsets[idx], tuptype.ttypes[idx], this.argToICPPLocation(upd[1])]);
                 });
 
-                return ICPPOpEmitter.genUpdateTupleOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.argflowtype), resulttype.trkey, this.argToICPPLocation(op.arg), op.arglayouttype, op.argflowtype, idxs);
+                return ICPPOpEmitter.genUpdateTupleOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.argflowtype), resulttype.typeID, this.argToICPPLocation(op.arg), op.arglayouttype, op.argflowtype, idxs);
             }
             else {
                 //If we need to do coercsion then just build a vmethod call that will handle it 
@@ -756,7 +881,7 @@ class ICPPBodyEmitter {
                     this.requiredUpdateVirtualTuple.push(geninfo);
                 }
                 
-                return ICPPOpEmitter.genInvokeVirtualFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.argflowtype), resulttype.trkey, icall, op.arglayouttype, [this.argToICPPLocation(op.arg)], -1);
+                return ICPPOpEmitter.genInvokeVirtualFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.argflowtype), resulttype.typeID, icall, op.arglayouttype, [this.argToICPPLocation(op.arg)], -1);
             }
         }
     }
@@ -772,18 +897,18 @@ class ICPPBodyEmitter {
                 this.requiredUpdateVirtualRecord.push(geninfo);
             }
             
-            return ICPPOpEmitter.genInvokeVirtualFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.argflowtype), resulttype.trkey, icall, op.arglayouttype, [this.argToICPPLocation(op.arg)], -1);
+            return ICPPOpEmitter.genInvokeVirtualFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.argflowtype), resulttype.typeID, icall, op.arglayouttype, [this.argToICPPLocation(op.arg)], -1);
         }
         else {
             let sametypes = true;
             for(let i = 0; i < op.updates.length; ++i) {
                 const pname = op.updates[i][0];
-                const pentry = (argflowtype.options[0] as MIRRecordType).entries.find((entry) => entry.name === pname) as MIRRecordTypeEntry;
-                sametypes = sametypes && (pentry.type.trkey === op.updates[i][2]);
+                const pentry = (argflowtype.options[0] as MIRRecordType).entries.find((entry) => entry.pname === pname) as {pname: string, ptype: MIRType};
+                sametypes = sametypes && (pentry.ptype.typeID === op.updates[i][2]);
             }
 
             if(sametypes) {
-                const rectype = this.typegen.getICPPTypeData(this.typegen.getMIRType((argflowtype.options[0] as MIRRecordType).trkey)) as ICPPTypeRecord;
+                const rectype = this.typegen.getICPPLayoutInfo(this.typegen.getMIRType((argflowtype.options[0] as MIRRecordType).typeID)) as ICPPRecordLayoutInfo;
                 
                 let props: [string, number, MIRResolvedTypeKey, Argument][] = [];
                 op.updates.forEach((upd) => {
@@ -792,7 +917,7 @@ class ICPPBodyEmitter {
                     props.push([pname, rectype.propertyoffsets[pentryidx], rectype.propertytypes[pentryidx], this.argToICPPLocation(upd[1])]);
                 });
 
-                return ICPPOpEmitter.genUpdateRecordOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.argflowtype), resulttype.trkey, this.argToICPPLocation(op.arg), op.arglayouttype, op.argflowtype, props);
+                return ICPPOpEmitter.genUpdateRecordOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.argflowtype), resulttype.typeID, this.argToICPPLocation(op.arg), op.arglayouttype, op.argflowtype, props);
             }
             else {
                 //If we need to do coercsion then just build a vmethod call that will handle it 
@@ -803,7 +928,7 @@ class ICPPBodyEmitter {
                     this.requiredUpdateVirtualRecord.push(geninfo);
                 }
                 
-                return ICPPOpEmitter.genInvokeVirtualFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.argflowtype), resulttype.trkey, icall, op.arglayouttype, [this.argToICPPLocation(op.arg)], -1);
+                return ICPPOpEmitter.genInvokeVirtualFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.argflowtype), resulttype.typeID, icall, op.arglayouttype, [this.argToICPPLocation(op.arg)], -1);
             }
         }
     }
@@ -818,7 +943,7 @@ class ICPPBodyEmitter {
                 this.requiredUpdateVirtualEntity.push(geninfo);
             }
 
-            return ICPPOpEmitter.genInvokeVirtualFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.argflowtype), resulttype.trkey, icall, op.arglayouttype, [this.argToICPPLocation(op.arg)], -1);
+            return ICPPOpEmitter.genInvokeVirtualFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.argflowtype), resulttype.typeID, icall, op.arglayouttype, [this.argToICPPLocation(op.arg)], -1);
         }
         else {
             //
@@ -831,19 +956,19 @@ class ICPPBodyEmitter {
                 this.requiredUpdateVirtualEntity.push(geninfo);
             }
 
-            return ICPPOpEmitter.genInvokeVirtualFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.argflowtype), resulttype.trkey, icall, op.arglayouttype, [this.argToICPPLocation(op.arg)], -1);
+            return ICPPOpEmitter.genInvokeVirtualFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.argflowtype), resulttype.typeID, icall, op.arglayouttype, [this.argToICPPLocation(op.arg)], -1);
         }
     }
 
     processLoadFromEpehmeralList(op: MIRLoadFromEpehmeralList): ICPPOp {
-        const icppargtype = this.typegen.getICPPTypeData(this.typegen.getMIRType(op.argtype)) as ICPPTypeEphemeralList;
+        const icppargtype = this.typegen.getICPPLayoutInfo(this.typegen.getMIRType(op.argtype)) as ICPPEphemeralListLayoutInfo;
         const offset = icppargtype.eoffsets[op.idx];
 
         return ICPPOpEmitter.genLoadFromEpehmeralListOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.resulttype), op.resulttype, this.argToICPPLocation(op.arg), op.argtype, offset, op.idx);
     }
 
     processMultiLoadFromEpehmeralList(op: MIRMultiLoadFromEpehmeralList): ICPPOp {
-        const icppargtype = this.typegen.getICPPTypeData(this.typegen.getMIRType(op.argtype)) as ICPPTypeEphemeralList;
+        const icppargtype = this.typegen.getICPPLayoutInfo(this.typegen.getMIRType(op.argtype)) as ICPPEphemeralListLayoutInfo;
 
         let trgts: TargetVar[] = []
         let trgttypes: MIRResolvedTypeKey[] = [];
@@ -860,8 +985,8 @@ class ICPPBodyEmitter {
     }
 
     processSliceEpehmeralList(op: MIRSliceEpehmeralList): ICPPOp {
-        const slicpp = this.typegen.getICPPTypeData(this.typegen.getMIRType(op.sltype)) as ICPPTypeEphemeralList;
-        const elicpp = this.typegen.getICPPTypeData(this.typegen.getMIRType(op.argtype)) as ICPPTypeEphemeralList;
+        const slicpp = this.typegen.getICPPLayoutInfo(this.typegen.getMIRType(op.sltype)) as ICPPEphemeralListLayoutInfo;
+        const elicpp = this.typegen.getICPPLayoutInfo(this.typegen.getMIRType(op.argtype)) as ICPPEphemeralListLayoutInfo;
 
         if(slicpp.allocinfo.inlinedatasize === elicpp.allocinfo.inlinedatasize) {
             return ICPPOpEmitter.genDirectAssignOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.sltype), op.sltype, this.argToICPPLocation(op.arg), ICPPOpEmitter.genNoStatmentGuard());
@@ -888,7 +1013,7 @@ class ICPPBodyEmitter {
             const args = op.args.map((arg) => this.argToICPPLocation(arg));
             const sguard = this.generateStatmentGuardInfo(op.sguard);
 
-            return ICPPOpEmitter.genInvokeFixedFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.resultType), op.resultType, invk.key, args, maskidx, sguard);
+            return ICPPOpEmitter.genInvokeFixedFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.resultType), op.resultType, invk.ikey, args, maskidx, sguard);
         }
     }
 
@@ -919,7 +1044,7 @@ class ICPPBodyEmitter {
     processConstructorRecordFromEphemeralList(op: MIRConstructorRecordFromEphemeralList): ICPPOp {
         const rtype = this.typegen.getMIRType(op.resultRecordType).options[0] as MIRRecordType;
         let proppositions = rtype.entries.map((rentry) => {
-            const eidx = op.propertyPositions.indexOf(rentry.name);
+            const eidx = op.propertyPositions.indexOf(rentry.pname);
             return eidx;
         });
 
@@ -972,18 +1097,59 @@ class ICPPBodyEmitter {
         return ICPPOpEmitter.genConstructorEphemeralListOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.resultEphemeralListType), op.resultEphemeralListType, args);
     }
 
+    processConstructorEntityDirect(op: MIRConstructorEntityDirect): ICPPOp {
+        const args = op.args.map((arg) => this.argToICPPLocation(arg));
+        return ICPPOpEmitter.genConstructorEntityDirectOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.entityType), op.entityType, args);
+    }
+
     processEphemeralListExtend(op: MIREphemeralListExtend): ICPPOp {
         const ext = op.ext.map((arg) => this.argToICPPLocation(arg));
         return ICPPOpEmitter.genEphemeralListExtendOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.resultType), op.resultType, this.argToICPPLocation(op.arg), op.argtype, ext);
     }
 
     processConstructorPrimaryCollectionEmpty(op: MIRConstructorPrimaryCollectionEmpty): ICPPOp {
-        return ICPPOpEmitter.genConstructorPrimaryCollectionEmptyOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.tkey), op.tkey);
+        return this.typegen.coerce(op.sinfo, this.getSpecialLiteralValue("none"), this.typegen.getMIRType("None"), this.trgtToICPPTargetLocation(op.trgt, op.tkey), this.typegen.getMIRType(op.tkey),  ICPPOpEmitter.genNoStatmentGuard());
+    }
+
+    processConstructorPrimaryCollectionSingletonsList_Helper(op: MIRConstructorPrimaryCollectionSingletons, ltype: MIRPrimitiveListEntityTypeDecl, exps: Argument[]): ICPPOp {
+        const icall = this.generateSingletonConstructorsList(exps.length, this.typegen.getMIRType(op.tkey));
+        if(this.requiredSingletonConstructorsList.findIndex((vv) => vv.inv === icall) === -1) {
+            const geninfo = { inv: icall, argc: exps.length, resulttype: this.typegen.getMIRType(op.tkey) };
+            this.requiredSingletonConstructorsList.push(geninfo);
+        }
+            
+        return ICPPOpEmitter.genInvokeFixedFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.tkey), op.tkey, icall, exps, -1, ICPPOpEmitter.genNoStatmentGuard());
+    }
+
+    processConstructorPrimaryCollectionSingletonsMap_Helper(op: MIRConstructorPrimaryCollectionSingletons, ltype: MIRPrimitiveCollectionEntityTypeDecl, exps: Argument[]): ICPPOp {
+        const icall = this.generateSingletonConstructorsMap(exps.length, this.typegen.getMIRType(op.tkey));
+        if(this.requiredSingletonConstructorsMap.findIndex((vv) => vv.inv === icall) === -1) {
+            const geninfo = { inv: icall, argc: exps.length, resulttype: this.typegen.getMIRType(op.tkey) };
+            this.requiredSingletonConstructorsMap.push(geninfo);
+        }
+            
+        return ICPPOpEmitter.genInvokeFixedFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.tkey), op.tkey, icall, exps, -1, ICPPOpEmitter.genNoStatmentGuard());
     }
 
     processConstructorPrimaryCollectionSingletons(op: MIRConstructorPrimaryCollectionSingletons): ICPPOp {
+        const constype = this.assembly.entityDecls.get(op.tkey) as MIRPrimitiveCollectionEntityTypeDecl;
         const args = op.args.map((arg) => this.argToICPPLocation(arg[1]));
-        return ICPPOpEmitter.genConstructorPrimaryCollectionSingletonsOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.tkey), op.tkey, args);
+        
+        if(constype instanceof MIRPrimitiveListEntityTypeDecl) {
+            return this.processConstructorPrimaryCollectionSingletonsList_Helper(op, constype, args);
+        }
+        else if (constype instanceof MIRPrimitiveStackEntityTypeDecl) {
+            return NOT_IMPLEMENTED("MIRPrimitiveStackEntityTypeDecl@cons");
+        }
+        else if (constype instanceof MIRPrimitiveQueueEntityTypeDecl) {
+            return NOT_IMPLEMENTED("MIRPrimitiveQueueEntityTypeDecl@cons");
+        }
+        else if (constype instanceof MIRPrimitiveSetEntityTypeDecl) {
+            return NOT_IMPLEMENTED("MIRPrimitiveSetEntityTypeDecl@cons");
+        }
+        else {
+            return this.processConstructorPrimaryCollectionSingletonsMap_Helper(op, constype, args);
+        }
     }
 
     processConstructorPrimaryCollectionCopies(op: MIRConstructorPrimaryCollectionCopies): ICPPOp {
@@ -1003,16 +1169,16 @@ class ICPPBodyEmitter {
 
         const oftype = this.typegen.getMIRType(op.cmptype);
         const sguard = this.generateStatmentGuardInfo(op.sguard);
-        if(mirlhsflow.trkey === mirrhsflow.trkey && this.typegen.isUniqueType(mirlhsflow) && this.typegen.isUniqueType(mirrhsflow)) {
+        if(mirlhsflow.typeID === mirrhsflow.typeID && this.typegen.isUniqueType(mirlhsflow) && this.typegen.isUniqueType(mirrhsflow)) {
             if(this.typegen.isUniqueType(mirlhslayout) && this.typegen.isUniqueType(mirrhslayout)) {
-                return ICPPOpEmitter.genBinKeyEqFastOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), oftype.trkey, this.argToICPPLocation(op.lhs), this.argToICPPLocation(op.rhs), sguard);
+                return ICPPOpEmitter.genBinKeyEqFastOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), oftype.typeID, this.argToICPPLocation(op.lhs), this.argToICPPLocation(op.rhs), sguard);
             }
             else {
-                return ICPPOpEmitter.genBinKeyEqStaticOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), oftype.trkey, this.argToICPPLocation(op.lhs), mirlhslayout.trkey, this.argToICPPLocation(op.rhs), mirrhslayout.trkey, sguard);
+                return ICPPOpEmitter.genBinKeyEqStaticOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), oftype.typeID, this.argToICPPLocation(op.lhs), mirlhslayout.typeID, this.argToICPPLocation(op.rhs), mirrhslayout.typeID, sguard);
             }
         }
         else {
-            return ICPPOpEmitter.genBinKeyEqVirtualOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), oftype.trkey, this.argToICPPLocation(op.lhs), mirlhslayout.trkey, this.argToICPPLocation(op.rhs), mirrhslayout.trkey, sguard);
+            return ICPPOpEmitter.genBinKeyEqVirtualOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), oftype.typeID, this.argToICPPLocation(op.lhs), mirlhslayout.typeID, this.argToICPPLocation(op.rhs), mirrhslayout.typeID, sguard);
         }
     }
 
@@ -1024,22 +1190,37 @@ class ICPPBodyEmitter {
         const mirrhslayout = this.typegen.getMIRType(op.rhslayouttype);
 
         const oftype = this.typegen.getMIRType(op.cmptype);
-        const sguard = this.generateStatmentGuardInfo(op.sguard);
-        if(mirlhsflow.trkey === mirrhsflow.trkey && this.typegen.isUniqueType(mirlhsflow) && this.typegen.isUniqueType(mirrhsflow)) {
+        if(mirlhsflow.typeID === mirrhsflow.typeID && this.typegen.isUniqueType(mirlhsflow) && this.typegen.isUniqueType(mirrhsflow)) {
             if(this.typegen.isUniqueType(mirlhslayout) && this.typegen.isUniqueType(mirrhslayout)) {
-                return ICPPOpEmitter.genBinKeyLessFastOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), oftype.trkey, this.argToICPPLocation(op.lhs), this.argToICPPLocation(op.rhs), sguard);
+                return ICPPOpEmitter.genBinKeyLessFastOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), oftype.typeID, this.argToICPPLocation(op.lhs), this.argToICPPLocation(op.rhs));
             }
             else {
-                return ICPPOpEmitter.genBinKeyLessStaticOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), oftype.trkey, this.argToICPPLocation(op.lhs), mirlhslayout.trkey, this.argToICPPLocation(op.rhs), mirrhslayout.trkey, sguard);
+                return ICPPOpEmitter.genBinKeyLessStaticOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), oftype.typeID, this.argToICPPLocation(op.lhs), mirlhslayout.typeID, this.argToICPPLocation(op.rhs), mirrhslayout.typeID);
             }
         }
         else {
-            return ICPPOpEmitter.genBinKeyLessVirtualOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), oftype.trkey, this.argToICPPLocation(op.lhs), mirlhslayout.trkey, this.argToICPPLocation(op.rhs), mirrhslayout.trkey, sguard);
+            return ICPPOpEmitter.genBinKeyLessVirtualOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), oftype.typeID, this.argToICPPLocation(op.lhs), mirlhslayout.typeID, this.argToICPPLocation(op.rhs), mirrhslayout.typeID);
         }
     }
 
     processPrefixNotOp(op: MIRPrefixNotOp): ICPPOp {
-        return ICPPOpEmitter.genPrefixNotOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), this.argToICPPLocation(op.arg));
+        return ICPPOpEmitter.genPrefixNotOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), this.argToICPPLocation(op.arg));
+    }
+
+    processLogicAction(op: MIRLogicAction): ICPPOp {
+        assert(op.args.length !== 0, "Should not be empty logic argument list");
+
+        if(op.args.length === 1) {
+            return ICPPOpEmitter.genDirectAssignOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), "Bool", this.argToICPPLocation(op.args[0]), ICPPOpEmitter.genNoStatmentGuard());
+        }
+        else {
+            if (op.opkind === "/\\") {
+                return ICPPOpEmitter.genAllTrueOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), op.args.map((arg) => this.argToICPPLocation(arg)));
+            }
+            else {
+                return ICPPOpEmitter.genSomeTrueOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), op.args.map((arg) => this.argToICPPLocation(arg)));
+            }
+        }
     }
 
     processIsTypeOf(op: MIRIsTypeOf): ICPPOp {
@@ -1049,20 +1230,23 @@ class ICPPBodyEmitter {
 
         const sguard = this.generateStatmentGuardInfo(op.sguard);
         if(this.assembly.subtypeOf(flow, oftype)) {
-            return ICPPOpEmitter.genDirectAssignOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), "NSCore::Bool", this.getSpecialLiteralValue("true"), sguard);
+            return ICPPOpEmitter.genDirectAssignOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), "Bool", this.getSpecialLiteralValue("true"), sguard);
         }
-        else if(this.typegen.isType(oftype, "NSCore::None")) {
-            return ICPPOpEmitter.genTypeIsNoneOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), this.argToICPPLocation(op.arg), layout.trkey, sguard);
+        else if(this.typegen.isType(oftype, "None")) {
+            return ICPPOpEmitter.genTypeIsNoneOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), this.argToICPPLocation(op.arg), layout.typeID, sguard);
         }
-        else if (this.typegen.isType(oftype, "NSCore::Some")) {
-            return ICPPOpEmitter.genTypeIsSomeOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), this.argToICPPLocation(op.arg), layout.trkey, sguard);
+        else if (this.typegen.isType(oftype, "Some")) {
+            return ICPPOpEmitter.genTypeIsSomeOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), this.argToICPPLocation(op.arg), layout.typeID, sguard);
+        }
+        else if(this.typegen.isType(oftype, "Nothing")) {
+            return ICPPOpEmitter.genTypeIsNothingOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), this.argToICPPLocation(op.arg), layout.typeID, sguard);
         }
         else {
             if(this.typegen.isUniqueType(oftype)) {
-                return ICPPOpEmitter.genTypeTagIsOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), oftype.trkey, this.argToICPPLocation(op.arg), layout.trkey, sguard);
+                return ICPPOpEmitter.genTypeTagIsOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), oftype.typeID, this.argToICPPLocation(op.arg), layout.typeID, sguard);
             }
             else {
-                return ICPPOpEmitter.genTypeTagSubtypeOfOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "NSCore::Bool"), oftype.trkey, this.argToICPPLocation(op.arg), layout.trkey, sguard);
+                return ICPPOpEmitter.genTypeTagSubtypeOfOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), oftype.typeID, this.argToICPPLocation(op.arg), layout.typeID, sguard);
             }
         }
     }
@@ -1082,13 +1266,19 @@ class ICPPBodyEmitter {
     processOp(op: MIROp): ICPPOp | undefined {
         switch (op.tag) {
             case MIROpTag.MIRNop:
-            case MIROpTag.MIRDebug:
             case MIROpTag.MIRJump:
             case MIROpTag.MIRJumpCond:
-            case MIROpTag.MIRJumpNone:
-            case MIROpTag.MIRVarLifetimeStart:
-            case MIROpTag.MIRVarLifetimeEnd: {
+            case MIROpTag.MIRJumpNone:  {
                 return undefined;
+            }
+            case MIROpTag.MIRDebug: {
+                return this.processDebugOp(op as MIRDebug);
+            }
+            case MIROpTag.MIRVarLifetimeStart: {
+                return this.processVarLifetimeStart(op as MIRVarLifetimeStart);
+            }
+            case MIROpTag.MIRVarLifetimeEnd: {
+                return this.processVarLifetimeEnd(op as MIRVarLifetimeEnd);
             }
             case MIROpTag.MIRAbort: {
                 return this.processAbort(op as MIRAbort);
@@ -1108,6 +1298,15 @@ class ICPPBodyEmitter {
             }
             case MIROpTag.MIRConvertValue: {
                 return this.processConvertValue(op as MIRConvertValue);
+            }
+            case MIROpTag.MIRInject: {
+                return this.processInject(op as MIRInject);
+            }
+            case MIROpTag.MIRGuardedOptionInject: {
+                return this.processGuardedOptionInject(op as MIRGuardedOptionInject);
+            }
+            case MIROpTag.MIRExtract: {
+                return this.processExtract(op as MIRExtract);
             }
             case MIROpTag.MIRLoadConst: {
                 return this.processLoadConst(op as MIRLoadConst);
@@ -1190,6 +1389,9 @@ class ICPPBodyEmitter {
             case MIROpTag.MIRConstructorEphemeralList: {
                 return this.processConstructorEphemeralList(op as MIRConstructorEphemeralList);
             }
+            case MIROpTag.MIRConstructorEntityDirect: {
+                return this.processConstructorEntityDirect(op as MIRConstructorEntityDirect);
+            }
             case MIROpTag.MIREphemeralListExtend: {
                 return this.processEphemeralListExtend(op as MIREphemeralListExtend);
             }
@@ -1214,6 +1416,9 @@ class ICPPBodyEmitter {
             case MIROpTag.MIRPrefixNotOp: {
                 return this.processPrefixNotOp(op as MIRPrefixNotOp);
             }
+            case MIROpTag.MIRLogicAction: {
+                return this.processLogicAction(op as MIRLogicAction);
+            }
             case MIROpTag.MIRIsTypeOf: {
                 return this.processIsTypeOf(op as MIRIsTypeOf);
             }
@@ -1236,256 +1441,250 @@ class ICPPBodyEmitter {
     processDefaultOperatorInvokePrimitiveType(sinfo: SourceInfo, trgt: TargetVar, oftype: MIRResolvedTypeKey, op: MIRInvokeKey, args: Argument[]): ICPPOp {
         switch (op) {
             //op unary +
-            case "NSCore::+=prefix=(NSCore::Int)":
-            case "NSCore::+=prefix=(NSCore::Nat)":
-            case "NSCore::+=prefix=(NSCore::BigInt)":
-            case "NSCore::+=prefix=(NSCore::BigNat)":
-            case "NSCore::+=prefix=(NSCore::Rational)":
-            case "NSCore::+=prefix=(NSCore::Float)":
-            case "NSCore::+=prefix=(NSCore::Decimal)": {
+            case "__i__Core::+=prefix=(Int)":
+            case "__i__Core::+=prefix=(Nat)":
+            case "__i__Core::+=prefix=(BigInt)":
+            case "__i__Core::+=prefix=(BigNat)":
+            case "__i__Core::+=prefix=(Rational)":
+            case "__i__Core::+=prefix=(Float)":
+            case "__i__Core::+=prefix=(Decimal)": {
                 return ICPPOpEmitter.genDirectAssignOp(sinfo, trgt, oftype, args[0], ICPPOpEmitter.genNoStatmentGuard());
             }
             //op unary -
-            case "NSCore::-=prefix=(NSCore::Int)": {
+            case "__i__Core::-=prefix=(Int)": {
                 return ICPPOpEmitter.genNegateOp(sinfo, OpCodeTag.NegateIntOp, trgt, oftype, args[0]);
             }
-            case "NSCore::-=prefix=(NSCore::BigInt)": {
+            case "__i__Core::-=prefix=(BigInt)": {
                 return ICPPOpEmitter.genNegateOp(sinfo, OpCodeTag.NegateBigIntOp, trgt, oftype, args[0]);
             }
-            case "NSCore::-=prefix=(NSCore::Rational)": {
+            case "__i__Core::-=prefix=(Rational)": {
                 return ICPPOpEmitter.genNegateOp(sinfo, OpCodeTag.NegateRationalOp, trgt, oftype, args[0]);
             }
-            case "NSCore::-=prefix=(NSCore::Float)": {
+            case "__i__Core::-=prefix=(Float)": {
                 return ICPPOpEmitter.genNegateOp(sinfo, OpCodeTag.NegateFloatOp, trgt, oftype, args[0]);
             }
-            case "NSCore::-=prefix=(NSCore::Decimal)": {
+            case "__i__Core::-=prefix=(Decimal)": {
                 return ICPPOpEmitter.genNegateOp(sinfo, OpCodeTag.NegateDecimalOp, trgt, oftype, args[0]);
             }
             //op infix +
-            case "NSCore::+=infix=(NSCore::Int, NSCore::Int)": {
+            case "__i__Core::+=infix=(Int, Int)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.AddIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::+=infix=(NSCore::Nat, NSCore::Nat)": {
+            case "__i__Core::+=infix=(Nat, Nat)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.AddNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::+=infix=(NSCore::BigInt, NSCore::BigInt)": {
+            case "__i__Core::+=infix=(BigInt, BigInt)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.AddBigIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::+=infix=(NSCore::BigNat, NSCore::BigNat)": {
+            case "__i__Core::+=infix=(BigNat, BigNat)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.AddBigNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::+=infix=(NSCore::Rational, NSCore::Rational)": {
+            case "__i__Core::+=infix=(Rational, Rational)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.AddRationalOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::+=infix=(NSCore::Float, NSCore::Float)": {
+            case "__i__Core::+=infix=(Float, Float)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.AddFloatOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::+=infix=(NSCore::Decimal, NSCore::Decimal)": {
+            case "__i__Core::+=infix=(Decimal, Decimal)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.AddDecimalOp, trgt, oftype, args[0], args[1]);
             }
             //op infix -
-            case "NSCore::-=infix=(NSCore::Int, NSCore::Int)": {
+            case "__i__Core::-=infix=(Int, Int)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.SubIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::-=infix=(NSCore::Nat, NSCore::Nat)": {
+            case "__i__Core::-=infix=(Nat, Nat)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.SubNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::-=infix=(NSCore::BigInt, NSCore::BigInt)": {
+            case "__i__Core::-=infix=(BigInt, BigInt)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.SubBigIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::-=infix=(NSCore::BigNat, NSCore::BigNat)": {
+            case "__i__Core::-=infix=(BigNat, BigNat)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.SubBigNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::-=infix=(NSCore::Rational, NSCore::Rational)": {
+            case "__i__Core::-=infix=(Rational, Rational)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.SubRationalOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::-=infix=(NSCore::Float, NSCore::Float)": {
+            case "__i__Core::-=infix=(Float, Float)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.SubFloatOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::-=infix=(NSCore::Decimal, NSCore::Decimal)": {
+            case "__i__Core::-=infix=(Decimal, Decimal)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.SubDecimalOp, trgt, oftype, args[0], args[1]);
             }
             //op infix *
-            case "NSCore::*=infix=(NSCore::Int, NSCore::Int)": {
+            case "__i__Core::*=infix=(Int, Int)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.MultIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::*=infix=(NSCore::Nat, NSCore::Nat)": {
+            case "__i__Core::*=infix=(Nat, Nat)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.MultNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::*=infix=(NSCore::BigInt, NSCore::BigInt)": {
+            case "__i__Core::*=infix=(BigInt, BigInt)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.MultBigIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::*=infix=(NSCore::BigNat, NSCore::BigNat)": {
+            case "__i__Core::*=infix=(BigNat, BigNat)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.MultBigNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::*=infix=(NSCore::Rational, NSCore::Rational)": {
+            case "__i__Core::*=infix=(Rational, Rational)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.MultRationalOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::*=infix=(NSCore::Float, NSCore::Float)": {
+            case "__i__Core::*=infix=(Float, Float)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.MultFloatOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::*=infix=(NSCore::Decimal, NSCore::Decimal)": {
+            case "__i__Core::*=infix=(Decimal, Decimal)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.MultDecimalOp, trgt, oftype, args[0], args[1]);
             }
             //op infix /
-            case "NSCore::/=infix=(NSCore::Int, NSCore::Int)": {
+            case "__i__Core::/=infix=(Int, Int)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.DivIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::/=infix=(NSCore::Nat, NSCore::Nat)": {
+            case "__i__Core::/=infix=(Nat, Nat)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.DivNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::/=infix=(NSCore::BigInt, NSCore::BigInt)": {
+            case "__i__Core::/=infix=(BigInt, BigInt)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.DivBigIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::/=infix=(NSCore::BigNat, NSCore::BigNat)": {
+            case "__i__Core::/=infix=(BigNat, BigNat)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.DivBigNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::/=infix=(NSCore::Rational, NSCore::Rational)": {
+            case "__i__Core::/=infix=(Rational, Rational)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.DivRationalOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::/=infix=(NSCore::Float, NSCore::Float)": {
+            case "__i__Core::/=infix=(Float, Float)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.DivFloatOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::/=infix=(NSCore::Decimal, NSCore::Decimal)": {
+            case "__i__Core::/=infix=(Decimal, Decimal)": {
                 return ICPPOpEmitter.genBinaryOp(sinfo, OpCodeTag.DivDecimalOp, trgt, oftype, args[0], args[1]);
             }
             //op infix ==
-            case "NSCore::===infix=(NSCore::Int, NSCore::Int)": {
+            case "__i__Core::===infix=(Int, Int)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.EqIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::===infix=(NSCore::Nat, NSCore::Nat)": {
+            case "__i__Core::===infix=(Nat, Nat)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.EqNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::===infix=(NSCore::BigInt, NSCore::BigInt)": {
+            case "__i__Core::===infix=(BigInt, BigInt)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.EqBigIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::===infix=(NSCore::BigNat, NSCore::BigNat)": {
+            case "__i__Core::===infix=(BigNat, BigNat)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.EqBigNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::===infix=(NSCore::Rational, NSCore::Rational)": {
+            case "__i__Core::===infix=(Rational, Rational)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.EqRationalOp, trgt, oftype, args[0], args[1]);
             }
+            case "__i__Core::===infix=(Float, Float)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.EqFloatOp, trgt, oftype, args[0], args[1]);
+            }
+            case "__i__Core::===infix=(Decimal, Decmial)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.EqDecimalOp, trgt, oftype, args[0], args[1]);
+            }
             //op infix !=
-            case "NSCore::!==infix=(NSCore::Int, NSCore::Int)": {
+            case "__i__Core::!==infix=(Int, Int)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.NeqIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::!==infix=(NSCore::Nat, NSCore::Nat)": {
+            case "__i__Core::!==infix=(Nat, Nat)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.NeqNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::!==infix=(NSCore::BigInt, NSCore::BigInt)": {
+            case "__i__Core::!==infix=(BigInt, BigInt)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.NeqBigIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::!==infix=(NSCore::BigNat, NSCore::BigNat)": {
+            case "__i__Core::!==infix=(BigNat, BigNat)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.NeqBigNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::!==infix=(NSCore::Rational, NSCore::Rational)": {
+            case "__i__Core::!==infix=(Rational, Rational)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.NeqRationalOp, trgt, oftype, args[0], args[1]);
             }
+            case "__i__Core::!==infix=(Float, Float)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.NeqFloatOp, trgt, oftype, args[0], args[1]);
+            }
+            case "__i__Core::!==infix=(Decimal, Decimal)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.NeqDecimalOp, trgt, oftype, args[0], args[1]);
+            }
             //op infix <
-            case "NSCore::<=infix=(NSCore::Int, NSCore::Int)": {
+            case "__i__Core::<=infix=(Int, Int)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::<=infix=(NSCore::Nat, NSCore::Nat)": {
+            case "__i__Core::<=infix=(Nat, Nat)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::<=infix=(NSCore::BigInt, NSCore::BigInt)": {
+            case "__i__Core::<=infix=(BigInt, BigInt)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtBigIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::<=infix=(NSCore::BigNat, NSCore::BigNat)": {
+            case "__i__Core::<=infix=(BigNat, BigNat)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtBigNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::<=infix=(NSCore::Rational, NSCore::Rational)": {
+            case "__i__Core::<=infix=(Rational, Rational)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtRationalOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::<=infix=(NSCore::Float, NSCore::Float)": {
+            case "__i__Core::<=infix=(Float, Float)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtFloatOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::<=infix=(NSCore::Decimal, NSCore::Decimal)": {
+            case "__i__Core::<=infix=(Decimal, Decimal)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtDecimalOp, trgt, oftype, args[0], args[1]);
             }
             //op infix >
-            case "NSCore::>=infix=(NSCore::Int, NSCore::Int)": {
-                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GtIntOp, trgt, oftype, args[0], args[1]);
+            case "__i__Core::>=infix=(Int, Int)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtIntOp, trgt, oftype, args[1], args[0]);
             }
-            case "NSCore::>=infix=(NSCore::Nat, NSCore::Nat)": {
-                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GtNatOp, trgt, oftype, args[0], args[1]);
+            case "__i__Core::>=infix=(Nat, Nat)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtNatOp, trgt, oftype, args[1], args[0]);
             }
-            case "NSCore::>=infix=(NSCore::BigInt, NSCore::BigInt)": {
-                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GtBigIntOp, trgt, oftype, args[0], args[1]);
+            case "__i__Core::>=infix=(BigInt, BigInt)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtBigIntOp, trgt, oftype, args[1], args[0]);
             }
-            case "NSCore::>=infix=(NSCore::BigNat, NSCore::BigNat)": {
-                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GtBigNatOp, trgt, oftype, args[0], args[1]);
+            case "__i__Core::>=infix=(BigNat, BigNat)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtBigNatOp, trgt, oftype, args[1], args[0]);
             }
-            case "NSCore::>=infix=(NSCore::Rational, NSCore::Rational)": {
-                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GtRationalOp, trgt, oftype, args[0], args[1]);
+            case "__i__Core::>=infix=(Rational, Rational)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtRationalOp, trgt, oftype, args[1], args[0]);
             }
-            case "NSCore::>=infix=(NSCore::Float, NSCore::Float)": {
-                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GtFloatOp, trgt, oftype, args[0], args[1]);
+            case "__i__Core::>=infix=(Float, Float)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtFloatOp, trgt, oftype, args[1], args[0]);
             }
-            case "NSCore::>=infix=(NSCore::Decimal, NSCore::Decimal)": {
-                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GtDecimalOp, trgt, oftype, args[0], args[1]);
+            case "__i__Core::>=infix=(Decimal, Decimal)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtDecimalOp, trgt, oftype, args[1], args[0]);
             }
             //op infix <=
-            case "NSCore::<==infix=(NSCore::Int, NSCore::Int)": {
+            case "__i__Core::<==infix=(Int, Int)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::<==infix=(NSCore::Nat, NSCore::Nat)": {
+            case "__i__Core::<==infix=(Nat, Nat)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::<==infix=(NSCore::BigInt, NSCore::BigInt)":  {
+            case "__i__Core::<==infix=(BigInt, BigInt)":  {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeBigIntOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::<==infix=(NSCore::BigNat, NSCore::BigNat)": {
+            case "__i__Core::<==infix=(BigNat, BigNat)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeBigNatOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::<==infix=(NSCore::Rational, NSCore::Rational)": {
+            case "__i__Core::<==infix=(Rational, Rational)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeRationalOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::<==infix=(NSCore::Float, NSCore::Float)": {
+            case "__i__Core::<==infix=(Float, Float)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeFloatOp, trgt, oftype, args[0], args[1]);
             }
-            case "NSCore::<==infix=(NSCore::Decimal, NSCore::Decimal)": {
+            case "__i__Core::<==infix=(Decimal, Decimal)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeDecimalOp, trgt, oftype, args[0], args[1]);
             }
             //op infix >=
-            case "NSCore::>==infix=(NSCore::Int, NSCore::Int)": {
-                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GeIntOp, trgt, oftype, args[0], args[1]);
+            case "__i__Core::>==infix=(Int, Int)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeIntOp, trgt, oftype, args[1], args[0]);
             }
-            case "NSCore::>==infix=(NSCore::Nat, NSCore::Nat)": {
-                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GeNatOp, trgt, oftype, args[0], args[1]);
+            case "__i__Core::>==infix=(Nat, Nat)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeNatOp, trgt, oftype, args[1], args[0]);
             }
-            case "NSCore::>==infix=(NSCore::BigInt, NSCore::BigInt)": {
-                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GeBigIntOp, trgt, oftype, args[0], args[1]);
+            case "__i__Core::>==infix=(BigInt, BigInt)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeBigIntOp, trgt, oftype, args[1], args[0]);
             }
-            case "NSCore::>==infix=(NSCore::BigNat, NSCore::BigNat)": {
-                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GeBigNatOp, trgt, oftype, args[0], args[1]);
+            case "__i__Core::>==infix=(BigNat, BigNat)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeBigNatOp, trgt, oftype, args[1], args[0]);
             }
-            case "NSCore::>==infix=(NSCore::Rational, NSCore::Rational)":{
-                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GeRationalOp, trgt, oftype, args[0], args[1]);
+            case "__i__Core::>==infix=(Rational, Rational)":{
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeRationalOp, trgt, oftype, args[1], args[0]);
             }
-            case "NSCore::>==infix=(NSCore::Float, NSCore::Float)": {
-                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GeFloatOp, trgt, oftype, args[0], args[1]);
+            case "__i__Core::>==infix=(Float, Float)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeFloatOp, trgt, oftype, args[1], args[0]);
             }
-            case "NSCore::>==infix=(NSCore::Decimal, NSCore::Decimal)": {
-                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GeDecimalOp, trgt, oftype, args[0], args[1]);
-            }
-            case "NSCore::===infix=(NSCore::StringPos, NSCore::StringPos)": {
-                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.EqStrPosOp, trgt, oftype, args[0], args[1]);
-            }
-            case "NSCore::!==infix=(NSCore::StringPos, NSCore::StringPos)": {
-                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.NeqStrPosOp, trgt, oftype, args[0], args[1]);
-            }
-            case "NSCore::<=infix=(NSCore::StringPos, NSCore::StringPos)": {
-                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LtStrPosOp, trgt, oftype, args[0], args[1]);
-            }
-            case "NSCore::>=infix=(NSCore::StringPos, NSCore::StringPos)": {
-                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GtStrPosOp, trgt, oftype, args[0], args[1]);
-            }
-            case "NSCore::<==infix=(NSCore::StringPos, NSCore::StringPos)": {
-                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeStrPosOp, trgt, oftype, args[0], args[1]);
-            }
-            case "NSCore::>==infix=(NSCore::StringPos, NSCore::StringPos)": {
-                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.GeStrPosOp, trgt, oftype, args[0], args[1]);
+            case "__i__Core::>==infix=(Decimal, Decimal)": {
+                return ICPPOpEmitter.genCmpOp(sinfo, OpCodeTag.LeDecimalOp, trgt, oftype, args[1], args[0]);
             }
             default: {
                 return NOT_IMPLEMENTED(op);
@@ -1493,11 +1692,12 @@ class ICPPBodyEmitter {
         }
     }
 
-    generateBlockExps(blocks: Map<string, MIRBasicBlock>, blockrevorder: string[]): ICPPOp[] {
+    generateBlockExps(blocks: Map<string, MIRBasicBlock>, blockinorder: string[], blockrevorder: string[]): ICPPOp[] {
         let icppblocks = new Map<string, ICPPOp[]>();
 
         //Generate basic logic
-        blocks.forEach((bb) => {
+        blockinorder.forEach((bbid) => {
+            const bb = blocks.get(bbid) as MIRBasicBlock;
             let ii = Math.max(0, bb.ops.findIndex((op) => !(op instanceof MIRPhi)));
 
             if(ii !== 0) { 
@@ -1586,24 +1786,25 @@ class ICPPBodyEmitter {
 
     generateICPPInvoke(idecl: MIRInvokeDecl): ICPPInvokeDecl | undefined {
         const params = idecl.params.map((arg) => {
-            return new ICPPFunctionParameter(arg.name, this.typegen.getICPPTypeData(this.typegen.getMIRType(arg.type)));
+            return new ICPPFunctionParameter(arg.name, arg.type);
         });
 
-        let paramsmap: Map<string, number> = new Map<string, number>();
+        this.initializeBodyGen(idecl.srcFile, this.typegen.getMIRType(idecl.resultType));
+
+        let paraminfo: ParameterInfo[] = [];
         for(let i = 0; i < idecl.params.length; ++i) {
             const param = idecl.params[i];
-            paramsmap.set(param.name, i);
+            const ptype = this.typegen.getICPPLayoutInfo(this.typegen.getMIRType(param.type));
+
+            paraminfo.push(this.getStackInfoForArgumentVar(param.name, ptype));
         }
 
-        const rtype = this.typegen.getICPPTypeData(this.typegen.getMIRType(idecl.resultType));
-
-        this.initializeBodyGen(idecl.srcFile, this.typegen.getMIRType(idecl.resultType), paramsmap);
-
         if (idecl instanceof MIRInvokeBodyDecl) {
-            const revblocks = topologicalOrder((idecl as MIRInvokeBodyDecl).body.body).reverse().map((bb) => bb.label);
-            const body = this.generateBlockExps((idecl as MIRInvokeBodyDecl).body.body, revblocks);
+            const inorderblocks = topologicalOrder((idecl as MIRInvokeBodyDecl).body.body).map((bb) => bb.label);
+            const revblocks = [...inorderblocks].reverse();
+            const body = this.generateBlockExps((idecl as MIRInvokeBodyDecl).body.body, inorderblocks, revblocks);
 
-            return new ICPPInvokeBodyDecl(idecl.iname, idecl.key, idecl.srcFile, idecl.sourceLocation, idecl.recursive, params, rtype, this.getStackInfoForArgVar("$$return"), this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), this.masksize, body, idecl.masksize);
+            return new ICPPInvokeBodyDecl(idecl.shortname, idecl.ikey, idecl.srcFile, idecl.sourceLocation, idecl.recursive, params, paraminfo, idecl.resultType, this.getStackInfoForArgVar("$$return"), this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), this.masksize, body, idecl.masksize);
         }
         else {
             assert(idecl instanceof MIRInvokePrimitiveDecl);
@@ -1618,43 +1819,19 @@ class ICPPBodyEmitter {
         }
         
         const params = idecl.params.map((arg) => {
-            return new ICPPFunctionParameter(arg.name, this.typegen.getICPPTypeData(this.typegen.getMIRType(arg.type)));
-        });
-
-        const rtype = this.typegen.getICPPTypeData(this.typegen.getMIRType(idecl.resultType));
-
-        let scalarsmap: Map<string, [number, MIRResolvedTypeKey]> = new Map<string, [number, MIRResolvedTypeKey]>();
-        let spoffset: number = 0;
-        for(let i = 0; i < idecl.scalarslotsinfo.length; ++i) {
-            const slot = idecl.scalarslotsinfo[i];
-            const stype = this.typegen.getICPPTypeData(this.typegen.getMIRType(slot.vtype));
-            scalarsmap.set(slot.vname, [spoffset, slot.vtype]);
-            spoffset += stype.allocinfo.inlinedatasize;
-        }
-
-        let mixedmap: Map<string, [number, MIRResolvedTypeKey]> = new Map<string, [number, MIRResolvedTypeKey]>();
-        let mpoffset: number = 0;
-        let mmask = "";
-        for(let i = 0; i < idecl.mixedslotsinfo.length; ++i) {
-            const slot = idecl.mixedslotsinfo[i];
-            const mtype = this.typegen.getICPPTypeData(this.typegen.getMIRType(slot.vtype));
-            mixedmap.set(slot.vname, [mpoffset, slot.vtype]);
-            mpoffset += mtype.allocinfo.inlinedatasize;
-            mmask = mmask + mtype.allocinfo.inlinedmask;
-        }
-
-        let binds: Map<string, ICPPType> = new Map<string, ICPPType>();
-        idecl.binds.forEach((btype, bname) => {
-            binds.set(bname, this.typegen.getICPPTypeData(this.typegen.getMIRType(btype)));
+            return new ICPPFunctionParameter(arg.name, arg.type);
         });
 
         let pcodes: Map<string, ICPPPCode> = new Map<string, ICPPPCode>();
         idecl.pcodes.forEach((pc, pcname) => {
-            const icpppc = new ICPPPCode(pc.code, pc.cargs.map((carg) => ICPPOpEmitter.genParameterArgument(this.argsMap.get(carg) as number)));
+            const ctypes = pc.cargs.map((carg) => carg.ctype);
+            const cargs = pc.cargs.map((carg) => idecl.params.findIndex((pp) => pp.name == carg.cname));
+
+            const icpppc = new ICPPPCode(pc.code, ctypes, cargs);
             pcodes.set(pcname, icpppc);
         });
 
-        return new ICPPInvokePrimitiveDecl(idecl.iname, idecl.key, idecl.srcFile, idecl.sourceLocation, idecl.recursive, params, rtype, spoffset, mpoffset, mmask, 0, idecl.enclosingDecl, idecl.implkey, scalarsmap, mixedmap, binds, pcodes);
+        return new ICPPInvokePrimitiveDecl(idecl.shortname, idecl.ikey, idecl.srcFile, idecl.sourceLocation, idecl.recursive, params, idecl.resultType, idecl.enclosingDecl, idecl.implkey, idecl.binds, pcodes);
     }
 }
 

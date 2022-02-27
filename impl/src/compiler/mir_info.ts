@@ -8,7 +8,7 @@
 //
 
 import { MIRAssembly, MIRFunctionParameter, MIRType } from "./mir_assembly";
-import { MIRBasicBlock, MIROpTag, MIRJump, MIRJumpCond, MIRJumpNone, MIROp, MIRRegisterArgument, MIRPhi, MIRLoadUnintVariableValue, MIRConvertValue, MIRLoadConst, MIRTupleHasIndex, MIRRecordHasProperty, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadField, MIRTupleProjectToEphemeral, MIRRecordProjectToEphemeral, MIREntityProjectToEphemeral, MIRTupleUpdate, MIRRecordUpdate, MIREntityUpdate, MIRLoadFromEpehmeralList, MIRMultiLoadFromEpehmeralList, MIRSliceEpehmeralList, MIRInvokeFixedFunction, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConstructorRecord, MIRReturnAssignOfCons, MIRReturnAssign, MIRIsTypeOf, MIRPrefixNotOp, MIRBinKeyLess, MIRBinKeyEq, MIRConstructorPrimaryCollectionMixed, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionSingletons, MIRConstructorPrimaryCollectionEmpty, MIREphemeralListExtend, MIRConstructorEphemeralList, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRConstructorRecordFromEphemeralList, MIRResolvedTypeKey, MIRArgGuard, MIRRegisterAssign, MIRArgument, MIRConstantArgument, MIRStatmentGuard, MIRInject, MIRGuardedOptionInject, MIRExtract } from "./mir_ops";
+import { MIRBasicBlock, MIROpTag, MIRJump, MIRJumpCond, MIRJumpNone, MIROp, MIRRegisterArgument, MIRPhi, MIRLoadUnintVariableValue, MIRConvertValue, MIRLoadConst, MIRTupleHasIndex, MIRRecordHasProperty, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadField, MIRTupleProjectToEphemeral, MIRRecordProjectToEphemeral, MIREntityProjectToEphemeral, MIRTupleUpdate, MIRRecordUpdate, MIREntityUpdate, MIRLoadFromEpehmeralList, MIRMultiLoadFromEpehmeralList, MIRSliceEpehmeralList, MIRInvokeFixedFunction, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConstructorRecord, MIRReturnAssignOfCons, MIRReturnAssign, MIRIsTypeOf, MIRPrefixNotOp, MIRBinKeyLess, MIRBinKeyEq, MIRConstructorPrimaryCollectionMixed, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionSingletons, MIRConstructorPrimaryCollectionEmpty, MIREphemeralListExtend, MIRConstructorEphemeralList, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRConstructorRecordFromEphemeralList, MIRResolvedTypeKey, MIRArgGuard, MIRRegisterAssign, MIRInject, MIRGuardedOptionInject, MIRExtract, MIRLogicAction, MIRConstructorEntityDirect } from "./mir_ops";
 
 type FlowLink = {
     label: string,
@@ -374,6 +374,11 @@ function computeVarTypes(blocks: Map<string, MIRBasicBlock>, params: MIRFunction
                     vinfo.set(tc.trgt.nameID, tc.resultEphemeralListType);
                     break;
                 }
+                case MIROpTag.MIRConstructorEntityDirect: {
+                    const tc = op as MIRConstructorEntityDirect;
+                    vinfo.set(tc.trgt.nameID, tc.entityType);
+                    break;
+                }
                 case MIROpTag.MIREphemeralListExtend: {
                     const pse = op as MIREphemeralListExtend;
                     vinfo.set(pse.trgt.nameID, pse.resultType);
@@ -412,6 +417,11 @@ function computeVarTypes(blocks: Map<string, MIRBasicBlock>, params: MIRFunction
                 case MIROpTag.MIRPrefixNotOp: {
                     const pfx = op as MIRPrefixNotOp;
                     vinfo.set(pfx.trgt.nameID, booltype);
+                    break;
+                }
+                case MIROpTag.MIRLogicAction: {
+                    const it = op as MIRLogicAction;
+                    vinfo.set(it.trgt.nameID, booltype);
                     break;
                 }
                 case MIROpTag.MIRIsTypeOf: {
@@ -454,207 +464,4 @@ function computeVarTypes(blocks: Map<string, MIRBasicBlock>, params: MIRFunction
     return vresinfo;
 }
 
-function maxConst(cc: bigint, vv: number): bigint {
-    const bvv = BigInt(vv);
-    return cc >= bvv ? cc : bvv;
-}
-
-function maxConsts(cc: bigint, vv: number[]): bigint {
-    for (let i = 0; i < vv.length; ++i) {
-        const bvv = BigInt(vv[i]);
-        cc = cc >= bvv ? cc : bvv;
-    }
-    return cc;
-}
-
-function maxConstArg(cc: bigint, arg: MIRArgument): bigint {
-    if(arg instanceof MIRConstantArgument) {
-        const args = arg.constantSize();
-        return cc >= args ? cc : args;
-    }
-    else {
-        return cc;
-    }
-}
-
-function maxConstArgs(cc: bigint, args: MIRArgument[]): bigint {
-    for(let i = 0; i < args.length; ++i) {
-        cc = maxConstArg(cc, args[i]);
-    }
-
-    return cc;
-}
-
-
-function maxStructuredArgs<T>(cc: bigint, args: T[], extract: (arg: T) => MIRArgument): bigint {
-    for(let i = 0; i < args.length; ++i) {
-        cc = maxConstArg(cc, extract(args[i]));
-    }
-
-    return cc;
-}
-
-function maxStatementGuard(cc: bigint, arg: MIRStatmentGuard | undefined): bigint {
-    if(arg === undefined) {
-        return cc;
-    }
-    else {
-        if(arg.defaultvar === undefined) {
-            return cc;
-        } 
-        else {
-            return maxConstArg(cc, arg.defaultvar);
-        }
-    }
-}
-
-function computeMaxConstantSize(blocks: Map<string, MIRBasicBlock>): bigint {
-    let cc = 0n;
-
-    blocks.forEach((bb) => {
-        bb.ops.forEach((op) => {
-            switch (op.tag) {
-                case MIROpTag.MIRConvertValue: {
-                    const conv = op as MIRConvertValue;
-                    cc = maxConstArg(cc, conv.src);
-                    cc = maxStatementGuard(cc, conv.sguard);
-                    break;
-                }
-                case MIROpTag.MIRInject: {
-                    const inj = op as MIRInject;
-                    cc = maxConstArg(cc, inj.src);
-                    break;
-                }
-                case MIROpTag.MIRGuardedOptionInject: {
-                    const inj = op as MIRGuardedOptionInject;
-                    cc = maxConstArg(cc, inj.src);
-                    cc = maxStatementGuard(cc, inj.sguard);
-                    break;
-                }
-                case MIROpTag.MIRExtract: {
-                    const ext = op as MIRExtract;
-                    cc = maxConstArg(cc, ext.src);
-                    break;
-                }
-                case MIROpTag.MIRTupleHasIndex: {
-                    const thi = op as MIRTupleHasIndex;
-                    cc = maxConst(cc, thi.idx);
-                    break;
-                }
-                case MIROpTag.MIRLoadTupleIndex: {
-                    const lti = op as MIRLoadTupleIndex;
-                    cc = maxConst(cc, lti.idx);
-                    break;
-                }
-                case MIROpTag.MIRLoadTupleIndexSetGuard: {
-                    const ltig = op as MIRLoadTupleIndexSetGuard;
-                    cc = maxConst(cc, ltig.idx);
-                    break;
-                }
-                case MIROpTag.MIRTupleProjectToEphemeral: {
-                    const pte = op as MIRTupleProjectToEphemeral;
-                    cc = maxConsts(cc, pte.indecies);
-                    break;
-                }
-                case MIROpTag.MIRTupleUpdate: {
-                    const mi = op as MIRTupleUpdate;
-                    cc = maxConsts(cc, mi.updates.map((uu) => uu[0]));
-                    cc = maxStructuredArgs(cc, mi.updates, (uu) => uu[1]);
-                    break;
-                }
-                case MIROpTag.MIRLoadFromEpehmeralList: {
-                    const mle = op as MIRLoadFromEpehmeralList;
-                    cc = maxConst(cc, mle.idx);
-                    break;
-                }
-                case MIROpTag.MIRMultiLoadFromEpehmeralList: {
-                    const mle = op as MIRMultiLoadFromEpehmeralList;
-                    cc = maxConsts(cc, mle.trgts.map((ll) => ll.pos));
-                    break;
-                }
-                case MIROpTag.MIRInvokeFixedFunction: {
-                    const invk = op as MIRInvokeFixedFunction;
-                    cc = maxConstArgs(cc, invk.args);
-                    cc = maxStatementGuard(cc, invk.sguard);
-                    break;
-                }
-                case MIROpTag.MIRInvokeVirtualFunction: {
-                    const invk = op as MIRInvokeVirtualFunction;
-                    cc = maxConstArgs(cc, invk.args);
-                    break;
-                }
-                case MIROpTag.MIRInvokeVirtualOperator: {
-                    const invk = op as MIRInvokeVirtualOperator;
-                    cc = maxStructuredArgs(cc, invk.args, (vv) => vv.arg);
-                    break;
-                }
-                case MIROpTag.MIRConstructorTuple: {
-                    const tc = op as MIRConstructorTuple;
-                    cc = maxConstArgs(cc, tc.args);
-                    break;
-                }
-                case MIROpTag.MIRConstructorPrimaryCollectionSingletons: {
-                    const cps = op as MIRConstructorPrimaryCollectionSingletons;
-                    cc = maxStructuredArgs(cc, cps.args, (vv) => vv[1]);
-                    break;
-                }
-                case MIROpTag.MIRConstructorPrimaryCollectionCopies: {
-                    const cpc = op as MIRConstructorPrimaryCollectionCopies;
-                    cc = maxStructuredArgs(cc, cpc.args, (vv) => vv[1]);
-                    break;
-                }
-                case MIROpTag.MIRConstructorPrimaryCollectionMixed: {
-                    const cpm = op as MIRConstructorPrimaryCollectionMixed;
-                    cc = maxStructuredArgs(cc, cpm.args, (vv) => vv[2]);
-                    break;
-                }
-                case MIROpTag.MIRBinKeyEq: {
-                    const beq = op as MIRBinKeyEq;
-                    cc = maxConstArgs(cc, [beq.lhs, beq.rhs]);
-                    cc = maxStatementGuard(cc, beq.sguard);
-                    break;
-                }
-                case MIROpTag.MIRBinKeyLess: {
-                    const bl = op as MIRBinKeyLess;
-                    cc = maxConstArgs(cc, [bl.lhs, bl.rhs]);
-                    cc = maxStatementGuard(cc, bl.sguard);
-                    break;
-                }
-                case MIROpTag.MIRIsTypeOf: {
-                    const it = op as MIRIsTypeOf;
-                    cc = maxConstArg(cc, it.arg);
-                    cc = maxStatementGuard(cc, it.sguard);
-                    break;
-                }
-                case MIROpTag.MIRJumpNone: {
-                    const njop = op as MIRJumpNone;
-                    cc = maxConstArg(cc, njop.arg);
-                    break;
-                }
-                case MIROpTag.MIRRegisterAssign: {
-                    const regop = op as MIRRegisterAssign;
-                    cc = maxConstArg(cc, regop.src);
-                    cc = maxStatementGuard(cc, regop.sguard);
-                    break;
-                }
-                case MIROpTag.MIRReturnAssign: {
-                    const ra = op as MIRReturnAssign;
-                    cc = maxConstArg(cc, ra.src);
-                    break;
-                }
-                case MIROpTag.MIRReturnAssignOfCons: {
-                    const ra = op as MIRReturnAssignOfCons;
-                    cc = maxConstArgs(cc, ra.args);
-                    break;
-                }
-                default: {
-                    break;
-                }
-            }
-        });
-    });
-
-   return cc;
-}
-
-export { FlowLink, BlockLiveSet, computeDominators, topologicalOrder, computeBlockLinks, computeBlockLiveVars, computeVarTypes, computeMaxConstantSize };
+export { FlowLink, BlockLiveSet, computeDominators, topologicalOrder, computeBlockLinks, computeBlockLiveVars, computeVarTypes };

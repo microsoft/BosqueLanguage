@@ -36,12 +36,12 @@ Notes:
    \defgroup cppapi C++ API
 
 */
-/*@{*/
+/**@{*/
 
 /**
    @name C++ API classes and functions
 */
-/*@{*/
+/**@{*/
 
 /**
    \brief Z3 C++ namespace
@@ -334,6 +334,7 @@ namespace z3 {
         func_decl recfun(char const * name, sort const & d1, sort const & d2, sort const & range);
 
         void      recdef(func_decl, expr_vector const& args, expr const& body);
+        func_decl user_propagate_function(symbol const& name, sort_vector const& domain, sort const& range);
 
         expr constant(symbol const & name, sort const & s);
         expr constant(char const * name, sort const & s);
@@ -379,6 +380,7 @@ namespace z3 {
         expr string_val(char const* s);
         expr string_val(char const* s, unsigned n);
         expr string_val(std::string const& s);
+        expr string_val(std::u32string const& s);
 
         expr num_val(int n, sort const & s);
 
@@ -833,7 +835,7 @@ namespace z3 {
 
         double as_double() const { double d = 0; is_numeral(d); return d; }
         uint64_t as_uint64() const { uint64_t r = 0; is_numeral_u64(r); return r; }
-        uint64_t as_int64() const { int64_t r = 0; is_numeral_i64(r); return r; }
+        int64_t as_int64() const { int64_t r = 0; is_numeral_i64(r); return r; }
         
 
         /**
@@ -1100,23 +1102,29 @@ namespace z3 {
         bool is_string_value() const { return Z3_is_string(ctx(), m_ast); }
 
         /**
-           \brief for a string value expression return an escaped or unescaped string value.
+           \brief for a string value expression return an escaped string value.
            \pre expression is for a string value.
          */
 
-        std::string get_escaped_string() const {            
+        std::string get_string() const {            
             assert(is_string_value());
             char const* s = Z3_get_string(ctx(), m_ast);
             check_error();
             return std::string(s);
         }
 
-        std::string get_string() const {
+        /**
+           \brief for a string value expression return an unespaced string value.
+           \pre expression is for a string value.
+        */
+
+        std::u32string get_u32string() const {
             assert(is_string_value());
-            unsigned n;
-            char const* s = Z3_get_lstring(ctx(), m_ast, &n);
-            check_error();
-            return std::string(s, n);
+            unsigned n = Z3_get_string_length(ctx(), m_ast);
+            std::u32string s;
+            s.resize(n);
+            Z3_get_string_contents(ctx(), m_ast, n, (unsigned*)s.data());
+            return s;
         }
 
         operator Z3_app() const { assert(is_app()); return reinterpret_cast<Z3_app>(m_ast); }
@@ -1516,7 +1524,7 @@ namespace z3 {
         expr substitute(expr_vector const& dst);
 
 
-	class iterator {
+    class iterator {
             expr& e;
             unsigned i;
         public:
@@ -1904,7 +1912,7 @@ namespace z3 {
     }
     inline expr bvredand(expr const & a) {
         assert(a.is_bv());
-        Z3_ast r = Z3_mk_bvredor(a.ctx(), a);
+        Z3_ast r = Z3_mk_bvredand(a.ctx(), a);
         a.check_error();
         return expr(a.ctx(), r);
     }
@@ -1912,14 +1920,14 @@ namespace z3 {
         Z3_ast r;
         if (a.is_int()) {
             expr zero = a.ctx().int_val(0);
-	    expr ge = a >= zero;
-	    expr na = -a;
+        expr ge = a >= zero;
+        expr na = -a;
             r = Z3_mk_ite(a.ctx(), ge, a, na);	    
         }
         else if (a.is_real()) {
             expr zero = a.ctx().real_val(0);
-	    expr ge = a >= zero;
-	    expr na = -a;
+        expr ge = a >= zero;
+        expr na = -a;
             r = Z3_mk_ite(a.ctx(), ge, a, na);
         }
         else {
@@ -3417,6 +3425,14 @@ namespace z3 {
         Z3_add_rec_def(f.ctx(), f, vars.size(), vars.ptr(), body);
     }
 
+    inline func_decl context::user_propagate_function(symbol const& name, sort_vector const& domain, sort const& range) {
+        check_context(domain, range);
+        array<Z3_sort> domain1(domain);
+        Z3_func_decl f = Z3_solver_propagate_declare(range.ctx(), name, domain1.size(), domain1.ptr(), range);
+        check_error();
+        return func_decl(*this, f);
+    }
+
     inline expr context::constant(symbol const & name, sort const & s) {
         Z3_ast r = Z3_mk_const(m_ctx, name, s);
         check_error();
@@ -3480,6 +3496,7 @@ namespace z3 {
     inline expr context::string_val(char const* s, unsigned n) { Z3_ast r = Z3_mk_lstring(m_ctx, n, s); check_error(); return expr(*this, r); }
     inline expr context::string_val(char const* s) { Z3_ast r = Z3_mk_string(m_ctx, s); check_error(); return expr(*this, r); }
     inline expr context::string_val(std::string const& s) { Z3_ast r = Z3_mk_string(m_ctx, s.c_str()); check_error(); return expr(*this, r); }
+    inline expr context::string_val(std::u32string const& s) { Z3_ast r = Z3_mk_u32string(m_ctx, (unsigned)s.size(), (unsigned const*)s.c_str()); check_error(); return expr(*this, r); }
 
     inline expr context::num_val(int n, sort const & s) { Z3_ast r = Z3_mk_int(m_ctx, n, s); check_error(); return expr(*this, r); }
 
@@ -3780,6 +3797,13 @@ namespace z3 {
         ctx.check_error();
         return expr(ctx, r);
     }
+    inline expr re_diff(expr const& a, expr const& b) {
+        check_context(a, b);
+        context& ctx = a.ctx();
+        Z3_ast r = Z3_mk_re_diff(ctx, a, b);
+        ctx.check_error();
+        return expr(ctx, r);
+    }
     inline expr re_complement(expr const& a) {
         MK_EXPR1(Z3_mk_re_complement, a);
     }
@@ -3869,10 +3893,12 @@ namespace z3 {
         typedef std::function<void(unsigned, expr const&)> fixed_eh_t;
         typedef std::function<void(void)> final_eh_t;
         typedef std::function<void(unsigned, unsigned)> eq_eh_t;
+        typedef std::function<void(unsigned, expr const&)> created_eh_t;
 
         final_eh_t m_final_eh;
         eq_eh_t    m_eq_eh;
         fixed_eh_t m_fixed_eh;
+        created_eh_t m_created_eh;
         solver*    s;
         Z3_context c;
         Z3_solver_callback cb { nullptr };
@@ -3921,6 +3947,14 @@ namespace z3 {
             static_cast<user_propagator_base*>(p)->m_final_eh(); 
         }
 
+        static void created_eh(void* _p, Z3_solver_callback cb, Z3_ast _e, unsigned id) {
+            user_propagator_base* p = static_cast<user_propagator_base*>(_p);
+            scoped_cb _cb(p, cb);
+            scoped_context ctx(p->ctx());
+            expr e(ctx(), _e);
+            static_cast<user_propagator_base*>(p)->m_created_eh(id, e);
+        }
+
 
     public:
         user_propagator_base(Z3_context c) : s(nullptr), c(c) {}
@@ -3931,6 +3965,8 @@ namespace z3 {
 
         virtual void push() = 0;
         virtual void pop(unsigned num_scopes) = 0;
+
+        virtual ~user_propagator_base() = default;
 
         /**
            \brief user_propagators created using \c fresh() are created during 
@@ -3954,10 +3990,26 @@ namespace z3 {
             Z3_solver_propagate_fixed(ctx(), *s, fixed_eh); 
         }
 
+        void register_fixed() {
+            assert(s);
+            m_fixed_eh = [this](unsigned id, expr const& e) {
+                fixed(id, e);
+            };
+            Z3_solver_propagate_fixed(ctx(), *s, fixed_eh);
+        }
+
         void register_eq(eq_eh_t& f) { 
             assert(s);
             m_eq_eh = f; 
             Z3_solver_propagate_eq(ctx(), *s, eq_eh); 
+        }
+
+        void register_eq() {
+            assert(s);
+            m_eq_eh = [this](unsigned x, unsigned y) {
+                eq(x, y);
+            };
+            Z3_solver_propagate_eq(ctx(), *s, eq_eh);
         }
 
         /**
@@ -3973,6 +4025,35 @@ namespace z3 {
             m_final_eh = f; 
             Z3_solver_propagate_final(ctx(), *s, final_eh); 
         }
+        
+        void register_final() { 
+            assert(s);
+            m_final_eh = [this]() {
+                final();
+            };
+            Z3_solver_propagate_final(ctx(), *s, final_eh); 
+        }
+
+        void register_created(created_eh_t& c) {
+            assert(s);
+            m_created_eh = c;
+            Z3_solver_propagate_created(ctx(), *s, created_eh);
+        }
+
+        void register_created() {
+            m_created_eh = [this](unsigned id, expr const& e) {
+                created(id, e);
+            };
+            Z3_solver_propagate_created(ctx(), *s, created_eh);
+        }
+
+        virtual void fixed(unsigned /*id*/, expr const& /*e*/) { }
+
+        virtual void eq(unsigned /*x*/, unsigned /*y*/) { }
+
+        virtual void final() { }
+
+        virtual void created(unsigned /*id*/, expr const& /*e*/) {}
 
         /**
            \brief tracks \c e by a unique identifier that is returned by the call.
@@ -3989,8 +4070,12 @@ namespace z3 {
          */
 
         unsigned add(expr const& e) {
-            assert(s);
-            return Z3_solver_propagate_register(ctx(), *s, e);
+            if (cb)
+                return Z3_solver_propagate_register_cb(ctx(), cb, e);
+            if (s)
+                return Z3_solver_propagate_register(ctx(), *s, e);
+            assert(false);
+            return 0;
         }
 
         void conflict(unsigned num_fixed, unsigned const* fixed) {
@@ -4020,7 +4105,7 @@ namespace z3 {
 
 }
 
-/*@}*/
-/*@}*/
+/**@}*/
+/**@}*/
 #undef Z3_THROW
 

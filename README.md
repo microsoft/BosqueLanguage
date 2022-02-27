@@ -29,12 +29,6 @@ The move into cloud based development, with architectures based around microserv
 The Bosque project takes a cloud and IoT first view of programming languages. It includes features like API Types to simplify the construction and deployment of REST style APIs. Application initialization design provides 0-cost loading for lighting fast (cold) startup. Choices like fully determinized language semantics, keys and ordering, and memory behavior result in a runtime with minimal performance variability and enable ultra-low overhead tracing.
 
 ## News
-**September 2021:** Upcoming talk at Linux Foundation Open Source Summit in collaboration with folks from Morgan Stanley! [Agile and Dependable Service Development with Bosque and Morphir](https://events.linuxfoundation.org/open-source-summit-north-america/program/schedule/). 
-
-**June 2021**
-Pushing version 0.8.0 as new master -- this update obsoletes the previous prototype version and lays the ground work for an eventual stable release. Major rework was done in the language, type-checker, validator implementation, and runtime. More details will be posted soon but the headline is exciting improvements in all areas.
-
-However, this also means many many things are broken. Fixes and tests are coming online continuously and I will be opening a number of issues that are suitable for community contributions. Looking forward to seeing Bosque move from an exciting concept and toward a practical language!
 
 ## Documentation
 
@@ -84,21 +78,21 @@ doit([1, false], {f="ok", g=3}) //4
 **Sign (with default argument):**
 
 ```none
-function sign(x?: Int=0): Int {
+function sign(x?: Int=0i): Int {
     var y: Int;
 
-    if(x == 0) {
-        y = 0;
+    if(x == 0i) {
+        y = 0i;
     }
     else {
-        y = (x > 0) ? 1 : -1;
+        y = (x > 0i) ? 1i : -1i;
     }
 
     return y;
 }
 
-sign(5)    //1
-sign(-5)   //-1
+sign(5i)    //1
+sign(-5i)   //-1
 sign()     //0
 ```
 

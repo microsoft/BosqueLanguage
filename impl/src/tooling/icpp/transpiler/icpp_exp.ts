@@ -4,20 +4,20 @@
 //-------------------------------------------------------------------------------------------------------
 
 import { MIRFieldKey, MIRInvokeKey, MIRResolvedTypeKey, MIRVirtualMethodKey } from "../../../compiler/mir_ops";
-import { ICPP_WORD_SIZE, SourceInfo, UNIVERSAL_SIZE } from "./icpp_assembly";
+import { ICPP_WORD_SIZE, SourceInfo, UNIVERSAL_TOTAL_SIZE } from "./icpp_assembly";
 
 enum ArgumentTag
 {
     InvalidOp = 0x0,
     Const,
-    LocalScalar,
-    LocalMixed,
-    Argument
+    ScalarVal,
+    MixedVal
 }
 
 const EMPTY_CONST_POSITION = 0;
-const NONE_VALUE_POSITION = + UNIVERSAL_SIZE;
-const TRUE_VALUE_POSITION = NONE_VALUE_POSITION + ICPP_WORD_SIZE;
+const NONE_VALUE_POSITION = UNIVERSAL_TOTAL_SIZE;
+const NOTHING_VALUE_POSITION = NONE_VALUE_POSITION + ICPP_WORD_SIZE;
+const TRUE_VALUE_POSITION = NOTHING_VALUE_POSITION + ICPP_WORD_SIZE;
 const FALSE_VALUE_POSITION = TRUE_VALUE_POSITION + ICPP_WORD_SIZE;
 
 enum OpCodeTag
@@ -69,10 +69,7 @@ enum OpCodeTag
     EphemeralListExtendOp,
     ConstructorRecordFromEphemeralListOp,
     ConstructorEphemeralListOp,
-    ConstructorPrimaryCollectionEmptyOp,
-    ConstructorPrimaryCollectionSingletonsOp,
-    ConstructorPrimaryCollectionCopiesOp,
-    ConstructorPrimaryCollectionMixedOp,
+    ConstructorEntityDirect,
     PrefixNotOp,
     AllTrueOp,
     SomeTrueOp,
@@ -86,6 +83,7 @@ enum OpCodeTag
 
     TypeIsNoneOp,
     TypeIsSomeOp,
+    TypeIsNothingOp,
     TypeTagIsOp,
     TypeTagSubtypeOfOp,
     
@@ -138,11 +136,15 @@ enum OpCodeTag
     EqBigNatOp,
     EqBigIntOp,
     EqRationalOp,
+    EqFloatOp,
+    EqDecimalOp,
     NeqNatOp,
     NeqIntOp,
     NeqBigNatOp,
     NeqBigIntOp,
     NeqRationalOp,
+    NeqFloatOp,
+    NeqDecimalOp,
 
     LtNatOp,
     LtIntOp,
@@ -151,13 +153,6 @@ enum OpCodeTag
     LtRationalOp,
     LtFloatOp,
     LtDecimalOp,
-    GtNatOp,
-    GtIntOp,
-    GtBigNatOp,
-    GtBigIntOp,
-    GtRationalOp,
-    GtFloatOp,
-    GtDecimalOp,
 
     LeNatOp,
     LeIntOp,
@@ -165,21 +160,7 @@ enum OpCodeTag
     LeBigIntOp,
     LeRationalOp,
     LeFloatOp,
-    LeDecimalOp,
-    GeNatOp,
-    GeIntOp,
-    GeBigNatOp,
-    GeBigIntOp,
-    GeRationalOp,
-    GeFloatOp,
-    GeDecimalOp,
-
-    EqStrPosOp,
-    NeqStrPosOp,
-    LtStrPosOp,
-    GtStrPosOp,
-    LeStrPosOp,
-    GeStrPosOp,
+    LeDecimalOp
 }
 
 type Argument = {
@@ -190,6 +171,11 @@ type Argument = {
 type TargetVar = {
     kind: ArgumentTag;
     offset: number;
+};
+
+type ParameterInfo = {
+    kind: ArgumentTag;
+    poffset: number;
 };
 
 type ICPPGuard = {
@@ -214,16 +200,12 @@ class ICPPOpEmitter
         return { kind: ArgumentTag.Const, location: offset };
     }
 
-    static genLocalScalarArgument(offset: number): Argument {
-        return { kind: ArgumentTag.LocalScalar, location: offset };
+    static genScalarArgument(offset: number): Argument {
+        return { kind: ArgumentTag.ScalarVal, location: offset };
     }
 
-    static genLocalMixedArgument(offset: number): Argument {
-        return { kind: ArgumentTag.LocalMixed, location: offset };
-    }
-
-    static genParameterArgument(offset: number): Argument {
-        return { kind: ArgumentTag.Argument, location: offset };
+    static genMixedArgument(offset: number): Argument {
+        return { kind: ArgumentTag.MixedVal, location: offset };
     }
 
     static genMaskGuard(gindex: number, goffset: number): ICPPGuard {
@@ -254,8 +236,8 @@ class ICPPOpEmitter
         return {tag: OpCodeTag.AssertOp, sinfo: sinfo, arg: arg, msg: msg};
     }
     
-    static genDebugOp(sinfo: SourceInfo, arg: Argument): ICPPOp {
-        return {tag: OpCodeTag.DebugOp, sinfo: sinfo, arg: arg};
+    static genDebugOp(sinfo: SourceInfo, arg: Argument | undefined): ICPPOp {
+        return {tag: OpCodeTag.DebugOp, sinfo: sinfo, arg: arg || null};
     }
 
     static genLoadUnintVariableValueOp(sinfo: SourceInfo, trgt: TargetVar, oftype: MIRResolvedTypeKey): ICPPOp {
@@ -406,20 +388,8 @@ class ICPPOpEmitter
         return {tag: OpCodeTag.ConstructorEphemeralListOp, sinfo: sinfo, trgt: trgt, oftype: oftype, args: args};
     }
 
-    static genConstructorPrimaryCollectionEmptyOp(sinfo: SourceInfo, trgt: TargetVar, oftype: MIRResolvedTypeKey): ICPPOp {
-        return {tag: OpCodeTag.ConstructorPrimaryCollectionEmptyOp, sinfo: sinfo, trgt: trgt, oftype: oftype};
-    }
-
-    static genConstructorPrimaryCollectionSingletonsOp(sinfo: SourceInfo, trgt: TargetVar, oftype: MIRResolvedTypeKey, args: Argument[]): ICPPOp {
-        return {tag: OpCodeTag.ConstructorPrimaryCollectionSingletonsOp, sinfo: sinfo, trgt: trgt, oftype: oftype, args: args};
-    }
-
-    static genConstructorPrimaryCollectionCopiesOp(sinfo: SourceInfo, trgt: TargetVar, oftype: MIRResolvedTypeKey, args: Argument[]): ICPPOp {
-        return {tag: OpCodeTag.ConstructorPrimaryCollectionCopiesOp, sinfo: sinfo, trgt: trgt, oftype: oftype, args: args};
-    }
-
-    static genConstructorPrimaryCollectionMixedOp(sinfo: SourceInfo, trgt: TargetVar, oftype: MIRResolvedTypeKey, args: Argument[]): ICPPOp {
-        return {tag: OpCodeTag.ConstructorPrimaryCollectionMixedOp, sinfo: sinfo, trgt: trgt, oftype: oftype, args: args};
+    static genConstructorEntityDirectOp(sinfo: SourceInfo, trgt: TargetVar, oftype: MIRResolvedTypeKey, args: Argument[]): ICPPOp {
+        return {tag: OpCodeTag.ConstructorEntityDirect, sinfo: sinfo, trgt: trgt, oftype: oftype, args: args};
     }
 
     static genPrefixNotOp(sinfo: SourceInfo, trgt: TargetVar, arg: Argument): ICPPOp {
@@ -446,16 +416,16 @@ class ICPPOpEmitter
         return {tag: OpCodeTag.BinKeyEqVirtualOp, sinfo: sinfo, trgt: trgt, oftype: oftype, argl: argl, argllayout: argllayout, argr: argr, argrlayout: argrlayout, sguard: sguard };
     }
      
-    static genBinKeyLessFastOp(sinfo: SourceInfo, trgt: TargetVar, oftype: MIRResolvedTypeKey, argl: Argument, argr: Argument, sguard: ICPPStatementGuard): ICPPOp {
-        return {tag: OpCodeTag.BinKeyLessFastOp, sinfo: sinfo, trgt: trgt, oftype: oftype, argl: argl, argr: argr, sguard: sguard };
+    static genBinKeyLessFastOp(sinfo: SourceInfo, trgt: TargetVar, oftype: MIRResolvedTypeKey, argl: Argument, argr: Argument): ICPPOp {
+        return {tag: OpCodeTag.BinKeyLessFastOp, sinfo: sinfo, trgt: trgt, oftype: oftype, argl: argl, argr: argr };
     }
 
-    static genBinKeyLessStaticOp(sinfo: SourceInfo, trgt: TargetVar, oftype: MIRResolvedTypeKey, argl: Argument, argllayout: MIRResolvedTypeKey, argr: Argument, argrlayout: MIRResolvedTypeKey, sguard: ICPPStatementGuard): ICPPOp {
-        return {tag: OpCodeTag.BinKeyLessStaticOp, sinfo: sinfo, trgt: trgt, oftype: oftype, argl: argl, argllayout: argllayout, argr: argr, argrlayout: argrlayout, sguard: sguard };
+    static genBinKeyLessStaticOp(sinfo: SourceInfo, trgt: TargetVar, oftype: MIRResolvedTypeKey, argl: Argument, argllayout: MIRResolvedTypeKey, argr: Argument, argrlayout: MIRResolvedTypeKey): ICPPOp {
+        return {tag: OpCodeTag.BinKeyLessStaticOp, sinfo: sinfo, trgt: trgt, oftype: oftype, argl: argl, argllayout: argllayout, argr: argr, argrlayout: argrlayout };
     }
 
-    static genBinKeyLessVirtualOp(sinfo: SourceInfo, trgt: TargetVar, oftype: MIRResolvedTypeKey, argl: Argument, argllayout: MIRResolvedTypeKey, argr: Argument, argrlayout: MIRResolvedTypeKey, sguard: ICPPStatementGuard): ICPPOp {
-        return {tag: OpCodeTag.BinKeyLessVirtualOp, sinfo: sinfo, trgt: trgt, oftype: oftype, argl: argl, argllayout: argllayout, argr: argr, argrlayout: argrlayout, sguard: sguard };
+    static genBinKeyLessVirtualOp(sinfo: SourceInfo, trgt: TargetVar, oftype: MIRResolvedTypeKey, argl: Argument, argllayout: MIRResolvedTypeKey, argr: Argument, argrlayout: MIRResolvedTypeKey): ICPPOp {
+        return {tag: OpCodeTag.BinKeyLessVirtualOp, sinfo: sinfo, trgt: trgt, oftype: oftype, argl: argl, argllayout: argllayout, argr: argr, argrlayout: argrlayout };
     }
 
     static genTypeIsNoneOp(sinfo: SourceInfo, trgt: TargetVar, arg: Argument, arglayout: MIRResolvedTypeKey, sguard: ICPPStatementGuard): ICPPOp {
@@ -464,6 +434,10 @@ class ICPPOpEmitter
 
     static genTypeIsSomeOp(sinfo: SourceInfo, trgt: TargetVar, arg: Argument, arglayout: MIRResolvedTypeKey, sguard: ICPPStatementGuard): ICPPOp {
         return {tag: OpCodeTag.TypeIsSomeOp, sinfo: sinfo, trgt: trgt, arg: arg, arglayout: arglayout, sguard: sguard};
+    }
+
+    static genTypeIsNothingOp(sinfo: SourceInfo, trgt: TargetVar, arg: Argument, arglayout: MIRResolvedTypeKey, sguard: ICPPStatementGuard): ICPPOp {
+        return {tag: OpCodeTag.TypeIsNothingOp, sinfo: sinfo, trgt: trgt, arg: arg, arglayout: arglayout, sguard: sguard};
     }
 
     static genTypeTagIsOp(sinfo: SourceInfo, trgt: TargetVar, oftype: MIRResolvedTypeKey, arg: Argument, arglayout: MIRResolvedTypeKey, sguard: ICPPStatementGuard): ICPPOp {
@@ -521,8 +495,8 @@ class ICPPOpEmitter
 
 export {
     ArgumentTag, OpCodeTag, 
-    EMPTY_CONST_POSITION, NONE_VALUE_POSITION, TRUE_VALUE_POSITION, FALSE_VALUE_POSITION, 
-    Argument, TargetVar,
+    EMPTY_CONST_POSITION, NONE_VALUE_POSITION, NOTHING_VALUE_POSITION, TRUE_VALUE_POSITION, FALSE_VALUE_POSITION, 
+    Argument, TargetVar, ParameterInfo,
     ICPPGuard, ICPPStatementGuard,
     ICPPOp,
     ICPPOpEmitter

@@ -1,0 +1,626 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+//The core namespace implements the primitive types used in the Bosque language
+namespace Core;
+
+//<summary>Special type which all values are instances of.</summary>
+__universal concept Any {
+    method is<T>(): Bool = special_method;
+    method as<T>(): T = special_method;
+
+    method asOrNone<T>(): T? {
+        return this.is<T>() ? this.as<T>() : none;
+    }
+
+    method asOption<T>(): Option<T> {
+        return this.is<T>() ? something(this.as<T>()) : nothing;
+    }
+
+    method asResult<T>(): Result<T, None> {
+        return this.is<T>() ? ok(this.as<T>()) : err(none);
+    }
+
+    method asTry<T>(out? v: T): Bool {
+        if(!this.is<T>()) {
+            return false;
+        }
+        else {
+            v = this.as<T>();
+            return true;
+        }
+    }
+
+    method isSome(): Bool = special_method;
+    method isNone(): Bool = special_method;
+}
+
+//<summary>Special type for representing all non-none values.</summary>
+__universal concept Some provides Any {
+}
+
+//<summary>Special type for indicating a value can be used as a key in a collection.</summary>
+__universal concept KeyType provides Any {
+    function equal<T grounded KeyType>(a: T, b: T): Bool = special_method;
+    function less<T grounded KeyType>(a: T, b: T): Bool = special_method;
+}
+
+//<summary>Type for indicating that a datatype is a Validator.</summary>
+__universal private concept Validator provides Any {
+}
+
+//<summary>Type for indicating that a datatype is parsable.</summary>
+__universal concept Parsable provides Any {
+}
+
+//<summary>Type for indicating that a datatype is parsable out of a buffer.</summary>
+__universal concept BufferParsable provides Any {
+}
+
+
+//<summary>Type for indicating that a datatype can be use as an input on a test method.</summary>
+__universal concept TestableType provides Any {
+}
+
+//<summary>Type for indicating that a datatype can be exported as part of a stable API.</summary>
+__universal concept APIType provides TestableType {
+}
+
+//<summary>Type for indicating that a datatype overrides the algebraic operators +, -, *, / along with the needed consts.</summary>
+__universal concept Algebraic provides Any {
+}
+
+enum AlgebraicOpStability {
+    unstable,
+    bounded,
+    stable,
+    complete
+}
+
+//<summary>Type for indicating that a datatype overrides the algebraic operators ==, !=, <, >, <=, >=.</summary>
+__universal concept Orderable provides Any {
+}
+
+//<summary>Type for representing the none value.</summary>
+__internal entity None provides KeyType, APIType {
+}
+
+//<summary>Primitive boolean value.</summary>
+__internal entity Bool provides Some, KeyType, APIType {
+}
+
+abstract prefix operator +(a: Some): Some;
+abstract prefix operator -(a: Some): Some;
+abstract infix operator *(a: Some, b: Some): Some;
+abstract infix operator /(a: Some, b: Some): Some;
+abstract infix operator +(a: Some, b: Some): Some;
+abstract infix operator -(a: Some, b: Some): Some;
+abstract infix operator ==(a: Some, b: Some): Bool;
+abstract infix operator !=(a: Some, b: Some): Bool;
+abstract infix operator <(a: Some, b: Some): Bool;
+abstract infix operator >(a: Some, b: Some): Bool;
+abstract infix operator <=(a: Some, b: Some): Bool;
+abstract infix operator >=(a: Some, b: Some): Bool;
+
+//<summary>Primitive integer value.</summary>
+__internal __typedeclable entity Int provides Some, Algebraic, Orderable, KeyType, APIType {
+    const stability: AlgebraicOpStability = AlgebraicOpStability::bounded;
+    const zero: Int = 0i;
+    const one: Int = 1i;
+
+    method toNat(): Nat { return NumericOps::s_intToNat(this); }
+    method toBigNat(): BigNat { return NumericOps::s_bigIntToBigNat(NumericOps::s_intToBigInt(this)); }
+    method toBigInt(): BigInt { return NumericOps::s_intToBigInt(this); }
+    method toFloat(): Float { return NumericOps::s_bigIntToFloat(NumericOps::s_intToBigInt(this)); }
+    method toDecimal(): Decimal { return NumericOps::s_bigIntToDecimal(NumericOps::s_intToBigInt(this)); }
+    method toRational(): Decimal { return NumericOps::s_bigIntToRational(NumericOps::s_intToBigInt(this)); }
+}
+__safe __primitive inline prefix operator +(a: Int): Int = default;
+__safe __primitive inline prefix operator -(a: Int): Int = default;
+__safe __primitive inline infix operator *(a: Int, b: Int): Int = default;
+__primitive inline infix operator /(a: Int, b: Int): Int = default;
+__safe __primitive inline infix operator +(a: Int, b: Int): Int = default;
+__safe __primitive inline infix operator -(a: Int, b: Int): Int = default;
+__safe __primitive inline infix operator ==(a: Int, b: Int): Bool = default;
+__safe __primitive inline infix operator !=(a: Int, b: Int): Bool = default;
+__safe __primitive inline infix operator <(a: Int, b: Int): Bool = default;
+__safe __primitive inline infix operator >(a: Int, b: Int): Bool = default;
+__safe __primitive inline infix operator <=(a: Int, b: Int): Bool = default;
+__safe __primitive inline infix operator >=(a: Int, b: Int): Bool = default;
+
+//<summary>Primitive natural number value.</summary>
+__internal __typedeclable entity Nat provides Some, Algebraic, Orderable, KeyType, APIType {
+    const stability: AlgebraicOpStability = AlgebraicOpStability::stable;
+    const zero: Nat = 0n;
+    const one: Nat = 1n;
+
+    method toBigNat(): BigNat { return NumericOps::s_natToBigNat(this); }
+    method toInt(): Int { return NumericOps::s_natToInt(this); }
+    method toBigInt(): BigInt { return NumericOps::s_bigNatToBigInt(NumericOps::s_natToBigNat(this)); }
+    method toFloat(): Float { return NumericOps::s_bigNatToFloat(NumericOps::s_natToBigNat(this)); }
+    method toDecimal(): Decimal { return NumericOps::s_bigNatToDecimal(NumericOps::s_natToBigNat(this)); }
+    method toRational(): Decimal { return NumericOps::s_bigNatToRational(NumericOps::s_natToBigNat(this)); }
+}
+__safe __primitive inline prefix operator +(a: Nat): Nat = default;
+__safe __primitive inline infix operator *(a: Nat, b: Nat): Nat = default;
+__primitive inline infix operator /(a: Nat, b: Nat): Nat = default;
+__safe __primitive inline infix operator +(a: Nat, b: Nat): Nat = default;
+__safe __primitive inline infix operator -(a: Nat, b: Nat): Nat = default;
+__safe __primitive inline infix operator ==(a: Nat, b: Nat): Bool = default;
+__safe __primitive inline infix operator !=(a: Nat, b: Nat): Bool = default;
+__safe __primitive inline infix operator <(a: Nat, b: Nat): Bool = default;
+__safe __primitive inline infix operator >(a: Nat, b: Nat): Bool = default;
+__safe __primitive inline infix operator <=(a: Nat, b: Nat): Bool = default;
+__safe __primitive inline infix operator >=(a: Nat, b: Nat): Bool = default;
+
+//<summary>Primitive big-integer value.</summary>
+__internal __typedeclable entity BigInt provides Some, Algebraic, Orderable, KeyType, APIType {
+    const stability: AlgebraicOpStability = AlgebraicOpStability::complete;
+    const zero: BigInt = 0I;
+    const one: BigInt = 1I;
+
+    method toNat(): Nat { return NumericOps::s_bigNatToNat(NumericOps::s_bigIntToBigNat(this)); }
+    method toBigNat(): BigNat { return NumericOps::s_bigIntToBigNat(this); }
+    method toInt(): Int { return NumericOps::s_bigIntToInt(this); }
+    method toFloat(): Float { return NumericOps::s_bigIntToFloat(this); }
+    method toDecimal(): Decimal { return NumericOps::s_bigIntToDecimal(this); }
+    method toRational(): Decimal { return NumericOps::s_bigIntToRational(this); }
+}
+__safe __primitive inline prefix operator +(a: BigInt): BigInt = default;
+__safe __primitive inline prefix operator -(a: BigInt): BigInt = default;
+__safe __primitive inline infix operator *(a: BigInt, b: BigInt): BigInt = default;
+__primitive inline infix operator /(a: BigInt, b: BigInt): BigInt = default;
+__safe __primitive inline infix operator +(a: BigInt, b: BigInt): BigInt = default;
+__safe __primitive inline infix operator -(a: BigInt, b: BigInt): BigInt = default;
+__safe __primitive inline infix operator ==(a: BigInt, b: BigInt): Bool = default;
+__safe __primitive inline infix operator !=(a: BigInt, b: BigInt): Bool = default;
+__safe __primitive inline infix operator <(a: BigInt, b: BigInt): Bool = default;
+__safe __primitive inline infix operator >(a: BigInt, b: BigInt): Bool = default;
+__safe __primitive inline infix operator <=(a: BigInt, b: BigInt): Bool = default;
+__safe __primitive inline infix operator >=(a: BigInt, b: BigInt): Bool = default;
+
+//<summary>Primitive big-integer value.</summary>
+__internal __typedeclable entity BigNat provides Some, Algebraic, Orderable, KeyType, APIType {
+    const stability: AlgebraicOpStability = AlgebraicOpStability::complete;
+    const zero: BigNat = 0N;
+    const one: BigNat = 1N;
+
+    method toNat(): Nat { return NumericOps::s_bigNatToNat(this); }
+    method toInt(): Int { return NumericOps::s_bigIntToInt(NumericOps::s_bigNatToBigInt(this)); }
+    method toBigInt(): BigInt { return NumericOps::s_bigNatToBigInt(this); }
+    method toFloat(): Float { return NumericOps::s_bigNatToFloat(this); }
+    method toDecimal(): Decimal { return NumericOps::s_bigNatToDecimal(this); }
+    method toRational(): Decimal { return NumericOps::s_bigNatToRational(this); }
+}
+__safe __primitive inline prefix operator +(a: BigNat): BigNat = default;
+__safe __primitive inline infix operator *(a: BigNat, b: BigNat): BigNat = default;
+__primitive inline infix operator /(a: BigNat, b: BigNat): BigNat = default;
+__safe __primitive inline infix operator +(a: BigNat, b: BigNat): BigNat = default;
+__safe __primitive inline infix operator -(a: BigNat, b: BigNat): BigNat = default;
+__safe __primitive inline infix operator ==(a: BigNat, b: BigNat): Bool = default;
+__safe __primitive inline infix operator !=(a: BigNat, b: BigNat): Bool = default;
+__safe __primitive inline infix operator <(a: BigNat, b: BigNat): Bool = default;
+__safe __primitive inline infix operator >(a: BigNat, b: BigNat): Bool = default;
+__safe __primitive inline infix operator <=(a: BigNat, b: BigNat): Bool = default;
+__safe __primitive inline infix operator >=(a: BigNat, b: BigNat): Bool = default;
+
+//<summary>Primitive rational value.</summary>
+__internal __typedeclable entity Rational provides Some, Algebraic, Orderable, APIType {
+    const stability: AlgebraicOpStability = AlgebraicOpStability::unstable;
+    const zero: Rational = 0/1R;
+    const one: Rational = 1/1R;
+
+    method toNat(): Nat { return NumericOps::s_bigNatToNat(NumericOps::s_bigIntToBigNat(NumericOps::s_rationalToBigInt(this))); }
+    method toBigNat(): BigNat { return NumericOps::s_bigIntToBigNat(NumericOps::s_rationalToBigInt(this)); }
+    method toInt(): Int { return NumericOps::s_bigIntToInt(NumericOps::s_rationalToBigInt(this)); }
+    method toBigInt(): BigInt { return NumericOps::s_rationalToBigInt(this); }
+    method toFloat(): Float { return NumericOps::s_rationalToFloat(this); }
+    method toDecimal(): Decimal { return NumericOps::s_rationalToDecimal(this); }
+}
+__safe __primitive inline prefix operator +(a: Rational): Rational = default;
+__safe __primitive inline prefix operator -(a: Rational): Rational = default;
+__safe __primitive inline infix operator *(a: Rational, b: Rational): Rational = default;
+__primitive inline infix operator /(a: Rational, b: Rational): Rational = default;
+__safe __primitive inline infix operator +(a: Rational, b: Rational): Rational = default;
+__safe __primitive inline infix operator -(a: Rational, b: Rational): Rational = default;
+__safe __primitive inline infix operator ==(a: Rational, b: Rational): Bool = default;
+__safe __primitive inline infix operator !=(a: Rational, b: Rational): Bool = default;
+__safe __primitive inline infix operator <(a: Rational, b: Rational): Bool = default;
+__safe __primitive inline infix operator >(a: Rational, b: Rational): Bool = default;
+__safe __primitive inline infix operator <=(a: Rational, b: Rational): Bool = default;
+__safe __primitive inline infix operator >=(a: Rational, b: Rational): Bool = default;
+
+//<summary>Primitive float value defaults to 64bit.</summary>
+__internal __typedeclable entity Float provides Some, Algebraic, Orderable, APIType {
+    const stability: AlgebraicOpStability = AlgebraicOpStability::unstable;
+    const zero: Float = 0.0f;
+    const one: Float = 1.0f;
+
+    const pi: Float = 3.1415926535897931f;
+    const e: Float = 2.7182818284590451f;
+
+    method toNat(): Nat { return NumericOps::s_bigNatToNat(NumericOps::s_bigIntToBigNat(NumericOps::s_floatToBigInt(this))); }
+    method toBigNat(): BigNat { return NumericOps::s_bigIntToBigNat(NumericOps::s_floatToBigInt(this)); }
+    method toInt(): Int { return NumericOps::s_bigIntToInt(NumericOps::s_floatToBigInt(this)); }
+    method toBigInt(): BigInt { return NumericOps::s_floatToBigInt(this); }
+    method toDecimal(): Decimal { return NumericOps::s_floatToDecimal(this); }
+    method toRational(): Rational { return NumericOps::s_floatToRational(this); }
+
+    method floor(): BigInt { return NumericOps::s_floatFloor(this); }
+    method ceiling(): BigInt { return NumericOps::s_floatCeil(this); }
+    method truncate(): BigInt { return NumericOps::s_floatTruncate(this); }
+
+    method pow(x: Float): Float {
+        return NumericOps::s_floatPower(this, x);
+    }
+
+    method square(): Float {
+        return this * this;
+    }
+
+    method sqrt(): Float {
+        return NumericOps::s_floatPower(this, 0.5f);
+    }
+}
+__safe __primitive inline prefix operator +(a: Float): Float = default;
+__safe __primitive inline prefix operator -(a: Float): Float = default;
+__safe __primitive inline infix operator *(a: Float, b: Float): Float = default;
+__primitive inline infix operator /(a: Float, b: Float): Float = default;
+__safe __primitive inline infix operator +(a: Float, b: Float): Float = default;
+__safe __primitive inline infix operator -(a: Float, b: Float): Float = default;
+__safe __primitive inline infix operator ==(a: Float, b: Float): Bool = default;
+__safe __primitive inline infix operator !=(a: Float, b: Float): Bool = default;
+__safe __primitive inline infix operator <(a: Float, b: Float): Bool = default;
+__safe __primitive inline infix operator >(a: Float, b: Float): Bool = default;
+__safe __primitive inline infix operator <=(a: Float, b: Float): Bool = default;
+__safe __primitive inline infix operator >=(a: Float, b: Float): Bool = default;
+
+//<summary>Primitive float decimal value.</summary>
+__internal __typedeclable entity Decimal provides Some, Algebraic, Orderable, APIType {
+    const stability: AlgebraicOpStability = AlgebraicOpStability::unstable;
+    const zero: Decimal = 0.0d;
+    const one: Decimal = 1.0d;
+
+    const pi: Decimal = 3.1415926535897931d;
+    const e: Decimal = 2.7182818284590451d;
+
+    method toNat(): Nat { return NumericOps::s_bigNatToNat(NumericOps::s_bigIntToBigNat(NumericOps::s_decimalToBigInt(this))); }
+    method toBigNat(): BigNat { return NumericOps::s_bigIntToBigNat(NumericOps::s_decimalToBigInt(this)); }
+    method toInt(): Int { return NumericOps::s_bigIntToInt(NumericOps::s_decimalToBigInt(this)); }
+    method toBigInt(): BigInt { return NumericOps::s_decimalToBigInt(this); }
+    method toFloat(): Float { return NumericOps::s_decimalToFloat(this); }
+    method toRational(): Rational { return NumericOps::s_decimalToRational(this); }
+
+    method floor(): BigInt { return NumericOps::s_decimalFloor(this); }
+    method ceiling(): BigInt { return NumericOps::s_decimalCeil(this); }
+    method truncate(): BigInt { return NumericOps::s_decimalTruncate(this); }
+
+    method pow(x: Decimal): Decimal {
+        return NumericOps::s_decimalPower(this, x);
+    }
+
+    method square(): Decimal {
+        return this * this;
+    }
+
+    method sqrt(): Decimal {
+        return NumericOps::s_decimalPower(this, 0.5f);
+    }
+}
+__safe __primitive inline prefix operator +(a: Decimal): Decimal = default;
+__safe __primitive inline prefix operator -(a: Decimal): Decimal = default;
+__safe __primitive inline infix operator *(a: Decimal, b: Decimal): Decimal = default;
+__primitive inline infix operator /(a: Decimal, b: Decimal): Decimal = default;
+__safe __primitive inline infix operator +(a: Decimal, b: Decimal): Decimal = default;
+__safe __primitive inline infix operator -(a: Decimal, b: Decimal): Decimal = default;
+__safe __primitive inline infix operator ==(a: Decimal, b: Decimal): Bool = default;
+__safe __primitive inline infix operator !=(a: Decimal, b: Decimal): Bool = default;
+__safe __primitive inline infix operator <(a: Decimal, b: Decimal): Bool = default;
+__safe __primitive inline infix operator >(a: Decimal, b: Decimal): Bool = default;
+__safe __primitive inline infix operator <=(a: Decimal, b: Decimal): Bool = default;
+__safe __primitive inline infix operator >=(a: Decimal, b: Decimal): Bool = default;
+
+//<summary>Primitive string value.</summary>
+__internal entity String provides Some, KeyType, APIType {
+    __safe private function s_empty(s: String): Bool = string_empty;
+
+    __assume_safe private function s_concat2(s1: String, s2: String): String = string_append;
+
+    function concat(...sl: List<String>): String {
+        return ListOps::s_strconcat(sl);
+    }
+
+    function join(sl: List<String>, sep: String): String {
+        return ListOps::s_strjoin(sl, sep);
+    }
+
+    method empty(): Bool {
+        return String::s_empty(this);
+    }
+
+    method append(s: String): String {
+        return String::s_concat2(this, s);
+    }
+
+    method prepend(s: String): String {
+        return String::s_concat2(s, this);
+    }
+
+    /*
+    method startsWith(v: String | Regex): Bool {
+        use RE(.*)
+    }
+
+    method endsWith(v: String | Regex): Bool {
+        use (.*)RE
+    }
+
+    method includes(v: String | Regex): Bool {
+        use (.*)RE(.*)
+    }
+
+    method extractFront(v: String | Regex): String, String {
+        use bin search on RE(.*) and RE -- take maximal slice
+    }
+
+    method extractEnd(v: String | Regex): String, String {
+        use bin search on (.*)RE and RE -- take maximal slice
+    }
+
+    method splitAt(v: String | Regex): String, String, String {
+        use bin search on min start position of RE(.*)
+    }
+
+    method splitAll(...seps: List<String>): List<String> {
+        split on every sep provided
+    }
+    */
+}
+
+//<summary>Primitive safe string value.</summary>
+__internal __constructable entity StringOf<T unique Validator> provides Some, KeyType, APIType {
+    private function s_into(s: String): StringOf<T> = special_inject;
+    method value(): String = special_extract;
+
+    function coerce(s: String): StringOf<T> {
+        assert T::accepts(s);
+        return StringOf<T>::s_into(s);
+    } 
+
+    function tryCoerce(s: String): StringOf<T>? {
+        if(!T::accepts(s)) {
+            return none;
+        } 
+        else {
+            return StringOf<T>::s_into(s);
+        }
+    }
+}
+
+//<summary>Primitive DataString value.</summary>
+__internal __constructable entity DataString<T unique Parsable> provides Some, KeyType, APIType when T grounded APIType, TestableType when T grounded TestableType {
+    private function s_into(s: String): DataString<T> = special_inject;
+    method value(): String = special_extract;
+
+    function coerce(s: String): DataString<T> {
+        assert T::accepts(s);
+        return DataString<T>::s_into(s);
+    } 
+
+    function tryCoerce(s: String): DataString<T>? {
+        if(!T::accepts(s)) {
+            return none;
+        } 
+        else {
+            return DataString<T>::s_into(s);
+        }
+    }
+}
+
+enum BufferFormat {
+    utf8,
+    binary,
+    bosque,
+    json
+}
+
+enum BufferCompression {
+    off,
+    deflate
+}
+
+//<summary>An efficient byte buffer for data.</summary>
+__internal entity ByteBuffer provides Some, APIType {
+    private function s_getFormat(bb: ByteBuffer): BufferFormat = bytebuffer_getformat;
+    private function s_getCompression(bb: ByteBuffer): BufferCompression = bytebuffer_getcompression;
+
+    method getFormat(): BufferFormat {
+        return ByteBuffer::s_getFormat(this);
+    }
+
+    method getCompression(): BufferCompression {
+        return ByteBuffer::s_getCompression(this);
+    }
+}
+
+//<summary>An efficient buffer encoding for data.</summary>
+__internal __constructable entity DataBuffer<T unique BufferParsable> provides Some, APIType when T grounded APIType, TestableType when T grounded TestableType {
+    method value(): ByteBuffer = special_extract;
+}
+
+//<summary>Primitive DateTime value.</summary>
+__internal __typedeclable entity DateTime provides Some, Orderable, KeyType, APIType {
+}
+//TODO: operators for orderable and make key type compliant
+
+//<summary>Primitive DateTime value.</summary>
+__internal __typedeclable entity TickTime provides Some, Orderable, APIType {
+}
+//TODO: operators for orderable
+
+//<summary>Primitive LogicalTime value.</summary>
+__internal __typedeclable entity LogicalTime provides Some, Orderable, KeyType, APIType {
+}
+//TODO: operators for orderable and make key type compliant
+
+//<summary>Primitive UUID value.</summary>
+__internal __typedeclable entity UUID provides Some, KeyType, APIType {
+}
+
+//<summary>Primitive hash value suitable for content addressable operations or crypto secure digests.</summary>
+__internal __typedeclable entity ContentHash provides Some, KeyType, APIType {
+}
+
+//<summary>Primitive regex value.</summary>
+__internal entity Regex provides Some {
+}
+
+//<summary>Static methods for Tuples.</summary>
+__universal concept Tuple provides Some {
+    function append(arg: Any): Tuple = special_method;
+}
+
+//<summary>Static methods for Records.</summary>
+__universal concept Record provides Some {
+    function join(arg: Any): Record = special_method;
+}
+
+//<summary>Generic type for all Option<T> to inherit from.</summary>
+__universal concept IOption provides Some {
+    method isNothing(): Bool = special_nothing;
+    method isSomething(): Bool = special_something;
+
+    method asNothing(): Nothing {
+        return this.as<Nothing>();
+    }
+}
+
+//<summary>Generic type for all Option<T> to inherit from.</summary>
+__universal private concept ISomething provides IOption {
+}
+
+//<summary>Type for representing the nothing option value.</summary>
+__internal entity Nothing provides IOption, APIType {
+}
+
+//<summary>Type for representing the nothing option value.</summary>
+__internal __constructable entity Something<T> provides Option<T>, APIType when T grounded APIType, TestableType when T grounded TestableType {
+    method value(): T = special_extract;
+}
+
+//<summary>Type for flagging T projection from Option -- kludge that has no other purpose.</summary>
+__universal concept IOptionT provides Some {
+}
+
+concept Option<T> provides ISomething, APIType when T grounded APIType, TestableType when T grounded TestableType {
+    method asSomething(): Something<T> {
+        return this.as<Something<T>>();
+    }
+
+    method asSomethingTry(out? v: Something<T>): Bool {
+        if(this.isNothing()) {
+            return false;
+        }
+        else {
+            v = this.asSomething();
+            return true;
+        }
+    }
+
+    method data(): T {
+        return this.asSomething().value();
+    }
+
+    method dataTry(out? v: T): Bool {
+        if(this.isNothing()) {
+            return false;
+        }
+        else {
+            v = this.asSomething().value();
+            return true;
+        }
+    }
+
+    method convert<V=?>(): Option<V> {
+        if(this === nothing) {
+            return nothing;
+        }
+        else {
+            return Something{this.data().as<V>()};
+        }
+    }
+}
+
+//<summary>Generic type for all Result<T, E> to inherit from.</summary>
+__universal concept IResult provides Some {
+}
+
+//<summary>Generic type for all Result<T, E>::Ok to inherit from.</summary>
+__universal internal concept IOk provides Some {
+}
+
+//<summary>Generic type for all Result<T, E>::Err to inherit from.</summary>
+__universal internal concept IErr provides Some {
+}
+
+//<summary>Type for flagging T projection from Result -- kludge that has no other purpose.</summary>
+__universal concept IResultT provides Some {
+}
+
+//<summary>Type for flagging E projection from Result -- kludge that has no other purpose.</summary>
+__universal concept IResultE provides Some {
+}
+
+//<summary>Result type.</summary>
+concept Result<T, E=None> provides IResult, APIType when T grounded APIType && E grounded APIType, TestableType when T grounded TestableType && E grounded TestableType {
+    __internal __constructable entity Ok provides IOk, Result<T, E> {
+        method value(): T = special_extract;
+    }
+
+    __internal __constructable entity Err provides IErr, Result<T, E> {
+        method value(): E = special_extract;
+    }
+
+    method isOk(): Bool {
+        return this.is<Result<T, E>::Ok>();
+    }
+
+    method isErr(): Bool {
+        return this.is<Result<T, E>::Err>();
+    }
+
+    method result(): T {
+        return this.as<Result<T, E>::Ok>().value();
+    }
+
+    method error(): E {
+        return this.as<Result<T, E>::Err>().value();
+    }
+
+    method convert<U=?, V=?>(): Result<U, V> {
+        if(this.is<Result<T, E>::Ok>()) {
+            return Result<U, V>::Ok{this.result().as<U>()};
+        }
+        else {
+            return Result<U, V>::Err{this.error().as<V>()};
+        }
+    }
+}
+
+//<summary>All actual entities/concepts implicitly provide this concept.</summary>
+__universal concept Object provides Some {
+}
+
+#if CHECK_LIBS
+__internal entity HavocSequence provides Some {
+}
+#endif
+
+//<summary>All collections provide this concept so we can expand them with spread operators.</summary>
+__universal concept Expandoable<T> provides Some {
+    method expand<U>(): List<U> = special_method;
+}
+
+__assume_safe internal function s_safeAs<T, U>(v: T): U = special_function;

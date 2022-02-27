@@ -4,8 +4,8 @@
 //-------------------------------------------------------------------------------------------------------
 
 import { SourceInfo, Parser } from "../ast/parser";
-import { MIRAbort, MIRArgument, MIRAssertCheck, MIRBasicBlock, MIRBinKeyEq, MIRBinKeyLess, MIRBody, MIRConstantArgument, MIRConstantBigInt, MIRConstantBigNat, MIRConstantDataString, MIRConstantDecimal, MIRConstantFalse, MIRConstantFloat, MIRConstantInt, MIRConstantNat, MIRConstantNone, MIRConstantRational, MIRConstantRegex, MIRConstantString, MIRConstantStringOf, MIRConstantTrue, MIRConstantTypedNumber, MIRConstructorEphemeralList, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionMixed, MIRConstructorPrimaryCollectionSingletons, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConvertValue, MIRDeadFlow, MIRDebug, MIRDeclareGuardFlagLocation, MIREntityProjectToEphemeral, MIREntityUpdate, MIREphemeralListExtend, MIRFieldKey, MIRGlobalKey, MIRGuard, MIRInvokeFixedFunction, MIRInvokeKey, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRIsTypeOf, MIRJump, MIRJumpCond, MIRJumpNone, MIRLoadConst, MIRLoadField, MIRLoadFromEpehmeralList, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadUnintVariableValue, MIRMultiLoadFromEpehmeralList, MIRNop, MIROp, MIRPrefixNotOp, MIRRecordHasProperty, MIRRecordProjectToEphemeral, MIRRecordUpdate, MIRRegisterArgument, MIRResolvedTypeKey, MIRReturnAssign, MIRReturnAssignOfCons, MIRSetConstantGuardFlag, MIRSliceEpehmeralList, MIRStatmentGuard, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRRegisterAssign, MIRTupleHasIndex, MIRTupleProjectToEphemeral, MIRTupleUpdate, MIRVarLifetimeEnd, MIRVarLifetimeStart, MIRVirtualMethodKey, MIRInject, MIRExtract, MIRGuardedOptionInject, MIRConstantNothing } from "./mir_ops";
-import { Assembly, BuildLevel, ConceptTypeDecl, EntityTypeDecl, InvokeDecl, MemberMethodDecl, NamespaceConstDecl, NamespaceFunctionDecl, NamespaceOperatorDecl, OOMemberLookupInfo, OOPTypeDecl, StaticFunctionDecl, StaticMemberDecl, StaticOperatorDecl } from "../ast/assembly";
+import { MIRAbort, MIRArgument, MIRAssertCheck, MIRBasicBlock, MIRBinKeyEq, MIRBinKeyLess, MIRBody, MIRConstantArgument, MIRConstantBigInt, MIRConstantBigNat, MIRConstantDataString, MIRConstantDecimal, MIRConstantFalse, MIRConstantFloat, MIRConstantInt, MIRConstantNat, MIRConstantNone, MIRConstantRational, MIRConstantRegex, MIRConstantString, MIRConstantStringOf, MIRConstantTrue, MIRConstantTypedNumber, MIRConstructorEphemeralList, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionMixed, MIRConstructorPrimaryCollectionSingletons, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConvertValue, MIRDeadFlow, MIRDebug, MIRDeclareGuardFlagLocation, MIREntityProjectToEphemeral, MIREntityUpdate, MIREphemeralListExtend, MIRFieldKey, MIRGlobalKey, MIRGuard, MIRInvokeFixedFunction, MIRInvokeKey, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRIsTypeOf, MIRJump, MIRJumpCond, MIRJumpNone, MIRLoadConst, MIRLoadField, MIRLoadFromEpehmeralList, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadUnintVariableValue, MIRMultiLoadFromEpehmeralList, MIRNop, MIROp, MIRPrefixNotOp, MIRRecordHasProperty, MIRRecordProjectToEphemeral, MIRRecordUpdate, MIRRegisterArgument, MIRResolvedTypeKey, MIRReturnAssign, MIRReturnAssignOfCons, MIRSetConstantGuardFlag, MIRSliceEpehmeralList, MIRStatmentGuard, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRRegisterAssign, MIRTupleHasIndex, MIRTupleProjectToEphemeral, MIRTupleUpdate, MIRVarLifetimeEnd, MIRVarLifetimeStart, MIRVirtualMethodKey, MIRInject, MIRExtract, MIRGuardedOptionInject, MIRConstantNothing, MIRLogicAction, MIRConstructorEntityDirect } from "./mir_ops";
+import { Assembly, BuildApplicationMode, BuildLevel, ConceptTypeDecl, EntityTypeDecl, InvokeDecl, MemberMethodDecl, NamespaceConstDecl, NamespaceFunctionDecl, NamespaceOperatorDecl, OOMemberLookupInfo, OOPTypeDecl, StaticFunctionDecl, StaticMemberDecl, StaticOperatorDecl } from "../ast/assembly";
 import { ResolvedConceptAtomType, ResolvedConceptAtomTypeEntry, ResolvedEntityAtomType, ResolvedEphemeralListType, ResolvedFunctionType, ResolvedRecordAtomType, ResolvedTupleAtomType, ResolvedType } from "../ast/resolved_type";
 import { MIRAssembly, MIRConceptType, MIREntityType, MIREphemeralListType, MIRRecordType, MIRTupleType, MIRType, MIRTypeOption, PackageConfig } from "./mir_assembly";
 
@@ -33,18 +33,15 @@ type GeneratedKeyName<T> = {
 }
 
 class MIRKeyGenerator {
-    static computeBindsKeyInfo(binds: Map<string, ResolvedType>): [string, string] {
+    static computeBindsKeyInfo(binds: Map<string, ResolvedType>): string{
         if (binds.size === 0) {
-            return ["", ""];
+            return "";
         }
 
         let terms: string[] = [];
         binds.forEach((v, k) => terms.push(`${k}=${v.typeID}`));
 
-        let shortterms: string[] = [];
-        binds.forEach((v, k) => shortterms.push(`${k}=${v.shortID}`));
-
-        return [`<${terms.sort().join(", ")}>`, `<${shortterms.sort().join(", ")}>`];
+        return `<${terms.sort().join(", ")}>`;
     }
 
     static computePCodeKeyInfo(pcodes: PCode[]): string {
@@ -55,13 +52,13 @@ class MIRKeyGenerator {
         return "[" + pcodes.map((pc) => `${pc.ikey}`).join(",") + "]";
     }
 
-    static generateTypeKey(t: ResolvedType): GeneratedKeyName<MIRResolvedTypeKey> {
-        return {keyid: t.typeID, shortname: t.shortID};
+    static generateTypeKey(t: ResolvedType): MIRResolvedTypeKey {
+        return t.typeID;
     }
 
     static generateFieldKey(t: ResolvedType, name: string): MIRFieldKey {
         const tkey = this.generateTypeKey(t);
-        return `__f__${tkey.keyid}.${name}`;
+        return `__f__${tkey}.${name}`;
     }
 
     static generateGlobalKeyWNamespace(ns: string, name: string, prefix?: string): GeneratedKeyName<MIRGlobalKey> {
@@ -74,37 +71,37 @@ class MIRKeyGenerator {
     static generateGlobalKeyWType(t: ResolvedType, name: string, prefix?: string): GeneratedKeyName<MIRGlobalKey> {
         const tinfo = MIRKeyGenerator.generateTypeKey(t);
 
-        const fname = `__g__${prefix !== undefined ? (prefix + "#") : ""}${tinfo.keyid}::${name}`;
-        const shortfname = `${prefix !== undefined ? (prefix + "#") : ""}${tinfo.shortname}::${name}`;
+        const fname = `__g__${prefix !== undefined ? (prefix + "#") : ""}${tinfo}::${name}`;
+        const shortfname = `${prefix !== undefined ? (prefix + "#") : ""}${tinfo}::${name}`;
         return {keyid: fname, shortname: shortfname};
     }
 
     static generateFunctionKeyWNamespace(ns: string, name: string, binds: Map<string, ResolvedType>, pcodes: PCode[], prefix?: string): GeneratedKeyName<MIRInvokeKey> {
-        const [binfo, shortbinfo] = MIRKeyGenerator.computeBindsKeyInfo(binds);
+        const binfo = MIRKeyGenerator.computeBindsKeyInfo(binds);
         const pcinfo = MIRKeyGenerator.computePCodeKeyInfo(pcodes);
 
         const fname = `__i__${prefix !== undefined ? (prefix + "#") : ""}${ns}::${name}${binfo}${pcinfo}`;
-        const shortfname = `${prefix !== undefined ? (prefix + "#") : ""}${ns}::${name}${shortbinfo}${pcinfo}`;
+        const shortfname = `${prefix !== undefined ? (prefix + "#") : ""}${ns}::${name}${binfo}${pcinfo}`;
         return {keyid: fname, shortname: shortfname};
     }
 
     static generateFunctionKeyWType(t: ResolvedType, name: string, binds: Map<string, ResolvedType>, pcodes: PCode[], prefix?: string): GeneratedKeyName<MIRInvokeKey> {
         const tinfo = MIRKeyGenerator.generateTypeKey(t);
-        const [binfo, shortbinfo] = MIRKeyGenerator.computeBindsKeyInfo(binds);
+        const binfo = MIRKeyGenerator.computeBindsKeyInfo(binds);
         const pcinfo = MIRKeyGenerator.computePCodeKeyInfo(pcodes);
 
-        const fname = `__i__${prefix !== undefined ? (prefix + "#") : ""}${tinfo.keyid}::${name}${binfo}${pcinfo}`;
-        const shortfname = `${prefix !== undefined ? (prefix + "#") : ""}${tinfo.shortname}::${name}${shortbinfo}${pcinfo}`;
+        const fname = `__i__${prefix !== undefined ? (prefix + "#") : ""}${tinfo}::${name}${binfo}${pcinfo}`;
+        const shortfname = `${prefix !== undefined ? (prefix + "#") : ""}${tinfo}::${name}${binfo}${pcinfo}`;
         return {keyid: fname, shortname: shortfname};
     }
 
     static generateVirtualMethodKey(vname: string, binds: Map<string, ResolvedType>, pcodes: PCode[]): GeneratedKeyName<MIRVirtualMethodKey> {
-        const [binfo, shortbinfo] = MIRKeyGenerator.computeBindsKeyInfo(binds);
+        const binfo = MIRKeyGenerator.computeBindsKeyInfo(binds);
         const pcinfo = MIRKeyGenerator.computePCodeKeyInfo(pcodes);
 
 
         const iname = `__v__${vname}${binfo}${pcinfo}`;
-        const shortvname =  `${vname}${shortbinfo}${pcinfo}`;
+        const shortvname =  `${vname}${binfo}${pcinfo}`;
         return {keyid: iname, shortname: shortvname};
     }
 
@@ -132,7 +129,7 @@ type PendingOOMethodProcessingInfo = { vkey: MIRVirtualMethodKey, mkey: MIRInvok
 type PendingPCodeProcessingInfo = { lkey: MIRInvokeKey, lshort: string, invoke: InvokeDecl, sigt: ResolvedFunctionType, bodybinds: Map<string, ResolvedType>, cargs: [string, ResolvedType][], capturedpcodes: [string, PCode][] };
 type PendingOPVirtualProcessingInfo = { vkey: MIRVirtualMethodKey, optns: string | undefined, optenclosingType: [ResolvedType, MIRType, OOPTypeDecl, Map<string, ResolvedType>] | undefined, name: string, binds: Map<string, ResolvedType>, pcodes: PCode[], cargs: [string, ResolvedType][] };
 
-type EntityInstantiationInfo = { tkey: MIRResolvedTypeKey, shortname: string, ootype: OOPTypeDecl, binds: Map<string, ResolvedType> };
+type EntityInstantiationInfo = { tkey: MIRResolvedTypeKey, ootype: OOPTypeDecl, binds: Map<string, ResolvedType> };
 type AllVInvokesInfo = { vkey: MIRVirtualMethodKey, enclosingtype: ResolvedType, name: string, binds: Map<string, ResolvedType>, pcodes: PCode[], cargs: [string, ResolvedType][] };
 
 class MIREmitter {
@@ -400,13 +397,13 @@ class MIREmitter {
             return;
         }
 
-        if(itype.typeID === "NSCore::Int") {
+        if(itype.typeID === "Int") {
             this.m_currentBlock.push(new MIRLoadConst(sinfo, new MIRConstantInt(vv), itype.typeID, trgt));
         }
-        else if(itype.typeID === "NSCore::Nat") {
+        else if(itype.typeID === "Nat") {
             this.m_currentBlock.push(new MIRLoadConst(sinfo, new MIRConstantNat(vv), itype.typeID, trgt));
         }
-        else if(itype.typeID === "NSCore::BigInt") {
+        else if(itype.typeID === "BigInt") {
             this.m_currentBlock.push(new MIRLoadConst(sinfo, new MIRConstantBigInt(vv), itype.typeID, trgt));
         }
         else {
@@ -427,7 +424,7 @@ class MIREmitter {
             return;
         }
 
-        if(ftype.typeID === "NSCore::Float") {
+        if(ftype.typeID === "Float") {
             this.m_currentBlock.push(new MIRLoadConst(sinfo, new MIRConstantFloat(fv), ftype.typeID, trgt));
         }
         else {
@@ -757,6 +754,14 @@ class MIREmitter {
         this.m_currentBlock.push(new MIRConstructorEphemeralList(sinfo, resultEphemeralType.typeID, args, trgt));
     }
 
+    emitConstructorEntityDirect(sinfo: SourceInfo, entityType: MIRType, args: MIRArgument[], trgt: MIRRegisterArgument) {
+        if(!this.emitEnabled) {
+            return;
+        }
+
+        this.m_currentBlock.push(new MIRConstructorEntityDirect(sinfo, entityType.typeID, args, trgt));
+    }
+
     emitMIRPackExtend(sinfo: SourceInfo, basepack: MIRArgument, basetype: MIRType, ext: MIRArgument[], sltype: MIRType, trgt: MIRRegisterArgument) {
         if(!this.emitEnabled) {
             return;
@@ -805,12 +810,12 @@ class MIREmitter {
         this.m_currentBlock.push(new MIRBinKeyEq(sinfo, lhslayouttype.typeID, lhs, rhslayouttype.typeID, rhs, cmptype.typeID, trgt, guard, lhsflowtype.typeID, rhsflowtype.typeID));
     }
 
-    emitBinKeyLess(sinfo: SourceInfo, lhslayouttype: MIRType, lhs: MIRArgument, rhslayouttype: MIRType, rhs: MIRArgument, cmptype: MIRType, trgt: MIRRegisterArgument, guard: MIRStatmentGuard | undefined, lhsflowtype: MIRType, rhsflowtype: MIRType) {
+    emitBinKeyLess(sinfo: SourceInfo, lhslayouttype: MIRType, lhs: MIRArgument, rhslayouttype: MIRType, rhs: MIRArgument, cmptype: MIRType, trgt: MIRRegisterArgument, lhsflowtype: MIRType, rhsflowtype: MIRType) {
         if(!this.emitEnabled) {
             return;
         }
 
-        this.m_currentBlock.push(new MIRBinKeyLess(sinfo, lhslayouttype.typeID, lhs, rhslayouttype.typeID, rhs, cmptype.typeID, trgt, guard, lhsflowtype.typeID, rhsflowtype.typeID));
+        this.m_currentBlock.push(new MIRBinKeyLess(sinfo, lhslayouttype.typeID, lhs, rhslayouttype.typeID, rhs, cmptype.typeID, trgt, lhsflowtype.typeID, rhsflowtype.typeID));
     }
 
     emitPrefixNotOp(sinfo: SourceInfo, arg: MIRArgument, trgt: MIRRegisterArgument) {
@@ -821,6 +826,14 @@ class MIREmitter {
         this.m_currentBlock.push(new MIRPrefixNotOp(sinfo, arg, trgt));
     }
     
+    emitLogicAction(sinfo: SourceInfo, trgt: MIRRegisterArgument, opkind: "\\/" | "/\\", args: MIRArgument[]) {
+        if(!this.emitEnabled) {
+            return;
+        }
+
+        this.m_currentBlock.push(new MIRLogicAction(sinfo, trgt, opkind, args));
+    }
+
     emitTypeOf(sinfo: SourceInfo, trgt: MIRRegisterArgument, chktype: MIRType, src: MIRArgument, srclayouttype: MIRType, srcflowtype: MIRType, guard: MIRStatmentGuard | undefined) {
         if(!this.emitEnabled) {
             return;
@@ -1038,64 +1051,55 @@ class MIREmitter {
         }
 
         const key = MIRKeyGenerator.generateTypeKey(rtype);
-        if (this.masm.conceptDecls.has(key.keyid) || this.masm.entityDecls.has(key.keyid) || this.pendingOOProcessing.findIndex((oop) => oop.tkey === key.keyid) !== -1) {
+        if (this.masm.conceptDecls.has(key) || this.masm.entityDecls.has(key) || this.pendingOOProcessing.findIndex((oop) => oop.tkey === key) !== -1) {
             return;
         }
 
-        if (decl.ns === "NSCore" && decl.name === "Result") {
-            const okdecl = this.assembly.tryGetObjectTypeForFullyResolvedName("NSCore::Result::Ok") as EntityTypeDecl;
+        if (decl.ns === "Core" && decl.name === "Result") {
+            const okdecl = this.assembly.tryGetObjectTypeForFullyResolvedName("Result::Ok") as EntityTypeDecl;
             const okkey = MIRKeyGenerator.generateTypeKey(ResolvedType.createSingle(ResolvedEntityAtomType.create(okdecl, binds)));
-            const okentry = { tkey: okkey.keyid, shortname: okkey.shortname, ootype: okdecl, binds: binds }
-            if (!this.masm.entityDecls.has(okkey.keyid) && this.pendingOOProcessing.findIndex((oop) => oop.tkey === okkey.keyid) === -1) {
+            const okentry = { tkey: okkey, ootype: okdecl, binds: binds }
+            if (!this.masm.entityDecls.has(okkey) && this.pendingOOProcessing.findIndex((oop) => oop.tkey === okkey) === -1) {
                 this.pendingOOProcessing.push(okentry);
                 this.entityInstantiationInfo.push(okentry);
 
                 if(this.emitEnabled) {
-                    const ft = MIREntityType.create(okkey.keyid, okkey.shortname);
+                    const ft = MIREntityType.create(okkey);
                     this.masm.typeMap.set(ft.typeID, MIRType.createSingle(ft));
                 }
             }
 
-            const errdecl = this.assembly.tryGetObjectTypeForFullyResolvedName("NSCore::Result::Err") as EntityTypeDecl;
+            const errdecl = this.assembly.tryGetObjectTypeForFullyResolvedName("Result::Err") as EntityTypeDecl;
             const errkey = MIRKeyGenerator.generateTypeKey(ResolvedType.createSingle(ResolvedEntityAtomType.create(errdecl, binds)));
-            const errentry = { tkey: errkey.keyid, shortname: errkey.shortname, ootype: errdecl, binds: binds }
-            if (!this.masm.entityDecls.has(errkey.keyid) && this.pendingOOProcessing.findIndex((oop) => oop.tkey === errkey.keyid) === -1) {
+            const errentry = { tkey: errkey, ootype: errdecl, binds: binds }
+            if (!this.masm.entityDecls.has(errkey) && this.pendingOOProcessing.findIndex((oop) => oop.tkey === errkey) === -1) {
                 this.pendingOOProcessing.push(errentry);
                 this.entityInstantiationInfo.push(errentry);
 
                 if(this.emitEnabled) {
-                    const ft = MIREntityType.create(errkey.keyid, errkey.shortname);
+                    const ft = MIREntityType.create(errkey);
                     this.masm.typeMap.set(ft.typeID, MIRType.createSingle(ft));
                 }
             }
         }
 
-        if (decl.ns === "NSCore" && decl.name === "Option") {
-            const somethingdecl = this.assembly.tryGetObjectTypeForFullyResolvedName("NSCore::Something") as EntityTypeDecl;
+        if (decl.ns === "Core" && decl.name === "Option") {
+            const somethingdecl = this.assembly.tryGetObjectTypeForFullyResolvedName("Something") as EntityTypeDecl;
             const somethngkey = MIRKeyGenerator.generateTypeKey(ResolvedType.createSingle(ResolvedEntityAtomType.create(somethingdecl, binds)));
-            const somethingentry = { tkey: somethngkey.keyid, shortname: somethngkey.shortname, ootype: somethingdecl, binds: binds }
-            if (!this.masm.entityDecls.has(somethngkey.keyid) && this.pendingOOProcessing.findIndex((oop) => oop.tkey === somethngkey.keyid) === -1) {
+            const somethingentry = { tkey: somethngkey, ootype: somethingdecl, binds: binds }
+            if (!this.masm.entityDecls.has(somethngkey) && this.pendingOOProcessing.findIndex((oop) => oop.tkey === somethngkey) === -1) {
                 this.pendingOOProcessing.push(somethingentry);
                 this.entityInstantiationInfo.push(somethingentry);
 
                 if(this.emitEnabled) {
-                    const ft = MIREntityType.create(somethngkey.keyid, somethngkey.shortname);
+                    const ft = MIREntityType.create(somethngkey);
                     this.masm.typeMap.set(ft.typeID, MIRType.createSingle(ft));
                 }
             }
         }
 
-        if (decl.ns === "NSCore" && decl.name === "Map") {
-            const tatoms = [this.registerResolvedTypeReference(binds.get("K") as ResolvedType), this.registerResolvedTypeReference(binds.get("V") as ResolvedType)];
-            const rt = MIRTupleType.create(tatoms);
-            
-            if(!this.masm.tupleDecls.has(rt.typeID) && this.emitEnabled) {
-                this.masm.tupleDecls.set(rt.typeID, rt as MIRTupleType);
-            }
-        }
-
-        this.pendingOOProcessing.push({ tkey: key.keyid, shortname: key.shortname, ootype: decl, binds: binds});
-        this.entityInstantiationInfo.push({ tkey: key.keyid, shortname: key.shortname, ootype: decl, binds: binds});
+        this.pendingOOProcessing.push({ tkey: key, ootype: decl, binds: binds});
+        this.entityInstantiationInfo.push({ tkey: key, ootype: decl, binds: binds});
     }
 
     registerResolvedTypeReference(t: ResolvedType): MIRType {
@@ -1120,7 +1124,7 @@ class MIREmitter {
                 }
 
                 const ekey = MIRKeyGenerator.generateTypeKey(rtt);
-                rt = MIREntityType.create(ekey.keyid, ekey.shortname);
+                rt = MIREntityType.create(ekey);
             }
             else if (sopt instanceof ResolvedConceptAtomType) {
                 if(sopt.conceptTypes.length > 1) {
@@ -1131,7 +1135,7 @@ class MIREmitter {
                     this.registerTypeInstantiation(rtt, cpt.concept, cpt.binds);
                     return MIRKeyGenerator.generateTypeKey(rtt);
                 });
-                rt = MIRConceptType.create(natoms.map((kk) => [kk.keyid, kk.shortname]));
+                rt = MIRConceptType.create(natoms);
             }
             else if (sopt instanceof ResolvedTupleAtomType) {
                 const tatoms = sopt.types.map((entry) => this.registerResolvedTypeReference(entry));
@@ -1277,53 +1281,111 @@ class MIREmitter {
         this.pendingPCodeProcessing.push({ lkey: ikey, lshort: shortname, invoke: idecl, sigt: fsig, bodybinds: bodybinds, cargs: cinfo, capturedpcodes: capturedpcode });
     }
 
-    static generateMASM(pckge: PackageConfig, buildLevel: BuildLevel, macrodefs: string[], entrypoints: { namespace: string, names: string[] }, functionalize: boolean, srcFiles: { fpath: string, filepath: string, contents: string }[]): { masm: MIRAssembly | undefined, errors: string[] } {
+    static generateMASM(buildmode: BuildApplicationMode, pckge: PackageConfig[], buildLevel: BuildLevel, entrypoints: { filename: string, names: string[] }): { masm: MIRAssembly | undefined, errors: string[] } {
         ////////////////
         //Parse the contents and generate the assembly
         const assembly = new Assembly();
-        let p = new Parser(assembly, srcFiles.map((sfi) => { return {fullname: sfi.fpath, shortname: sfi.filepath}; }));
+        const allfiles = ([] as [PackageConfig, string, string, string][]).concat(...pckge.map((pk) => pk.src.map((srci) => [pk, srci.srcpath, srci.filename, srci.contents] as [PackageConfig, string, string, string])));
+
+        const p = new Parser(assembly, allfiles.map((fe) => { return {fullname: fe[1], shortname: fe[2]}; }));
+        let depsmap = new Map<string, string[]>();
+        let filetonsnamemap = new Map<string, Set<string>>();
+        let nsfilemap = new Map<string, [PackageConfig, string, string, string][]>();
+        let entryremap = new Map<string, string>();
+        let entryns: string = "Main";
+        let allfe: [PackageConfig, string, string, string][] = [];
         try {
-            for (let i = 0; i < srcFiles.length; ++i) {
-                p.parseCompilationUnitPass1(srcFiles[i].fpath, srcFiles[i].contents, macrodefs);
+            for(let i = 0; i < allfiles.length; ++i) {
+                const fe = allfiles[i];
+                const deps = p.parseCompilationUnitGetNamespaceDeps(fe[1], fe[3], fe[0].macrodefs);
+            
+                if(deps === undefined) {
+                    return { masm: undefined, errors: ["Hard failure in parse of namespace deps"] };
+                }
+
+                if(deps.ns !== "Core") {
+                    deps.deps.push("Core");
+                }
+
+                if(fe[1] === entrypoints.filename) {
+                    entryremap = deps.remap;
+                    entryns = deps.ns;
+                }
+
+                const nsnamemap = ["Core", deps.ns, ...[...deps.remap].map((rrp) => rrp[0])];
+                filetonsnamemap.set(fe[1], new Set<string>(nsnamemap));
+
+                if(!depsmap.has(deps.ns)) {
+                    depsmap.set(deps.ns, []);
+                }
+                depsmap.set(deps.ns, [...(depsmap.get(deps.ns) as string[]), ...deps.deps].sort());
+
+                if(!nsfilemap.has(deps.ns)) {
+                    nsfilemap.set(deps.ns, []);
+                }
+                (nsfilemap.get(deps.ns) as [PackageConfig, string, string, string][]).push(fe);
             }
 
-            for (let i = 0; i < srcFiles.length; ++i) {
-                p.parseCompilationUnitPass2(srcFiles[i].fpath, srcFiles[i].contents, macrodefs);
+            const allns = [...depsmap].map((dm) => dm[0]).sort();
+            let nsdone = new Set<string>();
+            while(nsdone.size < allns.length) {
+                const nsopts = allns.filter((ns) => {
+                    const ndeps = depsmap.get(ns) as string[];
+                    return !nsdone.has(ns) && ndeps.every((dep) => nsdone.has(dep));
+                });
+
+                if(nsopts.length === 0) {
+                    //TODO: should hunt down the cycle
+                    return { masm: undefined, errors: ["Cyclic dependency in namespaces"] };
+                }
+
+                const nns = nsopts[0];
+                const nsfiles = nsfilemap.get(nns) as [PackageConfig, string, string, string][];
+
+                for (let i = 0; i < nsfiles.length; ++i) {
+                    const parseok = p.parseCompilationUnitPass1(nsfiles[i][1], nsfiles[i][3], nsfiles[i][0].macrodefs);
+                    if (!parseok) {
+                        const parseErrors = p.getParseErrors();
+                        if (parseErrors !== undefined) {
+                            return { masm: undefined, errors: parseErrors.map((err: [string, number, string]) => JSON.stringify(err)) };
+                        }
+                    }
+                }
+    
+                for (let i = 0; i < nsfiles.length; ++i) {
+                    const parseok = p.parseCompilationUnitPass2(nsfiles[i][1], nsfiles[i][3], nsfiles[i][0].macrodefs, filetonsnamemap.get(nsfiles[i][1]) as Set<string>);
+                    if (!parseok) {
+                        const parseErrors = p.getParseErrors();
+                        if (parseErrors !== undefined) {
+                            return { masm: undefined, errors: parseErrors.map((err: [string, number, string]) => JSON.stringify(err)) };
+                        }
+                    }
+                }
+
+                allfe = [...allfe, ...nsfiles].sort((a, b) => a[1].localeCompare(b[1]));
+                nsdone.add(nns);
             }
         }
         catch (ex) {
             return { masm: undefined, errors: [`Hard failure in parse with exception -- ${ex}`] };
         }
 
-        const parseErrors = p.getParseErrors();
-        if (parseErrors !== undefined) {
-            return { masm: undefined, errors: parseErrors.map((err: [string, number, string]) => JSON.stringify(err)) };
-        }
-
         ////////////////
         //Compute the assembly hash and initialize representations
         const hash = Crypto.createHash("sha512");
-        const data = [...srcFiles].sort((a, b) => a.fpath.localeCompare(b.fpath));
-        data.forEach((sf) => {
-            hash.update(sf.fpath);
-            hash.update(sf.contents);
+        allfe.forEach((sf) => {
+            hash.update(sf[1]);
+            hash.update(JSON.stringify(sf[0].jemit()));
+            hash.update(sf[3]);
         });
 
-        const masm = new MIRAssembly(pckge, srcFiles, hash.digest("hex"));
+        const masmsrc = allfe.map((fe) => {
+            return {fpath: fe[1], contents: fe[3]};
+        });
+
+        const masm = new MIRAssembly(pckge, masmsrc, hash.digest("hex"));
         const emitter = new MIREmitter(assembly, masm, true);
         const checker = new TypeChecker(assembly, emitter, buildLevel, p.sortedSrcFiles);
-
-        emitter.registerResolvedTypeReference(assembly.getSpecialAnyConceptType());
-        emitter.registerResolvedTypeReference(assembly.getSpecialSomeConceptType());
-        emitter.registerResolvedTypeReference(assembly.getSpecialKeyTypeConceptType());
-        emitter.registerResolvedTypeReference(assembly.getSpecialValidatorConceptType());
-        emitter.registerResolvedTypeReference(assembly.getSpecialParsableConceptType());
-        emitter.registerResolvedTypeReference(assembly.getSpecialAPITypeConceptType());
-        emitter.registerResolvedTypeReference(assembly.getSpecialAlgebraicConceptType());
-        emitter.registerResolvedTypeReference(assembly.getSpecialOrderableConceptType());
-        emitter.registerResolvedTypeReference(assembly.getSpecialTupleConceptType());
-        emitter.registerResolvedTypeReference(assembly.getSpecialRecordConceptType());
-        emitter.registerResolvedTypeReference(assembly.getSpecialObjectConceptType());
 
         emitter.registerResolvedTypeReference(assembly.getSpecialNoneType());
         emitter.registerResolvedTypeReference(assembly.getSpecialBoolType());
@@ -1338,18 +1400,48 @@ class MIREmitter {
         emitter.registerResolvedTypeReference(assembly.getSpecialBufferFormatType());
         emitter.registerResolvedTypeReference(assembly.getSpecialBufferCompressionType());
         emitter.registerResolvedTypeReference(assembly.getSpecialByteBufferType());
-        emitter.registerResolvedTypeReference(assembly.getSpecialISOTimeType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialDateTimeType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialTickTimeType());
         emitter.registerResolvedTypeReference(assembly.getSpecialLogicalTimeType());
         emitter.registerResolvedTypeReference(assembly.getSpecialUUIDType());
         emitter.registerResolvedTypeReference(assembly.getSpecialContentHashType());
         emitter.registerResolvedTypeReference(assembly.getSpecialRegexType());
         emitter.registerResolvedTypeReference(assembly.getSpecialNothingType());
-        emitter.registerResolvedTypeReference(assembly.getSpecialHavocType());
+
+        if(buildmode === BuildApplicationMode.ModelChecker) {
+            emitter.registerResolvedTypeReference(assembly.getSpecialHavocType());
+        }
+
+        emitter.registerResolvedTypeReference(assembly.getSpecialAnyConceptType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialSomeConceptType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialKeyTypeConceptType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialValidatorConceptType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialParsableConceptType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialBufferParsableConceptType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialTestableTypeConceptType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialAPITypeConceptType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialAlgebraicConceptType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialOrderableConceptType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialTupleConceptType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialRecordConceptType());
+
+        
+        emitter.registerResolvedTypeReference(assembly.getSpecialISomethingConceptType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialIOptionConceptType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialIOptionTConceptType());
+
+        emitter.registerResolvedTypeReference(assembly.getSpecialIResultConceptType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialIOkConceptType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialIErrTConceptType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialIResultTConceptType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialIResultEConceptType());
+
+        emitter.registerResolvedTypeReference(assembly.getSpecialObjectConceptType());
 
         //get any entrypoint functions and initialize the checker there
-        const epns = assembly.getNamespace(entrypoints.namespace);
+        const epns = assembly.getNamespace(entryns);
         if (epns === undefined) {
-            return { masm: undefined, errors: [`Could not find namespace ${entrypoints.namespace}`] };
+            return { masm: undefined, errors: [`Could not find namespace ${entryns}`] };
         }
         else {
             if(entrypoints.names.length === 0) {
@@ -1378,7 +1470,7 @@ class MIREmitter {
 
                     while (emitter.pendingOOProcessing.length !== 0) {
                         const tt = emitter.pendingOOProcessing[0];
-                        checker.processOOType(tt.tkey, tt.shortname, tt.ootype, tt.binds);
+                        checker.processOOType(tt.tkey, tt.ootype, tt.binds);
 
                         emitter.pendingOOProcessing.shift();
                     }
@@ -1442,7 +1534,7 @@ class MIREmitter {
             if (checker.getErrorList().length === 0) {
                 checker.processRegexInfo();
 
-                if (functionalize) {
+                if (buildmode === BuildApplicationMode.ModelChecker) {
                     functionalizeInvokes(emitter, masm);
                 }
                 
@@ -1458,6 +1550,12 @@ class MIREmitter {
             return { masm: undefined, errors: tcerrors.map((err: [string, number, string]) => JSON.stringify(err)) };
         }
         else {
+            let typedefremaps = new Map<string, MIRType>(); 
+            assembly.getTypedefRemap().forEach((tt, tkey) => {
+                typedefremaps.set(tkey, emitter.registerResolvedTypeReference(tt));
+            });
+
+            masm.entyremaps = {namespaceremap: entryremap, entrytypedef: typedefremaps};
             return { masm: masm, errors: [] };
         }
     }

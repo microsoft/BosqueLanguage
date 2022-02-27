@@ -94,11 +94,11 @@
 			"patterns": [
 				{
 					"name": "keyword.control.bosque",
-					"match": "\\b(#if|#else|#endif|abort|assert|check|elif|else|ensures|if|invariant|requires|return|spec|switch|test|type|release|validate|when|yield)\\b"
+					"match": "\\b(#if|#else|#endif|_debug|abort|assert|elif|else|ensures|if|invariant|match|release|return|requires|spec|doc|switch|test|validate|yield)\\b"
 				},
 				{
 					"name": "keyword.bosque",
-					"match": "\\b(#if|#else|#endif|recursive?|recursive|_debug|abort|assert|astype|check|concept|const|elif|else|enum|entity|ensures|err|false|field|fn|pred|function|if|invariant|istype|let|method|namespace|none|nothing|of|ok|operator|provides|ref|out|out?|release|return|requires|something|spec|switch|test|true|type|typedef|typedecl|var|when|yield)\\b"
+					"match": "\\b(#if|#else|#endif|recursive?|recursive|_debug|abort|assert|astype|conceptconst|elif|else|enum|entity|ensures|err|field|fn|pred|function|if|invariant|istype|let|match|method|namespace|of|ok|operator|provides|ref|out|out?|release|return|requires|something|spec|doc|switch|test|type|typedef|typedecl|using|validate|var|when|yield)\\b"
 				}
 			]
 		},
@@ -106,11 +106,15 @@
 			"patterns": [
 				{
 					"name": "constant.numeric.bosque",
-					"match": "\\b(0|[1-9][0-9]*)|(0|[1-9][0-9]*)n|([0-9]+(\\.[0-9]+)?|\\.[0-9]+)([eE][-+]?[0-9]+)?f\\b"
+					"match": "\\b(0|[1-9][0-9]*)|((0|[1-9][0-9]*)(n|i|N|I))|((0|[1-9][0-9]*)/(0|[1-9][0-9]*)R)|(([0-9]+(\\.[0-9]+)?|\\.[0-9]+)([eE][-+]?[0-9]+)?(f|d))\\b"
+				},
+				{
+					"name": "constant.numeric.bosque",
+					"match": "\\b(0|[1-9][0-9]*)|(0|[1-9][0-9]*)(_([A-Z][_a-zA-Z0-9]+))|(0|[1-9][0-9]*)/(0|[1-9][0-9]*)(_([A-Z][_a-zA-Z0-9]+))|([0-9]+(\\.[0-9]+)?|\\.[0-9]+)([eE][-+]?[0-9]+)?(_([A-Z][_a-zA-Z0-9]+))\\b"
 				},
 				{
 					"name": "constant.language",
-					"match": "\\b(none|true|false)\\b"
+					"match": "\\b(none|nothing|true|false)\\b"
 				}
 			]
 		},
@@ -118,11 +122,7 @@
 			"patterns": [
 				{
 					"name": "entity.name.type.bosque",
-					"match": "\\b((NS[_a-zA-Z0-9]+)::(([A-MO-Z][_a-zA-Z0-9]+)|([A-Z][_a-zA-RT-Z0-9][_a-zA-Z0-9]*)))\\b"
-				},
-				{
-					"name": "entity.name.type.bosque",
-					"match": "\\b(([A-MO-Z][_a-zA-Z0-9]+)|([A-Z][_a-zA-RT-Z0-9][_a-zA-Z0-9]*))\\b"
+					"match": "\\b((([A-Z][_a-zA-Z0-9]+)::)*([A-Z][_a-zA-Z0-9]+))\\b"
 				},
 				{
 					"name": "entity.name.type.bosque",
