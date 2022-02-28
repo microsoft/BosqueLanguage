@@ -1028,7 +1028,7 @@ class SMTEmitter {
         }
         
         this.bemitter.requiredUFConsts.forEach((ctype) => {
-            const ufcc = new SMTFunctionUninterpreted(`${ctype.smttypetag}@uicons_UF`, [], ctype);
+            const ufcc = new SMTFunctionUninterpreted(`${ctype.smttypename}@uicons_UF`, [], ctype);
             this.assembly.uninterpfunctions.push(ufcc);
         });
 
