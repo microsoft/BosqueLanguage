@@ -218,12 +218,10 @@ std::optional<bool> expBoolAsBool(z3::solver& s, const z3::expr& e)
 
     if(strval == "true") 
     {
-        s.add(e);
         return std::make_optional(true);
     }
     else if(strval == "false")
     {
-        s.add(!e);
         return std::make_optional(false);
     }
     else
@@ -269,8 +267,6 @@ std::optional<std::string> expIntAsUInt(z3::solver& s, const z3::expr& e)
     std::cmatch match;
     if(std::regex_match(strval, re_numberino_n))
     {
-        s.add(e == s.ctx().int_val(strval.c_str()));
-
         return std::make_optional(strval);
     }
     else
@@ -325,8 +321,6 @@ std::optional<std::string> expIntAsInt(z3::solver& s, const z3::expr& e)
     std::cmatch match;
     if(std::regex_match(strval, re_numberino_i))
     {
-        s.add(e == s.ctx().int_val(strval.c_str()));
-
         return std::make_optional(strval);
     }
     else
@@ -388,8 +382,6 @@ std::optional<std::string> evalStringAsString(z3::solver& s, const z3::expr& e)
 
     if(sstr.length() >= 2 && sstr[0] == '"' && sstr[sstr.length() - 1] == '"')
     {
-        s.add(e == s.ctx().string_val(sstr));
-
         return std::make_optional(sstr);
     }
     else
