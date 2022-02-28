@@ -62,3 +62,38 @@ chktest function structural_types_1(): Bool {
 __chktest function structural_types_fail(tup: [Int, Bool], rec: {f: String, g: Int}): Bool {
     return structural_types(tup, rec) != 4i;
 }
+
+////////
+//
+function sign(x?: Int=0i): Int {
+    var y: Int;
+
+    if(x == 0i) {
+        y = 0i;
+    }
+    else {
+        y = (x > 0i) ? 1i : -1i;
+    }
+
+    return y;
+}
+
+chktest function sign_pos(): Bool {
+    return sign(5i) == 1i;
+}
+
+chktest function sign_neg(): Bool {
+    return sign(-5i) == -1i;
+}
+
+chktest function sign_default(): Bool {
+    return sign() == 0i;
+}
+
+__chktest function sign_fail_pos(x: Int): Bool {
+    return sign(x) > 0i;
+}
+
+__chktest function sign_fail_0(x: Int): Bool {
+    return sign(x) != 0i;
+}
