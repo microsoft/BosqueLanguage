@@ -17,7 +17,7 @@ let doneicpp = false;
 let haderror = false;
 
 function doneop(iserror, msg) {
-    haderror = haderror & iserror;
+    haderror = haderror || iserror;
 
     process.stdout.write(msg + "\n");
     if(donecopy && donets && donesmt && doneicpp) {
@@ -34,20 +34,20 @@ function doneop(iserror, msg) {
 
 exec("tsc -p tsconfig.json", {cwd: tscdir}, (err, stdout, stderr) => {
     donets = true;
-    doneop(err === null, err !== null ? err : "done tsc..."); 
+    doneop(err !== null, err !== null ? err : "done tsc..."); 
 });
 
 exec("node ./resource_copy.js", {cwd: builddir}, (err, stdout, stderr) => {
     donecopy = true;
-    doneop(err === null, err !== null ? stderr : "done copy..."); 
+    doneop(err !== null, err !== null ? stderr : "done copy..."); 
 });
 
 exec("node ./evaluator_build.js", {cwd: builddir}, (err, stdout, stderr) => {
     donesmt = true;
-    doneop(err === null, err !== null ? stderr : "done smt..."); 
+    doneop(err !== null, err !== null ? stderr : "done smt..."); 
 
     exec("node ./interpreter_build.js", {cwd: builddir}, (err, stdout, stderr) => {
         doneicpp = true;
-        doneop(err === null, err !== null ? stderr : "done icpp..."); 
+        doneop(err !== null, err !== null ? stderr : "done icpp..."); 
     });
 });

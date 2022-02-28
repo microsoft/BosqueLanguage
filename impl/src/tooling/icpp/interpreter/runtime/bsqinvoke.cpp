@@ -66,7 +66,12 @@ BSQTypeSizeInfo j_allocinfo(json v)
 
 void j_vtable(std::map<BSQVirtualInvokeID, BSQInvokeID>& vtable, json v)
 {
-    auto oftype = v["tkey"].get<std::string>();
+    if(v.is_null())
+    {
+        return;
+    }
+
+    auto oftype = v["oftype"].get<std::string>();
     auto varray = v["vtable"];
 
     if(varray.is_array())
@@ -111,7 +116,7 @@ const BSQType* jsonLoadTupleType(json v, bool isref)
     auto allocinfo = j_allocinfo(v);
 
     std::map<BSQVirtualInvokeID, BSQInvokeID> vtable;
-    j_vtable(vtable, v);
+    j_vtable(vtable, v["vtable"]);
 
     BSQTupleIndex maxIndex = v["maxIndex"].get<BSQTupleIndex>();
 
@@ -145,7 +150,7 @@ const BSQType* jsonLoadRecordType(json v, bool isref)
     auto allocinfo = j_allocinfo(v);
 
     std::map<BSQVirtualInvokeID, BSQInvokeID> vtable;
-    j_vtable(vtable, v);
+    j_vtable(vtable, v["vtable"]);
 
     std::vector<BSQRecordPropertyID> propertynames;
     auto pnlist = v["propertynames"];
