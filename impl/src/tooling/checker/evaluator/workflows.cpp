@@ -227,7 +227,7 @@ json getPayload(int argc, char** argv, int argidx)
     }
     catch(const std::exception& e)
     {
-        std::cerr << "Failed in payload parsing... " << e.what() << std::endl;
+        std::cout << "{\"result\": \"error\", \"info\": \"" << e.what() << "\"}" << std::endl;
         exit(1);
     }
 }
@@ -254,7 +254,7 @@ int main(int argc, char** argv)
         }
         catch(const std::exception& e)
         {
-            std::cout << "{\"result\": \"error\", \"info\": \"" << e.what() << "\"" << std::endl;
+            std::cout << "{\"result\": \"error\", \"info\": \"" << e.what() << "\"}" << std::endl;
             fflush(stdout);
             exit(1);
         }
@@ -277,7 +277,7 @@ int main(int argc, char** argv)
         }
         catch(const std::exception& e)
         {
-            std::cout << "{\"result\": \"error\", \"info\": \"" << e.what() << "\"" << std::endl;
+            std::cout << "{\"result\": \"error\", \"info\": \"" << e.what() << "\"}" << std::endl;
             fflush(stdout);
             exit(1);
         }
@@ -300,7 +300,7 @@ int main(int argc, char** argv)
         }
         catch(const std::exception& e)
         {
-            std::cout << "{\"result\": \"error\", \"info\": \"" << e.what() << "\"" << std::endl;
+            std::cout << "{\"result\": \"error\", \"info\": \"" << e.what() << "\"}" << std::endl;
             fflush(stdout);
             exit(1);
         }

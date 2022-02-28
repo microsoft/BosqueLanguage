@@ -48,3 +48,17 @@ chktest function allpositive_2(): Bool {
 __chktest function allpositive_x_fail(x: Int): Bool {
     return allPositive(1, x, 4);
 }
+
+////////
+//
+function structural_types(tup: [Int, Bool], rec: {f: String, g: Int}): Int {
+    return tup.0 + rec.g;
+}
+
+chktest function structural_types_1(): Bool {
+    return structural_types([1, false], {f="ok", g=3}) == 4i;
+}
+
+__chktest function structural_types_fail(tup: [Int, Bool], rec: {f: String, g: Int}): Bool {
+    return structural_types(tup, rec) != 4i;
+}
