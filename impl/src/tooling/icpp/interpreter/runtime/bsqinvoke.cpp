@@ -66,12 +66,16 @@ BSQTypeSizeInfo j_allocinfo(json v)
 
 void j_vtable(std::map<BSQVirtualInvokeID, BSQInvokeID>& vtable, json v)
 {
-    auto oftype = v["oftype"].get<std::string>();
+    auto oftype = v["tkey"].get<std::string>();
     auto varray = v["vtable"];
-    for(size_t i = 0; i < varray.size(); ++i)
+
+    if(varray.is_array())
     {
-        auto ventry = varray.at(i);
-        vtable[MarshalEnvironment::g_vinvokeToIdMap[oftype]] = MarshalEnvironment::g_invokeToIdMap[ventry];
+        for(size_t i = 0; i < varray.size(); ++i)
+        {
+            auto ventry = varray.at(i);
+            vtable[MarshalEnvironment::g_vinvokeToIdMap[oftype]] = MarshalEnvironment::g_invokeToIdMap[ventry];
+        }
     }
 }
 
@@ -130,7 +134,7 @@ const BSQType* jsonLoadTupleType(json v, bool isref)
     else 
     {
         auto norefs = v["norefs"].get<bool>();
-        auto boxedtype = v["boxedtype"].get<BSQTypeID>();
+        auto boxedtype = MarshalEnvironment::g_typenameToIdMap.find(v["boxedtype"].get<std::string>())->second;
         return new BSQTupleStructType(tid, allocinfo.inlinedatasize, allocinfo.inlinedmask, vtable, j_name(v), norefs, boxedtype, maxIndex, ttypes, idxoffsets);
     }
 }
@@ -168,7 +172,7 @@ const BSQType* jsonLoadRecordType(json v, bool isref)
     else 
     {
         auto norefs = v["norefs"].get<bool>();
-        auto boxedtype = v["boxedtype"].get<BSQTypeID>();
+        auto boxedtype = MarshalEnvironment::g_typenameToIdMap.find(v["boxedtype"].get<std::string>())->second;
         return new BSQRecordStructType(tid, allocinfo.inlinedatasize, allocinfo.inlinedmask, vtable, j_name(v), norefs, boxedtype, propertynames, propertytypes, propertyoffsets);
     }
 }
@@ -206,7 +210,7 @@ const BSQType* jsonLoadEntityType(json v, bool isref)
     else 
     {
         auto norefs = v["norefs"].get<bool>();
-        auto boxedtype = v["boxedtype"].get<BSQTypeID>();
+        auto boxedtype = MarshalEnvironment::g_typenameToIdMap.find(v["boxedtype"].get<std::string>())->second;
         return new BSQEntityStructType(tid, allocinfo.inlinedatasize, allocinfo.inlinedmask, vtable, j_name(v), norefs, boxedtype, fieldnames, fieldoffsets, fieldtypes);
     }
 }
@@ -226,7 +230,7 @@ const BSQType* jsonLoadConstructableEntityType(json v, bool isref)
     else 
     {
         auto norefs = v["norefs"].get<bool>();
-        auto boxedtype = v["boxedtype"].get<BSQTypeID>();
+        auto boxedtype = MarshalEnvironment::g_typenameToIdMap.find(v["boxedtype"].get<std::string>())->second;
         return new BSQEntityConstructableStructType(tid, allocinfo.inlinedatasize, allocinfo.inlinedmask, j_name(v), norefs, boxedtype, oftypeid);
     }
 }
