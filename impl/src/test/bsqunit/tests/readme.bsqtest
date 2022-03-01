@@ -97,3 +97,45 @@ __chktest function sign_fail_pos(x: Int): Bool {
 __chktest function sign_fail_0(x: Int): Bool {
     return sign(x) != 0i;
 }
+
+////////
+//
+concept WithName {
+    invariant $name !== "";
+
+    field name: String;
+}
+
+concept Greeting {
+    abstract method sayHello(): String;
+
+    virtual method sayGoodbye(): String {
+        return "goodbye";
+    }
+}
+
+entity GenericGreeting provides Greeting {
+    const instance: GenericGreeting = GenericGreeting{};
+
+    override method sayHello(): String {
+        return "hello world";
+    }
+}
+
+entity NamedGreeting provides WithName, Greeting {
+    override method sayHello(): String {
+        return String::concat("hello ", this.name);
+    }
+}
+
+chktest function genericGreeting_1(): Bool {
+    return GenericGreeting{}.sayHello() === "hello world";
+}
+
+chktest function genericGreeting_2(): Bool {
+    return GenericGreeting::instance.sayHello() === "hello world";
+}
+
+//NamedGreeting@{}.sayHello()           //type error no value provided for "name" field
+//NamedGreeting@{name=""}.sayHello()    //invariant error
+//NamedGreeting@{name="bob"}.sayHello() //"hello bob"

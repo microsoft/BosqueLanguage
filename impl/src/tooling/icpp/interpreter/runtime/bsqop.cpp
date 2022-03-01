@@ -751,6 +751,8 @@ InterpOp* InterpOp::jparse(json v)
         return ConstructorTupleFromEphemeralListOp::jparse(v);
     case OpCodeTag::EphemeralListExtendOp:
         return EphemeralListExtendOp::jparse(v);
+    case OpCodeTag::ConstructorEntityDirectOp:
+        return ConstructorEntityDirectOp::jparse(v);
     case OpCodeTag::ConstructorEphemeralListOp:
         return ConstructorEphemeralListOp::jparse(v);
     case OpCodeTag::PrefixNotOp:
