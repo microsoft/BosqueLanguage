@@ -325,15 +325,14 @@ __safe __primitive inline infix operator >=(a: Decimal, b: Decimal): Bool = defa
 //<summary>Primitive string value.</summary>
 __internal entity String provides Some, KeyType, APIType {
     __safe private function s_empty(s: String): Bool = string_empty;
-
     __assume_safe private function s_concat2(s1: String, s2: String): String = string_append;
 
     function concat(...sl: List<String>): String {
-        return ListOps::s_strconcat(sl);
+        return StringOps::s_strconcat(sl.value());
     }
 
     function join(sl: List<String>, sep: String): String {
-        return ListOps::s_strjoin(sl, sep);
+        return StringOps::s_strjoin(sl.value(), sep);
     }
 
     method empty(): Bool {

@@ -1015,7 +1015,7 @@ public:
         assert(this->valid());
 
         auto utfbyte = this->cbuff[this->cpos];
-        if((utfbyte & 0x8) == 0)
+        if((utfbyte & (uint8_t)0x80) == 0)
         {
             this->increment_utf8byte();
         }
@@ -1031,7 +1031,7 @@ public:
         assert(this->valid());
 
         auto utfbyte = this->cbuff[this->cpos];
-        if((utfbyte & 0x8) == 0)
+        if((utfbyte & (uint8_t)0x80) == 0)
         {
             return (CharCode)utfbyte;
         }
@@ -1094,7 +1094,7 @@ public:
         if(curr == strmax - 1)
         {
             auto utfbyte = this->cbuff[this->cpos];
-            if((utfbyte & 0x8) == 0x8)
+            if((utfbyte & (uint8_t)0x80) == (uint8_t)0x80)
             {
                 //not implemented
                 assert(false);
@@ -1117,7 +1117,7 @@ public:
         if(this->valid())
         {
             auto utfbyte = this->cbuff[this->cpos];
-            if((utfbyte & 0x8) == 0x8)
+            if((utfbyte & (uint8_t)0x80) == (uint8_t)0x80)
             {
                 //not implemented
                 assert(false);
@@ -1130,7 +1130,7 @@ public:
         assert(this->valid());
 
         auto utfbyte = this->cbuff[this->cpos];
-        if((utfbyte & 0x8) == 0)
+        if((utfbyte & (uint8_t)0x80) == 0)
         {
             return (CharCode)utfbyte;
         }

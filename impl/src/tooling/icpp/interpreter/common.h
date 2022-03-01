@@ -302,6 +302,8 @@ enum class BSQPrimitiveImplTag
 
     string_empty,
     string_append,
+    s_strconcat_ne,
+    s_strjoin_ne,
 
     bytebuffer_getformat,
     bytebuffer_getcompression,

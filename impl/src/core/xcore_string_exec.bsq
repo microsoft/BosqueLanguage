@@ -1,0 +1,32 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+//The core namespace implements the primitive concepts used in the bosque core language
+namespace Core;
+
+#if EXEC_LIBS
+internal entity StringOps provides Some {
+    function s_strconcat_ne(l: ListRepr<String>): String = s_strconcat_ne;
+    function s_strjoin_ne(l: ListRepr<String>, sep: String): Nat = s_strjoin_ne;
+
+    function s_strconcat(l: ListRepr<String>): String {
+       if(l === none) {
+            return "";
+        }
+        else {
+            return StringOps::s_strconcat_ne(l);
+        }
+    }
+
+    function s_strjoin(l: ListRepr<String>, sep: String): String {
+        if(l === none) {
+            return "";
+        }
+        else {
+            return StringOps::s_strjoin_ne(l, sep);
+        }
+    }
+}
+#endif
