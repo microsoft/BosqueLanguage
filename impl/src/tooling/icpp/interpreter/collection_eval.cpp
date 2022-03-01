@@ -720,13 +720,15 @@ BSQString BSQListOps::s_strconcat_ne(void* t, const BSQListReprType* ttype)
     BSQListForwardIterator iter(ttype, t);
     Allocator::GlobalAllocator.registerCollectionIterator(&iter);
 
-    BSQString res = g_emptyString;
+    BSQString res = SLPTR_LOAD_CONTENTS_AS(BSQString, iter.getlocation());
+    iter.advance();
+
     GCStack::pushFrame((void**)&res, "3");
 
     while(iter.valid())
     {
         StorageLocationPtr ss = iter.getlocation();
-        res = BSQStringImplType::concat2(&res, &ss);
+        res = BSQStringImplType::concat2(&res, ss);
 
         iter.advance();
     }
@@ -742,7 +744,9 @@ BSQString BSQListOps::s_strjoin_ne(void* t, const BSQListReprType* ttype, Storag
     BSQListForwardIterator iter(ttype, t);
     Allocator::GlobalAllocator.registerCollectionIterator(&iter);
 
-    BSQString res = g_emptyString;
+    BSQString res = SLPTR_LOAD_CONTENTS_AS(BSQString, iter.getlocation());
+    iter.advance();
+
     GCStack::pushFrame((void**)&res, "3");
 
     while(iter.valid())

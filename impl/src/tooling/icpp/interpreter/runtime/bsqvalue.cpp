@@ -697,7 +697,7 @@ BSQString BSQStringImplType::concat2(StorageLocationPtr s1, StorageLocationPtr s
         auto len1 = BSQStringImplType::utf8ByteCount(str1);
         auto len2 = BSQStringImplType::utf8ByteCount(str2);
 
-        BSQString res;
+        BSQString res = g_emptyString;
         if(IS_INLINE_STRING(&str1) & IS_INLINE_STRING(&str2))
         {
             if(len1 + len2 < 16)

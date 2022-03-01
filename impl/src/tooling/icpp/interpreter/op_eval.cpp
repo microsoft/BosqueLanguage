@@ -1079,7 +1079,7 @@ void Evaluator::evalReturnAssignOfConsOp(const ReturnAssignOfConsOp* op)
     const BSQEntityInfo* entityinfo = dynamic_cast<const BSQEntityInfo*>(op->oftype);
     for(size_t i = 0; i < entityinfo->fieldoffsets.size(); ++i)
     {
-        BSQType::g_typetable[entityinfo->fields[i]]->storeValue(SLPTR_INDEX_DATAPTR(tcontents, entityinfo->fieldoffsets[i]), this->evalArgument(op->args[i]));
+        BSQType::g_typetable[entityinfo->ftypes[i]]->storeValue(SLPTR_INDEX_DATAPTR(tcontents, entityinfo->fieldoffsets[i]), this->evalArgument(op->args[i]));
     }
 }
 
