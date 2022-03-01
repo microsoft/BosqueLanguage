@@ -1079,7 +1079,7 @@ void Evaluator::evalReturnAssignOfConsOp(const ReturnAssignOfConsOp* op)
     const BSQEntityInfo* entityinfo = dynamic_cast<const BSQEntityInfo*>(op->oftype);
     for(size_t i = 0; i < entityinfo->fieldoffsets.size(); ++i)
     {
-        BSQType::g_typetable[entityinfo->fields[i]]->storeValue(SLPTR_INDEX_DATAPTR(tcontents, entityinfo->fieldoffsets[i]), this->evalArgument(op->args[i]));
+        BSQType::g_typetable[entityinfo->ftypes[i]]->storeValue(SLPTR_INDEX_DATAPTR(tcontents, entityinfo->fieldoffsets[i]), this->evalArgument(op->args[i]));
     }
 }
 
@@ -2117,6 +2117,18 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
     }
     case BSQPrimitiveImplTag::string_append: {
         BSQString res = BSQStringImplType::concat2(params[0], params[1]);
+
+        SLPTR_STORE_CONTENTS_AS(BSQString, resultsl, res);
+        break;
+    }
+    case BSQPrimitiveImplTag::s_strconcat_ne: {
+        BSQString res = BSQListOps::s_strconcat_ne(LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]));
+
+        SLPTR_STORE_CONTENTS_AS(BSQString, resultsl, res);
+        break;
+    }
+    case BSQPrimitiveImplTag::s_strjoin_ne: {
+        BSQString res = BSQListOps::s_strjoin_ne(LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), params[1]);
 
         SLPTR_STORE_CONTENTS_AS(BSQString, resultsl, res);
         break;

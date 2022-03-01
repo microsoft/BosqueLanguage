@@ -624,6 +624,14 @@ int BSQStringImplType::keycmp(BSQString v1, BSQString v2)
     {
         return 0;
     }
+    else if(BSQStringImplType::empty(v1))
+    {
+        return -1;
+    }
+    else if(BSQStringImplType::empty(v2))
+    {
+        return 1;
+    }
     else if(IS_INLINE_STRING(&v1) && IS_INLINE_STRING(&v2))
     {
         return memcmp(BSQInlineString::utf8Bytes(v1.u_inlineString), BSQInlineString::utf8Bytes(v2.u_inlineString), 16);
@@ -689,7 +697,7 @@ BSQString BSQStringImplType::concat2(StorageLocationPtr s1, StorageLocationPtr s
         auto len1 = BSQStringImplType::utf8ByteCount(str1);
         auto len2 = BSQStringImplType::utf8ByteCount(str2);
 
-        BSQString res;
+        BSQString res = g_emptyString;
         if(IS_INLINE_STRING(&str1) & IS_INLINE_STRING(&str2))
         {
             if(len1 + len2 < 16)

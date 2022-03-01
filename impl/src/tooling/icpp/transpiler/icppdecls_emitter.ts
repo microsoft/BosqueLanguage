@@ -68,7 +68,7 @@ class ICPPEmitter {
             .map((iiv) => iiv[0]));
 
         const vcallarray = [...assembly.entityDecls].filter((edcl) => edcl[1] instanceof MIRObjectEntityTypeDecl).map((edcl) => [...(edcl[1] as MIRObjectEntityTypeDecl).vcallMap].map((ee) => ee[0]));
-        const allvinvokes = new Set(...(([] as MIRVirtualMethodKey[]).concat(...vcallarray)));
+        const allvinvokes = new Set<string>((([] as MIRVirtualMethodKey[]).concat(...vcallarray)));
 
         return new ICPPAssembly(alltypenames, [...allproperties].sort(), [...allfields].sort().map((fkey) => assembly.fieldDecls.get(fkey) as MIRFieldDecl), [...allinvokes].sort(), [...allvinvokes].sort());
     }
@@ -224,8 +224,8 @@ class ICPPEmitter {
                     this.icppasm.vtable.push(vte);
                 }
 
-                mdecl.vcallMap.forEach((vc) => {
-                    (vte as { oftype: MIRResolvedTypeKey, vtable: { vcall: MIRVirtualMethodKey, inv: MIRInvokeKey }[] }).vtable.push({ vcall: vc[0], inv: vc[1] });
+                mdecl.vcallMap.forEach((tinv, tvcall) => {
+                    (vte as { oftype: MIRResolvedTypeKey, vtable: { vcall: MIRVirtualMethodKey, inv: MIRInvokeKey }[] }).vtable.push({ vcall: tvcall, inv: tinv });
                 });
             }
         });

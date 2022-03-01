@@ -114,7 +114,7 @@ concept Greeting {
 }
 
 entity GenericGreeting provides Greeting {
-    const instance: GenericGreeting = GenericGreeting@{};
+    const instance: GenericGreeting = GenericGreeting{};
 
     override method sayHello(): String {
         return "hello world";
@@ -127,12 +127,12 @@ entity NamedGreeting provides WithName, Greeting {
     }
 }
 
-GenericGreeting@{}.sayHello()         //"hello world"
+GenericGreeting{}.sayHello()          //"hello world"
 GenericGreeting::instance.sayHello()  //"hello world"
 
-NamedGreeting@{}.sayHello()           //type error no value provided for "name" field
-NamedGreeting@{name=""}.sayHello()    //invariant error
-NamedGreeting@{name="bob"}.sayHello() //"hello bob"
+NamedGreeting{}.sayHello()           //type error no value provided for "name" field
+NamedGreeting{name=""}.sayHello()    //invariant error
+NamedGreeting{"bob"}.sayHello()      //"hello bob"
 ```
 
 **(Algebraic Data Types)++ and Union Types**

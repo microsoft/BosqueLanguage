@@ -1,0 +1,53 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+//The core namespace implements the primitive concepts used in the bosque core language
+namespace Core;
+
+#if CHECK_LIBS
+internal entity StringOps provides Some {
+    function s_strconcat(l: ListRepr<String>): String {
+        if(l === none) {
+            return "";
+        }
+        elif(l.is<Vector1<String>>()) {
+            let ll = s_safeAs<ListRepr<String>, Vector1<String>>(l);
+            return ll.v0;
+        }
+        elif(l.is<Vector2<String>>()) {
+            let ll = s_safeAs<ListRepr<String>, Vector2<String>>(l);
+            return String::s_concat2(ll.v0, ll.v1);
+        }
+        elif(l.is<Vector3<String>>()) {
+            let ll = s_safeAs<ListRepr<String>, Vector3<String>>(l);
+            return String::s_concat2(ll.v0, String::s_concat2(ll.v1, ll.v2));
+        }
+        else {
+            return "[NOT IMPLEMENTED]";
+        }
+    }
+
+    function s_strjoin(l: ListRepr<String>, sep: String): String {
+        if(l === none) {
+            return "";
+        }
+        elif(l.is<Vector1<String>>()) {
+            let ll = s_safeAs<ListRepr<String>, Vector1<String>>(l);
+            return ll.v0;
+        }
+        elif(l.is<Vector2<String>>()) {
+            let ll = s_safeAs<ListRepr<String>, Vector2<String>>(l);
+            return String::s_concat2(ll.v0, String::s_concat2(sep, ll.v1));
+        }
+        elif(l.is<Vector3<String>>()) {
+            let ll = s_safeAs<ListRepr<String>, Vector3<String>>(l);
+            return String::s_concat2(ll.v0, String::s_concat2(sep, String::s_concat2(ll.v1, String::s_concat2(sep, ll.v2))));
+        }
+        else {
+            return "[NOT IMPLEMENTED]";
+        }
+    }
+}
+#endif

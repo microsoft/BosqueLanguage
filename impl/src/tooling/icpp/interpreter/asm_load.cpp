@@ -22,7 +22,7 @@ const BSQField* jsonLoadFieldDecl(json v)
 {
     auto fkey = MarshalEnvironment::g_fieldToIdMap.find(v["fkey"].get<std::string>())->second;
     auto fname = v["fname"].get<std::string>();
-    auto declaredType = v["declaredType"].get<BSQTypeID>();
+    auto declaredType = MarshalEnvironment::g_typenameToIdMap.find(v["declaredType"].get<std::string>())->second;
     auto isOptional = v["isOptional"].get<bool>();
 
     return new BSQField(fkey, fname, declaredType, isOptional);
@@ -224,6 +224,7 @@ void loadAssembly(json j, Evaluator& ee)
     });
 
     auto fdecls = j["fielddecls"];
+    BSQField::g_fieldtable = (const BSQField**)zxalloc(fdecls.size() * sizeof(const BSQField*));
     std::for_each(fdecls.cbegin(), fdecls.cend(), [](json jfdecl) {
         auto fdecl = jsonLoadFieldDecl(jfdecl);
         BSQField::g_fieldtable[fdecl->fkey] = fdecl;

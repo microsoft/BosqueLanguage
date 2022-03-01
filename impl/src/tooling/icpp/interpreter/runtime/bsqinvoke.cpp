@@ -71,15 +71,16 @@ void j_vtable(std::map<BSQVirtualInvokeID, BSQInvokeID>& vtable, json v)
         return;
     }
 
-    auto oftype = v["oftype"].get<std::string>();
     auto varray = v["vtable"];
-
     if(varray.is_array())
     {
         for(size_t i = 0; i < varray.size(); ++i)
         {
             auto ventry = varray.at(i);
-            vtable[MarshalEnvironment::g_vinvokeToIdMap[oftype]] = MarshalEnvironment::g_invokeToIdMap[ventry];
+            auto vcall = ventry["vcall"].get<std::string>();
+            auto inv = ventry["inv"].get<std::string>();
+
+            vtable[MarshalEnvironment::g_vinvokeToIdMap[vcall]] = MarshalEnvironment::g_invokeToIdMap[inv];
         }
     }
 }

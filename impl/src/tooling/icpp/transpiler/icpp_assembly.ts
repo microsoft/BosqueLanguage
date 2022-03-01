@@ -669,7 +669,7 @@ class ICPPAssembly
         }
         else {
             return {
-                ptag: ICPPParseTag.EntityObjectRefTag,
+                ptag: ICPPParseTag.EntityObjectStructTag,
                 tkey: edcl.tkey,
                 allocinfo: icpplayout.allocinfo.jemit(),
                 name: edcl.tkey,
