@@ -136,6 +136,6 @@ chktest function genericGreeting_2(): Bool {
     return GenericGreeting::instance.sayHello() === "hello world";
 }
 
-//NamedGreeting@{}.sayHello()           //type error no value provided for "name" field
-//NamedGreeting@{name=""}.sayHello()    //invariant error
-//NamedGreeting@{name="bob"}.sayHello() //"hello bob"
+chktest function genericGreeting_3(): Bool {
+    return NamedGreeting{"bob"}.sayHello() === "hello bob";
+}

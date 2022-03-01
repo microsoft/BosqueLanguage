@@ -2121,6 +2121,18 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         SLPTR_STORE_CONTENTS_AS(BSQString, resultsl, res);
         break;
     }
+    case BSQPrimitiveImplTag::s_strconcat_ne: {
+        BSQString res = BSQListOps::s_strconcat_ne(LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]));
+
+        SLPTR_STORE_CONTENTS_AS(BSQString, resultsl, res);
+        break;
+    }
+    case BSQPrimitiveImplTag::s_strjoin_ne: {
+        BSQString res = BSQListOps::s_strjoin_ne(LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), params[1]);
+
+        SLPTR_STORE_CONTENTS_AS(BSQString, resultsl, res);
+        break;
+    }
     case BSQPrimitiveImplTag::bytebuffer_getformat: {
         BSQByteBuffer bb;
         BSQWellKnownType::g_typeByteBuffer->storeValue(&bb, params[0]);

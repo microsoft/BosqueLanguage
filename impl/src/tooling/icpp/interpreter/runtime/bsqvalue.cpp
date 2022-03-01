@@ -624,6 +624,14 @@ int BSQStringImplType::keycmp(BSQString v1, BSQString v2)
     {
         return 0;
     }
+    else if(BSQStringImplType::empty(v1))
+    {
+        return -1;
+    }
+    else if(BSQStringImplType::empty(v2))
+    {
+        return 1;
+    }
     else if(IS_INLINE_STRING(&v1) && IS_INLINE_STRING(&v2))
     {
         return memcmp(BSQInlineString::utf8Bytes(v1.u_inlineString), BSQInlineString::utf8Bytes(v2.u_inlineString), 16);

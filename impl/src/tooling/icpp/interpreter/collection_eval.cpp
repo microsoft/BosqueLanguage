@@ -714,6 +714,52 @@ void* BSQListOps::s_unique_from_sorted_ne(const BSQListTypeFlavor& lflavor, Lamb
     return nullptr;
 }
 
+
+BSQString BSQListOps::s_strconcat_ne(void* t, const BSQListReprType* ttype)
+{
+    BSQListForwardIterator iter(ttype, t);
+    Allocator::GlobalAllocator.registerCollectionIterator(&iter);
+
+    BSQString res = g_emptyString;
+    GCStack::pushFrame((void**)&res, "3");
+
+    while(iter.valid())
+    {
+        StorageLocationPtr ss = iter.getlocation();
+        res = BSQStringImplType::concat2(&res, &ss);
+
+        iter.advance();
+    }
+
+    Allocator::GlobalAllocator.releaseCollectionIterator(&iter);
+    GCStack::popFrame();
+
+    return res;
+}
+
+BSQString BSQListOps::s_strjoin_ne(void* t, const BSQListReprType* ttype, StorageLocationPtr sep)
+{
+    BSQListForwardIterator iter(ttype, t);
+    Allocator::GlobalAllocator.registerCollectionIterator(&iter);
+
+    BSQString res = g_emptyString;
+    GCStack::pushFrame((void**)&res, "3");
+
+    while(iter.valid())
+    {
+        StorageLocationPtr ss = iter.getlocation();
+        res = BSQStringImplType::concat2(&res, sep);
+        res = BSQStringImplType::concat2(&res, ss);
+
+        iter.advance();
+    }
+
+    Allocator::GlobalAllocator.releaseCollectionIterator(&iter);
+    GCStack::popFrame();
+
+    return res;
+}
+
 std::map<std::pair<BSQTypeID, BSQTypeID>, BSQMapTypeFlavor> BSQMapOps::g_flavormap;
 
 void s_union_rec_ne(const BSQMapTypeFlavor& mflavor, StorageLocationPtr tnode, BSQMapSpineIterator& ii)

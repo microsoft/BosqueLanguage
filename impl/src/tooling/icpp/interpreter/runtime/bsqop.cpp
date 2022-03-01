@@ -54,6 +54,8 @@ std::map<std::string, BSQPrimitiveImplTag> MarshalEnvironment::g_primitiveinvoke
 
     {"string_empty", BSQPrimitiveImplTag::string_empty},
     {"string_append", BSQPrimitiveImplTag::string_append},
+    {"s_strconcat_ne", BSQPrimitiveImplTag::s_strconcat_ne},
+    {"s_strjoin_ne", BSQPrimitiveImplTag::s_strjoin_ne},
 
     {"bytebuffer_getformat", BSQPrimitiveImplTag::bytebuffer_getformat},
     {"bytebuffer_getcompression", BSQPrimitiveImplTag::bytebuffer_getcompression},
