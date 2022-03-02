@@ -139,3 +139,7 @@ chktest function genericGreeting_2(): Bool {
 chktest function genericGreeting_3(): Bool {
     return NamedGreeting{"bob"}.sayHello() === "hello bob";
 }
+
+__chktest function genericGreeting_fail_bob(n: String): Bool {
+    return NamedGreeting{n}.sayHello() !== "hello bob";
+}
