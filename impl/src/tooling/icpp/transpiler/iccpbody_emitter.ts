@@ -266,6 +266,7 @@ class ICPPBodyEmitter {
 
         const rt = this.getStackInfoForTargetVar("$$return", this.typegen.getICPPLayoutInfo(this.typegen.getMIRType(geninfo.resulttype.typeID)));
         ops.push(ICPPOpEmitter.genConstructorEphemeralListOp(sinfo, rt, geninfo.resulttype.typeID, pargs));
+        ops.push(ICPPOpEmitter.genJumpOp(sinfo, 1, "exit")); //dummy final jump block
         
         return new ICPPInvokeBodyDecl(name, name, "[GENERATED]", sinfo, false, params, paraminfo, geninfo.resulttype.typeID, this.getStackInfoForArgVar("$$return"), this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), 0, ops, 0);
     }
@@ -301,6 +302,7 @@ class ICPPBodyEmitter {
 
         const rt = this.getStackInfoForTargetVar("$$return", this.typegen.getICPPLayoutInfo(this.typegen.getMIRType(geninfo.resulttype.typeID)));
         ops.push(ICPPOpEmitter.genConstructorEphemeralListOp(sinfo, rt, geninfo.resulttype.typeID, pargs));
+        ops.push(ICPPOpEmitter.genJumpOp(sinfo, 1, "exit")); //dummy final jump block
         
         return new ICPPInvokeBodyDecl(name, name, "[GENERATED]", sinfo, false, params, paraminfo, geninfo.resulttype.typeID, this.getStackInfoForArgVar("$$return"), this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), 0, ops, 0);
     }
@@ -336,6 +338,7 @@ class ICPPBodyEmitter {
 
         const rt = this.getStackInfoForTargetVar("$$return", this.typegen.getICPPLayoutInfo(this.typegen.getMIRType(geninfo.resulttype.typeID)));
         ops.push(ICPPOpEmitter.genConstructorEphemeralListOp(sinfo, rt, geninfo.resulttype.typeID, pargs));
+        ops.push(ICPPOpEmitter.genJumpOp(sinfo, 1, "exit")); //dummy final jump block
         
         return new ICPPInvokeBodyDecl(name, name, "[GENERATED]", sinfo, false, params, paraminfo, geninfo.resulttype.typeID, this.getStackInfoForArgVar("$$return"), this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), 0, ops, 0);
     }

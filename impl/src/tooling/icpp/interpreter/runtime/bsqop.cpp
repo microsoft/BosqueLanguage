@@ -409,7 +409,7 @@ UpdateEntityOp* UpdateEntityOp::jparse(json v)
 
 LoadFromEpehmeralListOp* LoadFromEpehmeralListOp::jparse(json v)
 {
-    return new LoadFromEpehmeralListOp(j_sinfo(v), j_trgt(v), j_trgttype(v), j_arg(v), dynamic_cast<const BSQEphemeralListType*>(j_argtype(v)), v["slotoffset"].get<uint32_t>(), v["index"].get<uint32_t>());
+    return new LoadFromEpehmeralListOp(j_sinfo(v), j_trgt(v), j_trgttype(v), j_arg(v), dynamic_cast<const BSQEphemeralListType*>(j_layouttype(v)), v["slotoffset"].get<uint32_t>(), v["index"].get<uint32_t>());
 }
 
 MultiLoadFromEpehmeralListOp* MultiLoadFromEpehmeralListOp::jparse(json v)
@@ -438,12 +438,12 @@ MultiLoadFromEpehmeralListOp* MultiLoadFromEpehmeralListOp::jparse(json v)
         return idx.get<uint32_t>();
     });
 
-    return new MultiLoadFromEpehmeralListOp(j_sinfo(v), trgts, trgttypes, j_arg(v), dynamic_cast<const BSQEphemeralListType*>(j_argtype(v)), slotoffsets, indexs);
+    return new MultiLoadFromEpehmeralListOp(j_sinfo(v), trgts, trgttypes, j_arg(v), dynamic_cast<const BSQEphemeralListType*>(j_layouttype(v)), slotoffsets, indexs);
 }
 
 SliceEphemeralListOp* SliceEphemeralListOp::jparse(json v)
 {
-    return new SliceEphemeralListOp(j_sinfo(v), j_trgt(v), dynamic_cast<const BSQEphemeralListType*>(j_trgttype(v)), j_arg(v), dynamic_cast<const BSQEphemeralListType*>(j_argtype(v)), v["slotoffsetend"].get<uint32_t>(), v["indexend"].get<uint32_t>());
+    return new SliceEphemeralListOp(j_sinfo(v), j_trgt(v), dynamic_cast<const BSQEphemeralListType*>(j_trgttype(v)), j_arg(v), dynamic_cast<const BSQEphemeralListType*>(j_layouttype(v)), v["slotoffsetend"].get<uint32_t>(), v["indexend"].get<uint32_t>());
 }
 
 InvokeFixedFunctionOp* InvokeFixedFunctionOp::jparse(json v)

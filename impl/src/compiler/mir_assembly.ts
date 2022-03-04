@@ -1183,15 +1183,15 @@ class MIRAssembly {
         else {
             const oentity = entity as MIRObjectEntityTypeDecl;
             
-            let consfields: string[] = [];
-            let ttypes: string[] = [];
+            let consfields: {fkey: MIRFieldKey, fname: string}[] = [];
+            let ttypes: {declaredType: MIRResolvedTypeKey, isOptional: boolean}[] = [];
             for(let i = 0; i < oentity.consfuncfields.length; ++i)
             {
                 const ff = oentity.consfuncfields[i];
                 const mirff = this.fieldDecls.get(ff.cfkey) as MIRFieldDecl;
 
-                consfields.push(mirff.fname);
-                ttypes.push(mirff.declaredType);
+                consfields.push({fkey: mirff.fkey, fname: mirff.fname});
+                ttypes.push({declaredType: mirff.declaredType, isOptional: ff.isoptional});
             }
 
             return {tag: APIEmitTypeTag.EntityTag, name: tt.typeID, consfields: consfields, ttypes: ttypes, validatefunc: oentity.validatefunc || null, consfunc: oentity.consfunc || null};

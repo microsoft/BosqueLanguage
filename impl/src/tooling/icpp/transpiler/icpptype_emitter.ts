@@ -745,7 +745,7 @@ class ICPPTypeEmitter {
         else {
             const icppinto = this.getICPPLayoutInfo(into);
 
-            if(icppinto.layout === ICPPLayoutCategory.UnionInline) {
+            if(icppinto.layout === ICPPLayoutCategory.UnionRef) {
                 return ICPPOpEmitter.genDirectAssignOp(sinfo, trgt, into.typeID, arg, sguard);
             }
             else {
