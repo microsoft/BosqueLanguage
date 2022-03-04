@@ -245,6 +245,8 @@ class ICPPBodyEmitter {
         const parg = icpptuple.canScalarStackAllocate() ? ICPPOpEmitter.genScalarArgument(0) : ICPPOpEmitter.genMixedArgument(0);
         const paraminfo = [{kind: (icpptuple.canScalarStackAllocate() ? ArgumentTag.ScalarVal : ArgumentTag.MixedVal), poffset: 0}];
 
+        this.initializeBodyGen("[GENERATED]", geninfo.resulttype);
+
         let ops: ICPPOp[] = [];
         let pargs: Argument[] = [];
         geninfo.indecies.forEach((idx, i) => {
@@ -278,6 +280,8 @@ class ICPPBodyEmitter {
         const params = [new ICPPFunctionParameter("arg", recordtype.typeID)];
         const parg = icpprecord.canScalarStackAllocate() ? ICPPOpEmitter.genScalarArgument(0) : ICPPOpEmitter.genMixedArgument(0);
         const paraminfo = [{kind: (icpprecord.canScalarStackAllocate() ? ArgumentTag.ScalarVal : ArgumentTag.MixedVal), poffset: 0}];
+
+        this.initializeBodyGen("[GENERATED]", geninfo.resulttype);
 
         let ops: ICPPOp[] = [];
         let pargs: Argument[] = [];
@@ -315,6 +319,8 @@ class ICPPBodyEmitter {
         const parg = icppentity.canScalarStackAllocate() ? ICPPOpEmitter.genScalarArgument(0) : ICPPOpEmitter.genMixedArgument(0);
         const paraminfo = [{kind: (icppentity.canScalarStackAllocate() ? ArgumentTag.ScalarVal : ArgumentTag.MixedVal), poffset: 0}];
 
+        this.initializeBodyGen("[GENERATED]", geninfo.resulttype);
+        
         let ops: ICPPOp[] = [];
         let pargs: Argument[] = [];
         geninfo.fields.forEach((f, i) => {
