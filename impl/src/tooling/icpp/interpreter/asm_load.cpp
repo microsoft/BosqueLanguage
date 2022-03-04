@@ -12,7 +12,7 @@ const BSQType* jsonLoadBoxedStructType(json v)
 
     auto name = v["name"].get<std::string>();
 
-    auto oftypeid = v["oftype"].get<BSQTypeID>();
+    auto oftypeid = MarshalEnvironment::g_typenameToIdMap.find(v["oftype"].get<std::string>())->second;
     auto oftype = dynamic_cast<const BSQStructType*>(BSQType::g_typetable[oftypeid]);
 
     return new BSQBoxedStructType(tid, oftype, name);
