@@ -194,7 +194,7 @@ class ICPPTypeEmitter {
         }
     }
 
-    private getICPPTypeInfoInlineLayout_MIRPrimitiveInternalEntityTypeDecl(tt: MIRType): ICPPTypeInlineInfo {
+    private getICPPTypeInfoInlineLayout_MIRPrimitiveInternalEntityTypeDecl(tt: MIRType, entity: MIREntityTypeDecl): ICPPTypeInlineInfo {
         if (this.isType(tt, "None")) {
             return {layout: ICPPLayoutCategory.Inline, size: 0, asize: 0, mask: ""};
         }
@@ -250,8 +250,22 @@ class ICPPTypeEmitter {
             return {layout: ICPPLayoutCategory.Inline, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "1"};
         }
         else {
-            assert(false, "Unknown primitive internal entity");
-            return {layout: ICPPLayoutCategory.Inline, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "1"};
+            if(entity.name === "PartialVector4") {
+                return {layout: ICPPLayoutCategory.Ref, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "2"};
+            }
+            else if (entity.name === "PartialVector8") {
+                return {layout: ICPPLayoutCategory.Ref, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "2"};
+            }
+            else if (entity.name === "ListTree") {
+                return {layout: ICPPLayoutCategory.Ref, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "2"};
+            }
+            else if (entity.name === "MapTree") {
+                return {layout: ICPPLayoutCategory.Ref, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "2"};
+            }
+            else {
+                assert(false, "Unknown primitive internal entity");
+                return {layout: ICPPLayoutCategory.Inline, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "1"};
+            }
         }
     }
 
@@ -308,7 +322,7 @@ class ICPPTypeEmitter {
             
             if(entity instanceof MIRInternalEntityTypeDecl) {
                 if(entity instanceof MIRPrimitiveInternalEntityTypeDecl) {
-                    res = this.getICPPTypeInfoInlineLayout_MIRPrimitiveInternalEntityTypeDecl(tt);
+                    res = this.getICPPTypeInfoInlineLayout_MIRPrimitiveInternalEntityTypeDecl(tt, this.assembly.entityDecls.get(tt.typeID) as MIREntityTypeDecl);
                 }
                 else if (entity instanceof MIRStringOfInternalEntityTypeDecl) {
                     const mirtype = this.getMIRType("String");

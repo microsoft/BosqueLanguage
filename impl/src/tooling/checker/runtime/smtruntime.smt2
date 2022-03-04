@@ -454,9 +454,9 @@
 
 (define-fun _@@cons_DateTime_entrypoint ((ctx HavocSequence)) $Result_BDateTime
   (let ((tctx (seq.++ ctx (seq.unit 0))))
-    (let ((y (BNat@UFCons_API (seq.++ tctx (seq.unit 0)))) (m (BNat@UFCons_API (seq.++ tctx (seq.unit 1)))) (d (BNat@UFCons_API (seq.++ tctx (seq.unit 2)))) (hh (BNat@UFCons_API (seq.++ tctx (seq.unit 3)))) (mm (BNat@UFCons_API (seq.++ tctx (seq.unit 4)))) (tzo (BNat@UFCons_API (seq.++ ctx (seq.unit 1)))) (tzn (BString@UFCons_API (seq.++ ctx (seq.unit 2)))))
-      (ite (and (<= 0 y) (<= y 300) (<= 0 m) (<= m 11) (<= 1 d) (<= d 31) (<= 0 hh) (<= hh 23) (<= 0 mm) (<= mm 59) (<= -720 tzo) (<= tzo 840) (<= (str.len tzn) 32))
-        ($Result_BDateTime@success (BDateTime@cons y m d hh mm tzo tzn))
+    (let ((y (BNat@UFCons_API (seq.++ tctx (seq.unit 0)))) (m (BNat@UFCons_API (seq.++ tctx (seq.unit 1)))) (d (BNat@UFCons_API (seq.++ tctx (seq.unit 2)))) (hh (BNat@UFCons_API (seq.++ tctx (seq.unit 3)))) (mm (BNat@UFCons_API (seq.++ tctx (seq.unit 4)))) (tzo (BNat@UFCons_API (seq.++ ctx (seq.unit 1)))))
+      (ite (and (<= 0 y) (<= y 300) (<= 0 m) (<= m 11) (<= 1 d) (<= d 31) (<= 0 hh) (<= hh 23) (<= 0 mm) (<= mm 59) (<= -720 tzo) (<= tzo 840))
+        ($Result_BDateTime@success (BDateTime@cons y m d hh mm tzo))
         ($Result_BDateTime@error ErrorID_AssumeCheck) 
       )
     )
