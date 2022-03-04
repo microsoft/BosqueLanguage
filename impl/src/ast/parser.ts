@@ -4905,7 +4905,7 @@ class Parser {
                             if (!lexer.isDeclTypeName(ename)) {
                                 this.raiseError(this.getCurrentLine(), "Not a valid type name to define");
                             }
-                            if (nsdecl.declaredNames.has(tname)) {
+                            if (nsdecl.declaredNames.has(ename)) {
                                 this.raiseError(this.getCurrentLine(), "Duplicate definition of name");
                             }
                             nsdecl.declaredNames.add(ename);
