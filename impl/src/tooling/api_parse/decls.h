@@ -116,8 +116,7 @@ struct DateTime
     uint8_t hour;    // 0-23
     uint8_t min;     // 0-59
 
-    int32_t tzoffset; //in minutes
-    std::string tzname; //optional abbrev (and/or) description
+    int16_t tzoffset; //in minutes
 };
 
 template <typename ValueRepr, typename State>

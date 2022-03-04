@@ -594,9 +594,6 @@ bool SMTParseJSON::parseDateTimeImpl(const APIModule* apimodule, const IType* it
 
     ctx.add(bef(etzo) == ctx.ctx().int_val(t.tzoffset));
 
-    auto bes = getArgContextConstructor(ctx.ctx(), "BString@UFCons_API", ctx.ctx().string_sort());
-    ctx.add(bes(etzn) == ctx.ctx().string_val(t.tzname));
-
     return true;
 }
 
@@ -855,7 +852,6 @@ std::optional<DateTime> SMTParseJSON::extractDateTimeImpl(const APIModule* apimo
 
     auto etime = extendContext(ctx.ctx(), value, 0);
     auto etzo = extendContext(ctx.ctx(), value, 1);
-    auto etzn = extendContext(ctx.ctx(), value, 2);
 
     {
         auto elocaly = extendContext(ctx.ctx(), etime, 0);
@@ -888,15 +884,13 @@ std::optional<DateTime> SMTParseJSON::extractDateTimeImpl(const APIModule* apimo
     auto bes = getArgContextConstructor(ctx.ctx(), "BString@UFCons_API", ctx.ctx().string_sort());
 
     auto tzo = expIntAsUIntSmall(ctx, bef(etzo));
-    auto tzn = evalStringAsString(ctx, bes(etzn));
     
-    if(!tzo.has_value() || !tzn.has_value())
+    if(!tzo.has_value())
     {
         return std::nullopt;
     }
 
     dt.tzoffset = tzo.value();
-    dt.tzname = tzn.value();
 
     return std::make_optional(dt);
 }

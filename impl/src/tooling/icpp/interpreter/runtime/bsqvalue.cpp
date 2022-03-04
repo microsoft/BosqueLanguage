@@ -895,17 +895,7 @@ std::string entityDateTimeDisplay_impl(const BSQType* btype, StorageLocationPtr 
 
         auto tstr = emitDateTimeRaw_v(t->year, t->month, t->day, t->hour, t->min) + tzstr;
 
-        std::string rstr;
-        if(t->tzname.empty())
-        {
-            rstr = tstr;
-        }
-        else
-        {
-            rstr = tstr + "(" + t->tzname  + ")";
-        }
-
-        return rstr + ((btype->name == "DateTime") ? "" : ("_" + btype->name));
+        return tstr + ((btype->name == "DateTime") ? "" : ("_" + btype->name));
     }
 }
 

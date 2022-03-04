@@ -149,14 +149,14 @@ LConst { val: Bool }
         match(this) {
             LConst                  => return this.val;
             | NotOp                 => return !this.arg.evaluate[recursive]();
-            | AndOp@{_, larg, rarg} => return larg.evaluate[recursive]() && rarg.evaluate[recursive]();
-            | OrOp@{_, larg, rarg}  => return larg.evaluate[recursive]() || rarg.evaluate[recursive]();
+            | AndOp{_, larg, rarg} => return larg.evaluate[recursive]() && rarg.evaluate[recursive]();
+            | OrOp{_, larg, rarg}  => return larg.evaluate[recursive]() || rarg.evaluate[recursive]();
         }
     } 
 }
 
-AndOp@{2, LConst@{1, true}, LConst@{1, false}}.evaluate[recursive]() //false
-OrOp@{2, LConst@{1, true}, LConst@{1, false}}.evaluate[recursive]()  //true
+AndOp{2, LConst{1, true}, LConst{1, false}}.evaluate[recursive]() //false
+OrOp{2, LConst{1, true}, LConst{1, false}}.evaluate[recursive]()  //true
 
 function printType(x: Bool | Int | String | None ): String {
     return match(x) {|

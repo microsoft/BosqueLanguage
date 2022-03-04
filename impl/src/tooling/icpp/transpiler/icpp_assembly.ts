@@ -25,60 +25,10 @@ const UNIVERSAL_MASK = "51111";
 
 type RefMask = string;
 
-class ICPPTypeSizeInfoSimple {
-    readonly tkey: MIRResolvedTypeKey;
-
-    readonly isinlinevalue: boolean; //if this value is represented by an inline value (otherwise by a pointer to a heap allocated value)
-    readonly issmallinlinevalue: boolean; //if this value is represented by a small inline value (which can be inlined itself) 
-    
-    readonly realdatasize: number; //number of bytes needed in storage location for this (EXCLUDES type tag for inline union)
-    readonly inlinedatasize: number; //number of bytes needed in storage location for this (includes type tag for inline union -- is the size of a pointer for ref -- and word size for BSQBool)
-    readonly assigndatasize: number; //number of bytes needed to copy when assigning this to a location -- 1 for BSQBool -- others should be same as inlined size
-
-    readonly inlinedmask: RefMask; //The mask used to traverse this object as part of inline storage (on stack or inline in an object) -- must traverse full object
-
-    constructor(tkey: MIRResolvedTypeKey, realdatasize: number, inlinedatasize: number, assigndatasize: number, inlinedmask: RefMask, isinlinevalue: boolean, issmallinlinevalue: boolean) {
-        this.tkey = tkey;
-        this.isinlinevalue = isinlinevalue;
-        this.issmallinlinevalue = issmallinlinevalue;
-
-        this.realdatasize = realdatasize;
-        this.inlinedatasize = inlinedatasize;
-        this.assigndatasize = assigndatasize;
-
-        this.inlinedmask = inlinedmask;
-    }
-
-    isScalarOnlyInline(): boolean {
-        return /^1+$/.test(this.inlinedmask);
-    }
-
-    static createByRegisterSizeInfo(tkey: MIRResolvedTypeKey, inlinedatasize: number, assigndatasize: number, inlinedmask: RefMask): ICPPTypeSizeInfoSimple {
-        return new ICPPTypeSizeInfoSimple(tkey, inlinedatasize, inlinedatasize, assigndatasize, inlinedmask, true, true);
-    }
-
-    static createByValueSizeInfo(tkey: MIRResolvedTypeKey, inlinedatasize: number, inlinedmask: RefMask, issmallinlinevalue: boolean): ICPPTypeSizeInfoSimple {
-        return new ICPPTypeSizeInfoSimple(tkey, inlinedatasize, inlinedatasize, inlinedatasize, inlinedmask, true, issmallinlinevalue);
-    }
-
-    static createByRefSizeInfo(tkey: MIRResolvedTypeKey): ICPPTypeSizeInfoSimple {
-        return new ICPPTypeSizeInfoSimple(tkey, ICPP_WORD_SIZE, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "2", false, false);
-    }
-
-    static createInlineUnionSizeInfo(tkey: MIRResolvedTypeKey, inlinedatasize: number, inlinedmask: RefMask): ICPPTypeSizeInfoSimple {
-        return new ICPPTypeSizeInfoSimple(tkey, inlinedatasize - ICPP_WORD_SIZE, inlinedatasize, inlinedatasize, inlinedmask, true, false);
-    }
-
-    createFromSizeInfo(tkey: MIRResolvedTypeKey): ICPPTypeSizeInfoSimple {
-        return new ICPPTypeSizeInfoSimple(tkey, this.inlinedatasize, this.inlinedatasize, this.assigndatasize, this.inlinedmask, this.isinlinevalue, this.issmallinlinevalue);
-    }
-}
-
 class ICPPTypeSizeInfo {
     readonly tkey: MIRResolvedTypeKey;
 
     readonly isinlinevalue: boolean; //if this value is represented by an inline value (otherwise by a pointer to a heap allocated value)
-    readonly issmallinlinevalue: boolean; //if this value is represented by a small inline value (which can be inlined itself) 
     
     readonly realdatasize: number; //number of bytes needed in storage location for this (EXCLUDES type tag for inline union)
     readonly heapsize: number;   //number of bytes needed to represent the data (no type ptr) when storing in the heap
@@ -88,11 +38,10 @@ class ICPPTypeSizeInfo {
     readonly heapmask: RefMask | undefined; //The mask to used to traverse this object during gc (if it is heap allocated) -- null if this is a leaf object -- partial if tailing scalars
     readonly inlinedmask: RefMask; //The mask used to traverse this object as part of inline storage (on stack or inline in an object) -- must traverse full object
 
-    constructor(tkey: MIRResolvedTypeKey, realdatasize: number, heapsize: number, inlinedatasize: number, assigndatasize: number, heapmask: RefMask | undefined, inlinedmask: RefMask, isinlinevalue: boolean, issmallinlinevalue: boolean)
+    constructor(tkey: MIRResolvedTypeKey, realdatasize: number, heapsize: number, inlinedatasize: number, assigndatasize: number, heapmask: RefMask | undefined, inlinedmask: RefMask, isinlinevalue: boolean)
     {
         this.tkey = tkey;
         this.isinlinevalue = isinlinevalue;
-        this.issmallinlinevalue = issmallinlinevalue;
 
         this.realdatasize = realdatasize;
         this.heapsize = heapsize;
@@ -108,11 +57,11 @@ class ICPPTypeSizeInfo {
     }
 
     static createByRegisterSizeInfo(tkey: MIRResolvedTypeKey, inlinedatasize: number, assigndatasize: number, inlinedmask: RefMask): ICPPTypeSizeInfo {
-        return new ICPPTypeSizeInfo(tkey, inlinedatasize, inlinedatasize, inlinedatasize, assigndatasize, undefined, inlinedmask, true, true);
+        return new ICPPTypeSizeInfo(tkey, inlinedatasize, inlinedatasize, inlinedatasize, assigndatasize, undefined, inlinedmask, true);
     }
 
-    static createByValueSizeInfo(tkey: MIRResolvedTypeKey, inlinedatasize: number, inlinedmask: RefMask, issmallinlinevalue: boolean): ICPPTypeSizeInfo {
-        return new ICPPTypeSizeInfo(tkey, inlinedatasize, inlinedatasize, inlinedatasize, inlinedatasize, undefined, inlinedmask, true, issmallinlinevalue);
+    static createByValueSizeInfo(tkey: MIRResolvedTypeKey, inlinedatasize: number, inlinedmask: RefMask): ICPPTypeSizeInfo {
+        return new ICPPTypeSizeInfo(tkey, inlinedatasize, inlinedatasize, inlinedatasize, inlinedatasize, undefined, inlinedmask, true);
     }
 
     static createByRefSizeInfo(tkey: MIRResolvedTypeKey, heapsize: number, heapmask: RefMask | undefined): ICPPTypeSizeInfo {
@@ -120,15 +69,15 @@ class ICPPTypeSizeInfo {
             heapmask = undefined;
         }
         
-        return new ICPPTypeSizeInfo(tkey, ICPP_WORD_SIZE, heapsize, ICPP_WORD_SIZE, ICPP_WORD_SIZE, heapmask, "2", false, false);
+        return new ICPPTypeSizeInfo(tkey, ICPP_WORD_SIZE, heapsize, ICPP_WORD_SIZE, ICPP_WORD_SIZE, heapmask, "2", false);
     }
 
     static createInlineUnionSizeInfo(tkey: MIRResolvedTypeKey, inlinedatasize: number, inlinedmask: RefMask): ICPPTypeSizeInfo {
-        return new ICPPTypeSizeInfo(tkey, inlinedatasize - ICPP_WORD_SIZE, inlinedatasize, inlinedatasize, inlinedatasize, undefined, inlinedmask, true, false);
+        return new ICPPTypeSizeInfo(tkey, inlinedatasize - ICPP_WORD_SIZE, inlinedatasize, inlinedatasize, inlinedatasize, undefined, inlinedmask, true);
     }
 
     createFromSizeInfo(tkey: MIRResolvedTypeKey): ICPPTypeSizeInfo {
-        return new ICPPTypeSizeInfo(tkey, this.inlinedatasize, this.heapsize, this.inlinedatasize, this.assigndatasize, this.heapmask, this.inlinedmask, this.isinlinevalue, this.issmallinlinevalue);
+        return new ICPPTypeSizeInfo(tkey, this.inlinedatasize, this.heapsize, this.inlinedatasize, this.assigndatasize, this.heapmask, this.inlinedmask, this.isinlinevalue);
     }
 
     jemit(): any {
@@ -179,8 +128,8 @@ class ICPPLayoutInfoFixed extends ICPPLayoutInfo {
         return new ICPPLayoutInfoFixed(tkey, ICPPTypeSizeInfo.createByRegisterSizeInfo(tkey, inlinedatasize, assigndatasize, inlinedmask), ICPPLayoutCategory.Inline);
     }
 
-    static createByValueLayout(tkey: MIRResolvedTypeKey, inlinedatasize: number, inlinedmask: RefMask, issmallinlinevalue: boolean): ICPPLayoutInfoFixed {
-        return new ICPPLayoutInfoFixed(tkey, ICPPTypeSizeInfo.createByValueSizeInfo(tkey, inlinedatasize, inlinedmask, issmallinlinevalue), ICPPLayoutCategory.Inline);
+    static createByValueLayout(tkey: MIRResolvedTypeKey, inlinedatasize: number, inlinedmask: RefMask): ICPPLayoutInfoFixed {
+        return new ICPPLayoutInfoFixed(tkey, ICPPTypeSizeInfo.createByValueSizeInfo(tkey, inlinedatasize, inlinedmask), ICPPLayoutCategory.Inline);
     }
 
     static createByRefLayout(tkey: MIRResolvedTypeKey, heapsize: number, heapmask: RefMask | undefined): ICPPLayoutInfoFixed {
@@ -206,7 +155,7 @@ class ICPPTupleLayoutInfo extends ICPPLayoutInfo {
     }
 
     static createByValueTuple(tkey: MIRResolvedTypeKey, inlinedatasize: number, inlinedmask: RefMask, idxtypes: MIRResolvedTypeKey[], idxoffsets: number[]): ICPPTupleLayoutInfo {
-        return new ICPPTupleLayoutInfo(tkey, ICPPTypeSizeInfo.createByValueSizeInfo(tkey, inlinedatasize, inlinedmask, false), idxtypes, idxoffsets, ICPPLayoutCategory.Inline);
+        return new ICPPTupleLayoutInfo(tkey, ICPPTypeSizeInfo.createByValueSizeInfo(tkey, inlinedatasize, inlinedmask), idxtypes, idxoffsets, ICPPLayoutCategory.Inline);
     }
 
     static createByRefTuple(tkey: MIRResolvedTypeKey, heapsize: number, heapmask: RefMask, idxtypes: MIRResolvedTypeKey[], idxoffsets: number[]): ICPPTupleLayoutInfo {
@@ -232,7 +181,7 @@ class ICPPRecordLayoutInfo extends ICPPLayoutInfo {
     }
 
     static createByValueRecord(tkey: MIRResolvedTypeKey, inlinedatasize: number, inlinedmask: RefMask, propertynames: string[], propertytypes: MIRResolvedTypeKey[], propertyoffsets: number[]): ICPPRecordLayoutInfo {
-        return new ICPPRecordLayoutInfo(tkey, ICPPTypeSizeInfo.createByValueSizeInfo(tkey, inlinedatasize, inlinedmask, false), propertynames, propertytypes, propertyoffsets, ICPPLayoutCategory.Inline);
+        return new ICPPRecordLayoutInfo(tkey, ICPPTypeSizeInfo.createByValueSizeInfo(tkey, inlinedatasize, inlinedmask), propertynames, propertytypes, propertyoffsets, ICPPLayoutCategory.Inline);
     }
 
     static createByRefRecord(tkey: MIRResolvedTypeKey, heapsize: number, heapmask: RefMask, propertynames: string[], propertytypes: MIRResolvedTypeKey[], propertyoffsets: number[]): ICPPRecordLayoutInfo {
@@ -258,7 +207,7 @@ class ICPPEntityLayoutInfo extends ICPPLayoutInfo {
     }
 
     static createByValueEntity(tkey: MIRResolvedTypeKey, inlinedatasize: number, inlinedmask: RefMask, fieldnames: string[], fieldtypes: MIRResolvedTypeKey[], fieldoffsets: number[]): ICPPEntityLayoutInfo {
-        return new ICPPEntityLayoutInfo(tkey, ICPPTypeSizeInfo.createByValueSizeInfo(tkey, inlinedatasize, inlinedmask, false), fieldnames, fieldtypes, fieldoffsets, ICPPLayoutCategory.Inline);
+        return new ICPPEntityLayoutInfo(tkey, ICPPTypeSizeInfo.createByValueSizeInfo(tkey, inlinedatasize, inlinedmask), fieldnames, fieldtypes, fieldoffsets, ICPPLayoutCategory.Inline);
     }
 
     static createByRefEntity(tkey: MIRResolvedTypeKey, heapsize: number, heapmask: RefMask, fieldnames: string[], fieldtypes: MIRResolvedTypeKey[], fieldoffsets: number[]): ICPPEntityLayoutInfo {
@@ -289,7 +238,7 @@ class ICPPEphemeralListLayoutInfo extends ICPPLayoutInfo {
     readonly eoffsets: number[];
 
     constructor(tkey: MIRResolvedTypeKey, inlinedatasize: number, inlinedmask: RefMask, etypes: MIRResolvedTypeKey[], eoffsets: number[]) {
-        super(tkey, ICPPTypeSizeInfo.createByValueSizeInfo(tkey, inlinedatasize, inlinedmask, false), ICPPLayoutCategory.Inline);
+        super(tkey, ICPPTypeSizeInfo.createByValueSizeInfo(tkey, inlinedatasize, inlinedmask), ICPPLayoutCategory.Inline);
 
         this.etypes = etypes;
         this.eoffsets = eoffsets;
@@ -1019,7 +968,7 @@ class ICPPAssembly
 
 export {
     TranspilerOptions, SourceInfo, ICPP_WORD_SIZE, UNIVERSAL_CONTENT_SIZE, UNIVERSAL_TOTAL_SIZE, UNIVERSAL_MASK,
-    ICPPTypeSizeInfoSimple, ICPPTypeSizeInfo, RefMask,
+    ICPPTypeSizeInfo, RefMask,
     ICPPLayoutCategory, ICPPLayoutInfo, ICPPLayoutInfoFixed, ICPPTupleLayoutInfo, ICPPRecordLayoutInfo, ICPPEntityLayoutInfo, ICPPCollectionInternalsLayoutInfo, ICPPEphemeralListLayoutInfo, 
     ICPPLayoutInlineUnion, ICPPLayoutRefUnion, ICPPLayoutUniversalUnion,
     ICPPInvokeDecl, ICPPFunctionParameter, ICPPPCode, ICPPInvokeBodyDecl, ICPPInvokePrimitiveDecl,
