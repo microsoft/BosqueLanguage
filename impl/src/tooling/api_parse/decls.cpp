@@ -328,52 +328,25 @@ std::optional<int32_t> parseToDateTimeTZ(json j)
 
 std::optional<DateTime> JSONParseHelper::parseToDateTime(json j)
 {
-    if(j.is_string())
-    {
-        DateTime tinfo = {0, 0, 0, 0, 0, 0, ""};
-        auto ok = parseToDateTimeRaw(j, tinfo.year, tinfo.month, tinfo.day, tinfo.hour, tinfo.min);
-        if(!ok)
-        {
-            return std::nullopt;
-        }
-
-        auto tzo = parseToDateTimeTZ(j);
-        if(!tzo.has_value())
-        {
-            return std::nullopt;
-        }
-        tinfo.tzoffset = tzo.value();
-
-        return std::make_optional(tinfo);
+    if(!j.is_string()) {
+        return std::nullopt;
     }
-    else
+    
+    DateTime tinfo = {0, 0, 0, 0, 0, 0};
+    auto ok = parseToDateTimeRaw(j, tinfo.year, tinfo.month, tinfo.day, tinfo.hour, tinfo.min);
+    if(!ok)
     {
-        if(!j.is_array() || j.size() > 2)
-        {
-            return std::nullopt;
-        }
-
-        if(j.size() == 2 && !j[2].is_string())
-        {
-            return std::nullopt;
-        }
-
-        DateTime tinfo = {0, 0, 0, 0, 0, 0, j[2].get<std::string>()};
-        auto ok = parseToDateTimeRaw(j[0], tinfo.year, tinfo.month, tinfo.day, tinfo.hour, tinfo.min);
-        if(!ok)
-        {
-            return std::nullopt;
-        }
-
-        auto tzo = parseToDateTimeTZ(j[0]);
-        if(!tzo.has_value())
-        {
-            return std::nullopt;
-        }
-        tinfo.tzoffset = tzo.value();
-
-        return std::make_optional(tinfo);
+        return std::nullopt;
     }
+
+    auto tzo = parseToDateTimeTZ(j);
+    if(!tzo.has_value())
+    {
+        return std::nullopt;
+    }
+    tinfo.tzoffset = tzo.value();
+
+    return std::make_optional(tinfo);
 }
 
 std::optional<uint64_t> JSONParseHelper::parseToTickTime(json j)
@@ -568,19 +541,7 @@ std::optional<json> JSONParseHelper::emitDateTime(DateTime t)
         std::string tzstr(sstrt, sstrt + 10);
 
         auto tstr = emitDateTimeRaw_d(t.year, t.month, t.day, t.hour, t.min) + tzstr;
-
-        if(t.tzname.empty())
-        {
-            return std::make_optional(tstr);
-        }
-        else
-        {
-            auto jobj = json::array();
-            jobj[0] = tstr;
-            jobj[1] = t.tzname;
-
-            return std::make_optional(jobj);
-        }
+        return std::make_optional(tstr);
     }
 }
 

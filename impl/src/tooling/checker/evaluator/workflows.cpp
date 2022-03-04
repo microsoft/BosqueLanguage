@@ -25,7 +25,7 @@ json workflowCheckError(std::string smt2decl, const APIModule* apimodule, const 
     auto res = s.check();    
     auto end = std::chrono::system_clock::now();
 
-    auto delta_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();    
+    int delta_ms = (int)std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();    
     if(res == z3::check_result::unknown)
     {
         return {
@@ -86,7 +86,7 @@ json workflowTestPass(std::string smt2decl, const APIModule* apimodule, const In
     auto res = s.check();    
     auto end = std::chrono::system_clock::now();
 
-    auto delta_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();    
+    int delta_ms = (int)std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();    
     if(res == z3::check_result::unknown)
     {
         return {
@@ -170,7 +170,7 @@ json workflowEvaluate(std::string smt2decl, const APIModule* apimodule, const In
     auto res = s.check();    
     auto end = std::chrono::system_clock::now();
 
-    auto delta_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();    
+    int delta_ms = (int)std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();    
     if(res == z3::check_result::unknown)
     {
         return {

@@ -98,11 +98,9 @@ void initializeLiteral(size_t storageOffset, const BSQType* gtype, std::string& 
     switch (gtype->tid)
     {
     case BSQ_TYPE_ID_NONE: {
-        dynamic_cast<const BSQRegisterType<BSQNone>*>(BSQWellKnownType::g_typeNone)->storeValueDirect(sl, BSQNoneValue);
         break;
     }
     case BSQ_TYPE_ID_NOTHING: {
-        dynamic_cast<const BSQRegisterType<BSQNothing>*>(BSQWellKnownType::g_typeNothing)->storeValueDirect(sl, BSQNoneValue);
         break;
     }
     case BSQ_TYPE_ID_BOOL: {

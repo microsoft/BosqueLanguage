@@ -104,7 +104,7 @@
 
 (declare-datatype BDateTime 
   (
-    (BDateTime@cons (BDateTime@year BNat) (BDateTime@month BNat) (BDateTime@day BNat) (BDateTime@hour BNat) (BDateTime@min BNat) (BDateTime@tzoffset BNat) (BDateTime@tzinfo BString))
+    (BDateTime@cons (BDateTime@year BNat) (BDateTime@month BNat) (BDateTime@day BNat) (BDateTime@hour BNat) (BDateTime@min BNat) (BDateTime@tzoffset BNat))
   )
 )
 

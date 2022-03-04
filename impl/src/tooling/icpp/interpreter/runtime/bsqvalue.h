@@ -62,6 +62,32 @@ public:
     static const BSQType* g_typeRegex;
 };
 
+class BSQEmptyType : public BSQType
+{
+public:
+    BSQEmptyType(BSQTypeID tid, KeyCmpFP fpkeycmp, DisplayFP fpDisplay, std::string name): 
+        BSQType(tid, BSQTypeLayoutKind::Empty, { 0, 0, 0, nullptr, "" }, STRUCT_LEAF_GC_FUNCTOR_SET, {}, fpkeycmp, fpDisplay, name)
+    {;}
+
+    virtual ~BSQEmptyType() {;}
+
+    void clearValue(StorageLocationPtr trgt) const override final
+    {
+        ;
+    }
+
+    void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override final
+    {
+        ;
+    }
+
+    StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override final
+    {
+        assert(false);
+        return nullptr;
+    }
+};
+
 template <typename T>
 class BSQRegisterType : public BSQType
 {
@@ -731,22 +757,16 @@ std::pair<const BSQType*, StorageLocationPtr> extractFromUnionVCall(const BSQUni
 
 ////
 //None
-typedef uint64_t BSQNone;
-#define BSQNoneValue 0
-
 std::string entityNoneDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 int entityNoneKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
 
-#define CONS_BSQ_NONE_TYPE() (new BSQRegisterType<BSQNone>(BSQ_TYPE_ID_NONE, sizeof(BSQNone), "1", entityNoneKeyCmp_impl, entityNoneDisplay_impl, "None"))
+#define CONS_BSQ_NONE_TYPE() (new BSQEmptyType(BSQ_TYPE_ID_NONE, entityNoneKeyCmp_impl, entityNoneDisplay_impl, "None"))
 
 ////
 //Nothing
-typedef uint64_t BSQNothing;
-#define BSQNothingValue 0
-
 std::string entityNothingDisplay_impl(const BSQType* btype, StorageLocationPtr data);
 
-#define CONS_BSQ_NOTHING_TYPE() (new BSQRegisterType<BSQNothing>(BSQ_TYPE_ID_NOTHING, sizeof(BSQNothing), "1", EMPTY_KEY_CMP, entityNothingDisplay_impl, "Nothing"))
+#define CONS_BSQ_NOTHING_TYPE() (new BSQEmptyType(BSQ_TYPE_ID_NOTHING, EMPTY_KEY_CMP, entityNothingDisplay_impl, "Nothing"))
 
 ////
 //Bool
@@ -1281,11 +1301,6 @@ struct BSQDateTime
     uint8_t min;     // 0-59
 
     int16_t tzoffset; //in minutes
-
-//Remove TZ name -- make this a struct type and convert None/Nothing to special empty types...
-xxxx;
-
-    std::string tzname; //optional abbrev (and/or) description
 };
 
 std::string entityDateTimeDisplay_impl(const BSQType* btype, StorageLocationPtr data);

@@ -160,7 +160,7 @@ int main(int argc, char** argv)
         auto res = run(runner, api, jmain, jargs);
         auto end = std::chrono::system_clock::now();
 
-        auto delta_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+        int delta_ms = (int)std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
         auto jout = res.second.dump(4);
         if(res.first)
         {
@@ -225,7 +225,7 @@ int main(int argc, char** argv)
         auto res = run(runner, api, jmain, jargs);
         auto end = std::chrono::system_clock::now();
 
-        auto delta_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+        int delta_ms = (int)std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
         auto jout = res.second.dump(4);
         if(res.first)
         {
