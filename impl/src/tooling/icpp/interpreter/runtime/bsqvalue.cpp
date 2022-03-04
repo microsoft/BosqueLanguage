@@ -72,7 +72,7 @@ std::string recordDisplay_impl(const BSQType* btype, StorageLocationPtr data)
             res += ", ";
         }
 
-        res += BSQRecordInfo::g_propertynamemap[ttype->properties[i]] + ":";
+        res += BSQRecordInfo::g_propertynamemap[ttype->properties[i]] + "=";
 
         auto itype = BSQType::g_typetable[ttype->rtypes[i]];
         auto idata = btype->indexStorageLocationOffset(data, ttype->propertyoffsets[i]);
@@ -94,7 +94,7 @@ std::string entityDisplay_impl(const BSQType* btype, StorageLocationPtr data)
             res += ", ";
         }
 
-        res += BSQField::g_fieldtable[ttype->fields[i]]->fname + ":";
+        res += BSQField::g_fieldtable[ttype->fields[i]]->fname + "=";
 
         auto itype = BSQType::g_typetable[BSQField::g_fieldtable[ttype->fields[i]]->declaredType];
         auto idata = btype->indexStorageLocationOffset(data, ttype->fieldoffsets[i]);

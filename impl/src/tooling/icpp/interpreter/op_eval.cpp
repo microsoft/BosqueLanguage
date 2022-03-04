@@ -760,7 +760,7 @@ void Evaluator::evalConstructorEntityDirectOp(const ConstructorEntityDirectOp* o
     auto einfo = dynamic_cast<const BSQEntityInfo*>(op->oftype);
     for(size_t i = 0; i < einfo->fieldoffsets.size(); ++i)
     {
-        BSQType::g_typetable[einfo->ftypes[i]]->storeValue(op->oftype->indexStorageLocationOffset(tcontents, einfo->fieldoffsets[i]), this->evalArgument(op->args[i]));
+        BSQType::g_typetable[einfo->ftypes[i]]->storeValue(SLPTR_INDEX_DATAPTR(tcontents, einfo->fieldoffsets[i]), this->evalArgument(op->args[i]));
     }
 }
 

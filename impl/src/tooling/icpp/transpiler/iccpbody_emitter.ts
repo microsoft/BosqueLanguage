@@ -245,6 +245,8 @@ class ICPPBodyEmitter {
         const parg = icpptuple.canScalarStackAllocate() ? ICPPOpEmitter.genScalarArgument(0) : ICPPOpEmitter.genMixedArgument(0);
         const paraminfo = [{kind: (icpptuple.canScalarStackAllocate() ? ArgumentTag.ScalarVal : ArgumentTag.MixedVal), poffset: 0}];
 
+        this.initializeBodyGen("[GENERATED]", geninfo.resulttype);
+
         let ops: ICPPOp[] = [];
         let pargs: Argument[] = [];
         geninfo.indecies.forEach((idx, i) => {
@@ -266,6 +268,7 @@ class ICPPBodyEmitter {
 
         const rt = this.getStackInfoForTargetVar("$$return", this.typegen.getICPPLayoutInfo(this.typegen.getMIRType(geninfo.resulttype.typeID)));
         ops.push(ICPPOpEmitter.genConstructorEphemeralListOp(sinfo, rt, geninfo.resulttype.typeID, pargs));
+        ops.push(ICPPOpEmitter.genJumpOp(sinfo, 1, "exit")); //dummy final jump block
         
         return new ICPPInvokeBodyDecl(name, name, "[GENERATED]", sinfo, false, params, paraminfo, geninfo.resulttype.typeID, this.getStackInfoForArgVar("$$return"), this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), 0, ops, 0);
     }
@@ -277,6 +280,8 @@ class ICPPBodyEmitter {
         const params = [new ICPPFunctionParameter("arg", recordtype.typeID)];
         const parg = icpprecord.canScalarStackAllocate() ? ICPPOpEmitter.genScalarArgument(0) : ICPPOpEmitter.genMixedArgument(0);
         const paraminfo = [{kind: (icpprecord.canScalarStackAllocate() ? ArgumentTag.ScalarVal : ArgumentTag.MixedVal), poffset: 0}];
+
+        this.initializeBodyGen("[GENERATED]", geninfo.resulttype);
 
         let ops: ICPPOp[] = [];
         let pargs: Argument[] = [];
@@ -301,6 +306,7 @@ class ICPPBodyEmitter {
 
         const rt = this.getStackInfoForTargetVar("$$return", this.typegen.getICPPLayoutInfo(this.typegen.getMIRType(geninfo.resulttype.typeID)));
         ops.push(ICPPOpEmitter.genConstructorEphemeralListOp(sinfo, rt, geninfo.resulttype.typeID, pargs));
+        ops.push(ICPPOpEmitter.genJumpOp(sinfo, 1, "exit")); //dummy final jump block
         
         return new ICPPInvokeBodyDecl(name, name, "[GENERATED]", sinfo, false, params, paraminfo, geninfo.resulttype.typeID, this.getStackInfoForArgVar("$$return"), this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), 0, ops, 0);
     }
@@ -313,6 +319,8 @@ class ICPPBodyEmitter {
         const parg = icppentity.canScalarStackAllocate() ? ICPPOpEmitter.genScalarArgument(0) : ICPPOpEmitter.genMixedArgument(0);
         const paraminfo = [{kind: (icppentity.canScalarStackAllocate() ? ArgumentTag.ScalarVal : ArgumentTag.MixedVal), poffset: 0}];
 
+        this.initializeBodyGen("[GENERATED]", geninfo.resulttype);
+        
         let ops: ICPPOp[] = [];
         let pargs: Argument[] = [];
         geninfo.fields.forEach((f, i) => {
@@ -336,6 +344,7 @@ class ICPPBodyEmitter {
 
         const rt = this.getStackInfoForTargetVar("$$return", this.typegen.getICPPLayoutInfo(this.typegen.getMIRType(geninfo.resulttype.typeID)));
         ops.push(ICPPOpEmitter.genConstructorEphemeralListOp(sinfo, rt, geninfo.resulttype.typeID, pargs));
+        ops.push(ICPPOpEmitter.genJumpOp(sinfo, 1, "exit")); //dummy final jump block
         
         return new ICPPInvokeBodyDecl(name, name, "[GENERATED]", sinfo, false, params, paraminfo, geninfo.resulttype.typeID, this.getStackInfoForArgVar("$$return"), this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), 0, ops, 0);
     }

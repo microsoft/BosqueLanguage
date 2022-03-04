@@ -164,10 +164,14 @@ LConst { val: Bool }
     } 
 }
 
-function logiceval_1(): Bool {
+chktest function logiceval_1(): Bool {
     return !AndOp{2, LConst{1, true}, LConst{1, false}}.evaluate[recursive]();
 }
 
-function logiceval_2(): Bool {
+chktest function logiceval_2(): Bool {
     return OrOp{2, LConst{1, true}, LConst{1, false}}.evaluate[recursive]();
+}
+
+__chktest function logiceval_fail_1(bv: Bool): Bool {
+    return AndOp{2, LConst{1, true}, LConst{1, bv}}.evaluate[recursive]();
 }
