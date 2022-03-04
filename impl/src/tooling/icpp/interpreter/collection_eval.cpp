@@ -1091,7 +1091,7 @@ std::string entityListTreeDisplay_impl(const BSQType* btype, StorageLocationPtr 
 
 std::string entityListDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
-    if(LIST_LOAD_DATA(data) == BSQNoneValue)
+    if(LIST_LOAD_TYPE_INFO(data)->tid == BSQ_TYPE_ID_NONE)
     {
         return btype->name + "{}";
     }
@@ -1144,7 +1144,7 @@ std::string entityMapDisplay_impl_rec(const BSQMapTypeFlavor& mflavor, BSQMapSpi
 
 std::string entityMapDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 {
-    if(MAP_LOAD_REPR(data) == BSQNoneValue)
+    if(MAP_LOAD_TYPE_INFO(data)->tid == BSQ_TYPE_ID_NONE)
     {
         return btype->name + "{}";
     }

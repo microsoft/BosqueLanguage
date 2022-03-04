@@ -175,6 +175,7 @@ class BSQType;
 enum class BSQTypeLayoutKind : uint32_t
 {
     Invalid = 0x0,
+    Empty,
     Register,
     Struct,
     BoxedStruct,

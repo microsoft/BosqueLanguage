@@ -6,12 +6,23 @@
 import { MIRAssembly, MIRConceptType, MIRConceptTypeDecl, MIRConstructableEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIRDataBufferInternalEntityTypeDecl, MIRDataStringInternalEntityTypeDecl, MIREntityType, MIREntityTypeDecl, MIREnumEntityTypeDecl, MIREphemeralListType, MIRInternalEntityTypeDecl, MIRObjectEntityTypeDecl, MIRPrimitiveCollectionEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRRecordType, MIRStringOfInternalEntityTypeDecl, MIRTupleType, MIRType } from "../../../compiler/mir_assembly";
 import { MIRFieldKey, MIRGlobalKey, MIRInvokeKey, MIRResolvedTypeKey } from "../../../compiler/mir_ops";
 
-import { ICPPTypeSizeInfoSimple, RefMask, TranspilerOptions, ICPP_WORD_SIZE, ICPPLayoutInfo, UNIVERSAL_MASK, UNIVERSAL_TOTAL_SIZE, ICPPLayoutCategory, ICPPLayoutUniversalUnion, ICPPLayoutRefUnion, ICPPLayoutInlineUnion, ICPPTupleLayoutInfo, ICPPRecordLayoutInfo, ICPPEntityLayoutInfo, ICPPLayoutInfoFixed, ICPPEphemeralListLayoutInfo, ICPPCollectionInternalsLayoutInfo, ICPPTypeSizeInfo, UNIVERSAL_CONTENT_SIZE,  } from "./icpp_assembly";
+import { RefMask, TranspilerOptions, ICPP_WORD_SIZE, ICPPLayoutInfo, UNIVERSAL_MASK, UNIVERSAL_TOTAL_SIZE, ICPPLayoutCategory, ICPPLayoutUniversalUnion, ICPPLayoutRefUnion, ICPPLayoutInlineUnion, ICPPTupleLayoutInfo, ICPPRecordLayoutInfo, ICPPEntityLayoutInfo, ICPPLayoutInfoFixed, ICPPEphemeralListLayoutInfo, ICPPCollectionInternalsLayoutInfo, ICPPTypeSizeInfo } from "./icpp_assembly";
 
 import { ArgumentTag, Argument, ICPPOp, ICPPOpEmitter, ICPPStatementGuard, TargetVar, NONE_VALUE_POSITION } from "./icpp_exp";
 import { SourceInfo } from "../../../ast/parser";
 
 import * as assert from "assert";
+
+const SMALL_INLINEABLE_TYPES = [
+    "None", "Nothing", "Bool", "Int", "Nat", "BigInt", "BigNat", "Float", "Decimal", "Rational", "String", "TickTime", "LogicalTime", "UUID", "Regex"
+];
+
+type ICPPTypeInlineInfo = { 
+    layout: ICPPLayoutCategory,
+    size: number, 
+    asize: number, 
+    mask: string 
+};
 
 class ICPPTypeEmitter {
     readonly topts: TranspilerOptions;
@@ -24,7 +35,8 @@ class ICPPTypeEmitter {
     private mangledGlobalNameMap: Map<string, string> = new Map<string, string>();
 
     private typeDataMap: Map<MIRResolvedTypeKey, ICPPLayoutInfo> = new Map<MIRResolvedTypeKey, ICPPLayoutInfo>();
-    private typeInfoShallowMap: Map<MIRResolvedTypeKey, ICPPTypeSizeInfoSimple> = new Map<MIRResolvedTypeKey, ICPPTypeSizeInfoSimple>();
+    private typeInlineMap: Map<MIRResolvedTypeKey, ICPPTypeInlineInfo> = new Map<MIRResolvedTypeKey, ICPPTypeInlineInfo>();
+
 
     constructor(assembly: MIRAssembly, topts: TranspilerOptions, namectr?: number, mangledTypeNameMap?: Map<string, string>, mangledFunctionNameMap?: Map<string, string>, mangledGlobalNameMap?: Map<string, string>) {
         this.assembly = assembly;
@@ -118,243 +130,310 @@ class ICPPTypeEmitter {
         return this.isUniqueTupleType(tt) || this.isUniqueRecordType(tt) || this.isUniqueEntityType(tt) || this.isUniqueEphemeralType(tt);
     }
 
-    getICPPTypeInfoShallow(tt: MIRType): ICPPTypeSizeInfoSimple {
-        if(this.typeInfoShallowMap.has(tt.typeID)) {
-            return this.typeInfoShallowMap.get(tt.typeID) as ICPPTypeSizeInfoSimple;
+    getICPPTypeInfoIsSmallInlineable(tt: MIRType): boolean {
+        if(!this.isUniqueEntityType(tt)) {
+            return false;
         }
+        else {
+            const entity = this.assembly.entityDecls.get(tt.typeID) as MIREntityTypeDecl;
+            if(entity instanceof MIRInternalEntityTypeDecl) {
+                if(entity instanceof MIRPrimitiveInternalEntityTypeDecl) {
+                    return SMALL_INLINEABLE_TYPES.includes(tt.typeID);
+                }
+                else if (entity instanceof MIRStringOfInternalEntityTypeDecl) {
+                    const mirtype = this.getMIRType("String");
+                    return this.getICPPTypeInfoIsSmallInlineable(mirtype);
+                }
+                else if (entity instanceof MIRDataStringInternalEntityTypeDecl) {
+                    const mirtype = this.getMIRType("String");
+                    return this.getICPPTypeInfoIsSmallInlineable(mirtype);
 
-        this.internTypeName(tt.typeID);
-        let res: ICPPTypeSizeInfoSimple | undefined = undefined;
+                }
+                else if (entity instanceof MIRDataBufferInternalEntityTypeDecl) {
+                    const mirtype = this.getMIRType("ByteBuffer");
+                    return this.getICPPTypeInfoIsSmallInlineable(mirtype);
 
-        if(this.isUniqueTupleType(tt)) {
-            let isinline = true;
-            let size = 0;
-            let mask: RefMask = "";
-
-            const tuptt = tt.getUniqueTupleTargetType();
-            for (let i = 0; i < tuptt.entries.length; ++i) {
-                const sizeinfo = this.getICPPTypeInfoShallow(tuptt.entries[i]);
-
-                isinline = isinline && sizeinfo.issmallinlinevalue;
-                size = size + sizeinfo.inlinedatasize;
-                mask = mask + sizeinfo.inlinedmask;
+                }
+                else if (entity instanceof MIRConstructableInternalEntityTypeDecl) {
+                    const mirtype = this.getMIRType(entity.fromtype);
+                    return this.getICPPTypeInfoIsSmallInlineable(mirtype);
+                }
+                else {
+                    return false;
+                }
             }
-
-            if(tuptt.entries.length <= 4 && isinline) {
-                res = ICPPTypeSizeInfoSimple.createByValueSizeInfo(tt.typeID, size, mask, false);
+            else if (entity instanceof MIRConstructableEntityTypeDecl) {
+                const mirtype = this.getMIRType(entity.fromtype);
+                return this.getICPPTypeInfoIsSmallInlineable(mirtype);
+            }
+            else if (entity instanceof MIREnumEntityTypeDecl) {
+                return true;
             }
             else {
-                res = ICPPTypeSizeInfoSimple.createByRefSizeInfo(tt.typeID);
+                return false;
+            }
+        }
+    }
+
+    private computeICCPInlineLayoutForUnion(tl: ICPPTypeInlineInfo[]): ICPPTypeInlineInfo {
+        if(tl.some((t) => t.layout === ICPPLayoutCategory.UnionUniversal)) {
+            return {layout: ICPPLayoutCategory.UnionUniversal, size: UNIVERSAL_TOTAL_SIZE, asize: UNIVERSAL_TOTAL_SIZE, mask: UNIVERSAL_MASK};
+        }
+        else if(tl.every((t) => t.layout === ICPPLayoutCategory.Ref || t.layout === ICPPLayoutCategory.UnionRef)) {
+            return {layout: ICPPLayoutCategory.UnionRef, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "2"};
+        }
+        else {
+            const size = Math.max(...tl.map((oi) => oi.layout === ICPPLayoutCategory.UnionInline ? (oi.size - ICPP_WORD_SIZE) : oi.size));
+            
+            let mask: RefMask = "5";
+            for(let i = 0; i < (size / ICPP_WORD_SIZE); ++i) {
+                mask = mask + "1";
+            }
+
+            return {layout: ICPPLayoutCategory.UnionInline, size: size + ICPP_WORD_SIZE, asize: size + ICPP_WORD_SIZE, mask: mask};
+        }
+    }
+
+    private getICPPTypeInfoInlineLayout_MIRPrimitiveInternalEntityTypeDecl(tt: MIRType, entity: MIREntityTypeDecl): ICPPTypeInlineInfo {
+        if (this.isType(tt, "None")) {
+            return {layout: ICPPLayoutCategory.Inline, size: 0, asize: 0, mask: ""};
+        }
+        else if (this.isType(tt, "Nothing")) {
+            return {layout: ICPPLayoutCategory.Inline, size: 0, asize: 0, mask: ""};
+        }
+        else if (this.isType(tt, "Bool")) {
+            return {layout: ICPPLayoutCategory.Inline, size: ICPP_WORD_SIZE, asize: 1, mask: "1"};
+        }
+        else if (this.isType(tt, "Int")) {
+            return {layout: ICPPLayoutCategory.Inline, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "1"};
+        }
+        else if (this.isType(tt, "Nat")) {
+            return {layout: ICPPLayoutCategory.Inline, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "1"};
+        }
+        else if (this.isType(tt, "BigInt")) {
+            return {layout: ICPPLayoutCategory.Inline, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "4"};
+        }
+        else if (this.isType(tt, "BigNat")) {
+            return {layout: ICPPLayoutCategory.Inline, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "4"};
+        }
+        else if (this.isType(tt, "Float")) {
+            return {layout: ICPPLayoutCategory.Inline, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "1"};
+        }
+        else if (this.isType(tt, "Decimal")) {
+            return {layout: ICPPLayoutCategory.Inline, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "1"};
+        }
+        else if (this.isType(tt, "Rational")) {
+            return {layout: ICPPLayoutCategory.Inline, size: 2*ICPP_WORD_SIZE, asize: 2*ICPP_WORD_SIZE, mask: "41"};
+        }
+        else if (this.isType(tt, "String")) {
+            return {layout: ICPPLayoutCategory.Inline, size: 2*ICPP_WORD_SIZE, asize: 2*ICPP_WORD_SIZE, mask: "31"};
+        }
+        else if (this.isType(tt, "ByteBuffer")) {
+            return {layout: ICPPLayoutCategory.Ref, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "2"};
+        }
+        else if (this.isType(tt, "DateTime")) {
+            return {layout: ICPPLayoutCategory.Inline, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "1"};
+        }
+        else if (this.isType(tt, "TickTime")) {
+            return {layout: ICPPLayoutCategory.Inline, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "1"};
+        }
+        else if (this.isType(tt, "LogicalTime")) {
+            return {layout: ICPPLayoutCategory.Inline, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "1"};
+        }
+        else if (this.isType(tt, "UUID")) {
+            return {layout: ICPPLayoutCategory.Inline, size: 2*ICPP_WORD_SIZE, asize: 2*ICPP_WORD_SIZE, mask: "11"};
+        }
+        else if (this.isType(tt, "ContentHash")) {
+            return {layout: ICPPLayoutCategory.Ref, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "2"};
+        }
+        else if (this.isType(tt, "Regex")) {
+            return {layout: ICPPLayoutCategory.Inline, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "1"};
+        }
+        else {
+            if(entity.name === "PartialVector4") {
+                return {layout: ICPPLayoutCategory.Ref, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "2"};
+            }
+            else if (entity.name === "PartialVector8") {
+                return {layout: ICPPLayoutCategory.Ref, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "2"};
+            }
+            else if (entity.name === "ListTree") {
+                return {layout: ICPPLayoutCategory.Ref, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "2"};
+            }
+            else if (entity.name === "MapTree") {
+                return {layout: ICPPLayoutCategory.Ref, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "2"};
+            }
+            else {
+                assert(false, "Unknown primitive internal entity");
+                return {layout: ICPPLayoutCategory.Inline, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "1"};
+            }
+        }
+    }
+
+    getICPPTypeInfoInlineLayout(tt: MIRType): ICPPTypeInlineInfo {
+        if(this.typeInlineMap.has(tt.typeID)) {
+            return this.typeInlineMap.get(tt.typeID) as ICPPTypeInlineInfo;
+        }
+
+        let res: ICPPTypeInlineInfo | undefined = undefined;
+        if(this.isUniqueTupleType(tt)) {
+            const tuptt = tt.getUniqueTupleTargetType();
+
+            const byval = tuptt.entries.length <= 4 && tuptt.entries.every((ee) => this.getICPPTypeInfoIsSmallInlineable(ee));
+            if (!byval) {
+                res = {layout: ICPPLayoutCategory.Ref, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "2"}
+            }
+            else {
+                let size = 0;
+                let mask: RefMask = "";
+
+                for (let i = 0; i < tuptt.entries.length; ++i) {
+                    const sizeinfo = this.getICPPTypeInfoInlineLayout(tuptt.entries[i]);
+
+                    size = size + sizeinfo.size;
+                    mask = mask + sizeinfo.mask;
+                }
+
+                res = {layout: ICPPLayoutCategory.Inline, size: size, asize: size, mask: mask};
             }
         }
         else if(this.isUniqueRecordType(tt)) {
-            let isinline = true;
-            let size = 0;
-            let mask: RefMask = "";
-
             const rectt = tt.getUniqueRecordTargetType();
-            for (let i = 0; i < rectt.entries.length; ++i) {
-                const sizeinfo = this.getICPPTypeInfoShallow(rectt.entries[i].ptype);
 
-                isinline = isinline && sizeinfo.issmallinlinevalue;
-                size = size + sizeinfo.inlinedatasize;
-                mask = mask + sizeinfo.inlinedmask;
-            }
-
-            if(rectt.entries.length <= 4 && isinline) {
-                res = ICPPTypeSizeInfoSimple.createByValueSizeInfo(tt.typeID, size, mask, false);
+            const byval = rectt.entries.length <= 4 && rectt.entries.every((ee) => this.getICPPTypeInfoIsSmallInlineable(ee.ptype));
+            if (!byval) {
+                res = {layout: ICPPLayoutCategory.Ref, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "2"}
             }
             else {
-                res = ICPPTypeSizeInfoSimple.createByRefSizeInfo(tt.typeID);
+                let size = 0;
+                let mask: RefMask = "";
+
+                for (let i = 0; i < rectt.entries.length; ++i) {
+                    const sizeinfo = this.getICPPTypeInfoInlineLayout(rectt.entries[i].ptype);
+
+                    size = size + sizeinfo.size;
+                    mask = mask + sizeinfo.mask;
+                }
+
+                res = {layout: ICPPLayoutCategory.Inline, size: size, asize: size, mask: mask};
             }
         }
         else if(this.isUniqueEntityType(tt)) {
-            return this.getICPPTypeInfoShallowForEntity(tt, this.assembly.entityDecls.get(tt.typeID) as MIREntityTypeDecl);
+            const entity = this.assembly.entityDecls.get(tt.typeID) as MIREntityTypeDecl;
+            
+            if(entity instanceof MIRInternalEntityTypeDecl) {
+                if(entity instanceof MIRPrimitiveInternalEntityTypeDecl) {
+                    res = this.getICPPTypeInfoInlineLayout_MIRPrimitiveInternalEntityTypeDecl(tt, this.assembly.entityDecls.get(tt.typeID) as MIREntityTypeDecl);
+                }
+                else if (entity instanceof MIRStringOfInternalEntityTypeDecl) {
+                    const mirtype = this.getMIRType("String");
+                    res = this.getICPPTypeInfoInlineLayout(mirtype);
+                }
+                else if (entity instanceof MIRDataStringInternalEntityTypeDecl) {
+                    const mirtype = this.getMIRType("String");
+                    res = this.getICPPTypeInfoInlineLayout(mirtype);
+                }
+                else if (entity instanceof MIRDataBufferInternalEntityTypeDecl) {
+                    const mirtype = this.getMIRType("ByteBuffer");
+                    res = this.getICPPTypeInfoInlineLayout(mirtype);
+                }
+                else if (entity instanceof MIRConstructableInternalEntityTypeDecl) {
+                    const mirtype = this.getMIRType(entity.fromtype);
+                    res = this.getICPPTypeInfoInlineLayout(mirtype);
+                }
+                else {
+                    assert(entity instanceof MIRPrimitiveCollectionEntityTypeDecl, "Should be a collection type");
+
+                    if(entity instanceof MIRPrimitiveMapEntityTypeDecl) {
+                        res = {layout: ICPPLayoutCategory.Inline, size: 3*ICPP_WORD_SIZE, asize: 3*ICPP_WORD_SIZE, mask: "112"};
+                    }
+                    else if(entity instanceof MIRPrimitiveStackEntityTypeDecl) {
+                        res = {layout: ICPPLayoutCategory.Inline, size: 2*ICPP_WORD_SIZE, asize: 2*ICPP_WORD_SIZE, mask: "12"};
+                    }
+                    else if(entity instanceof MIRPrimitiveQueueEntityTypeDecl) {
+                        res = {layout: ICPPLayoutCategory.Inline, size: 2*ICPP_WORD_SIZE, asize: 2*ICPP_WORD_SIZE, mask: "12"};
+                    }
+                    else if(entity instanceof MIRPrimitiveSetEntityTypeDecl) {
+                        res = {layout: ICPPLayoutCategory.Inline, size: 3*ICPP_WORD_SIZE, asize: 3*ICPP_WORD_SIZE, mask: "112"};
+                    }
+                    else {
+                        assert(entity instanceof MIRPrimitiveListEntityTypeDecl, "Should be a list type");
+    
+                        res = {layout: ICPPLayoutCategory.Inline, size: 2*ICPP_WORD_SIZE, asize: 2*ICPP_WORD_SIZE, mask: "12"};
+                    }
+                }
+            }
+            else if (entity instanceof MIRConstructableEntityTypeDecl) {
+                const mirtype = this.getMIRType(entity.fromtype);
+                res = this.getICPPTypeInfoInlineLayout(mirtype);
+            }
+            else if (entity instanceof MIREnumEntityTypeDecl) {
+                res = {layout: ICPPLayoutCategory.Inline, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "1"};
+            }
+            else {
+                const ett = this.assembly.entityDecls.get(tt.getUniqueCallTargetType().typeID) as MIRObjectEntityTypeDecl;                
+                const byval = ett.fields.length <= 4 && ett.fields.every((ff) => this.getICPPTypeInfoIsSmallInlineable(this.getMIRType(ff.declaredType)));
+
+                if (!byval) {
+                    res = {layout: ICPPLayoutCategory.Ref, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "2"}
+                }
+                else {
+                    let size = 0;
+                    let mask: RefMask = "";
+    
+                    for (let i = 0; i < ett.fields.length; ++i) {
+                        const sizeinfo = this.getICPPTypeInfoInlineLayout(this.getMIRType(ett.fields[i].declaredType));
+    
+                        size = size + sizeinfo.size;
+                        mask = mask + sizeinfo.mask;
+                    }
+    
+                    res = {layout: ICPPLayoutCategory.Inline, size: size, asize: size, mask: mask};
+                }
+            }    
         }
         else if (this.isUniqueEphemeralType(tt)) {
+            const ett = tt.options[0] as MIREphemeralListType;
+
             let size = 0;
             let mask: RefMask = "";
 
-            const eltt = tt.options[0] as MIREphemeralListType;
-            for (let i = 0; i < eltt.entries.length; ++i) {
-                const sizeinfo = this.getICPPTypeInfoShallow(eltt.entries[i]);
+            for (let i = 0; i < ett.entries.length; ++i) {
+                const sizeinfo = this.getICPPTypeInfoInlineLayout(ett.entries[i]);
 
-                size = size + sizeinfo.inlinedatasize;
-                mask = mask + sizeinfo.inlinedmask;
+                size = size + sizeinfo.size;
+                mask = mask + sizeinfo.mask;
             }
 
-            res = ICPPTypeSizeInfoSimple.createByValueSizeInfo(tt.typeID, size, mask, false);
+            res = {layout: ICPPLayoutCategory.Inline, size: size, asize: size, mask: mask};
         }
         else {
-            const isuniversal = tt.options.some((opt) => opt instanceof MIRConceptType && opt.ckeys.some((ckk) => (this.assembly.conceptDecls.get(ckk) as MIRConceptTypeDecl).attributes.includes("__universal")));
-            if(isuniversal) {
-                res = ICPPTypeSizeInfoSimple.createInlineUnionSizeInfo(tt.typeID, UNIVERSAL_TOTAL_SIZE, UNIVERSAL_MASK);
-            }
-            else {
-                const allsubtt = tt.options.map((opt) => this.getICPPTypeInfoShallow(this.getMIRType(opt.typeID)));
-                if(allsubtt.every((sttr) => !sttr.isinlinevalue)) {
-                    res = ICPPTypeSizeInfoSimple.createByRefSizeInfo(tt.typeID);
+            if(tt.options.length === 1) {
+                const copt = tt.options[0] as MIRConceptType;
+
+                const isuniversal = copt.ckeys.some((ckk) => (this.assembly.conceptDecls.get(ckk) as MIRConceptTypeDecl).attributes.includes("__universal"));
+                if(isuniversal) {
+                    res =  {layout: ICPPLayoutCategory.UnionUniversal, size: UNIVERSAL_TOTAL_SIZE, asize: UNIVERSAL_TOTAL_SIZE, mask: UNIVERSAL_MASK};
                 }
                 else {
-                    const realdatasize = Math.max(...allsubtt.map((linfo) => linfo.realdatasize));
+                    const cttype = this.getMIRType(copt.typeID);
+                    const iccpopts = [...this.assembly.entityDecls]
+                        .filter((edp) => this.assembly.subtypeOf(this.getMIRType(edp[0]), cttype))
+                        .map((edp) => this.getICPPTypeInfoInlineLayout(this.getMIRType(edp[0])));
 
-                    let mask = "5";
-                    for(let i = 0; i < realdatasize / ICPP_WORD_SIZE; ++i) {
-                        mask += "1";
-                    }
-
-                    res = ICPPTypeSizeInfoSimple.createInlineUnionSizeInfo(tt.typeID, realdatasize + ICPP_WORD_SIZE, mask);
+                    res = this.computeICCPInlineLayoutForUnion(iccpopts);
                 }
+            }
+            else {
+                const optinfo = tt.options.map((stt) => this.getICPPTypeInfoInlineLayout(this.getMIRType(stt.typeID)));
+                res = this.computeICCPInlineLayoutForUnion(optinfo);
             }
         }
 
-        this.typeInfoShallowMap.set(tt.typeID, res as ICPPTypeSizeInfoSimple);
-        return this.typeInfoShallowMap.get(tt.typeID) as ICPPTypeSizeInfoSimple;
+        this.typeInlineMap.set(tt.typeID, res);
+        return res;
     }
 
-    private getICPPTypeInfoShallowForEntity(tt: MIRType, entity: MIREntityTypeDecl): ICPPTypeSizeInfoSimple {
-        if(entity instanceof MIRInternalEntityTypeDecl) {
-            if(entity instanceof MIRPrimitiveInternalEntityTypeDecl) {
-                if (this.isType(tt, "None")) {
-                    return ICPPTypeSizeInfoSimple.createByRegisterSizeInfo(entity.tkey, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1");
-                }
-                else if (this.isType(tt, "Nothing")) {
-                    return ICPPTypeSizeInfoSimple.createByRegisterSizeInfo(entity.tkey, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1");
-                }
-                else if (this.isType(tt, "Bool")) {
-                    return ICPPTypeSizeInfoSimple.createByRegisterSizeInfo(entity.tkey, ICPP_WORD_SIZE, 1, "1");
-                }
-                else if (this.isType(tt, "Int")) {
-                    return ICPPTypeSizeInfoSimple.createByRegisterSizeInfo(entity.tkey, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1");
-                }
-                else if (this.isType(tt, "Nat")) {
-                    return ICPPTypeSizeInfoSimple.createByRegisterSizeInfo(entity.tkey, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1");
-                }
-                else if (this.isType(tt, "BigInt")) {
-                    return ICPPTypeSizeInfoSimple.createByValueSizeInfo(entity.tkey, ICPP_WORD_SIZE, "4", true);
-                }
-                else if (this.isType(tt, "BigNat")) {
-                    return ICPPTypeSizeInfoSimple.createByValueSizeInfo(entity.tkey, ICPP_WORD_SIZE, "4", true);
-                }
-                else if (this.isType(tt, "Float")) {
-                    return ICPPTypeSizeInfoSimple.createByRegisterSizeInfo(entity.tkey, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1");
-                }
-                else if (this.isType(tt, "Decimal")) {
-                    return ICPPTypeSizeInfoSimple.createByRegisterSizeInfo(entity.tkey, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1");
-                }
-                else if (this.isType(tt, "Rational")) {
-                    return ICPPTypeSizeInfoSimple.createByValueSizeInfo(entity.tkey, 2*ICPP_WORD_SIZE, "41", true);
-                }
-                else if (this.isType(tt, "String")) {
-                    return ICPPTypeSizeInfoSimple.createByValueSizeInfo(entity.tkey, 2*ICPP_WORD_SIZE, "31", true);
-                }
-                else if (this.isType(tt, "ByteBuffer")) {
-                    return ICPPTypeSizeInfoSimple.createByRefSizeInfo(entity.tkey);
-                }
-                else if(this.isType(tt, "DateTime")) {
-                    return ICPPTypeSizeInfoSimple.createByRefSizeInfo(entity.tkey);
-                }
-                else if(this.isType(tt, "TickTime")) {
-                    return ICPPTypeSizeInfoSimple.createByRegisterSizeInfo(entity.tkey, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1");
-                }
-                else if(this.isType(tt, "LogicalTime")) {
-                    return ICPPTypeSizeInfoSimple.createByRegisterSizeInfo(entity.tkey, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1");
-                }
-                else if(this.isType(tt, "UUID")) {
-                    return ICPPTypeSizeInfoSimple.createByRegisterSizeInfo(entity.tkey, 2*ICPP_WORD_SIZE, 2*ICPP_WORD_SIZE, "11");
-                }
-                else if(this.isType(tt, "ContentHash")) {
-                    return ICPPTypeSizeInfoSimple.createByRefSizeInfo(entity.tkey);
-                }
-                else if(this.isType(tt, "Regex")) {
-                    return ICPPTypeSizeInfoSimple.createByRegisterSizeInfo(entity.tkey, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1");
-                }
-                else {
-                    assert(false, "Unknown primitive internal entity");
-
-                    return ICPPTypeSizeInfoSimple.createByRefSizeInfo(entity.tkey);
-                }
-            }
-            else if (entity instanceof MIRStringOfInternalEntityTypeDecl) {
-                const mirtype = this.getMIRType("String");
-                const fromlayout = this.getICPPTypeInfoShallow(mirtype);
-
-                return fromlayout.createFromSizeInfo(entity.tkey);
-            }
-            else if (entity instanceof MIRDataStringInternalEntityTypeDecl) {
-                const mirtype = this.getMIRType("String");
-                const fromlayout = this.getICPPTypeInfoShallow(mirtype);
-
-                return fromlayout.createFromSizeInfo(entity.tkey);
-            }
-            else if (entity instanceof MIRDataBufferInternalEntityTypeDecl) {
-                const mirtype = this.getMIRType("ByteBuffer");
-                const fromlayout = this.getICPPTypeInfoShallow(mirtype);
-
-                return fromlayout.createFromSizeInfo(entity.tkey);
-            }
-            else if (entity instanceof MIRConstructableInternalEntityTypeDecl) {
-                const mirtype = this.getMIRType(entity.fromtype);
-                const fromlayout = this.getICPPTypeInfoShallow(mirtype);
-
-                return fromlayout.createFromSizeInfo(entity.tkey);
-            }
-            else {
-                assert(entity instanceof MIRPrimitiveCollectionEntityTypeDecl, "Should be a collection type");
-
-                if(entity instanceof MIRPrimitiveMapEntityTypeDecl) {
-                    return ICPPTypeSizeInfoSimple.createByValueSizeInfo(entity.tkey, ICPP_WORD_SIZE * 3, "112", false);
-                }
-                else if(entity instanceof MIRPrimitiveStackEntityTypeDecl) {
-                    return ICPPTypeSizeInfoSimple.createByValueSizeInfo(entity.tkey, ICPP_WORD_SIZE * 2, "12", false);
-                }
-                else if(entity instanceof MIRPrimitiveQueueEntityTypeDecl) {
-                    return ICPPTypeSizeInfoSimple.createByValueSizeInfo(entity.tkey, ICPP_WORD_SIZE * 2, "12", false);
-                }
-                else if(entity instanceof MIRPrimitiveSetEntityTypeDecl) {
-                    return ICPPTypeSizeInfoSimple.createByValueSizeInfo(entity.tkey, ICPP_WORD_SIZE * 3, "112", false);
-                }
-                else {
-                    assert(entity instanceof MIRPrimitiveListEntityTypeDecl, "Should be a list type");
-
-                    return ICPPTypeSizeInfoSimple.createByValueSizeInfo(entity.tkey, ICPP_WORD_SIZE * 2, "12", false);
-                }
-            }
-        }
-        else if (entity instanceof MIRConstructableEntityTypeDecl) {
-            const mirtype = this.getMIRType(entity.fromtype);
-            const fromlayout = this.getICPPTypeInfoShallow(mirtype);
-
-            return fromlayout.createFromSizeInfo(entity.tkey);
-        }
-        else if (entity instanceof MIREnumEntityTypeDecl) {
-            return ICPPTypeSizeInfoSimple.createByRegisterSizeInfo(entity.tkey, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1");
-        }
-        else {
-            let isinline = true;
-            let size = 0;
-            let mask: RefMask = "";
-
-            const ett = this.assembly.entityDecls.get(tt.getUniqueCallTargetType().typeID) as MIRObjectEntityTypeDecl;
-            for (let i = 0; i < ett.fields.length; ++i) {
-                const sizeinfo = this.getICPPTypeInfoShallow(this.getMIRType(ett.fields[i].declaredType));
-
-                isinline = isinline && sizeinfo.issmallinlinevalue;
-                size = size + sizeinfo.inlinedatasize;
-                mask = mask + sizeinfo.inlinedmask;
-            }
-
-            if(ett.fields.length <= 4 && isinline) {
-                return ICPPTypeSizeInfoSimple.createByValueSizeInfo(tt.typeID, size, mask, false);
-            }
-            else {
-                return ICPPTypeSizeInfoSimple.createByRefSizeInfo(tt.typeID);
-            }
-        }
-    }
-
-    private computeICCPLayoutForUnion(utype: MIRType, tl: ICPPLayoutInfo[]): ICPPLayoutInfo {
-
+    private computeICCPLayoutForUnion(utype: MIRType, tl: ICPPTypeInlineInfo[]): ICPPLayoutInfo {
         if(tl.some((t) => t.layout === ICPPLayoutCategory.UnionUniversal)) {
             return new ICPPLayoutUniversalUnion(utype.typeID);
         }
@@ -362,7 +441,7 @@ class ICPPTypeEmitter {
             return new ICPPLayoutRefUnion(utype.typeID);
         }
         else {
-            let size = Math.max(...tl.map((t) => t.allocinfo.realdatasize));
+            const size = Math.max(...tl.map((oi) => oi.layout === ICPPLayoutCategory.UnionInline ? (oi.size - ICPP_WORD_SIZE) : oi.size));
 
             let mask: RefMask = "5";
             for(let i = 0; i < (size / ICPP_WORD_SIZE); ++i) {
@@ -374,144 +453,141 @@ class ICPPTypeEmitter {
     }
 
     private getICPPLayoutForTuple(tt: MIRTupleType): ICPPLayoutInfo {
+        const inlineinfo = this.getICPPTypeInfoInlineLayout(this.getMIRType(tt.typeID));
+
         let idxtypes: MIRResolvedTypeKey[] = [];
         let idxoffsets: number[] = [];
-        let isinline = true;
-        let size = 0;
-        let mask: RefMask = "";
+        let endoffest = 0;
 
-        const icppentries = tt.entries.map((entry) => this.getICPPTypeInfoShallow(entry));
+        const icppentries = tt.entries.map((entry) => this.getICPPTypeInfoInlineLayout(entry));
         for (let i = 0; i < icppentries.length; ++i) {
-            idxtypes.push(icppentries[i].tkey);
-            idxoffsets.push(size);
-            isinline = isinline && icppentries[i].issmallinlinevalue;
-            size = size + icppentries[i].inlinedatasize;
-            mask = mask + icppentries[i].inlinedmask;
+            idxtypes.push(tt.entries[i].typeID);
+            idxoffsets.push(endoffest);
+            endoffest += icppentries[i].size;
         }
 
-        if (isinline) { 
-            return ICPPTupleLayoutInfo.createByValueTuple(tt.typeID, size, mask, idxtypes, idxoffsets);
+        if (inlineinfo.layout === ICPPLayoutCategory.Inline) { 
+            return ICPPTupleLayoutInfo.createByValueTuple(tt.typeID, inlineinfo.size, inlineinfo.mask, idxtypes, idxoffsets);
         }
         else {
-            return ICPPTupleLayoutInfo.createByRefTuple(tt.typeID, size, mask, idxtypes, idxoffsets);
+            return ICPPTupleLayoutInfo.createByRefTuple(tt.typeID, inlineinfo.size, inlineinfo.mask, idxtypes, idxoffsets);
         }
     }
 
     private getICPPLayoutForRecord(tt: MIRRecordType): ICPPLayoutInfo {
+        const inlineinfo = this.getICPPTypeInfoInlineLayout(this.getMIRType(tt.typeID));
+        
         let propertynames: string[] = [];
         let propertytypes: MIRResolvedTypeKey[] = [];
         let propertyoffsets: number[] = [];
-        let isinline = true;
-        let size = 0;
-        let mask: RefMask = "";
+        let endoffest = 0;
 
-        const icppentries = tt.entries.map((entry) => this.getICPPTypeInfoShallow(entry.ptype));
+        const icppentries = tt.entries.map((entry) => this.getICPPTypeInfoInlineLayout(entry.ptype));
         for(let i = 0; i < icppentries.length; ++i) {
             propertynames.push(tt.entries[i].pname);
-            propertytypes.push(icppentries[i].tkey);
-            propertyoffsets.push(size);
-            isinline = isinline && icppentries[i].issmallinlinevalue;
-            size = size + icppentries[i].inlinedatasize;
-            mask = mask + icppentries[i].inlinedmask;
+            propertytypes.push(tt.entries[i].ptype.typeID);
+            propertyoffsets.push(endoffest);
+            endoffest += icppentries[i].size;
         }
-
     
-        if (isinline) { 
-            return ICPPRecordLayoutInfo.createByValueRecord(tt.typeID, size, mask, propertynames, propertytypes, propertyoffsets);
+        if (inlineinfo.layout === ICPPLayoutCategory.Inline) { 
+            return ICPPRecordLayoutInfo.createByValueRecord(tt.typeID, inlineinfo.size, inlineinfo.mask, propertynames, propertytypes, propertyoffsets);
         }
         else {
-            return ICPPRecordLayoutInfo.createByRefRecord(tt.typeID, size, mask, propertynames, propertytypes, propertyoffsets);
+            return ICPPRecordLayoutInfo.createByRefRecord(tt.typeID, inlineinfo.size, inlineinfo.mask, propertynames, propertytypes, propertyoffsets);
         }
     }
 
     private getICPPLayoutForEphemeralList(tt: MIREphemeralListType): ICPPEphemeralListLayoutInfo {
+        const inlineinfo = this.getICPPTypeInfoInlineLayout(this.getMIRType(tt.typeID));
+
         let idxtypes: MIRResolvedTypeKey[] = [];
         let idxoffsets: number[] = [];
-        let size = 0;
-        let mask: RefMask = "";
+        let endoffest = 0;
 
-        const icppentries = tt.entries.map((entry) => this.getICPPTypeInfoShallow(this.getMIRType(entry.typeID)));
+        const icppentries = tt.entries.map((entry) => this.getICPPTypeInfoInlineLayout(this.getMIRType(entry.typeID)));
         for(let i = 0; i < icppentries.length; ++i) {
-            idxtypes.push(icppentries[i].tkey);
-            idxoffsets.push(size);
-            size = size + icppentries[i].inlinedatasize;
-            mask = mask + icppentries[i].inlinedmask;
+            idxtypes.push(tt.entries[i].typeID);
+            idxoffsets.push(endoffest);
+            endoffest += icppentries[i].size;
         }
 
-        return new ICPPEphemeralListLayoutInfo(tt.typeID, size, mask, idxtypes, idxoffsets);
+        return new ICPPEphemeralListLayoutInfo(tt.typeID, inlineinfo.size, inlineinfo.mask, idxtypes, idxoffsets);
     }
 
     private getICPPLayoutForEntity(tt: MIRType, entity: MIREntityTypeDecl): ICPPLayoutInfo {
+        const inlineinfo = this.getICPPTypeInfoInlineLayout(this.getMIRType(tt.typeID));
+
         if(entity instanceof MIRInternalEntityTypeDecl) {
             if(entity instanceof MIRPrimitiveInternalEntityTypeDecl) {
                 if (this.isType(tt, "None")) {
-                    return ICPPLayoutInfoFixed.createByRegisterLayout(entity.tkey, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1");
+                    return ICPPLayoutInfoFixed.createByRegisterLayout(entity.tkey, inlineinfo.size, inlineinfo.asize, inlineinfo.mask);
                 }
                 else if (this.isType(tt, "Nothing")) {
-                    return ICPPLayoutInfoFixed.createByRegisterLayout(entity.tkey, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1");
+                    return ICPPLayoutInfoFixed.createByRegisterLayout(entity.tkey, inlineinfo.size, inlineinfo.asize, inlineinfo.mask);
                 }
                 else if (this.isType(tt, "Bool")) {
-                    return ICPPLayoutInfoFixed.createByRegisterLayout(entity.tkey, ICPP_WORD_SIZE, 1, "1");
+                    return ICPPLayoutInfoFixed.createByRegisterLayout(entity.tkey, inlineinfo.size, inlineinfo.asize, inlineinfo.mask);
                 }
                 else if (this.isType(tt, "Int")) {
-                    return ICPPLayoutInfoFixed.createByRegisterLayout(entity.tkey, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1");
+                    return ICPPLayoutInfoFixed.createByRegisterLayout(entity.tkey, inlineinfo.size, inlineinfo.asize, inlineinfo.mask);
                 }
                 else if (this.isType(tt, "Nat")) {
-                    return ICPPLayoutInfoFixed.createByRegisterLayout(entity.tkey, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1");
+                    return ICPPLayoutInfoFixed.createByRegisterLayout(entity.tkey, inlineinfo.size, inlineinfo.asize, inlineinfo.mask);
                 }
                 else if (this.isType(tt, "BigInt")) {
-                    return ICPPLayoutInfoFixed.createByValueLayout(entity.tkey, ICPP_WORD_SIZE, "4", true);
+                    return ICPPLayoutInfoFixed.createByValueLayout(entity.tkey, inlineinfo.size, inlineinfo.mask);
                 }
                 else if (this.isType(tt, "BigNat")) {
-                    return ICPPLayoutInfoFixed.createByValueLayout(entity.tkey, ICPP_WORD_SIZE, "4", true);
+                    return ICPPLayoutInfoFixed.createByValueLayout(entity.tkey, inlineinfo.size, inlineinfo.mask);
                 }
                 else if (this.isType(tt, "Float")) {
-                    return ICPPLayoutInfoFixed.createByRegisterLayout(entity.tkey, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1");
+                    return ICPPLayoutInfoFixed.createByRegisterLayout(entity.tkey, inlineinfo.size, inlineinfo.asize, inlineinfo.mask);
                 }
                 else if (this.isType(tt, "Decimal")) {
-                    return ICPPLayoutInfoFixed.createByRegisterLayout(entity.tkey, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1");
+                    return ICPPLayoutInfoFixed.createByRegisterLayout(entity.tkey, inlineinfo.size, inlineinfo.asize, inlineinfo.mask);
                 }
                 else if (this.isType(tt, "Rational")) {
-                    return ICPPLayoutInfoFixed.createByValueLayout(entity.tkey, 2*ICPP_WORD_SIZE, "41", true);
+                    return ICPPLayoutInfoFixed.createByValueLayout(entity.tkey, inlineinfo.size, inlineinfo.mask);
                 }
                 else if (this.isType(tt, "String")) {
-                    return ICPPLayoutInfoFixed.createByValueLayout(entity.tkey, 2*ICPP_WORD_SIZE, "31", true);
+                    return ICPPLayoutInfoFixed.createByValueLayout(entity.tkey, inlineinfo.size, inlineinfo.mask);
                 }
                 else if (this.isType(tt, "ByteBuffer")) {
                     return ICPPLayoutInfoFixed.createByRefLayout(entity.tkey, 3*ICPP_WORD_SIZE, "2");
                 }
                 else if(this.isType(tt, "DateTime")) {
-                    return ICPPLayoutInfoFixed.createByRefLayout(entity.tkey, 5*ICPP_WORD_SIZE, undefined);
+                    return ICPPLayoutInfoFixed.createByValueLayout(entity.tkey, inlineinfo.size, inlineinfo.mask);
                 }
                 else if(this.isType(tt, "TickTime")) {
-                    return ICPPLayoutInfoFixed.createByRegisterLayout(entity.tkey, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1");
+                    return ICPPLayoutInfoFixed.createByRegisterLayout(entity.tkey, inlineinfo.size, inlineinfo.asize, inlineinfo.mask);
                 }
                 else if(this.isType(tt, "LogicalTime")) {
-                    return ICPPLayoutInfoFixed.createByRegisterLayout(entity.tkey, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1");
+                    return ICPPLayoutInfoFixed.createByRegisterLayout(entity.tkey, inlineinfo.size, inlineinfo.asize, inlineinfo.mask);
                 }
                 else if(this.isType(tt, "UUID")) {
-                    return ICPPLayoutInfoFixed.createByRegisterLayout(entity.tkey, 2*ICPP_WORD_SIZE, 2*ICPP_WORD_SIZE, "11");
+                    return ICPPLayoutInfoFixed.createByRegisterLayout(entity.tkey, inlineinfo.size, inlineinfo.asize, inlineinfo.mask);
                 }
                 else if(this.isType(tt, "ContentHash")) {
                     return ICPPLayoutInfoFixed.createByRefLayout(entity.tkey, 8*ICPP_WORD_SIZE, undefined);
                 }
                 else if(this.isType(tt, "Regex")) {
-                    return ICPPLayoutInfoFixed.createByRegisterLayout(entity.tkey, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1");
+                    return ICPPLayoutInfoFixed.createByRegisterLayout(entity.tkey, inlineinfo.size, inlineinfo.asize, inlineinfo.mask);
                 }
                 else {
                     if(entity.name === "PartialVector4") {
                         const etype = entity.terms.get("T") as MIRType;
-                        const elayout = this.getICPPTypeInfoShallow(etype);
-                        const allocinfo = ICPPTypeSizeInfo.createByRefSizeInfo(entity.tkey, elayout.inlinedatasize * 4, (elayout.inlinedmask + elayout.inlinedmask + elayout.inlinedmask + elayout.inlinedmask));
+                        const elayout = this.getICPPTypeInfoInlineLayout(etype);
+                        const allocinfo = ICPPTypeSizeInfo.createByRefSizeInfo(entity.tkey, elayout.size * 4, (elayout.mask + elayout.mask + elayout.mask + elayout.mask));
 
-                        return new ICPPCollectionInternalsLayoutInfo(entity.tkey, allocinfo, [{name: "T", type: etype.typeID, size: elayout.inlinedatasize, offset: 0}]);
+                        return new ICPPCollectionInternalsLayoutInfo(entity.tkey, allocinfo, [{name: "T", type: etype.typeID, size: elayout.size, offset: 0}]);
                     }
                     else if (entity.name === "PartialVector8") {
                         const etype = entity.terms.get("T") as MIRType;
-                        const elayout = this.getICPPTypeInfoShallow(etype);
-                        const allocinfo = ICPPTypeSizeInfo.createByRefSizeInfo(entity.tkey, elayout.inlinedatasize * 8, (elayout.inlinedmask + elayout.inlinedmask + elayout.inlinedmask + elayout.inlinedmask + elayout.inlinedmask + elayout.inlinedmask + elayout.inlinedmask + elayout.inlinedmask));
+                        const elayout = this.getICPPTypeInfoInlineLayout(etype);
+                        const allocinfo = ICPPTypeSizeInfo.createByRefSizeInfo(entity.tkey, elayout.size * 8, (elayout.mask + elayout.mask + elayout.mask + elayout.mask + elayout.mask + elayout.mask + elayout.mask + elayout.mask));
 
-                        return new ICPPCollectionInternalsLayoutInfo(entity.tkey, allocinfo, [{name: "T", type: etype.typeID, size: elayout.inlinedatasize, offset: 0}]);
+                        return new ICPPCollectionInternalsLayoutInfo(entity.tkey, allocinfo, [{name: "T", type: etype.typeID, size: elayout.size, offset: 0}]);
                     }
                     else if (entity.name === "ListTree") {
                         const allocinfo = ICPPTypeSizeInfo.createByRefSizeInfo(entity.tkey, ICPP_WORD_SIZE * 3, "221");
@@ -520,14 +596,14 @@ class ICPPTypeEmitter {
                     }
                     else if (entity.name === "MapTree") {
                         const ktype = entity.terms.get("K") as MIRType;
-                        const klayout = this.getICPPTypeInfoShallow(ktype);
+                        const klayout = this.getICPPTypeInfoInlineLayout(ktype);
                 
                         const vtype = entity.terms.get("V") as MIRType;
-                        const vlayout = this.getICPPTypeInfoShallow(vtype);
+                        const vlayout = this.getICPPTypeInfoInlineLayout(vtype);
 
-                        const allocinfo = ICPPTypeSizeInfo.createByRefSizeInfo(entity.tkey, (ICPP_WORD_SIZE * 2) + klayout.inlinedatasize + vlayout.inlinedatasize, ("22" + klayout.inlinedmask + vlayout.inlinedmask));
+                        const allocinfo = ICPPTypeSizeInfo.createByRefSizeInfo(entity.tkey, (ICPP_WORD_SIZE * 2) + klayout.size + vlayout.size, ("22" + klayout.mask + vlayout.mask));
 
-                        return new ICPPCollectionInternalsLayoutInfo(entity.tkey, allocinfo, [{name: "K", type: ktype.typeID, size: klayout.inlinedatasize, offset: 16}, {name: "V", type: vtype.typeID, size: vlayout.inlinedatasize, offset: 16 + klayout.inlinedatasize}]);
+                        return new ICPPCollectionInternalsLayoutInfo(entity.tkey, allocinfo, [{name: "K", type: ktype.typeID, size: klayout.size, offset: 16}, {name: "V", type: vtype.typeID, size: vlayout.size, offset: 16 + klayout.size}]);
                     }
                     else {
                         assert(false, "Unknown primitive internal entity");
@@ -563,21 +639,21 @@ class ICPPTypeEmitter {
                 assert(entity instanceof MIRPrimitiveCollectionEntityTypeDecl, "Should be a collection type");
 
                 if(entity instanceof MIRPrimitiveMapEntityTypeDecl) {
-                    return ICPPLayoutInfoFixed.createByValueLayout(entity.tkey, ICPP_WORD_SIZE * 3, "112", false);
+                    return ICPPLayoutInfoFixed.createByValueLayout(entity.tkey, inlineinfo.size, inlineinfo.mask);
                 }
                 else if(entity instanceof MIRPrimitiveStackEntityTypeDecl) {
-                    return ICPPLayoutInfoFixed.createByValueLayout(entity.tkey, ICPP_WORD_SIZE * 2, "12", false);
+                    return ICPPLayoutInfoFixed.createByValueLayout(entity.tkey, inlineinfo.size, inlineinfo.mask);
                 }
                 else if(entity instanceof MIRPrimitiveQueueEntityTypeDecl) {
-                    return ICPPLayoutInfoFixed.createByValueLayout(entity.tkey, ICPP_WORD_SIZE * 2, "12", false);
+                    return ICPPLayoutInfoFixed.createByValueLayout(entity.tkey, inlineinfo.size, inlineinfo.mask);
                 }
                 else if(entity instanceof MIRPrimitiveSetEntityTypeDecl) {
-                    return ICPPLayoutInfoFixed.createByValueLayout(entity.tkey, ICPP_WORD_SIZE * 3, "112", false);
+                    return ICPPLayoutInfoFixed.createByValueLayout(entity.tkey, inlineinfo.size, inlineinfo.mask);
                 }
                 else {
                     assert(entity instanceof MIRPrimitiveListEntityTypeDecl, "Should be a list type");
 
-                    return ICPPLayoutInfoFixed.createByValueLayout(entity.tkey, ICPP_WORD_SIZE * 2, "12", false);
+                    return ICPPLayoutInfoFixed.createByValueLayout(entity.tkey, inlineinfo.size, inlineinfo.mask);
                 }
             }
         }
@@ -588,34 +664,29 @@ class ICPPTypeEmitter {
             return fromlayout.createFromLayoutInfo(entity.tkey);
         }
         else if (entity instanceof MIREnumEntityTypeDecl) {
-            return ICPPLayoutInfoFixed.createByRegisterLayout(entity.tkey, ICPP_WORD_SIZE, ICPP_WORD_SIZE, "1");
+            return ICPPLayoutInfoFixed.createByRegisterLayout(entity.tkey, inlineinfo.size, inlineinfo.asize, inlineinfo.mask);
         }
         else {
-            let isinline = true;
             let fieldnames: MIRFieldKey[] = [];
             let fieldtypes: MIRResolvedTypeKey[] = [];
             let fieldoffsets: number[] = [];
-            let size = 0;
-            let mask: RefMask = "";
-
+            let endoffest = 0;
+            
             const ett = this.assembly.entityDecls.get(tt.getUniqueCallTargetType().typeID) as MIRObjectEntityTypeDecl;
             for(let i = 0; i < ett.fields.length; ++i) {
-                const sizeinfo = this.getICPPTypeInfoShallow(this.getMIRType(ett.fields[i].declaredType));
+                const sizeinfo = this.getICPPTypeInfoInlineLayout(this.getMIRType(ett.fields[i].declaredType));
 
                 fieldnames.push(ett.fields[i].fkey);
                 fieldtypes.push(ett.fields[i].declaredType);
-                fieldoffsets.push(size);
-
-                isinline = isinline && sizeinfo.issmallinlinevalue;
-                size = size + sizeinfo.inlinedatasize;
-                mask = mask + sizeinfo.inlinedmask;
+                fieldoffsets.push(endoffest);
+                endoffest += sizeinfo.size;
             }
 
-            if(size <= UNIVERSAL_CONTENT_SIZE && isinline) {
-                return ICPPEntityLayoutInfo.createByValueEntity(tt.typeID, size, mask, fieldnames, fieldtypes, fieldoffsets);
+            if(inlineinfo.layout === ICPPLayoutCategory.Inline) {
+                return ICPPEntityLayoutInfo.createByValueEntity(tt.typeID, inlineinfo.size, inlineinfo.mask, fieldnames, fieldtypes, fieldoffsets);
             }
             else {
-                return ICPPEntityLayoutInfo.createByRefEntity(tt.typeID, size, mask, fieldnames, fieldtypes, fieldoffsets);
+                return ICPPEntityLayoutInfo.createByRefEntity(tt.typeID, inlineinfo.size, inlineinfo.mask, fieldnames, fieldtypes, fieldoffsets);
             }
         }
     }
@@ -652,14 +723,14 @@ class ICPPTypeEmitter {
                     const cttype = this.getMIRType(copt.typeID);
                     const iccpopts = [...this.assembly.entityDecls]
                         .filter((edp) => this.assembly.subtypeOf(this.getMIRType(edp[0]), cttype))
-                        .map((edp) => this.getICPPLayoutInfo(this.getMIRType(edp[0])));
+                        .map((edp) => this.getICPPTypeInfoInlineLayout(this.getMIRType(edp[0])));
 
                     iidata = this.computeICCPLayoutForUnion(tt, iccpopts);
                 }
             }
         }
         else {
-            const iccpopts = tt.options.map((opt) => this.getICPPLayoutInfo(this.getMIRType(opt.typeID)));
+            const iccpopts = tt.options.map((opt) => this.getICPPTypeInfoInlineLayout(this.getMIRType(opt.typeID)));
             iidata = this.computeICCPLayoutForUnion(tt, iccpopts);
         }
 

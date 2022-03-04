@@ -120,8 +120,7 @@ void Evaluator::evalLoadUnintVariableValueOp(const LoadUnintVariableValueOp* op)
 
 void Evaluator::evalNoneInitUnionOp(const NoneInitUnionOp* op)
 {
-    auto tl = this->evalTargetVar(op->trgt);
-    SLPTR_STORE_CONTENTS_AS(BSQNone, tl, BSQNoneValue);
+    ;
 }
 
 void Evaluator::evalStoreConstantMaskValueOp(const StoreConstantMaskValueOp* op)
@@ -2709,7 +2708,6 @@ bool ICPPParseJSON::parseDateTimeImpl(const APIModule* apimodule, const IType* i
     dt->hour = t.hour;
     dt->month = t.min;
     dt->tzoffset = t.tzoffset;
-    dt->tzname = t.tzname;
 
     SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(value, dt);
     return true;
@@ -3203,7 +3201,6 @@ std::optional<DateTime> ICPPParseJSON::extractDateTimeImpl(const APIModule* apim
     dt.hour = t->hour;
     dt.min = t->min;
     dt.tzoffset = t->tzoffset;
-    dt.tzname = t->tzname;
 
     return std::make_optional(dt);
 }
