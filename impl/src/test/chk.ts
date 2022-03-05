@@ -25,7 +25,7 @@ const noerrtrgt = {file: "[No Error Trgt]", line: -1, pos: -1};
 const userpackage = new PackageConfig([], usercode);
 
 if(mode === "-smt") {
-    const ofile = args[0].slice(0, args[0].length - 3) + "smt";
+    const ofile = args[0].slice(0, args[0].length - 3) + "smt2";
     process.stdout.write(`Writing file to ${ofile}\n`);
 
     workflowEmitToFile(ofile, userpackage, false, TIMEOUT, STD_OPTS, {filename: args[0], name: "main", fkey: "__i__Main::main"}, noerrtrgt, true);

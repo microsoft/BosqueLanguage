@@ -175,3 +175,7 @@ chktest function logiceval_2(): Bool {
 __chktest function logiceval_fail_1(bv: Bool): Bool {
     return AndOp{2, LConst{1, true}, LConst{1, bv}}.evaluate[recursive]();
 }
+
+__chktest function logiceval_fail_2(lc: LConst): Bool {
+    return AndOp{2, LConst{1, true}, lc}.evaluate[recursive]();
+}
