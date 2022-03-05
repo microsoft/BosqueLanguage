@@ -304,9 +304,9 @@ function outputResultsAndExit(verbose: Verbosity, totaltime: number, totalicpp: 
         }
     }
 
-    process.stdout.write(`Ran ${totalsmt} SMT tests...\n`);
+    process.stdout.write(`Ran ${totalsmt} symbolic tests...\n`);
     if (failedsmt.length === 0 && errorsmt.length === 0) {
-        process.stdout.write(chalk.green(chalk.bold("All executable tests pass!\n\n")));
+        process.stdout.write(chalk.green(chalk.bold("All symbolic tests pass!\n\n")));
     }
     else {
         if(failedsmt.length !== 0) {
