@@ -371,11 +371,11 @@
 (declare-fun ContainerSize@UFCons_API (HavocSequence) BNat)
 (declare-fun UnionChoice@UFCons_API (HavocSequence) BNat)
 
-(define-fun _@@cons_bsq_none_entrypoint ((ctx HavocSequence)) $Result_bsq_none
+(define-fun _@@cons_None_entrypoint ((ctx HavocSequence)) $Result_bsq_none
   ($Result_bsq_none@success bsq_none@literal)
 )
 
-(define-fun _@@cons_bsq_nothing_entrypoint ((ctx HavocSequence)) $Result_bsq_nothing
+(define-fun _@@cons_Nothing_entrypoint ((ctx HavocSequence)) $Result_bsq_nothing
   ($Result_bsq_nothing@success bsq_nothing@literal)
 )
 

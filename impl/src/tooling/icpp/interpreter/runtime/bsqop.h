@@ -300,7 +300,7 @@ public:
     const TargetVar trgt;
     const BSQUnionType* oftype;
 
-    NoneInitUnionOp(SourceInfo sinfo, TargetVar trgt, const BSQUnionType* oftype) : InterpOp(sinfo, OpCodeTag::LoadUnintVariableValueOp), trgt(trgt), oftype(oftype) {;}
+    NoneInitUnionOp(SourceInfo sinfo, TargetVar trgt, const BSQUnionType* oftype) : InterpOp(sinfo, OpCodeTag::NoneInitUnionOp), trgt(trgt), oftype(oftype) {;}
     virtual ~NoneInitUnionOp() {;}
 
     static NoneInitUnionOp* jparse(json v);
