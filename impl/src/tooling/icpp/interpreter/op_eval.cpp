@@ -120,7 +120,7 @@ void Evaluator::evalLoadUnintVariableValueOp(const LoadUnintVariableValueOp* op)
 
 void Evaluator::evalNoneInitUnionOp(const NoneInitUnionOp* op)
 {
-    ;
+    SLPTR_STORE_UNION_INLINE_TYPE(BSQWellKnownType::g_typeNone, this->evalTargetVar(op->trgt));
 }
 
 void Evaluator::evalStoreConstantMaskValueOp(const StoreConstantMaskValueOp* op)
