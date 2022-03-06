@@ -179,3 +179,34 @@ __chktest function logiceval_fail_1(bv: Bool): Bool {
 __chktest function logiceval_fail_2(lc: LConst): Bool {
     return AndOp{2, LConst{1, true}, lc}.evaluate[recursive]();
 }
+
+////////
+//
+function printType(x: Bool | Int | String | None ): String {
+    return match(x) {|
+        Bool     => "b"
+        | Int    => "i"
+        | String => "s"
+        _        => "n"
+    |};
+}
+
+chktest function printtype_1(): Bool {
+    return printType(true) === "b";
+}
+
+chktest function printtype_2(): Bool {
+    return printType(none) === "n";
+}
+
+__chktest function printtype_fail_1(v: Bool | Int | String | None): Bool {
+    return printType(v) === "i";
+}
+
+__chktest function printtype_fail_2(v: Bool | Int | String | None): Bool {
+    return printType(v) === "s";
+}
+
+__chktest function printtype_fail_3(v: Bool | Int | String | None): Bool {
+    return printType(v) === "n";
+}
