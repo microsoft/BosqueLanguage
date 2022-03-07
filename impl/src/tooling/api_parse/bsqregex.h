@@ -7,6 +7,12 @@
 
 #include "common.h"
 
+struct SingleCharRange
+{
+    CharCode low;
+    CharCode high;
+};
+
 class NFAOpt
 {
 public:
@@ -63,25 +69,75 @@ public:
 class NFAOptRange : public NFAOpt
 {
 public:
-    const CharCode low;
-    const CharCode high;
+    const bool compliment;
+    const std::vector<SingleCharRange> ranges;
     const StateID follow;
 
-    NFAOptRange(StateID stateid, CharCode low, CharCode high, StateID follow) : NFAOpt(stateid), low(low), high(high), follow(follow) {;}
+    NFAOptRange(StateID stateid, bool compliment, std::vector<SingleCharRange> ranges, StateID follow) : NFAOpt(stateid), compliment(compliment), ranges(ranges), follow(follow) {;}
     virtual ~NFAOptRange() {;}
 
     virtual void advance(CharCode c, const std::vector<NFAOpt*>& nfaopts, std::vector<StateID>& nstates) const override final
     {
-        if(this->low <= c && c <= this->high)
-        {
-            nstates.push_back(this->follow);
+        auto chkrng = std::find_if(this->ranges.cbegin(), this->ranges.cend(), [c](const SingleCharRange& rr) {
+            return (rr.low <= c && c <= rr.high);
+        });
+
+        if(!compliment) {
+            if(chkrng != this->ranges.cend()) {
+                nstates.push_back(this->follow);
+            }
+        }
+        else {
+            if(chkrng == this->ranges.cend()) {
+                nstates.push_back(this->follow);
+            }
         }
     }
 
     virtual std::pair<CharCode, StateID> generate(RandGenerator& rnd, const std::vector<NFAOpt*>& nfaopts) const override final
     {
-        std::uniform_int_distribution<uint32_t> cgen(this->low, this->high);
-        return std::make_pair((CharCode)cgen(rnd), this->follow);
+        if(!compliment)
+        {
+            std::uniform_int_distribution<uint32_t> igen(0, this->ranges.size() - 1);
+            auto ii = igen(rnd);
+
+            auto range = this->ranges[ii];
+            std::uniform_int_distribution<uint32_t> cgen(range.low, range.high);
+
+            return std::make_pair((CharCode)cgen(rnd), this->follow);
+        }
+        else
+        {
+            uint32_t minrng = this->ranges.front().low == 0 ? 1 : 0;
+            uint32_t maxrng = this->ranges.back().high == std::numeric_limits<CharCode>::max() ? this->ranges.size() - 1 : this->ranges.size();
+            std::uniform_int_distribution<uint32_t> igen(minrng, maxrng);
+            auto ii = igen(rnd);
+
+            if(ii == 0)
+            {
+                auto range = this->ranges.front();
+                std::uniform_int_distribution<uint32_t> cgen(0, range.low - 1);
+
+                return std::make_pair((CharCode)cgen(rnd), this->follow);   
+            }
+            if(ii == this->ranges.size())
+            {
+                auto range = this->ranges.back();
+                std::uniform_int_distribution<uint32_t> cgen(range.high + 1, std::numeric_limits<CharCode>::max());
+
+                return std::make_pair((CharCode)cgen(rnd), this->follow);  
+            }
+            else
+            {
+                auto rangel = this->ranges[ii];
+                auto ranger = this->ranges[ii + 1];
+                assert(rangel.high + 1 < ranger.low); //should have merged them then
+
+                std::uniform_int_distribution<uint32_t> cgen(rangel.high + 1, ranger.low - 1);
+            
+                return std::make_pair((CharCode)cgen(rnd), this->follow);
+            }
+        }
     }
 };
 
@@ -183,6 +239,8 @@ public:
         while(cci.valid())
         {
             auto cc = cci.get();
+            cci.advance();
+
             for(size_t i = 0; i < cstates.size(); ++i)
             {
                 this->nfaopts[cstates[i]]->advance(cc, this->nfaopts, nstates);
@@ -210,6 +268,8 @@ public:
         while(cci.valid())
         {
             auto cc = cci.get();
+            cci.advance();
+
             for(size_t i = 0; i < cstates.size(); ++i)
             {
                 this->nfaopts[cstates[i]]->advance(cc, this->nfaopts, nstates);
@@ -243,6 +303,8 @@ public:
         while(cci.valid())
         {
             auto cc = cci.get();
+            cci.advance();
+
             for(size_t i = 0; i < cstates.size(); ++i)
             {
                 this->nfaopts[cstates[i]]->advance(cc, this->nfaopts, nstates);
@@ -321,10 +383,10 @@ public:
 class BSQCharRangeRe : public BSQRegexOpt
 {
 public:
-    const uint64_t low;
-    const uint64_t high;
+    const bool compliment;
+    const std::vector<SingleCharRange> ranges;
 
-    BSQCharRangeRe(uint64_t low, uint64_t high) : BSQRegexOpt(), low(low), high(high) {;}
+    BSQCharRangeRe(bool compliment, std::vector<SingleCharRange> ranges) : BSQRegexOpt(), compliment(compliment), ranges(ranges) {;}
     virtual ~BSQCharRangeRe() {;}
 
     static BSQCharRangeRe* parse(json j);
