@@ -210,3 +210,36 @@ __chktest function printtype_fail_2(v: Bool | Int | String | None): Bool {
 __chktest function printtype_fail_3(v: Bool | Int | String | None): Bool {
     return printType(v) === "n";
 }
+
+////////
+//
+typedecl ZipcodeUS = /[0-9]{5}(-[0-9]{4})?/;
+typedecl CSSpt = /[0-9]+pt/;
+
+function is3pt(s1: StringOf<CSSpt>): Bool {
+    return s1.value() === "3pt";
+}
+
+chktest function accepts_1(): Bool {
+    return ZipcodeUS::accepts("98052-0000");
+}
+
+chktest function accepts_2(): Bool {
+    return !ZipcodeUS::accepts("abc");
+}
+
+__chktest function accepts_fail_1(s: String): Bool {
+    return ZipcodeUS::accepts(s);
+}
+
+__chktest function accepts_fail_2(s: String): Bool {
+    return !ZipcodeUS::accepts(s);
+}
+
+chktest function iscsspt_1(): Bool {
+    return is3pt('3pt'_CSSpt);
+}
+
+chktest function iscsspt_2(): Bool {
+    return !is3pt('4pt'_CSSpt);
+}

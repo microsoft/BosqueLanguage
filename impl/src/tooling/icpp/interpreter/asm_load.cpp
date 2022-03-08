@@ -324,7 +324,7 @@ void loadAssembly(json j, Evaluator& ee)
 
     auto jregexes = j["regexes"];
     std::for_each(jregexes.cbegin(), jregexes.cend(), [](json redecl) {
-        const BSQRegex* rr = BSQRegex::jparse(redecl["regex"]);
+        const BSQRegex* rr = BSQRegex::jparse(redecl);
         Evaluator::g_regexs.emplace(rr->restr, rr);
     });
 
