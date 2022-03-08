@@ -1153,6 +1153,16 @@ class MIRAssembly {
                     return {tag: APIEmitTypeTag.ConstructableOfType, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey), validatefunc: null};
                 }
             }
+            else if (entity instanceof MIRStringOfInternalEntityTypeDecl) {
+                const validator = this.validatorRegexs.get(entity.validatortype) as BSQRegex;
+                return {tag: APIEmitTypeTag.StringOfTag, name: tt.typeID, validator: validator.jemit()};
+            }
+            else if (entity instanceof MIRDataStringInternalEntityTypeDecl) {
+                return {tag: APIEmitTypeTag.DataStringTag, name: tt.typeID, oftype: entity.fromtype, chkinv: entity.accepts}
+            }
+            else if (entity instanceof MIRDataBufferInternalEntityTypeDecl) {
+                return {tag: APIEmitTypeTag.DataStringTag, name: tt.typeID, oftype: entity.fromtype, chkinv: entity.accepts}
+            }
             else {
                 assert(entity instanceof MIRPrimitiveCollectionEntityTypeDecl);
 

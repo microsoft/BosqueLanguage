@@ -86,16 +86,24 @@ StateID BSQLiteralRe::compileReverse(StateID follows, std::vector<NFAOpt*>& stat
 
 BSQCharRangeRe* BSQCharRangeRe::parse(json j)
 {
-    auto lb = j["lb"].get<CharCode>();
-    auto ub = j["ub"].get<CharCode>();
+    const bool compliment = j["compliment"].get<bool>();
 
-    return new BSQCharRangeRe(lb, ub);
+    std::vector<SingleCharRange> ranges;
+    auto jranges = j["range"];
+    std::transform(jranges.cbegin(), jranges.cend(), std::back_inserter(ranges), [](const json& rv) {
+        auto lb = rv["lb"].get<CharCode>();
+        auto ub = rv["ub"].get<CharCode>();
+
+        return SingleCharRange{lb, ub};
+    });
+
+    return new BSQCharRangeRe(compliment, ranges);
 }
 
 StateID BSQCharRangeRe::compile(StateID follows, std::vector<NFAOpt*>& states) const
 {
     auto thisstate = (StateID)states.size();
-    states.push_back(new NFAOptRange(thisstate, this->low, this->high, follows));
+    states.push_back(new NFAOptRange(thisstate, this->compliment, this->ranges, follows));
 
     return thisstate;
 }
@@ -103,7 +111,7 @@ StateID BSQCharRangeRe::compile(StateID follows, std::vector<NFAOpt*>& states) c
 StateID BSQCharRangeRe::compileReverse(StateID follows, std::vector<NFAOpt*>& states) const
 {
     auto thisstate = (StateID)states.size();
-    states.push_back(new NFAOptRange(thisstate, this->low, this->high, follows));
+    states.push_back(new NFAOptRange(thisstate, this->compliment, this->ranges, follows));
 
     return thisstate;
 }
@@ -337,8 +345,8 @@ StateID BSQSequenceRe::compileReverse(StateID follows, std::vector<NFAOpt*>& sta
 
 BSQRegex* BSQRegex::jparse(json j)
 {
-    auto restr = j["regexstr"].get<std::string>();
-    auto bsqre = BSQRegexOpt::parse(j["bsqregex"]);
+    auto restr = j["restr"].get<std::string>();
+    auto bsqre = BSQRegexOpt::parse(j["re"]);
 
     std::vector<NFAOpt*> nfastates = { new NFAOptAccept(0) };
     auto nfastart = bsqre->compile(0, nfastates);
