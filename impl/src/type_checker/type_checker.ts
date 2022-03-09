@@ -6497,7 +6497,7 @@ class TypeChecker {
 
         this.m_emitter.setActiveBlock("returnassign");
 
-        const rrinfo = this.generateRefInfoForReturnEmit(constype, []);
+        const rrinfo = this.generateRefInfoForReturnEmit(this.m_assembly.getSpecialBoolType(), []);
         this.emitPrologForReturn(tdecl.sourceLocation, rrinfo, false);
         this.m_emitter.emitDirectJump(tdecl.sourceLocation, "exit");
 
@@ -6509,7 +6509,7 @@ class TypeChecker {
 
         const invbody = this.m_emitter.getBody(tdecl.srcFile, tdecl.sourceLocation);
         if (invbody !== undefined) {
-            const consinv = new MIRInvokeBodyDecl(this.m_emitter.registerResolvedTypeReference(constype).typeID, bodyid, invkey, invkeyshort, ["invariant", "private"], false, tdecl.sourceLocation, tdecl.srcFile, params, optfields.length, this.m_emitter.registerResolvedTypeReference(constype).typeID, undefined, undefined, invbody);
+            const consinv = new MIRInvokeBodyDecl(this.m_emitter.registerResolvedTypeReference(constype).typeID, bodyid, invkey, invkeyshort, ["invariant", "private"], false, tdecl.sourceLocation, tdecl.srcFile, params, optfields.length, this.m_emitter.registerResolvedTypeReference(this.m_assembly.getSpecialBoolType()).typeID, undefined, undefined, invbody);
             this.m_emitter.masm.invokeDecls.set(invkey, consinv);
         }
     }
@@ -6587,14 +6587,14 @@ class TypeChecker {
 
         this.m_emitter.setActiveBlock("returnassign");
 
-        const rrinfo = this.generateRefInfoForReturnEmit(constype, []);
+        const rrinfo = this.generateRefInfoForReturnEmit(this.m_assembly.getSpecialBoolType(), []);
         this.emitPrologForReturn(tdecl.sourceLocation, rrinfo, false);
         this.m_emitter.emitDirectJump(tdecl.sourceLocation, "exit");
 
         const params: MIRFunctionParameter[] = [new MIRFunctionParameter("$value", constype.typeID)];
         const invbody = this.m_emitter.getBody(tdecl.srcFile, tdecl.sourceLocation);
         if (invbody !== undefined) {
-            const consinv = new MIRInvokeBodyDecl(this.m_emitter.registerResolvedTypeReference(constype).typeID, bodyid, invkey, invkeyshort, ["invariant", "private"], false, tdecl.sourceLocation, tdecl.srcFile, params, 0, this.m_emitter.registerResolvedTypeReference(constype).typeID, undefined, undefined, invbody);
+            const consinv = new MIRInvokeBodyDecl(this.m_emitter.registerResolvedTypeReference(constype).typeID, bodyid, invkey, invkeyshort, ["invariant", "private"], false, tdecl.sourceLocation, tdecl.srcFile, params, 0, this.m_emitter.registerResolvedTypeReference(this.m_assembly.getSpecialBoolType()).typeID, undefined, undefined, invbody);
             this.m_emitter.masm.invokeDecls.set(invkey, consinv);
         }
     }
