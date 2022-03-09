@@ -14,7 +14,9 @@ json workflowCheckError(std::string smt2decl, const APIModule* apimodule, const 
     z3::solver s(c);
 
     z3::params p(c);
-    p.set(":timeout", timeout);
+    //p.set(":timeout", timeout);
+    //TODO: we should do some timeout niceness as well
+
     //TODO: it would be nice to set a more specifc logic here (than the ALL from the smtfile)
     s.set(p);
 
