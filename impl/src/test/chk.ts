@@ -60,14 +60,14 @@ else if (mode === "-eval") {
                 try {
                     const jres = JSON.parse(res);
 
-                    if (jres["result"] === "unreachable") {
+                    if (jres["status"] === "unreachable") {
                         process.stdout.write(`No valid (non error) result exists for this input!\n`);
                     }
-                    else if (jres["result"] === "output") {
+                    else if (jres["status"] === "output") {
                         process.stdout.write(`Generated output in ${jres["time"]} millis!\n`);
                         process.stdout.write(JSON.stringify(jres["value"], undefined, 2) + "\n");
                     }
-                    else if (jres["result"] === "timeout") {
+                    else if (jres["status"] === "timeout") {
                         process.stdout.write(`Solver timeout :(\n`);
                     }
                     else {

@@ -267,3 +267,27 @@ function isIOCode(s: DataString<StatusCode>): Bool {
     return s === 'IO'_StatusCode;
 }
 
+chktest function isiscode_1(): Bool {
+    return !isIOCode('Network'_StatusCode);
+}
+
+chktest function isiscode_2(): Bool {
+    return isIOCode('IO'_StatusCode);
+}
+
+chktest function isiscode_3(): Bool {
+    let ec: StatusCode = StatusCode{'IO'};
+    return ec.code == 1i;
+}
+
+__chktest function statuscode_fail_1(s: String): Bool {
+    return StatusCode::accepts(s);
+}
+
+__chktest function statuscode_fail_2(s: String): Bool {
+    return !StatusCode::accepts(s);
+}
+
+__chktest function statuscode_fail_3(s: String): Bool {
+    return StatusCode::parse(s).isOk();
+}

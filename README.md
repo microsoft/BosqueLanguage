@@ -221,7 +221,7 @@ StatusCode::parse("Input") //runtime error not a valid StatusCode string
 isIOCode('Network'_StatusCode)               //false
 isIOCode('IO'_StatusCode)                    //true
 
-let ec: StatusCode = 'IO'(StatusCode);
+let ec: StatusCode = StatusCode{'IO'};
 assert(ec.code == 1i); //true
 ```
 
