@@ -291,3 +291,32 @@ __chktest function statuscode_fail_2(s: String): Bool {
 __chktest function statuscode_fail_3(s: String): Bool {
     return StatusCode::parse(s).isOk();
 }
+
+////////
+//
+orderable algebraic typedecl Fahrenheit = Int;
+orderable algebraic typedecl Celsius = Int;
+
+orderable typedecl Percentage = Nat & {
+    invariant $value <= 100n;
+}
+
+function isFreezing(temp: Celsius): Bool {
+    return temp <= 0_Celsius;
+}
+
+chktest function isfreezing_1(): Bool {
+    return !isFreezing(5_Celsius);
+}
+
+chktest function isfreezing_2(): Bool {
+    return isFreezing(-5_Celsius);
+}
+
+__chktest function isfreezing_fail_1(t: Celsius): Bool {
+    return isFreezing(t);
+}
+
+__chktest function is50pct_fail_1(p: Percentage): Bool {
+    return p == 50_Percentage;
+}
