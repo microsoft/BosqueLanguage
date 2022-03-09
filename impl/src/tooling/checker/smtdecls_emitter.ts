@@ -19,6 +19,7 @@ class SMTEmitter {
     readonly bemitter: SMTBodyEmitter;
     readonly assembly: SMTAssembly;
     readonly vopts: VerifierOptions;
+    readonly callsafety: Map<MIRInvokeKey, { safe: boolean, trgt: boolean }>;
 
     readonly havocPathType: SMTTypeInfo;
 
@@ -26,11 +27,12 @@ class SMTEmitter {
     private lastVOperatorIdx = 0;
     private lastVEntityUpdateIdx = 0;
 
-    constructor(temitter: SMTTypeEmitter, bemitter: SMTBodyEmitter, assembly: SMTAssembly, vopts: VerifierOptions) {
+    constructor(temitter: SMTTypeEmitter, bemitter: SMTBodyEmitter, assembly: SMTAssembly, vopts: VerifierOptions, callsafety: Map<MIRInvokeKey, { safe: boolean, trgt: boolean }>) {
         this.temitter = temitter;
         this.bemitter = bemitter;
         this.assembly = assembly;
         this.vopts = vopts;
+        this.callsafety = callsafety;
 
         this.havocPathType = this.temitter.getSMTTypeFor(this.temitter.getMIRType("HavocSequence"));
     }
@@ -103,15 +105,33 @@ class SMTEmitter {
 
         let fexp: SMTExp = new SMTConst("[INVALID]");
         if(tdecl.validatefunc === undefined) {
-            fexp = new SMTIf(this.temitter.generateResultIsSuccessTest(tt, new SMTVar("vv")),
+            fexp = new SMTIf(this.temitter.generateResultIsSuccessTest(oftype, new SMTVar("vv")),
                 this.temitter.generateResultTypeConstructorSuccess(tt, this.temitter.generateResultGetSuccess(oftype, new SMTVar("vv"))),
                 this.temitter.generateErrorResultAssert(tt)
             );
         }
         else {
-            const cchk = SMTCallSimple.makeEq(new SMTCallGeneral(this.temitter.lookupFunctionName(tdecl.validatefunc), [this.temitter.generateResultGetSuccess(oftype, new SMTVar("vv"))]), this.temitter.generateResultTypeConstructorSuccess(this.temitter.getMIRType("Bool"), new SMTConst("true")));
-            const ccons = (tdecl.usingcons !== undefined) ? new SMTCallGeneral(this.temitter.lookupFunctionName(tdecl.usingcons), [this.temitter.generateResultGetSuccess(oftype, new SMTVar("vv"))]) : this.temitter.generateResultTypeConstructorSuccess(tt, this.temitter.generateResultGetSuccess(oftype, new SMTVar("vv")));
+            let cchk: SMTExp = new SMTConst("[UNDEFINED]");
+            let ccons: SMTExp = new SMTConst("[Undefined]");
+            if((this.callsafety.get(tdecl.validatefunc) as {safe: boolean, trgt: boolean}).safe) {
+                cchk = new SMTCallGeneral(this.temitter.lookupFunctionName(tdecl.validatefunc), [this.temitter.generateResultGetSuccess(oftype, new SMTVar("vv"))]);
+            }
+            else {
+                cchk = SMTCallSimple.makeEq(new SMTCallGeneral(this.temitter.lookupFunctionName(tdecl.validatefunc), [this.temitter.generateResultGetSuccess(oftype, new SMTVar("vv"))]), this.temitter.generateResultTypeConstructorSuccess(this.temitter.getMIRType("Bool"), new SMTConst("true")));
+            }
             
+            if(tdecl.usingcons === undefined) {
+                ccons = this.temitter.generateResultTypeConstructorSuccess(tt, this.temitter.generateResultGetSuccess(oftype, new SMTVar("vv")));
+            }
+            else {
+                if((this.callsafety.get(tdecl.usingcons) as {safe: boolean, trgt: boolean}).safe) {
+                    ccons = this.temitter.generateResultTypeConstructorSuccess(tt, new SMTCallGeneral(this.temitter.lookupFunctionName(tdecl.usingcons), [this.temitter.generateResultGetSuccess(oftype, new SMTVar("vv"))]));
+                }
+                else {
+                    ccons = new SMTCallGeneral(this.temitter.lookupFunctionName(tdecl.usingcons), [this.temitter.generateResultGetSuccess(oftype, new SMTVar("vv"))]);
+                }
+            }
+
             fexp = new SMTIf(cchk, ccons, this.temitter.generateErrorResultAssert(tt));
         }
 
@@ -127,7 +147,7 @@ class SMTEmitter {
         const bcreate = this.temitter.generateHavocConstructorCall_PassThrough(oftype, new SMTVar("path"));
         
         const fexp = new SMTLet("vv", bcreate, 
-                new SMTIf(this.temitter.generateResultIsSuccessTest(tt, new SMTVar("vv")),
+                new SMTIf(this.temitter.generateResultIsSuccessTest(oftype, new SMTVar("vv")),
                 this.temitter.generateResultTypeConstructorSuccess(tt, this.temitter.generateResultGetSuccess(oftype, new SMTVar("vv"))),
                 this.temitter.generateErrorResultAssert(tt)
             )
@@ -145,7 +165,7 @@ class SMTEmitter {
         const bcreate = this.temitter.generateHavocConstructorCall_PassThrough(oftype, new SMTVar("path"));
         
         const fexp = new SMTLet("vv", bcreate, 
-                new SMTIf(this.temitter.generateResultIsSuccessTest(tt, new SMTVar("vv")),
+                new SMTIf(this.temitter.generateResultIsSuccessTest(oftype, new SMTVar("vv")),
                 this.temitter.generateResultTypeConstructorSuccess(tt, this.temitter.generateResultGetSuccess(oftype, new SMTVar("vv"))),
                 this.temitter.generateErrorResultAssert(tt)
             )
@@ -163,7 +183,7 @@ class SMTEmitter {
         const bcreate = this.temitter.generateHavocConstructorCall_PassThrough(oftype, new SMTVar("path"));
         
         const fexp = new SMTLet("vv", bcreate, 
-                new SMTIf(this.temitter.generateResultIsSuccessTest(tt, new SMTVar("vv")),
+                new SMTIf(this.temitter.generateResultIsSuccessTest(oftype, new SMTVar("vv")),
                 this.temitter.generateResultTypeConstructorSuccess(tt, this.temitter.generateResultGetSuccess(oftype, new SMTVar("vv"))),
                 this.temitter.generateErrorResultAssert(tt)
             )
@@ -271,7 +291,12 @@ class SMTEmitter {
             ccons = this.temitter.generateResultTypeConstructorSuccess(tt, new SMTCallGeneral(this.temitter.lookupFunctionName(tdecl.consfunc as MIRInvokeKey), ctors.map((arg) => arg.access)));
 
             if(tdecl.validatefunc !== undefined) {
-                cvalidate = SMTCallSimple.makeEq(this.temitter.generateResultTypeConstructorSuccess(this.temitter.getMIRType("Bool"), new SMTConst("true")), new SMTCallGeneral(this.temitter.lookupFunctionName(tdecl.consfunc as MIRInvokeKey), ctors.map((arg) => arg.access)));
+                if((this.callsafety.get(tdecl.validatefunc) as {safe: boolean, trgt: boolean}).safe) {
+                    cvalidate = new SMTCallGeneral(this.temitter.lookupFunctionName(tdecl.consfunc as MIRInvokeKey), ctors.map((arg) => arg.access));
+                }
+                else {
+                    cvalidate = SMTCallSimple.makeEq(new SMTCallGeneral(this.temitter.lookupFunctionName(tdecl.consfunc as MIRInvokeKey), ctors.map((arg) => arg.access)), this.temitter.generateResultTypeConstructorSuccess(this.temitter.getMIRType("Bool"), new SMTConst("true")));
+                }
             }
         }
         else {
@@ -288,10 +313,20 @@ class SMTEmitter {
                 }
             }
 
-            ccons = this.temitter.generateResultTypeConstructorSuccess(tt, new SMTCallGeneralWOptMask(this.temitter.lookupFunctionName(tdecl.consfunc as MIRInvokeKey), ctors.map((arg) => arg.access), mask));
-
             if(tdecl.validatefunc !== undefined) {
-                cvalidate = SMTCallSimple.makeEq(this.temitter.generateResultTypeConstructorSuccess(this.temitter.getMIRType("Bool"), new SMTConst("true")), new SMTCallGeneralWOptMask(this.temitter.lookupFunctionName(tdecl.consfunc as MIRInvokeKey), ctors.map((arg) => arg.access), mask));
+                if((this.callsafety.get(tdecl.validatefunc) as {safe: boolean, trgt: boolean}).safe) {
+                    cvalidate = new SMTCallGeneralWOptMask(this.temitter.lookupFunctionName(tdecl.consfunc as MIRInvokeKey), ctors.map((arg) => arg.access), mask);
+                }
+                else {
+                    cvalidate = SMTCallSimple.makeEq(new SMTCallGeneralWOptMask(this.temitter.lookupFunctionName(tdecl.consfunc as MIRInvokeKey), ctors.map((arg) => arg.access), mask), this.temitter.generateResultTypeConstructorSuccess(this.temitter.getMIRType("Bool"), new SMTConst("true")));
+                }
+            }
+
+            if((this.callsafety.get(tdecl.consfunc) as {safe: boolean, trgt: boolean}).safe) {
+                ccons = this.temitter.generateResultTypeConstructorSuccess(tt, this.temitter.generateResultTypeConstructorSuccess(tt, new SMTCallGeneralWOptMask(this.temitter.lookupFunctionName(tdecl.consfunc as MIRInvokeKey), ctors.map((arg) => arg.access), mask)));
+            }
+            else {
+                ccons = this.temitter.generateResultTypeConstructorSuccess(tt, new SMTCallGeneralWOptMask(this.temitter.lookupFunctionName(tdecl.consfunc as MIRInvokeKey), ctors.map((arg) => arg.access), mask));
             }
         }
         
@@ -712,7 +747,7 @@ class SMTEmitter {
         }
     }
 
-    private initializeSMTAssembly(assembly: MIRAssembly, istestbuild: boolean, entrypoint: MIRInvokeKey, callsafety: Map<MIRInvokeKey, { safe: boolean, trgt: boolean }>) {
+    private initializeSMTAssembly(assembly: MIRAssembly, istestbuild: boolean, entrypoint: MIRInvokeKey) {
         const cginfo = constructCallGraphInfo([entrypoint], assembly, istestbuild);
         const rcg = [...cginfo.topologicalOrder].reverse();
 
@@ -979,7 +1014,7 @@ class SMTEmitter {
                 optenumname = [cdecl.enclosingDecl as string, cdecl.gkey];
             }
 
-            if((callsafety.get(cdecl.ivalue) as {safe: boolean, trgt: boolean}).safe) {
+            if((this.callsafety.get(cdecl.ivalue) as {safe: boolean, trgt: boolean}).safe) {
                 this.assembly.constantDecls.push(new SMTConstantDecl(smtname, optenumname, ctype, consf, new SMTConst(consf), undefined));
             }
             else {
@@ -994,7 +1029,7 @@ class SMTEmitter {
 
         const smtcall = this.temitter.lookupFunctionName(mirep.ikey);
         const callargs = iargs.map((arg) => arg.callexp);
-        const issafe = (callsafety.get(entrypoint) as {safe: boolean, trgt: boolean}).safe;
+        const issafe = (this.callsafety.get(entrypoint) as {safe: boolean, trgt: boolean}).safe;
 
         let iexp: SMTExp | undefined = undefined;
         let argchk: SMTExp[] | undefined = undefined;
@@ -1012,7 +1047,7 @@ class SMTEmitter {
             iexp = new SMTCallGeneral(smtcall, callargs);
             if(mirep.preconditions !== undefined) {
                 argchk = mirep.preconditions.map((pc) => {
-                    const ispcsafe = (callsafety.get(pc) as {safe: boolean, trgt: boolean}).safe;
+                    const ispcsafe = (this.callsafety.get(pc) as {safe: boolean, trgt: boolean}).safe;
                     if(ispcsafe) {
                         return new SMTCallSimple(this.temitter.lookupFunctionName(pc), callargs); 
                     }
@@ -1056,8 +1091,8 @@ class SMTEmitter {
         const bemitter = new SMTBodyEmitter(assembly, temitter, vopts, callsafety, errorTrgtPos);
         const smtassembly = new SMTAssembly(vopts, temitter.lookupFunctionName(entrypoint));
 
-        let smtemit = new SMTEmitter(temitter, bemitter, smtassembly, vopts);
-        smtemit.initializeSMTAssembly(assembly, istestbuild, entrypoint, callsafety);
+        let smtemit = new SMTEmitter(temitter, bemitter, smtassembly, vopts, callsafety);
+        smtemit.initializeSMTAssembly(assembly, istestbuild, entrypoint);
 
         ////////////
         const smtinfo = smtemit.assembly.buildSMT2file(runtime);
@@ -1085,8 +1120,8 @@ class SMTEmitter {
         const bemitter = new SMTBodyEmitter(assembly, temitter, vopts, callsafety, {file: "[]", line: -1, pos: -1});
         const smtassembly = new SMTAssembly(vopts, temitter.lookupFunctionName(entrypoint));
 
-        let smtemit = new SMTEmitter(temitter, bemitter, smtassembly, vopts);
-        smtemit.initializeSMTAssembly(assembly, istestbuild, entrypoint, callsafety);
+        let smtemit = new SMTEmitter(temitter, bemitter, smtassembly, vopts, callsafety);
+        smtemit.initializeSMTAssembly(assembly, istestbuild, entrypoint);
 
         return smtemit.assembly.allErrors;
     }

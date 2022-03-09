@@ -227,7 +227,26 @@ assert(ec.code == 1i); //true
 
 **Numeric Types**
 
-[TODO]
+```
+typedecl Fahrenheit = Int;
+typedecl Celsius = Int;
+
+typedecl Percentage = Nat & {
+    invariant $value <= 100n;
+}
+
+32_Fahrenheit + 0_Celsius //type error different numeric types
+101_Percentage            //invariant error
+
+function isFreezing(temp: Celsius): Bool {
+    return temp <= 0_Celsius;
+}
+
+isFreezing(5)          //type error not a celsius number
+isFreezing(5_Celsius)  //false
+isFreezing(-5_Celsius) //true
+
+```
 
 ## API Types
 
