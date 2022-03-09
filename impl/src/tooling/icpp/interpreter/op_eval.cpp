@@ -3376,3 +3376,20 @@ std::optional<size_t> ICPPParseJSON::extractUnionChoice(const APIModule* apimodu
     auto ppos = std::find(utype->opts.cbegin(), utype->opts.cend(), oname);
     return std::make_optional(std::distance(utype->opts.cbegin(), ppos));
 }
+
+StorageLocationPtr ICPPParseJSON::extractUnionValue(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
+{
+    auto utype = dynamic_cast<const UnionType*>(itype);
+
+    auto bsqutypeid = MarshalEnvironment::g_typenameToIdMap.find(itype->name)->second;
+    auto bsqutype = dynamic_cast<const BSQUnionType*>(BSQType::g_typetable[bsqutypeid]);
+
+    if(bsqutype->tkind == BSQTypeLayoutKind::UnionRef)
+    {
+        return value;
+    }
+    else
+    {
+        return SLPTR_LOAD_UNION_INLINE_DATAPTR(value);
+    }
+}

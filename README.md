@@ -163,7 +163,7 @@ function printType(x: Bool | Int | String | None ): String {
         Bool     => "b"
         | Int    => "i"
         | String => "s"
-        _        => "n"
+        | _        => "n"
     |};
 }
 
@@ -199,8 +199,8 @@ entity StatusCode provides Parsable {
 
     function parse(name: String): Result<StatusCode, String> {
         return switch(name) {|
-            "IO"        => ok(StatusCode@{1, name})
-            | "Network" => ok(StatusCode@{2, name})
+            "IO"        => ok(StatusCode{1, name})
+            | "Network" => ok(StatusCode{2, name})
             | _         => err("Unknown code")
         |};
     }
@@ -211,15 +211,15 @@ entity StatusCode provides Parsable {
 }
 
 function isIOCode(s: DataString<StatusCode>): Bool {
-    return s === 'IO'#StatusCode;
+    return s === 'IO'_StatusCode;
 }
 
 isIOCode("IO");               //type error not a DataString<StatusCode>
-isIOCode('Input'#StatusCode)  //type error not a valid StatusCode string
+isIOCode('Input'_StatusCode)  //type error not a valid StatusCode string
 StatusCode::parse("Input") //runtime error not a valid StatusCode string
 
-isIOCode('Network'#StatusCode)               //false
-isIOCode('IO'#StatusCode)                    //true
+isIOCode('Network'_StatusCode)               //false
+isIOCode('IO'_StatusCode)                    //true
 
 let ec: StatusCode = 'IO'(StatusCode);
 assert(ec.code == 1i); //true
