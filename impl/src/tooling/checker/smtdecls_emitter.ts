@@ -11,7 +11,7 @@ import { constructCallGraphInfo, markSafeCalls } from "../../compiler/mir_callg"
 import { MIRInvokeKey } from "../../compiler/mir_ops";
 import { SMTBodyEmitter } from "./smtbody_emitter";
 import { SMTTypeEmitter } from "./smttype_emitter";
-import { SMTAssembly, SMTConstantDecl, SMTEntityCollectionTypeDecl, SMTEntityOfTypeDecl, SMTEntityStdDecl, SMTEphemeralListDecl, SMTFunction, SMTFunctionUninterpreted, SMTModelState, SMTRecordDecl, SMTTupleDecl } from "./smt_assembly";
+import { SMTAssembly, SMTConstantDecl, SMTEntityCollectionTypeDecl, SMTEntityInternalOfTypeDecl, SMTEntityOfTypeDecl, SMTEntityStdDecl, SMTEphemeralListDecl, SMTFunction, SMTFunctionUninterpreted, SMTModelState, SMTRecordDecl, SMTTupleDecl } from "./smt_assembly";
 import { SMTCallGeneral, SMTCallGeneralWOptMask, SMTCallSimple, SMTConst, SMTExp, SMTIf, SMTLet, SMTLetMulti, SMTMaskConstruct, SMTTypeInfo, SMTVar, VerifierOptions } from "./smt_exp";
 
 class SMTEmitter {
@@ -531,7 +531,7 @@ class SMTEmitter {
         this.assembly.entityDecls.push(smtdecl);
     }
             
-    private processDataStringStringOfEntityDecl(edecl: MIRDataStringInternalEntityTypeDecl) {
+    private processDataStringEntityDecl(edecl: MIRDataStringInternalEntityTypeDecl) {
         const mirtype = this.temitter.getMIRType(edecl.tkey);
         const smttype = this.temitter.getSMTTypeFor(mirtype);
 
@@ -541,7 +541,7 @@ class SMTEmitter {
         this.assembly.entityDecls.push(smtdecl);
     }
             
-    private processDataBufferStringOfEntityDecl(edecl: MIRDataBufferInternalEntityTypeDecl) {
+    private processDataBufferEntityDecl(edecl: MIRDataBufferInternalEntityTypeDecl) {
         const mirtype = this.temitter.getMIRType(edecl.tkey);
         const smttype = this.temitter.getSMTTypeFor(mirtype);
 
@@ -563,6 +563,17 @@ class SMTEmitter {
         this.assembly.entityDecls.push(smtdecl);
     }
 
+    private processEntityInternalOfTypeDecl(edecl: MIRConstructableInternalEntityTypeDecl) {
+        const mirtype = this.temitter.getMIRType(edecl.tkey);
+        const smttype = this.temitter.getSMTTypeFor(mirtype);
+
+        const consfuncs = this.temitter.getSMTConstructorName(mirtype);
+        const oftype = this.temitter.getSMTTypeFor(this.temitter.getMIRType(edecl.fromtype));
+        
+        const smtdecl = new SMTEntityInternalOfTypeDecl(this.temitter.lookupTypeName(edecl.tkey), smttype.smttypetag, consfuncs.box, consfuncs.bfield, oftype.smttypename);
+        this.assembly.entityDecls.push(smtdecl);
+    }
+
     private processEnumEntityDecl(edecl: MIREnumEntityTypeDecl) {
         const mirtype = this.temitter.getMIRType(edecl.tkey);
         const smttype = this.temitter.getSMTTypeFor(mirtype);
@@ -570,17 +581,6 @@ class SMTEmitter {
         const consfuncs = this.temitter.getSMTConstructorName(mirtype);
 
         const smtdecl = new SMTEntityOfTypeDecl(true, smttype.smttypename, smttype.smttypetag, consfuncs.box, consfuncs.bfield, "BNat");
-        this.assembly.entityDecls.push(smtdecl);
-    }
-
-    private processConstructableInternalEntityDecl(edecl: MIRConstructableInternalEntityTypeDecl) {
-        const mirtype = this.temitter.getMIRType(edecl.tkey);
-        const smttype = this.temitter.getSMTTypeFor(mirtype);
-
-        const consfuncs = this.temitter.getSMTConstructorName(mirtype);
-        const oftype = this.temitter.getSMTTypeFor(this.temitter.getMIRType(edecl.fromtype), true);
-
-        const smtdecl = new SMTEntityOfTypeDecl(false, smttype.smttypename, smttype.smttypetag, consfuncs.box, consfuncs.bfield, oftype.smttypename);
         this.assembly.entityDecls.push(smtdecl);
     }
 
@@ -816,10 +816,10 @@ class SMTEmitter {
                 this.processStringOfEntityDecl(edcl as MIRStringOfInternalEntityTypeDecl);
             }
             else if (edcl.attributes.includes("__datastring_type")) {
-                this.processDataStringStringOfEntityDecl(edcl as MIRDataStringInternalEntityTypeDecl);
+                this.processDataStringEntityDecl(edcl as MIRDataStringInternalEntityTypeDecl);
             }
             else if (edcl.attributes.includes("__databuffer_type")) {
-                this.processDataBufferStringOfEntityDecl(edcl as MIRDataBufferInternalEntityTypeDecl);
+                this.processDataBufferEntityDecl(edcl as MIRDataBufferInternalEntityTypeDecl);
             }
             else if (edcl.attributes.includes("__typedprimitive")) {
                 this.processConstructableEntityDecl(edcl as MIRConstructableEntityTypeDecl);
@@ -828,13 +828,13 @@ class SMTEmitter {
                 this.processEnumEntityDecl(edcl as MIREnumEntityTypeDecl);
             }
             else if (edcl.attributes.includes("__ok_type")) {
-                this.processConstructableInternalEntityDecl(edcl as MIRConstructableInternalEntityTypeDecl);
+                this.processEntityInternalOfTypeDecl(edcl as MIRConstructableInternalEntityTypeDecl);
             }
             else if (edcl.attributes.includes("__err_type")) {
-                this.processConstructableInternalEntityDecl(edcl as MIRConstructableInternalEntityTypeDecl);
+                this.processEntityInternalOfTypeDecl(edcl as MIRConstructableInternalEntityTypeDecl);
             }
             else if (edcl.attributes.includes("__something_type")) {
-                this.processConstructableInternalEntityDecl(edcl as MIRConstructableInternalEntityTypeDecl);
+                this.processEntityInternalOfTypeDecl(edcl as MIRConstructableInternalEntityTypeDecl);
             }
             else if (edcl.attributes.includes("__list_type")) {
                 this.processPrimitiveListEntityDecl(edcl as MIRPrimitiveListEntityTypeDecl);

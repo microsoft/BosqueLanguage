@@ -157,6 +157,15 @@ class SMTEntityOfTypeDecl extends SMTEntityDecl {
     }
 }
 
+class SMTEntityInternalOfTypeDecl extends SMTEntityDecl {
+    readonly ofsmttype: string;
+
+    constructor(smtname: string, typetag: string, boxf: string, ubf: string, ofsmttype: string) {
+        super(false, smtname, typetag, boxf, ubf);
+        this.ofsmttype = ofsmttype;
+    }
+}
+
 class SMTEntityCollectionTypeDecl extends SMTEntityDecl {
     constructor(smtname: string, typetag: string, boxf: string, ubf: string) {
         super(false, smtname, typetag, boxf, ubf);
@@ -487,6 +496,15 @@ class SMTAssembly {
                 };
             });
 
+        const ofinternaltypeinfo = this.entityDecls
+            .filter((et) => et instanceof SMTEntityInternalOfTypeDecl)
+            .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
+            .map((tt) => {
+                return {
+                    boxf: `(${tt.boxf} (${tt.ubf} ${(tt as SMTEntityInternalOfTypeDecl).ofsmttype}))`
+                };
+            });
+
         const collectiontypeinfo = this.entityDecls
             .filter((et) => et instanceof SMTEntityCollectionTypeDecl)
             .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
@@ -658,7 +676,7 @@ class SMTAssembly {
             RECORD_HAS_PROPERTY_DECLS: propertyasserts,
             STRING_TYPE_ALIAS: "(define-sort BString () String)",
             OF_TYPE_DECLS: [...keytypeinfo.map((kd) => kd.decl), ...oftypeinfo.map((td) => td.decl)],
-            KEY_BOX_OPS: oftypeinfo.map((td) => td.boxf),
+            KEY_BOX_OPS: [...keytypeinfo.map((kd) => kd.boxf), ...oftypeinfo.map((td) => td.boxf)],
             TUPLE_INFO: { 
                 decls: termtupleinfo.map((kti) => kti.decl), constructors: termtupleinfo.map((kti) => kti.consf), 
                 boxing: termtupleinfo.map((kti) => kti.boxf) 
@@ -670,7 +688,7 @@ class SMTAssembly {
             TYPE_INFO: { 
                 decls: termtypeinfo.filter((tti) => tti.decl !== undefined).map((tti) => tti.decl as string), 
                 constructors: termtypeinfo.filter((tti) => tti.consf !== undefined).map((tti) => tti.consf as string), 
-                boxing: [...termtypeinfo.map((tti) => tti.boxf), ...collectiontypeinfo.map((cti) => cti.boxf)] 
+                boxing: [...termtypeinfo.map((tti) => tti.boxf), ...ofinternaltypeinfo.map((ttofi) => ttofi.boxf), ...collectiontypeinfo.map((cti) => cti.boxf)] 
             },
             COLLECTION_INFO: collectiontypeinfo.map((cti) => cti.decl),
             EPHEMERAL_DECLS: { 
@@ -746,7 +764,7 @@ class SMTAssembly {
 }
 
 export {
-    SMTEntityDecl, SMTEntityOfTypeDecl, SMTEntityCollectionTypeDecl, SMTEntityStdDecl,
+    SMTEntityDecl, SMTEntityOfTypeDecl, SMTEntityInternalOfTypeDecl, SMTEntityCollectionTypeDecl, SMTEntityStdDecl,
     SMTTupleDecl, SMTRecordDecl, SMTEphemeralListDecl,
     SMTConstantDecl,
     SMTFunction, SMTFunctionUninterpreted,

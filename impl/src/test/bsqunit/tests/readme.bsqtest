@@ -187,7 +187,7 @@ function printType(x: Bool | Int | String | None ): String {
         Bool     => "b"
         | Int    => "i"
         | String => "s"
-        _        => "n"
+        | _        => "n"
     |};
 }
 
@@ -242,4 +242,52 @@ chktest function iscsspt_1(): Bool {
 
 chktest function iscsspt_2(): Bool {
     return !is3pt('4pt'_CSSpt);
+}
+
+////////
+//
+entity StatusCode provides Parsable {
+    field code: Int;
+    field name: String;
+
+    function parse(name: String): Result<StatusCode, String> {
+        return switch(name) {|
+            "IO"        => ok(StatusCode{1, name})
+            | "Network" => ok(StatusCode{2, name})
+            | _         => err("Unknown code")
+        |};
+    }
+
+    function accepts(name: String): Bool {
+        return name === "IO" || name === "Network";
+    }
+}
+
+function isIOCode(s: DataString<StatusCode>): Bool {
+    return s === 'IO'_StatusCode;
+}
+
+chktest function isiscode_1(): Bool {
+    return !isIOCode('Network'_StatusCode);
+}
+
+chktest function isiscode_2(): Bool {
+    return isIOCode('IO'_StatusCode);
+}
+
+chktest function isiscode_3(): Bool {
+    let ec: StatusCode = StatusCode{'IO'};
+    return ec.code == 1i;
+}
+
+__chktest function statuscode_fail_1(s: String): Bool {
+    return StatusCode::accepts(s);
+}
+
+__chktest function statuscode_fail_2(s: String): Bool {
+    return !StatusCode::accepts(s);
+}
+
+__chktest function statuscode_fail_3(s: String): Bool {
+    return StatusCode::parse(s).isOk();
 }
