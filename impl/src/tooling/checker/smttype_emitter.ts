@@ -219,7 +219,9 @@ class SMTTypeEmitter {
                 return new SMTTypeInfo(this.lookupTypeName(entity.tkey), `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
             }
             else if (entity instanceof MIRConstructableInternalEntityTypeDecl) {
-                return new SMTTypeInfo(this.lookupTypeName(entity.tkey), `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
+                //Convert all refs of the type into refs to the underlying type
+                const ulltype = this.getSMTTypeFor(this.getMIRType(entity.fromtype));
+                return new SMTTypeInfo(ulltype.smttypename, `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
             }
             else {
                 assert(entity instanceof MIRPrimitiveCollectionEntityTypeDecl, "Should be a collection type");

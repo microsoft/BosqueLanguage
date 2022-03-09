@@ -1002,3 +1002,8 @@ std::optional<size_t> SMTParseJSON::extractUnionChoice(const APIModule* apimodul
     auto bef = getArgContextConstructor(ctx.ctx(), "UnionChoice@UFCons_API", ctx.ctx().int_sort());
     return expIntAsUIntSmall(ctx, bef(value));
 }
+
+z3::expr SMTParseJSON::extractUnionValue(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
+{
+    return value;
+}

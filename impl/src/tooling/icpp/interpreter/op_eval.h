@@ -481,4 +481,5 @@ public:
     virtual void completeExtractContainer(const APIModule* apimodule, const IType* itype, Evaluator& ctx) override final;
 
     virtual std::optional<size_t> extractUnionChoice(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, Evaluator& ctx) override final;
+    virtual StorageLocationPtr extractUnionValue(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
 };

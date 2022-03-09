@@ -1268,7 +1268,7 @@ class Assembly {
             flattened.push(this.getSpecialAnyConceptType().options[0]);
         }
 
-        //check for Option<T> | Nothing and add Result<T> if needed
+        //check for Something<T> | Nothing and add Option<T> if needed
         if (flattened.some((atom) => atom.typeID === "Nothing") && flattened.some((atom) => atom.typeID.startsWith("Something<"))) {
             const copt = this.m_conceptMap.get("Option") as ConceptTypeDecl;
 
@@ -1279,7 +1279,7 @@ class Assembly {
             flattened.push(...nopts);
         }
 
-        //check for Option<T> | Nothing and add Result<T> if needed
+        //check for Ok<T, E> | Err<T, E> and add Result<T> if needed
         if (flattened.some((atom) => atom.typeID.startsWith("Result::Ok<")) && flattened.some((atom) => atom.typeID.startsWith("Result::Err<"))) {
             const ropt = this.m_conceptMap.get("Result") as ConceptTypeDecl;
 
@@ -1315,22 +1315,20 @@ class Assembly {
         //do a simplification based on A | B when A \Subtypeeq B is B
         let simplifiedTypes: ResolvedAtomType[] = [];
         for (let i = 0; i < utypes.length; ++i) {
-            let docopy = true;
-            for (let j = 0; j < utypes.length; ++j) {
-                if (i === j) {
-                    continue; //ignore check on same element
-                }
+            const tt = utypes[i];
 
-                //if \exists a Tj s.t. Ti \Subtypeeq Tj then we discard Ti
-                if (this.atomSubtypeOf(utypes[i], utypes[j])) {
-                    docopy = (utypes[i].typeID === utypes[j].typeID) && i < j; //if same type only keep one copy
-                    break;
-                }
+            //see if there is a type that is a strict supertype
+            if (utypes.some((ott) => ott.typeID !== tt.typeID && this.atomSubtypeOf(tt, ott))) {
+                continue;
             }
 
-            if (docopy) {
-                simplifiedTypes.push(utypes[i]);
+            //see if this is the first occourence of the type
+            const idx = utypes.findIndex((ott) => ott.typeID === tt.typeID);
+            if (idx < i) {
+                continue;
             }
+
+            simplifiedTypes.push(utypes[i]);
         }
 
         return ResolvedType.create(simplifiedTypes);

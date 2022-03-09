@@ -193,6 +193,7 @@ public:
     virtual void completeExtractContainer(const APIModule* apimodule, const IType* itype, State& ctx) = 0;
 
     virtual std::optional<size_t> extractUnionChoice(const APIModule* apimodule, const IType* itype, ValueRepr intoloc, State& ctx) = 0;
+    virtual ValueRepr extractUnionValue(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
 };
 
 class JSONParseHelper
@@ -1790,7 +1791,8 @@ public:
         }
 
         auto choicetype = apimodule->typemap.find(this->opts[nval.value()])->second;
-        auto cval = choicetype->textract(apimgr, apimodule, value, ctx);
+        auto uvalue = apimgr.extractUnionValue(apimodule, this, value, ctx);
+        auto cval = choicetype->textract(apimgr, apimodule, uvalue, ctx);
         if(!cval.has_value())
         {
             return std::nullopt;

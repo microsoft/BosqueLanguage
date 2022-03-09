@@ -226,8 +226,7 @@ const BSQType* jsonLoadConstructableEntityType(json v, bool isref)
     auto tid = j_tkey(v);
     auto allocinfo = j_allocinfo(v);
 
-    auto oftypeid = v["oftype"].get<BSQTypeID>();
-
+    auto oftypeid = MarshalEnvironment::g_typenameToIdMap.find(v["oftype"].get<std::string>())->second;
 
     if(isref) 
     {
