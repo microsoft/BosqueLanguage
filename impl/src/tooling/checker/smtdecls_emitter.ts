@@ -114,10 +114,16 @@ class SMTEmitter {
             let cchk: SMTExp = new SMTConst("[UNDEFINED]");
             let ccons: SMTExp = new SMTConst("[Undefined]");
             if((this.callsafety.get(tdecl.validatefunc) as {safe: boolean, trgt: boolean}).safe) {
-                cchk = new SMTCallGeneral(this.temitter.lookupFunctionName(tdecl.validatefunc), [this.temitter.generateResultGetSuccess(oftype, new SMTVar("vv"))]);
+                cchk = SMTCallSimple.makeAndOf(
+                    this.temitter.generateResultIsSuccessTest(oftype, new SMTVar("vv")), 
+                    new SMTCallGeneral(this.temitter.lookupFunctionName(tdecl.validatefunc), [this.temitter.generateResultGetSuccess(oftype, new SMTVar("vv"))])
+                );
             }
             else {
-                cchk = SMTCallSimple.makeEq(new SMTCallGeneral(this.temitter.lookupFunctionName(tdecl.validatefunc), [this.temitter.generateResultGetSuccess(oftype, new SMTVar("vv"))]), this.temitter.generateResultTypeConstructorSuccess(this.temitter.getMIRType("Bool"), new SMTConst("true")));
+                cchk = SMTCallSimple.makeAndOf(
+                    this.temitter.generateResultIsSuccessTest(oftype, new SMTVar("vv")), 
+                    SMTCallSimple.makeEq(new SMTCallGeneral(this.temitter.lookupFunctionName(tdecl.validatefunc), [this.temitter.generateResultGetSuccess(oftype, new SMTVar("vv"))]), this.temitter.generateResultTypeConstructorSuccess(this.temitter.getMIRType("Bool"), new SMTConst("true")))
+                );
             }
             
             if(tdecl.usingcons === undefined) {
