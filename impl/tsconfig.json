@@ -19,6 +19,7 @@
         "src/tooling/icpp/transpiler/*.ts",
         "src/test/*.ts",
         "src/test/runner/*.ts",
-        "src/test/bsqunit/*.ts"
+        "src/test/bsqunit/*.ts",
+        "src/cmd/*.ts"
     ]
 }
