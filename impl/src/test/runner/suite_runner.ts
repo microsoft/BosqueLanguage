@@ -316,14 +316,14 @@ function outputResultsAndExit(verbose: Verbosity, totaltime: number, totalicpp: 
     }
     else {
         if(failedsmt.length !== 0) {
-            process.stdout.write(chalk.bold(`Suite had ${failedsmt.length}`) + " " + chalk.red("executable test failures") + "\n");
+            process.stdout.write(chalk.bold(`Suite had ${failedsmt.length}`) + " " + chalk.red("symbolic test failures") + "\n");
 
             const rstr = failedsmt.map((tt) => `${tt.test.namespace}::${tt.test.fname} -- "${tt.info}"`).join("\n  ");
             process.stdout.write("  " + rstr + "\n\n");
         }
 
         if(errorsmt.length !== 0) {
-            process.stdout.write(chalk.bold(`Suite had ${errorsmt.length}`) + " " + chalk.magenta("executable test errors") + "\n");
+            process.stdout.write(chalk.bold(`Suite had ${errorsmt.length}`) + " " + chalk.magenta("symbolic test errors") + "\n");
 
             const rstr = errorsmt.map((tt) => `${tt.test.namespace}::${tt.test.fname} -- "${tt.info}"`).join("\n  ");
             process.stdout.write("  " + rstr + "\n\n");
