@@ -165,7 +165,7 @@ function runtestsICPP(buildlevel: BuildLevel, istestbuild: boolean, topts: Trans
     }
 }
 
-function runtestsSMT(istestbuild: boolean, usercode: PackageConfig[], entrypoint: {filename: string, namespace: string, names: string[]}[], verbose: Verbosity, category: Category[], dirs: string[], cbpre: (test: SymTest | SymTestInternalChkShouldFail) => void, cb: (result: "pass" | "fail" | "error", test: SymTest | SymTestInternalChkShouldFail, start: Date, end: Date, smttime: number, info?: string) => void, cbdone: (err: string | null) => void) {
+function runtestsSMT(istestbuild: boolean, usercode: PackageConfig[], entrypoint: {filename: string, namespace: string, names: string[]}[], verbose: Verbosity, category: Category[], dirs: string[], cbpre: (test: SymTest | SymTestInternalChkShouldFail) => void, cb: (result: "pass" | "passlimit" | "fail" | "error", test: SymTest | SymTestInternalChkShouldFail, start: Date, end: Date, smttime: number, info?: string) => void, cbdone: (err: string | null) => void) {
     if(!category.includes("sym")) {
         cbdone(null);
         return;
@@ -277,7 +277,7 @@ function runtestsSMT(istestbuild: boolean, usercode: PackageConfig[], entrypoint
     }
 }
 
-function outputResultsAndExit(verbose: Verbosity, totaltime: number, totalicpp: number, failedicpp: {test: ICPPTest, info: string}[], erroricpp: {test: ICPPTest, info: string}[], totalsmt: number, failedsmt: {test: (SymTest | SymTestInternalChkShouldFail), info: string}[], errorsmt: {test: (SymTest | SymTestInternalChkShouldFail), info: string}[]) {
+function outputResultsAndExit(verbose: Verbosity, totaltime: number, totalicpp: number, failedicpp: {test: ICPPTest, info: string}[], erroricpp: {test: ICPPTest, info: string}[], totalsmt: number, passlimitsmt: number, failedsmt: {test: (SymTest | SymTestInternalChkShouldFail), info: string}[], errorsmt: {test: (SymTest | SymTestInternalChkShouldFail), info: string}[]) {
     if(verbose !== "std") {
         process.stdout.write("\n");   
     }
@@ -306,7 +306,13 @@ function outputResultsAndExit(verbose: Verbosity, totaltime: number, totalicpp: 
 
     process.stdout.write(`Ran ${totalsmt} symbolic tests...\n`);
     if (failedsmt.length === 0 && errorsmt.length === 0) {
-        process.stdout.write(chalk.green(chalk.bold("All symbolic tests pass!\n\n")));
+        if(passlimitsmt === 0) {
+            process.stdout.write(chalk.green(chalk.bold("All symbolic tests pass!\n\n")));
+        }
+        else {
+            process.stdout.write(chalk.green(chalk.bold(`${totalsmt - passlimitsmt} symbolic tests pass!\n`)));
+            process.stdout.write(chalk.blue(chalk.bold(`${passlimitsmt} symbolic tests report no error found in resource limit!\n\n`)));
+        }
     }
     else {
         if(failedsmt.length !== 0) {
@@ -396,6 +402,7 @@ function runtests(packageloads: {srcfiles: string[], macros: string[]}[], global
     let erroricpp: {test: ICPPTest, info: string}[] = [];
 
     let totalsmt = 0;
+    let passlimitsmt = 0;
     let failedsmt: {test: (SymTest | SymTestInternalChkShouldFail), info: string}[] = [];
     let errorsmt: {test: (SymTest | SymTestInternalChkShouldFail), info: string}[] = [];
 
@@ -416,11 +423,14 @@ function runtests(packageloads: {srcfiles: string[], macros: string[]}[], global
     const cbpre_smt = (tt: SymTest | SymTestInternalChkShouldFail) => {
         process.stdout.write(`Starting ${tt.namespace}::${tt.fname}...\n`);
     };
-    const cb_smt = (result: "pass" | "fail" | "error", test: SymTest | SymTestInternalChkShouldFail, start: Date, end: Date, smtime: number, info?: string) => {
+    const cb_smt = (result: "pass"  | "passlimit" | "fail" | "error", test: SymTest | SymTestInternalChkShouldFail, start: Date, end: Date, smtime: number, info?: string) => {
         totalsmt++;
 
         if(result === "pass") {
             ;
+        }
+        else if(result === "passlimit") {
+            passlimitsmt++;
         }
         else if(result === "fail") {
             failedsmt.push({test: test, info: info || "[Missing Info]"});
@@ -433,6 +443,9 @@ function runtests(packageloads: {srcfiles: string[], macros: string[]}[], global
             let rstr = "";
             if(result === "pass") {
                 rstr = chalk.green("pass");
+            }
+            else if(result === "passlimit") {
+                rstr = chalk.blue("no error found");
             }
             else if(result === "fail") {
                 rstr = chalk.red("fail");
@@ -453,7 +466,7 @@ function runtests(packageloads: {srcfiles: string[], macros: string[]}[], global
         else {
             const end = new Date();
             const totaltime = (end.getTime() - start.getTime()) / 1000;
-            outputResultsAndExit(verbose, totaltime, totalicpp, failedicpp, erroricpp, totalsmt, failedsmt, errorsmt);
+            outputResultsAndExit(verbose, totaltime, totalicpp, failedicpp, erroricpp, totalsmt, passlimitsmt, failedsmt, errorsmt);
         }
     };
 
