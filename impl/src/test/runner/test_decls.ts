@@ -9,7 +9,7 @@ import {MIRFunctionParameter, MIRType, SymbolicActionMode} from "../../compiler/
 const PARALLEL_COUNT_ICPP = process.platform !== "win32" ? 4 : 1;
 const PARALLEL_COUNT_SMT = process.platform !== "win32" ? 4 : 1;
 
-const SMT_TIMEOUT = 30;
+const SMT_TIMEOUT = 10000;
 
 //TODO: should compute max consts in program and then set these limits (numerics) to make sure we can cover them 
 const SMT_VOPTS_CHK = {

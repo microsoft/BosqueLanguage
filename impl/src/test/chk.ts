@@ -17,7 +17,7 @@ if(usercode === undefined) {
     process.exit(1);
 }
 
-const TIMEOUT = 30;
+const TIMEOUT = 10000;
 const STD_OPTS = generateStandardVOpts(SymbolicActionMode.ChkTestSymbolic);
 const EVAL_OPTS = generateStandardVOpts(SymbolicActionMode.EvaluateSymbolic);
 

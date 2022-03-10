@@ -7,7 +7,7 @@ import { exec } from "child_process";
 
 import { SymTest, SymTestInternalChkShouldFail, PARALLEL_COUNT_SMT, TestResultKind } from "./test_decls";
 
-function runSymTest(exepath: string, verbose: boolean, test: SymTest, cpayload: object, cbpre: (test: SymTest | SymTestInternalChkShouldFail) => void, cb: (result: "pass" | "fail" | "error", test: SymTest | SymTestInternalChkShouldFail, start: Date, end: Date, smttime: number, info?: string) => void) {
+function runSymTest(exepath: string, verbose: boolean, test: SymTest, cpayload: object, cbpre: (test: SymTest | SymTestInternalChkShouldFail) => void, cb: (result: "pass" | "passlimit" | "fail" | "error", test: SymTest | SymTestInternalChkShouldFail, start: Date, end: Date, smttime: number, info?: string) => void) {
     const start = new Date();
     try {
         const cmd = `${exepath} --${test.trgterror !== undefined ? "errorchk" : "passchk"}`;
@@ -47,7 +47,12 @@ function runSymTest(exepath: string, verbose: boolean, test: SymTest, cpayload: 
                         cb("fail", test, start, end, smttime, JSON.stringify(witness));
                     }
                     else {
-                        cb("error", test, start, end, smttime, (status === "timeout" ? "[TIMEOUT]" : "") + info);
+                        if(status === "timeout") {
+                            cb("passlimit", test, start, end, smttime);
+                        }
+                        else {
+                            cb("error", test, start, end, smttime, info);
+                        }
                     }
                 }
                 else {
@@ -58,7 +63,12 @@ function runSymTest(exepath: string, verbose: boolean, test: SymTest, cpayload: 
                         cb("fail", test, start, end, smttime, JSON.stringify(witness));
                     }
                     else {
-                        cb("error", test, start, end, smttime, (status === "timeout" ? "[TIMEOUT]" : "") + info);
+                        if(status === "timeout") {
+                            cb("passlimit", test, start, end, smttime);
+                        }
+                        else {
+                            cb("error", test, start, end, smttime, info);
+                        }
                     }
                 }
             }
@@ -130,16 +140,16 @@ function runSymTestShouldFail(exepath: string, verbose: boolean, test: SymTestIn
     }
 }
 
-function enqueueSymTest(exepath: string, verbose: boolean, test: SymTest, icppasm: any, cbpre: (test: SymTest | SymTestInternalChkShouldFail) => void, cb: (result: "pass" | "fail" | "error", test: SymTest | SymTestInternalChkShouldFail, start: Date, end: Date, smttime: number, info?: string) => void) {
+function enqueueSymTest(exepath: string, verbose: boolean, test: SymTest, icppasm: any, cbpre: (test: SymTest | SymTestInternalChkShouldFail) => void, cb: (result: "pass" | "passlimit" | "fail" | "error", test: SymTest | SymTestInternalChkShouldFail, start: Date, end: Date, smttime: number, info?: string) => void) {
     runSymTest(exepath, verbose, test, icppasm, cbpre, cb);
 }
 
-function enqueueSymTestInternalChkShouldFail(exepath: string, verbose: boolean, test: SymTestInternalChkShouldFail, icppasm: any, cbpre: (test: SymTest | SymTestInternalChkShouldFail) => void, cb: (result: "pass" | "fail" | "error", test: SymTest | SymTestInternalChkShouldFail, start: Date, end: Date, smttime: number, info?: string) => void) {
+function enqueueSymTestInternalChkShouldFail(exepath: string, verbose: boolean, test: SymTestInternalChkShouldFail, icppasm: any, cbpre: (test: SymTest | SymTestInternalChkShouldFail) => void, cb: (result: "pass" | "passlimit" | "fail" | "error", test: SymTest | SymTestInternalChkShouldFail, start: Date, end: Date, smttime: number, info?: string) => void) {
     runSymTestShouldFail(exepath, verbose, test, icppasm, cbpre, cb);
 }
 
-function generateTestResultCallback(exepath: string, verbose: boolean, winfo: {worklist: {test: SymTest | SymTestInternalChkShouldFail, cpayload: any}[], cpos: number, done: number}, cbpre: (test: SymTest | SymTestInternalChkShouldFail) => void, cb: (result: "pass" | "fail" | "error", test: SymTest | SymTestInternalChkShouldFail, start: Date, end: Date, smttime: number, info?: string) => void, cbdone: () => void): (result: "pass" | "fail" | "error", test: SymTest | SymTestInternalChkShouldFail, start: Date, end: Date, smttime: number, info?: string) => void {
-    return (result: "pass" | "fail" | "error", test: SymTest | SymTestInternalChkShouldFail, start: Date, end: Date, smttime: number, info?: string) => {
+function generateTestResultCallback(exepath: string, verbose: boolean, winfo: {worklist: {test: SymTest | SymTestInternalChkShouldFail, cpayload: any}[], cpos: number, done: number}, cbpre: (test: SymTest | SymTestInternalChkShouldFail) => void, cb: (result: "pass" | "passlimit" | "fail" | "error", test: SymTest | SymTestInternalChkShouldFail, start: Date, end: Date, smttime: number, info?: string) => void, cbdone: () => void): (result: "pass" | "passlimit" | "fail" | "error", test: SymTest | SymTestInternalChkShouldFail, start: Date, end: Date, smttime: number, info?: string) => void {
+    return (result: "pass" | "passlimit" | "fail" | "error", test: SymTest | SymTestInternalChkShouldFail, start: Date, end: Date, smttime: number, info?: string) => {
         cb(result, test, start, end, smttime, info);
 
         winfo.done++;
@@ -161,7 +171,7 @@ function generateTestResultCallback(exepath: string, verbose: boolean, winfo: {w
     };
 }
 
-function enqueueSymTests(exepath: string, tests: {test: SymTest | SymTestInternalChkShouldFail, cpayload: any}[], verbose: boolean, cbpre: (test: SymTest | SymTestInternalChkShouldFail) => void, cb: (result: "pass" | "fail" | "error", test: SymTest | SymTestInternalChkShouldFail, start: Date, end: Date, smttime: number, info?: string) => void, cbdone: () => void) {
+function enqueueSymTests(exepath: string, tests: {test: SymTest | SymTestInternalChkShouldFail, cpayload: any}[], verbose: boolean, cbpre: (test: SymTest | SymTestInternalChkShouldFail) => void, cb: (result: "pass" | "passlimit" | "fail" | "error", test: SymTest | SymTestInternalChkShouldFail, start: Date, end: Date, smttime: number, info?: string) => void, cbdone: () => void) {
     let shared_work_info = {worklist: tests, cpos: PARALLEL_COUNT_SMT, done: 0};
 
     for(let i = 0; i < Math.min(tests.length, PARALLEL_COUNT_SMT); ++i) {
