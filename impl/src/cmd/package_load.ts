@@ -16,7 +16,7 @@ type URIPathGlob = {
     authority: string | undefined,
     port: number | undefined,
     path: string,
-    selection: "*" | "**",
+    selection: "*" | "**" | undefined,
     filter: string | undefined
 }
 
@@ -28,7 +28,7 @@ type Version = {
     branch: string | undefined
 };
 
-type PackageFormat = "Inline" | "Component" | "Service";
+type PackageFormat = "inline" | "component" | "service";
 
 type Contact = {
     name: string,
@@ -43,24 +43,13 @@ type SourceInfo = {
     testfiles: URIPathGlob[]
 };
 
-type CompilerOptions = {
-};
-
-type CheckerOptions = {
-    INT_MIN: number,
-    INT_MAX: number,
-    SLEN_MAX: number,
-    BLEN_MAX: number,
-
-    CONTAINER_MAX: number
-};
 
 type Config = {
     macros: string[],
     globalmacros: string[],
     buildlevel: "debug" | "test" | "release",
-    testbuild: boolean,
-    options: CompilerOptions | CheckerOptions
+    testbuild: boolean
+    //More options here as we need them
 };
 
 type Dependency = {
@@ -72,19 +61,19 @@ type Dependency = {
 //exports must include scope component of the form `${name}${version.major}`
 type Package = {
     name: string;
-    version: Version,
-    format: PackageFormat,
+    version: Version, //string encoded
+    format: PackageFormat, //string encoded
     description: string
     keywords: string[],
-    homepage: URIPath,
-    repository: URIPath,
+    homepage: URIPath, //string encoded
+    repository: URIPath, //string encoded
     license: string,
     people: Contact[],
     src: SourceInfo,
     packagemacros: string[],
     documentation: {
-        files: URIPath[],
-        root: URIPath
+        files: URIPath[], //string encoded
+        root: URIPath //string encoded
     },
     configs: Config[],
     dependencies: Dependency[],
@@ -157,6 +146,70 @@ function parseURIPathBase(str: string): {scheme: string, authority: string | und
         path: rstr2,
         extension: extension
     };
+}
+
+function parseURIPath(pp: any): URIPath | undefined {
+    if(typeof(pp) !== "string") {
+        return undefined;
+    }
+
+    return parseURIPathBase(pp);
+}
+
+function parseURIPathGlob(pg: any): URIPathGlob | undefined {
+    if(typeof(pg) !== "string") {
+        return undefined;
+    }
+
+    const mm = /([*]{1,2}([.][a-zA-Z0-9]+)?)$/.exec(pg);
+    const ubase = parseURIPathBase(mm !== null ? pg.slice(0, pg.length - mm[0].length) : pg);
+    if(ubase === undefined) {
+        return undefined;
+    }
+
+    if(mm === null) {
+        return {
+            scheme: ubase.scheme,
+            authority: ubase.authority,
+            port: ubase.port,
+            path: ubase.path,
+            selection: undefined,
+            filter: undefined
+        };
+    }
+    else {
+        return {
+            scheme: ubase.scheme,
+            authority: ubase.authority,
+            port: ubase.port,
+            path: ubase.path,
+            selection: mm[0].startsWith("**") ? "**" : "*",
+            filter: mm[0].includes(".") ? mm[0].slice(mm[0].indexOf(".") + 1) : undefined
+        };
+    }
+}
+
+function parseVersion(vv: any): Version | undefined {
+    if(typeof(vv) !== "string") {
+        return undefined;
+    }
+
+    if(!)
+    return {
+        major: number, 
+        minor: number,
+        fix: number,
+        patch: number,
+        branch: string | undefined
+    };
+}
+
+function parsePackageFormat(pf: any): PackageFormat | undefined {
+    if(pf !== "inline" && pf !== "component" && pf !== "service") {
+        return undefined;
+    }
+
+    return pf;
 }
 
 function parsePackage(jp: any): Package {
