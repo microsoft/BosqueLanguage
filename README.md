@@ -254,6 +254,8 @@ isFreezing(-5_Celsius) //true
 
 ## Application Validation
 
+[TODO: Need to update]
+
 A unique feature of the Bosque systems is the `bsqcheck` tool. This tool combines verification and bug triggering input generation tools in a unique configuration. For each possible failure in the program it first attempts to prove that a given failure is impossible under all inputs or generate a debuggable input that will trigger the error. If it cannot do either of these, which can happen due to the computational cost of theorem proving, then it will try to prove that, under a variety of simplifying assumptions, that the error cannot occur. 
 
 Thus, the tool will output one of the following results for each possible program failure:
@@ -305,6 +307,8 @@ Note: we recommend specifying preconditions as always checked, `requires release
 
 ## Execution
 
+[TODO: Need to update]
+
 **Interpreter:** 
 
 An interpreter is under-development. See the [icpp](https://github.com/microsoft/BosqueLanguage/tree/master/impl/src/tooling/icpp) sources in the `impl` repository.
@@ -326,6 +330,8 @@ When prompted we can enter the arguments as a JSON array:
 The solver will take these values along with the logical encoding of the program and will infer that the only valid output value is `5`.
 
 ## Using the Bosque Language
+
+[TODO: Need to update]
 
 The current focus of the Bosque project is core language design. As a result there is _no_ support for packaging, deployment, lifecycle management, etc.
 
