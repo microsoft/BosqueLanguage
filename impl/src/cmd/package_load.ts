@@ -50,13 +50,36 @@ type SourceInfo = {
     testfiles: URIPathGlob[]
 };
 
+type ConfigRun = {
+    main: string,
+    args: any[] | undefined
+};
+
+type ConfigBuild = {
+    out: URIPath | undefined
+};
+
+type ConfigTest = {
+    flavors: ("sym" | "icpp" | "err" | "chk")[],
+    dirs: URIPathGlob[]
+};
+
+type ConfigAppTest = {
+    flavors: ("sym" | "icpp" | "err" | "chk")[],
+    dirs: URIPathGlob[]
+};
+
+type ConfigFuzz = {
+    dirs: URIPathGlob[]
+};
+
 type Config = {
     name: string,
     macros: string[],
     globalmacros: string[],
     buildlevel: "debug" | "test" | "release",
     testbuild: boolean
-    //More options here as we need them
+    configkind: "run" | "build" | "test" | "apptest" | "fuzz"
 };
 
 type Dependency = {
@@ -347,6 +370,81 @@ function parseSourceInfo(si: any): SourceInfo | undefined {
     };
 }
 
+function parseConfigRun(cfg: any): ConfigRun | undefined {
+    if(typeof(cfg["main"]) !== "string") {
+        return undefined;
+    }
+
+    if(cfg["args"] === undefined) {
+        return {
+            main: cfg["main"],
+            args: undefined
+        }
+    }
+    else {
+        if(!Array.isArray(cfg["args"])) {
+            return undefined;
+        }
+
+        return {
+            main: cfg["main"],
+            args: cfg["args"]
+        }
+    }
+}
+
+function parseConfigBuild(cfg: any): ConfigBuild | undefined {
+    const out = parseURIPath(cfg["out"]);
+    if(out === undefined) {
+        return undefined;
+    }
+
+    return {
+        dirpath: dirpath
+    };
+}
+
+function parseConfigTest(cfg: any): ConfigTest | undefined {
+    let flavors: ("sym" | "icpp" | "err" | "chk")[] = ["sym" , "icpp" , "chk"];
+    if(cfg["flavors"] !== undefined) {
+        if(!Array.isArray(cfg["flavors"]) || cfg["flavors"].some((ff) => (ff !== "sym" && ff !== "icpp" && ff !== "err" && ff !== "chk"))) {
+            return undefined;
+        }
+        flavors = cfg["flavors"] as ("sym" | "icpp" | "err" | "chk")[];
+    }
+
+    let dirs: URIPathGlob[] = [];
+    if(cfg["flavors"] !== undefined) {
+        if(!Array.isArray(cfg["flavors"]) || cfg["flavors"].some((ff) => (ff !== "sym" && ff !== "icpp" && ff !== "err" && ff !== "chk"))) {
+            return undefined;
+        }
+        flavors = cfg["flavors"] as ("sym" | "icpp" | "err" | "chk")[];
+    }
+
+    else {
+        if(!Array.isArray(cfg["args"])) {
+            return undefined;
+        }
+
+        return {
+            main: cfg["main"],
+            args: cfg["args"]
+        }
+    }
+
+    flavors: ("sym" | "icpp" | "err" | "chk")[],
+    dirs: string[]
+};
+
+type ConfigAppTest = {
+    flavors: ("sym" | "icpp" | "err" | "chk")[],
+    dirs: string[]
+};
+
+type ConfigFuzz = {
+    dirs: string[]
+};
+
 function parseConfig(cf: any): Config | undefined {
     if(cf === null || typeof(cf) !== "object") {
         return undefined;
@@ -600,6 +698,6 @@ function parsePackage(jp: any): Package | undefined {
 }
 
 export {
-    URIPath, URIPathGlob, Version, VersionConstraint, PackageFormat, Contact, SourceInfo, Config, Dependency, Package,
+    URIPath, URIPathGlob, Version, VersionConstraint, PackageFormat, Contact, SourceInfo, ConfigRun, ConfigBuild, ConfigTest, ConfigAppTest, ConfigFuzz, Config, Dependency, Package,
     parsePackage
 };

@@ -8,17 +8,17 @@ import { Config, SourceInfo } from "./package_load";
 function help(cmd: "run" | "build" | "test" | "apptest" | "fuzz" | undefined) {
     if(cmd === "run" || cmd === undefined) {
         /*
-        * bosque run [package_path.json] [--config cname]
-        * bosque run entryfile.bsqapp --files ...
-        * bosque run [package_path.json] [--config cname] --args "[...]"
-        * bosque run entryfile.bsqapp --files ... --args "[...]"
+        * bosque run [package_path.json] [--entrypoint fname] [--config cname]
+        * bosque run entryfile.bsqapp [--entrypoint fname] --files ...
+        * bosque run [package_path.json] [--config cname] [--entrypoint fname] --args "[...]"
+        * bosque run entryfile.bsqapp [--entrypoint fname] --files ... --args "[...]"
         */
         xxxx;
     }
 
     if(cmd === "build" || cmd === undefined) {
         /*
-        * bosque build npm package_path.json [--config cname]
+        * bosque build node package_path.json [--config cname] [out]
         */
         xxxx;
     }
