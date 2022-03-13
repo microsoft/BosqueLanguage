@@ -21,7 +21,7 @@ type URIPathGlob = {
 }
 
 type Version = {
-    major: number, 
+    major: number,
     minor: number,
     fix: number,
     patch: number,
@@ -29,7 +29,7 @@ type Version = {
 };
 
 type VersionConstraint = {
-    major: number, 
+    major: number,
     minor: number, //min minor
     fix: number,
     branch: string | undefined
@@ -61,25 +61,24 @@ type ConfigBuild = {
 
 type ConfigTest = {
     flavors: ("sym" | "icpp" | "err" | "chk")[],
-    dirs: URIPathGlob[]
+    dirs: URIPathGlob[] | "*"
 };
 
 type ConfigAppTest = {
     flavors: ("sym" | "icpp" | "err" | "chk")[],
-    dirs: URIPathGlob[]
+    dirs: URIPathGlob[] | "*"
 };
 
 type ConfigFuzz = {
-    dirs: URIPathGlob[]
+    dirs: URIPathGlob[] | "*"
 };
 
-type Config = {
+type Config<T> = {
     name: string,
     macros: string[],
     globalmacros: string[],
-    buildlevel: "debug" | "test" | "release",
-    testbuild: boolean
-    configkind: "run" | "build" | "test" | "apptest" | "fuzz"
+    buildlevel: "debug" | "test" | "release"
+    params: T
 };
 
 type Dependency = {
@@ -104,10 +103,16 @@ type Package = {
     documentation: {
         files: URIPath[], //string encoded
         root: URIPath //string encoded
+    } | undefined,
+    configs: {
+        run: Config<ConfigRun>[],
+        build: Config<ConfigBuild>[],
+        test: Config<ConfigTest>[],
+        apptest: Config<ConfigAppTest>[],
+        fuzz: Config<ConfigFuzz>[]
     },
-    configs: Config[],
     dependencies: Dependency[],
-    devDependencies: Dependency[] | undefined
+    devDependencies: Dependency[]
 };
 
 function parseURIScheme(str: string): [string | undefined, string] {
@@ -116,7 +121,7 @@ function parseURIScheme(str: string): [string | undefined, string] {
             return ["file", str];
         }
     }
-    
+
     if ((process.platform === "linux" || process.platform === "darwin")) {
         if (str.startsWith("/") || str.startsWith("~/") || str.startsWith("./") || str.startsWith("../")) {
             return ["file", str];
@@ -133,7 +138,7 @@ function parseURIScheme(str: string): [string | undefined, string] {
 }
 
 function parseURIAuthority(str: string): [string | undefined, number | undefined, string] {
-    if(!str.startsWith("//")) {
+    if (!str.startsWith("//")) {
         return [undefined, undefined, str];
     }
 
@@ -141,7 +146,7 @@ function parseURIAuthority(str: string): [string | undefined, number | undefined
     if (authoritymatch !== null) {
         const tail = str.slice(authoritymatch[0].length + 1);
         const port = /^:[0-9]{1, 5}/.exec(tail);
-        if(port === null) {
+        if (port === null) {
             return [authoritymatch[0].slice(2, authoritymatch[0].length), undefined, tail];
         }
         else {
@@ -156,15 +161,15 @@ function parseURIAuthority(str: string): [string | undefined, number | undefined
     }
 }
 
-function parseURIPathBase(str: string): {scheme: string, authority: string | undefined, port: number | undefined, path: string, extension: string | undefined} | undefined {
+function parseURIPathBase(str: string): { scheme: string, authority: string | undefined, port: number | undefined, path: string, extension: string | undefined } | undefined {
     const [scheme, rstr1] = parseURIScheme(str);
-    if(scheme === undefined) {
+    if (scheme === undefined) {
         return undefined;
     }
 
     const [authority, port, rstr2] = parseURIAuthority(rstr1);
     const extidx = rstr2.lastIndexOf(".");
-    if(extidx === -1) {
+    if (extidx === -1) {
         return undefined;
     }
     const extension = rstr2.slice(extidx + 1);
@@ -179,7 +184,7 @@ function parseURIPathBase(str: string): {scheme: string, authority: string | und
 }
 
 function parseURIPath(pp: any): URIPath | undefined {
-    if(typeof(pp) !== "string") {
+    if (typeof (pp) !== "string") {
         return undefined;
     }
 
@@ -187,17 +192,17 @@ function parseURIPath(pp: any): URIPath | undefined {
 }
 
 function parseURIPathGlob(pg: any): URIPathGlob | undefined {
-    if(typeof(pg) !== "string") {
+    if (typeof (pg) !== "string") {
         return undefined;
     }
 
     const mm = /([*]{1,2}([.][a-zA-Z0-9]+)?)$/.exec(pg);
     const ubase = parseURIPathBase(mm !== null ? pg.slice(0, pg.length - mm[0].length) : pg);
-    if(ubase === undefined) {
+    if (ubase === undefined) {
         return undefined;
     }
 
-    if(mm === null) {
+    if (mm === null) {
         return {
             scheme: ubase.scheme,
             authority: ubase.authority,
@@ -220,16 +225,16 @@ function parseURIPathGlob(pg: any): URIPathGlob | undefined {
 }
 
 function parseVersion(vv: any): Version | undefined {
-    if(typeof(vv) !== "string") {
+    if (typeof (vv) !== "string") {
         return undefined;
     }
 
-    if(!/^[0-9]{1-5}\.[0-9]{1-5}\.[0-9]{1-5}\.[0-9]{1-5}(-[a-zA-Z-0-9_]+)?$/.test(vv)) {
+    if (!/^[0-9]{1-5}\.[0-9]{1-5}\.[0-9]{1-5}\.[0-9]{1-5}(-[a-zA-Z-0-9_]+)?$/.test(vv)) {
         return undefined;
     }
 
     let branch: string | undefined = undefined;
-    if(vv.includes("-")) {
+    if (vv.includes("-")) {
         const bidx = vv.indexOf("-");
         branch = vv.slice(bidx + 1);
         vv = vv.slice(0, bidx);
@@ -238,7 +243,7 @@ function parseVersion(vv: any): Version | undefined {
     const pvals = (vv as string).split(".");
 
     return {
-        major: Number.parseInt(pvals[0]), 
+        major: Number.parseInt(pvals[0]),
         minor: Number.parseInt(pvals[1]),
         fix: Number.parseInt(pvals[2]),
         patch: Number.parseInt(pvals[3]),
@@ -248,16 +253,16 @@ function parseVersion(vv: any): Version | undefined {
 
 
 function parseVersionConstraint(vv: any): VersionConstraint | undefined {
-    if(typeof(vv) !== "string") {
+    if (typeof (vv) !== "string") {
         return undefined;
     }
 
-    if(!/^[0-9]{1-5}\.[0-9]{1-5}\.[0-9]{1-5}\.[*](-[a-zA-Z-0-9_]+)?$/.test(vv)) {
+    if (!/^[0-9]{1-5}\.[0-9]{1-5}\.[0-9]{1-5}\.[*](-[a-zA-Z-0-9_]+)?$/.test(vv)) {
         return undefined;
     }
 
     let branch: string | undefined = undefined;
-    if(vv.includes("-")) {
+    if (vv.includes("-")) {
         const bidx = vv.indexOf("-");
         branch = vv.slice(bidx + 1);
         vv = vv.slice(0, bidx);
@@ -266,7 +271,7 @@ function parseVersionConstraint(vv: any): VersionConstraint | undefined {
     const pvals = (vv as string).split(".");
 
     return {
-        major: Number.parseInt(pvals[0]), 
+        major: Number.parseInt(pvals[0]),
         minor: Number.parseInt(pvals[1]),
         fix: Number.parseInt(pvals[2]),
         branch: branch
@@ -274,7 +279,7 @@ function parseVersionConstraint(vv: any): VersionConstraint | undefined {
 }
 
 function parsePackageFormat(pf: any): PackageFormat | undefined {
-    if(pf !== "inline" && pf !== "component" && pf !== "service") {
+    if (pf !== "inline" && pf !== "component" && pf !== "service") {
         return undefined;
     }
 
@@ -282,19 +287,19 @@ function parsePackageFormat(pf: any): PackageFormat | undefined {
 }
 
 function parseContact(ct: any): Contact | undefined {
-    if(ct === null || typeof(ct) !== "object") {
+    if (ct === null || typeof (ct) !== "object") {
         return undefined;
     }
 
-    if(typeof(ct["name"]) !== "string" || typeof(ct["role"]) !== "string") {
+    if (typeof (ct["name"]) !== "string" || typeof (ct["role"]) !== "string") {
         return undefined;
     }
 
-    if(ct["email"] !== undefined && typeof(ct["email"]) !== "string") {
+    if (ct["email"] !== undefined && typeof (ct["email"]) !== "string") {
         return undefined;
     }
 
-    if(ct["url"] !== undefined && typeof(ct["url"]) !== "string") {
+    if (ct["url"] !== undefined && typeof (ct["url"]) !== "string") {
         return undefined;
     }
 
@@ -307,59 +312,59 @@ function parseContact(ct: any): Contact | undefined {
 }
 
 function parseSourceInfo(si: any): SourceInfo | undefined {
-    if(si === null || typeof(si) !== "object") {
+    if (si === null || typeof (si) !== "object") {
         return undefined;
     }
 
-    if(!Array.isArray(si["bsqsource"])) {
+    if (!Array.isArray(si["bsqsource"])) {
         return undefined;
     }
     const bsqsrc = si["bsqsource"].map((src) => {
         const pp = parseURIPathGlob(src);
-        if(pp === undefined) {
+        if (pp === undefined) {
             return undefined;
         }
 
-        if(pp.selection !== undefined && pp.filter === undefined) {
+        if (pp.selection !== undefined && pp.filter === undefined) {
             pp.filter = "bsq";
         }
 
         return pp.filter === "bsq" ? pp : undefined;
     });
 
-    if(!Array.isArray(si["entrypoints"])) {
+    if (!Array.isArray(si["entrypoints"])) {
         return undefined;
     }
     const entrypoints = si["entrypoints"].map((src) => {
         const pp = parseURIPathGlob(src);
-        if(pp === undefined) {
+        if (pp === undefined) {
             return undefined;
         }
 
-        if(pp.selection !== undefined && pp.filter === undefined) {
+        if (pp.selection !== undefined && pp.filter === undefined) {
             pp.filter = "bsqapp";
         }
 
         return pp.filter === "bsqapp" ? pp : undefined;
     });
 
-    if(!Array.isArray(si["testfiles"])) {
+    if (!Array.isArray(si["testfiles"])) {
         return undefined;
     }
     const testfiles = si["testfiles"].map((src) => {
         const pp = parseURIPathGlob(src);
-        if(pp === undefined) {
+        if (pp === undefined) {
             return undefined;
         }
 
-        if(pp.selection !== undefined && pp.filter === undefined) {
+        if (pp.selection !== undefined && pp.filter === undefined) {
             pp.filter = "bsqtest";
         }
 
         return pp.filter === "bsqtest" ? pp : undefined;
     });
 
-    if(bsqsrc.includes(undefined) || entrypoints.includes(undefined) || testfiles.includes(undefined)) {
+    if (bsqsrc.includes(undefined) || entrypoints.includes(undefined) || testfiles.includes(undefined)) {
         return undefined;
     }
 
@@ -371,18 +376,18 @@ function parseSourceInfo(si: any): SourceInfo | undefined {
 }
 
 function parseConfigRun(cfg: any): ConfigRun | undefined {
-    if(typeof(cfg["main"]) !== "string") {
+    if (typeof (cfg["main"]) !== "string") {
         return undefined;
     }
 
-    if(cfg["args"] === undefined) {
+    if (cfg["args"] === undefined) {
         return {
             main: cfg["main"],
             args: undefined
         }
     }
     else {
-        if(!Array.isArray(cfg["args"])) {
+        if (!Array.isArray(cfg["args"])) {
             return undefined;
         }
 
@@ -395,91 +400,145 @@ function parseConfigRun(cfg: any): ConfigRun | undefined {
 
 function parseConfigBuild(cfg: any): ConfigBuild | undefined {
     const out = parseURIPath(cfg["out"]);
-    if(out === undefined) {
+    if (out === undefined) {
         return undefined;
     }
 
     return {
-        dirpath: dirpath
+        out: out
     };
 }
 
 function parseConfigTest(cfg: any): ConfigTest | undefined {
-    let flavors: ("sym" | "icpp" | "err" | "chk")[] = ["sym" , "icpp" , "chk"];
-    if(cfg["flavors"] !== undefined) {
-        if(!Array.isArray(cfg["flavors"]) || cfg["flavors"].some((ff) => (ff !== "sym" && ff !== "icpp" && ff !== "err" && ff !== "chk"))) {
+    let flavors: ("sym" | "icpp" | "err" | "chk")[] = ["sym", "icpp", "chk"];
+    if (cfg["flavors"] !== undefined) {
+        if (!Array.isArray(cfg["flavors"]) || cfg["flavors"].some((ff) => (ff !== "sym" && ff !== "icpp" && ff !== "err" && ff !== "chk"))) {
             return undefined;
         }
         flavors = cfg["flavors"] as ("sym" | "icpp" | "err" | "chk")[];
     }
 
-    let dirs: URIPathGlob[] = [];
-    if(cfg["flavors"] !== undefined) {
-        if(!Array.isArray(cfg["flavors"]) || cfg["flavors"].some((ff) => (ff !== "sym" && ff !== "icpp" && ff !== "err" && ff !== "chk"))) {
+    let dirs: URIPathGlob[] | "*" = "*";
+    if (cfg["dirs"] !== undefined) {
+        if (!Array.isArray(cfg["dirs"])) {
+            return undefined;
+        }
+
+        const dirsmap = cfg["dirs"].map((dd) => parseURIPathGlob(dd));
+        if (dirsmap.includes(undefined)) {
+            return undefined;
+        }
+
+        dirs = dirsmap as URIPathGlob[];
+    }
+
+    return {
+        flavors: flavors,
+        dirs: dirs
+    };
+}
+
+function parseConfigAppTest(cfg: any): ConfigAppTest | undefined {
+    let flavors: ("sym" | "icpp" | "err" | "chk")[] = ["sym", "icpp", "err"];
+    if (cfg["flavors"] !== undefined) {
+        if (!Array.isArray(cfg["flavors"]) || cfg["flavors"].some((ff) => (ff !== "sym" && ff !== "icpp" && ff !== "err" && ff !== "chk"))) {
             return undefined;
         }
         flavors = cfg["flavors"] as ("sym" | "icpp" | "err" | "chk")[];
     }
 
-    else {
-        if(!Array.isArray(cfg["args"])) {
+    let dirs: URIPathGlob[] | "*" = "*";
+    if (cfg["dirs"] !== undefined) {
+        if (!Array.isArray(cfg["dirs"])) {
             return undefined;
         }
 
-        return {
-            main: cfg["main"],
-            args: cfg["args"]
+        const dirsmap = cfg["dirs"].map((dd) => parseURIPathGlob(dd));
+        if (dirsmap.includes(undefined)) {
+            return undefined;
         }
+
+        dirs = dirsmap as URIPathGlob[];
     }
 
-    flavors: ("sym" | "icpp" | "err" | "chk")[],
-    dirs: string[]
-};
+    return {
+        flavors: flavors,
+        dirs: dirs
+    };
+}
 
-type ConfigAppTest = {
-    flavors: ("sym" | "icpp" | "err" | "chk")[],
-    dirs: string[]
-};
+function parseConfigFuzz(cfg: any): ConfigFuzz | undefined {
+    let dirs: URIPathGlob[] | "*" = "*";
+    if (cfg["dirs"] !== undefined) {
+        if (!Array.isArray(cfg["dirs"])) {
+            return undefined;
+        }
 
-type ConfigFuzz = {
-    dirs: string[]
-};
+        const dirsmap = cfg["dirs"].map((dd) => parseURIPathGlob(dd));
+        if (dirsmap.includes(undefined)) {
+            return undefined;
+        }
 
-function parseConfig(cf: any): Config | undefined {
-    if(cf === null || typeof(cf) !== "object") {
+        dirs = dirsmap as URIPathGlob[];
+    }
+
+    return {
+        dirs: dirs
+    };
+}
+
+function parseConfig<T>(cf: any, tag: "run" | "build" | "test" | "apptest" | "fuzz"): Config<T> | undefined {
+    if (cf === null || typeof (cf) !== "object") {
         return undefined;
     }
 
-    if(typeof(cf["name"]) !== "string" || !/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(cf["name"])) {
+    if (typeof (cf["name"]) !== "string" || !/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(cf["name"])) {
         return undefined;
     }
 
-    if(!Array.isArray(cf["macros"])) {
+    if (!Array.isArray(cf["macros"])) {
         return undefined;
     }
     const macros = cf["macros"].map((mm) => {
-        if(typeof(mm) !== "string" || !/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(mm)) {
+        if (typeof (mm) !== "string" || !/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(mm)) {
             return undefined;
         }
         return mm;
     });
 
-    if(!Array.isArray(cf["globalmacros"])) {
+    if (!Array.isArray(cf["globalmacros"])) {
         return undefined;
     }
     const globalmacros = cf["globalmacros"].map((mm) => {
-        if(typeof(mm) !== "string" || !/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(mm)) {
+        if (typeof (mm) !== "string" || !/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(mm)) {
             return undefined;
         }
         return mm;
     });
 
-    if(macros.includes(undefined) || globalmacros.includes(undefined)) {
+    if (macros.includes(undefined) || globalmacros.includes(undefined)) {
         return undefined;
     }
 
-    if(cf["buildlevel"] !== "debug" && cf["buildlevel"] !== "test" && cf["buildlevel"] !== "release") {
+    if (cf["buildlevel"] !== "debug" && cf["buildlevel"] !== "test" && cf["buildlevel"] !== "release") {
         return undefined
+    }
+
+    let pc: any = undefined;
+    if (tag === "run") {
+        pc = parseConfigRun(cf);
+    }
+    else if (tag === "build") {
+        pc = parseConfigBuild(cf);
+    }
+    else if (tag === "test") {
+        pc = parseConfigTest(cf);
+    }
+    else if (tag === "apptest") {
+        pc = parseConfigAppTest(cf);
+    }
+    else {
+        pc = parseConfigFuzz(cf);
     }
 
     return {
@@ -487,28 +546,28 @@ function parseConfig(cf: any): Config | undefined {
         macros: macros as string[],
         globalmacros: globalmacros as string[],
         buildlevel: cf["buildlevel"] as "debug" | "test" | "release",
-        testbuild: cf["testbuild"] === true
+        params: pc as T
     };
 }
 
 function parseAppDependency(dep: any): Dependency | undefined {
-    if(dep === null || typeof(dep) !== "object") {
+    if (dep === null || typeof (dep) !== "object") {
         return undefined;
     }
 
-    if(typeof(dep["name"]) !== "string") {
+    if (typeof (dep["name"]) !== "string") {
         return undefined
     }
 
     const vc = parseVersionConstraint(dep["version"]);
-    if(vc === undefined) {
+    if (vc === undefined) {
         return undefined;
     }
 
     let src: URIPath | undefined = undefined;
-    if(dep["src"] !== undefined) {
+    if (dep["src"] !== undefined) {
         src = parseURIPath(dep["src"]);
-        if(src === undefined) {
+        if (src === undefined) {
             return undefined;
         }
     }
@@ -522,23 +581,23 @@ function parseAppDependency(dep: any): Dependency | undefined {
 }
 
 function parseDevDependency(dep: any): Dependency | undefined {
-    if(dep === null || typeof(dep) !== "object") {
+    if (dep === null || typeof (dep) !== "object") {
         return undefined;
     }
 
-    if(typeof(dep["name"]) !== "string") {
+    if (typeof (dep["name"]) !== "string") {
         return undefined
     }
 
     const vc = parseVersionConstraint(dep["version"]);
-    if(vc === undefined) {
+    if (vc === undefined) {
         return undefined;
     }
 
     let src: URIPath | undefined = undefined;
-    if(dep["src"] !== undefined) {
+    if (dep["src"] !== undefined) {
         src = parseURIPath(dep["src"]);
-        if(src === undefined) {
+        if (src === undefined) {
             return undefined;
         }
     }
@@ -551,127 +610,199 @@ function parseDevDependency(dep: any): Dependency | undefined {
     };
 }
 
-function parsePackage(jp: any): Package | undefined {
-    if(jp === null || typeof(jp) !== "object") {
-        return undefined;
+function parsePackage(jp: any): Package | string {
+    if (jp === null || typeof (jp) !== "object") {
+        return "package not a valid JSON object";
     }
 
-    if(typeof(jp["name"]) !== "string") {
-        return undefined
+    if (typeof (jp["name"]) !== "string") {
+        return "invalid 'name' field";
     }
 
     const version = parseVersion(jp["version"]);
-    if(version === undefined) {
-        return undefined;
+    if (version === undefined) {
+        return "invalid 'version' field";
     }
 
     const format = parsePackageFormat(jp["format"]);
-    if(format === undefined) {
-        return undefined;
+    if (format === undefined) {
+        return "invalid 'format' field";
     }
 
-    if(typeof(jp["description"]) !== "string") {
-        return undefined
+    if (typeof (jp["description"]) !== "string") {
+        return "invalid 'description' field";
     }
 
     let keywords: string[] = [];
-    if(jp["keywords"] !== undefined) {
-        if(!Array.isArray(jp["keywords"]) || jp["keywords"].some((ee) => typeof(ee) !== "string")) {
-            return undefined;
+    if (jp["keywords"] !== undefined) {
+        if (!Array.isArray(jp["keywords"]) || jp["keywords"].some((ee) => typeof (ee) !== "string")) {
+            return "invalid 'keywords'";
         }
 
         keywords = jp["keywords"];
     }
 
     let homepage: URIPath | undefined = undefined;
-    if(jp["homepage"] !== undefined) {
+    if (jp["homepage"] !== undefined) {
         homepage = parseURIPath(jp["homepage"]);
-        if(homepage === undefined) {
-            return undefined;
+        if (homepage === undefined) {
+            return "invalid 'homepage' field";
         }
     }
 
     let repository: URIPath | undefined = undefined;
-    if(jp["repository"] !== undefined) {
+    if (jp["repository"] !== undefined) {
         repository = parseURIPath(jp["repository"]);
-        if(repository === undefined) {
-            return undefined;
+        if (repository === undefined) {
+            return "invalid 'repository' field";
         }
     }
 
-    if(typeof(jp["license"]) !== "string") {
-        return undefined
+    if (typeof (jp["license"]) !== "string") {
+        return "invalid 'license' field";
     }
 
     let people: Contact[] = [];
-    if(jp["people"] !== undefined) {
-        if(!Array.isArray(jp["people"])) {
-            return undefined;
+    if (jp["people"] !== undefined) {
+        if (!Array.isArray(jp["people"])) {
+            return "'people' field should be an array";
         }
 
         const peoplemap = jp["people"].map((pp) => parseContact(pp));
-        if(peoplemap.includes(undefined)) {
-            return undefined;
+        if (peoplemap.includes(undefined)) {
+            return "invalid 'contact' in 'people' field";
         }
         people = peoplemap as Contact[];
     }
 
     const srcinfo = parseSourceInfo(jp["src"]);
-    if(srcinfo === undefined) {
-        return undefined;
+    if (srcinfo === undefined) {
+        return "invalid 'src' field";
     }
 
-    if(jp["documentation"] === null || typeof(jp["documentation"]) !== "object") {
-        return undefined;
+    let documentation: { files: URIPath[], root: URIPath } | undefined = undefined;
+    if (jp["documentation"] !== undefined) {
+        if (jp["documentation"] === null || typeof (jp["documentation"]) !== "object") {
+            return "invalid 'documentation' field";
+        }
+
+        let docfiles: URIPath[] = [];
+        if (!Array.isArray(jp["documentation"]["files"])) {
+            return "'documentation.files' needs to be an array";
+        }
+
+        const docfilesmap = jp["documentation"]["files"].map((df) => parseURIPath(df));
+        if (docfilesmap.includes(undefined)) {
+            return "invalid 'documentation.files' entry";
+        }
+        docfiles = docfilesmap as URIPath[];
+
+        const docroot = parseURIPath(jp["documentation"]["root"]);
+        if (docroot === undefined) {
+            return "invalid 'documentation.root' field";
+        }
+
+        documentation = {
+            files: docfiles,
+            root: docroot
+        };
     }
 
-    let docfiles: URIPath[] = [];
-    if(!Array.isArray(jp["documentation"]["files"])) {
-        return undefined;
-    }
+    let runconfigs: Config<ConfigRun>[] = [];
+    let buildconfigs: Config<ConfigBuild>[] = [];
+    let testconfigs: Config<ConfigTest>[] = [];
+    let apptestconfigs: Config<ConfigAppTest>[] = [];
+    let fuzzconfigs: Config<ConfigFuzz>[] = [];
 
-    const docfilesmap = jp["documentation"]["files"].map((df) => parseURIPath(df));
-    if(docfilesmap.includes(undefined)) {
-        return undefined;
-    }
-    docfiles = docfilesmap as URIPath[];
+    const configs = jp["configs"];
+    if (configs !== undefined) {
+        if (configs === null || typeof (configs) !== "object") {
+            return "invalid 'config' field";
+        }
 
-    const docroot = parseURIPath(jp["documentation"]["root"]);
-    if(docroot === undefined) {
-        return undefined;
-    }
+        if (configs["run"] !== undefined) {
+            if (!Array.isArray(configs["run"])) {
+                return "expected array for 'config.run' field";
+            }
 
-    let configs: Config[] = [];
-    if(!Array.isArray(jp["configs"])) {
-        return undefined;
-    }
+            const rcfg = configs["run"].map((cfg) => parseConfig<ConfigRun>(cfg, "run"));
+            if (rcfg.includes(undefined)) {
+                return "invalid entry in 'config.run' array";
+            }
+            runconfigs = rcfg as Config<ConfigRun>[];
+        }
 
-    const configmap = jp["configs"].map((cfg) => parseConfig(cfg));
-    if(configmap.includes(undefined)) {
-        return undefined;
+        if (configs["build"] !== undefined) {
+            if (!Array.isArray(configs["build"])) {
+                return "expected array for 'config.build' field";
+            }
+
+            const rcfg = configs["build"].map((cfg) => parseConfig<ConfigBuild>(cfg, "build"));
+            if (rcfg.includes(undefined)) {
+                return "invalid entry in 'config.build' array";
+            }
+            buildconfigs = rcfg as Config<ConfigBuild>[];
+        }
+
+        if (configs["test"] !== undefined) {
+            if (!Array.isArray(configs["test"])) {
+                return "expected array for 'config.test' field";
+            }
+
+            const rcfg = configs["test"].map((cfg) => parseConfig<ConfigTest>(cfg, "test"));
+            if (rcfg.includes(undefined)) {
+                return "invalid entry in 'config.test' array";
+            }
+            testconfigs = rcfg as Config<ConfigTest>[];
+        }
+
+        if (configs["apptest"] !== undefined) {
+            if (!Array.isArray(configs["apptest"])) {
+                return "expected array for 'config.apptest' field";
+            }
+
+            const rcfg = configs["apptest"].map((cfg) => parseConfig<ConfigAppTest>(cfg, "apptest"));
+            if (rcfg.includes(undefined)) {
+                return "invalid entry in 'config.apptest' array";
+            }
+            apptestconfigs = rcfg as Config<ConfigAppTest>[];
+        }
+
+        if (configs["fuzz"] !== undefined) {
+            if (!Array.isArray(configs["fuzz"])) {
+                return "expected array for 'config.fuzz' field";
+            }
+
+            const rcfg = configs["fuzz"].map((cfg) => parseConfig<ConfigFuzz>(cfg, "fuzz"));
+            if (rcfg.includes(undefined)) {
+                return "invalid entry in 'config.fuzz' array";
+            }
+            fuzzconfigs = rcfg as Config<ConfigFuzz>[];
+        }
     }
-    configs = configmap as Config[];
 
     let dependencies: Dependency[] = [];
-    if(!Array.isArray(jp["dependencies"])) {
-        return undefined;
-    }
+    if (jp["dependencies"] !== undefined) {
+        if (!Array.isArray(jp["dependencies"])) {
+            return "expected array for 'dependencies' field";
+        }
 
-    const dependenciesmap = jp["dependencies"].map((dep) => parseAppDependency(dep));
-    if(dependenciesmap.includes(undefined)) {
-        return undefined;
+        const dependenciesmap = jp["dependencies"].map((dep) => parseAppDependency(dep));
+        if (dependenciesmap.includes(undefined)) {
+            return "invalid entry in 'dependencies' array";
+        }
+        dependencies = dependenciesmap as Dependency[];
     }
-    dependencies = dependenciesmap as Dependency[];
 
     let devDependencies: Dependency[] = [];
-    if(jp["devDependencies"] !== undefined) {
-        if(!Array.isArray(jp["devDependencies"])) {
-            return undefined;
+    if (jp["devDependencies"] !== undefined) {
+        if (!Array.isArray(jp["devDependencies"])) {
+            return "expected array for 'devDependencies' field";
         }
 
         const devDependenciesmap = jp["devDependencies"].map((pp) => parseDevDependency(pp));
-        if(devDependenciesmap.includes(undefined)) {
-            return undefined;
+        if (devDependenciesmap.includes(undefined)) {
+            return "invalid entry in 'devDependencies' array";
         }
         devDependencies = devDependenciesmap as Dependency[];
     }
@@ -687,11 +818,14 @@ function parsePackage(jp: any): Package | undefined {
         license: jp["license"] as string,
         people: people,
         src: srcinfo,
-        documentation: {
-            files: docfiles,
-            root: docroot
+        documentation: documentation,
+        configs: {
+            run: runconfigs,
+            build: buildconfigs,
+            test: testconfigs,
+            apptest: apptestconfigs,
+            fuzz: fuzzconfigs
         },
-        configs: configs,
         dependencies: dependencies,
         devDependencies: devDependencies
     };
