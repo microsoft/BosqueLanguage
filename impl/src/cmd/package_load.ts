@@ -833,5 +833,5 @@ function parsePackage(jp: any): Package | string {
 
 export {
     URIPath, URIPathGlob, Version, VersionConstraint, PackageFormat, Contact, SourceInfo, ConfigRun, ConfigBuild, ConfigTest, ConfigAppTest, ConfigFuzz, Config, Dependency, Package,
-    parsePackage
+    parseURIPath, parseURIPathGlob, parsePackage
 };
