@@ -61,7 +61,7 @@ function help(cmd: CmdTag | undefined) {
 
     if(cmd === "build" || cmd === undefined) {
         process.stdout.write("Build Application:\n");
-        process.stdout.write("bosque build node package_path.json [--config cname] [out]\n\n");
+        process.stdout.write("bosque build node [package_path.json] [--config cname] [out]\n\n");
     }
 
     if(cmd === "test" || cmd === undefined) {
@@ -156,6 +156,21 @@ function extractArgs(args: string[]): any[] | undefined {
     }
 
     return rargs;
+}
+
+function extractOutput(workingdir: string, args: string[]): URIPath | undefined {
+    const argsidx = args.indexOf("--output");
+    if(argsidx === -1 || argsidx === args.length - 1) {
+        return {
+            scheme: "file",
+            authority: undefined,
+            port: undefined,
+            path: path.join(workingdir, "bin"),
+            extension: undefined
+        };
+    }
+
+    return parseURIPath(args[argsidx + 1]);
 }
 
 function extractFiles(workingdir: string, args: string[]): URIPath[] | undefined {
@@ -270,9 +285,18 @@ function extractConfig<T>(args: string[], pckg: Package, workingdir: string, cmd
     }
 }
 
-function extractTestFlags(args: string[]): ("sym" | "icpp" | "err" | "chk")[] | undefined {
+function extractTestFlags(args: string[], cmd: CmdTag): ("sym" | "icpp" | "err" | "chk")[] | undefined {
     const fidx = args.indexOf("--flavors");
     if(fidx === -1 || fidx === args.length - 1) {
+        if(cmd === "test") {
+            return ["sym", "icpp", "chk"];
+        }
+        else {
+            return ["sym", "icpp", "err"];
+        }
+    }
+
+    if(fidx === args.length - 1) {
         return undefined;
     }
 
@@ -314,6 +338,12 @@ function processRunAction(args: string[]) {
         }
 
         const files = extractFiles(process.cwd(), args);
+        if(files === undefined) {
+            process.stderr.write(chalk.red("Could not parse 'files' option\n"));
+
+            help("run");
+            process.exit(1);
+        }
 
         if(fargs === undefined) {
             // bosque run entryfile.bsqapp [--entrypoint fname] --files ...
@@ -325,12 +355,14 @@ function processRunAction(args: string[]) {
         }
     }
     else {
+        let workingdir = process.cwd();
         let pckg: Package | undefined = undefined;
         if(path.extname(args[0]) === "json") {
+            workingdir = path.dirname(path.normalize(args[0]));
             pckg = tryLoadPackage(args[0]);
         }
         else {
-            const implicitpckg = path.join(process.cwd(), "package.json");
+            const implicitpckg = path.join(workingdir, "package.json");
             if(fs.existsSync(implicitpckg)) {
                 pckg = tryLoadPackage(implicitpckg);
             }
@@ -362,8 +394,13 @@ function processRunAction(args: string[]) {
             }
         }
 
-        const workingdir = path.dirname(path.normalize(args[0]));
-        let cfg = extractConfig<ConfigRun>(args, pckg, workingdir, "run");
+        const cfg = extractConfig<ConfigRun>(args, pckg, workingdir, "run");
+        if(cfg === undefined) {
+            process.stderr.write(chalk.red("Could not parse 'config' option\n"));
+
+            help("run");
+            process.exit(1);
+        }
 
         if(fargs === undefined) {
             // bosque run [package_path.json] [--entrypoint fname] [--config cname]
@@ -377,14 +414,214 @@ function processRunAction(args: string[]) {
 }
 
 function processBuildAction(args: string[]) {
+    if(args[0] === "node") {
+        let workingdir = process.cwd();
+        let pckg: Package | undefined = undefined;
+        if(path.extname(args[0]) === "json") {
+            workingdir = path.dirname(path.normalize(args[0]));
+            pckg = tryLoadPackage(args[0]);
+        }
+        else {
+            const implicitpckg = path.join(workingdir, "package.json");
+            if(fs.existsSync(implicitpckg)) {
+                pckg = tryLoadPackage(implicitpckg);
+            }
+        }
+        
+        if(pckg === undefined) {
+            process.stderr.write(chalk.red("Could not parse 'package' option\n"));
+
+            help("build");
+            process.exit(1);
+        }
+
+        const cfg = extractConfig<ConfigRun>(args, pckg, workingdir, "build");
+        if(cfg === undefined) {
+            process.stderr.write(chalk.red("Could not parse 'config' option\n"));
+
+            help("build");
+            process.exit(1);
+        }
+
+        const output = extractOutput(workingdir, args);
+        if(output === undefined) {
+            process.stderr.write(chalk.red("Could not parse 'output' option\n"));
+
+            help("build");
+            process.exit(1);
+        }
+
+        xxxx;
+        //bosque build node [package_path.json] [--config cname] [--output out]
+    }
+    else {
+        process.stderr.write(chalk.red(`Unknown build target '${args[0]}'\n`));
+
+        help("build");
+        process.exit(1);
+    }
 }
 
 function processTestAction(args: string[]) {
+    if(path.extname(args[0]) === "bsqtest") {
+        const entryfile = args[0];
+
+        const files = extractFiles(process.cwd(), args);
+        if(files === undefined) {
+            process.stderr.write(chalk.red("Could not parse 'files' option\n"));
+
+            help("test");
+            process.exit(1);
+        }
+
+        const flavors = extractTestFlags(args, "test");
+        if(flavors === undefined) {
+            process.stderr.write(chalk.red("Could not parse test 'flavors' option\n"));
+
+            help("test");
+            process.exit(1);
+        }
+
+        //bosque test testfile.bsqtest ... --files ... [--flavors (sym | icpp | err | chk)*]
+        xxxx;
+    }
+    else {
+        let workingdir = process.cwd();
+        let pckg: Package | undefined = undefined;
+        if(path.extname(args[0]) === "json") {
+            workingdir = path.dirname(path.normalize(args[0]));
+            pckg = tryLoadPackage(args[0]);
+        }
+        else {
+            const implicitpckg = path.join(workingdir, "package.json");
+            if(fs.existsSync(implicitpckg)) {
+                pckg = tryLoadPackage(implicitpckg);
+            }
+        }
+        
+        if(pckg === undefined) {
+            process.stderr.write(chalk.red("Could not parse 'package' option\n"));
+
+            help("test");
+            process.exit(1);
+        }
+
+        const cfg = extractConfig<ConfigRun>(args, pckg, workingdir, "build");
+        if(cfg === undefined) {
+            process.stderr.write(chalk.red("Could not parse 'config' option\n"));
+
+            help("test");
+            process.exit(1);
+        }
+
+        //bosque test [package_path.json] [--config cname]
+        xxxx;
+    }
 }
 
 function processAppTestAction(args: string[]) {
+    if(path.extname(args[0]) === "bsqtest") {
+        const entryfile = args[0];
+
+        const files = extractFiles(process.cwd(), args);
+        if(files === undefined) {
+            process.stderr.write(chalk.red("Could not parse 'files' option\n"));
+
+            help("test");
+            process.exit(1);
+        }
+
+        const flavors = extractTestFlags(args, "apptest");
+        if(flavors === undefined) {
+            process.stderr.write(chalk.red("Could not parse test 'flavors' option\n"));
+
+            help("test");
+            process.exit(1);
+        }
+
+        //bosque test testfile.bsqtest ... --files ... [--flavors (sym | icpp | err | chk)*]
+        xxxx;
+    }
+    else {
+        let workingdir = process.cwd();
+        let pckg: Package | undefined = undefined;
+        if(path.extname(args[0]) === "json") {
+            workingdir = path.dirname(path.normalize(args[0]));
+            pckg = tryLoadPackage(args[0]);
+        }
+        else {
+            const implicitpckg = path.join(workingdir, "package.json");
+            if(fs.existsSync(implicitpckg)) {
+                pckg = tryLoadPackage(implicitpckg);
+            }
+        }
+        
+        if(pckg === undefined) {
+            process.stderr.write(chalk.red("Could not parse 'package' option\n"));
+
+            help("test");
+            process.exit(1);
+        }
+
+        const cfg = extractConfig<ConfigRun>(args, pckg, workingdir, "build");
+        if(cfg === undefined) {
+            process.stderr.write(chalk.red("Could not parse 'config' option\n"));
+
+            help("test");
+            process.exit(1);
+        }
+
+        //bosque test [package_path.json] [--config cname]
+        xxxx;
+    }
 }
 
 function processFuzzAction(args: string[]) {
+    if(path.extname(args[0]) === "bsqapp") {
+        const entryfile = args[0];
+
+        const files = extractFiles(process.cwd(), args);
+        if(files === undefined) {
+            process.stderr.write(chalk.red("Could not parse 'files' option\n"));
+
+            help("test");
+            process.exit(1);
+        }
+
+        //bosque fuzz testfile.bsqapp ... --files ...
+        xxxx;
+    }
+    else {
+        let workingdir = process.cwd();
+        let pckg: Package | undefined = undefined;
+        if(path.extname(args[0]) === "json") {
+            workingdir = path.dirname(path.normalize(args[0]));
+            pckg = tryLoadPackage(args[0]);
+        }
+        else {
+            const implicitpckg = path.join(workingdir, "package.json");
+            if(fs.existsSync(implicitpckg)) {
+                pckg = tryLoadPackage(implicitpckg);
+            }
+        }
+        
+        if(pckg === undefined) {
+            process.stderr.write(chalk.red("Could not parse 'package' option\n"));
+
+            help("test");
+            process.exit(1);
+        }
+
+        const cfg = extractConfig<ConfigRun>(args, pckg, workingdir, "build");
+        if(cfg === undefined) {
+            process.stderr.write(chalk.red("Could not parse 'config' option\n"));
+
+            help("test");
+            process.exit(1);
+        }
+
+        //bosque fuzz [package_path.json] [--config cname]
+        xxxx;
+    }
 }
 
