@@ -28,10 +28,10 @@ if(mode === "-smt") {
     const ofile = args[0].slice(0, args[0].length - 3) + "smt2";
     process.stdout.write(`Writing file to ${ofile}\n`);
 
-    workflowEmitToFile(ofile, userpackage, false, TIMEOUT, STD_OPTS, {filename: args[0], name: "main", fkey: "__i__Main::main"}, noerrtrgt, true);
+    workflowEmitToFile(ofile, userpackage, "debug", false, TIMEOUT, STD_OPTS, {filename: args[0], name: "main", fkey: "__i__Main::main"}, noerrtrgt, true);
 }
 else if(mode === "-test") {
-    workflowPassCheck(userpackage, false, TIMEOUT, STD_OPTS, {filename: args[0], name: "main", fkey: "__i__Main::main"}, (res: string) => {
+    workflowPassCheck(userpackage, "debug", false, TIMEOUT, STD_OPTS, {filename: args[0], name: "main", fkey: "__i__Main::main"}, (res: string) => {
         process.stdout.write(res + "\n");
     });
 }
@@ -39,13 +39,13 @@ else if(mode === "-ttout") {
     const ofile = args[0].slice(0, args[0].length - 3) + "json";
     process.stdout.write(`Writing file to ${ofile}\n`);
 
-    workflowEmitToFile(ofile, userpackage, false, TIMEOUT, STD_OPTS, {filename: args[0], name: "main", fkey: "__i__Main::main"}, noerrtrgt, false);
+    workflowEmitToFile(ofile, userpackage, "debug", false, TIMEOUT, STD_OPTS, {filename: args[0], name: "main", fkey: "__i__Main::main"}, noerrtrgt, false);
 }
 else if(mode === "-eeout") {
     const ofile = args[0].slice(0, args[0].length - 3) + "json";
     process.stdout.write(`Writing file to ${ofile}\n`);
 
-    workflowEmitToFile(ofile, userpackage, false, TIMEOUT, EVAL_OPTS, {filename: args[0], name: "main", fkey: "__i__Main::main"}, noerrtrgt, false);
+    workflowEmitToFile(ofile, userpackage, "debug", false, TIMEOUT, EVAL_OPTS, {filename: args[0], name: "main", fkey: "__i__Main::main"}, noerrtrgt, false);
 }
 else if (mode === "-eval") {
     let rl = readline.createInterface({
@@ -56,7 +56,7 @@ else if (mode === "-eval") {
     rl.question(">> ", (input) => {
         try {
             const jinput = JSON.parse(input) as any[];
-            workflowEvaluate(userpackage, false, TIMEOUT, EVAL_OPTS, {filename: args[0], name: "main", fkey: "__i__Main::main"}, jinput, (res: string) => {
+            workflowEvaluate(userpackage, "debug", false, TIMEOUT, EVAL_OPTS, {filename: args[0], name: "main", fkey: "__i__Main::main"}, jinput, (res: string) => {
                 try {
                     const jres = JSON.parse(res);
 
