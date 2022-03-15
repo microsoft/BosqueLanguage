@@ -396,7 +396,7 @@ function loadEntryPointInfo(files: string[], istestbuild: boolean): {filename: s
     }
 }
 
-function runtests(packageloads: PackageConfig[], globalmacros: string[], entrypointfiles: string[], buildlevel: BuildLevel, istestbuild: boolean, topts: TranspilerOptions, verbose: Verbosity, category: Category[], dirs: string[]) {
+function runtests(packageloads: {macros: string[], files: string[]}[], globalmacros: string[], entrypointfiles: string[], buildlevel: BuildLevel, istestbuild: boolean, topts: TranspilerOptions, verbose: Verbosity, category: Category[], dirs: string[]) {
     let totalicpp = 0;
     let failedicpp: {test: ICPPTest, info: string}[] = [];
     let erroricpp: {test: ICPPTest, info: string}[] = [];
@@ -408,7 +408,7 @@ function runtests(packageloads: PackageConfig[], globalmacros: string[], entrypo
 
     const start = new Date();
 
-    const usersrc = packageloads.map((psrc) => loadUserPackageSrc(psrc.src.map((src) => src.srcpath), psrc.macrodefs, globalmacros));
+    const usersrc = packageloads.map((psrc) => loadUserPackageSrc(psrc.files.map((src) => src), psrc.macros, globalmacros));
     if(usersrc.includes(undefined)) {
         process.stdout.write(chalk.red("Failure loading user packages\n"));
         process.exit(1);

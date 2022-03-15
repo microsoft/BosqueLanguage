@@ -10,7 +10,6 @@ import chalk from "chalk";
 
 import { extractConfig, extractFiles, extractTestFlags, help, loadUserSrc, tryLoadPackage } from "./args_load";
 import { ConfigAppTest, ConfigFuzz, ConfigTest, Package, parseURIPathGlob } from "./package_load";
-import { PackageConfig } from "../compiler/mir_assembly";
 import { runtests } from "../test/runner/suite_runner";
 
 function processTestAction(args: string[]) {
@@ -47,11 +46,11 @@ function processTestAction(args: string[]) {
             process.exit(1);
         }
 
-        const userpackage = new PackageConfig([], srcfiles);
+        const userpackage = [{macros: [] as string[], files: srcfiles}];
 
         //bosque test testfile.bsqtest ... --files ... [--flavors (sym | icpp | err | chk)*]
 
-        runtests([userpackage], [], [path.resolve(process.cwd(), entryfile)], "test", true, {}, "extra", flavors, ["*"]);
+        runtests(userpackage, [], [path.resolve(process.cwd(), entryfile)], "test", true, {}, "extra", flavors, ["*"]);
     }
     else {
         let workingdir = process.cwd();
@@ -88,7 +87,7 @@ function processTestAction(args: string[]) {
             process.exit(1);
         }
 
-        const userpackage = new PackageConfig([...cfg.macros, ...cfg.globalmacros], srcfiles);
+        const userpackage = [{macros: [...cfg.macros, ...cfg.globalmacros], files: srcfiles}];
 
         let dirs: string[] = ["*"];
         if(Array.isArray(cfg.params.dirs)) {
@@ -97,7 +96,7 @@ function processTestAction(args: string[]) {
 
         //bosque test [package_path.json] [--config cname]
 
-        runtests([userpackage], [], pckg.src.testfiles.map((tf) => path.resolve(workingdir, tf.path)), cfg.buildlevel, true, {}, "extra", cfg.params.flavors, dirs);
+        runtests(userpackage, [], pckg.src.testfiles.map((tf) => path.resolve(workingdir, tf.path)), cfg.buildlevel, true, {}, "extra", cfg.params.flavors, dirs);
     }
 }
 
@@ -135,11 +134,11 @@ function processAppTestAction(args: string[]) {
             process.exit(1);
         }
 
-        const userpackage = new PackageConfig([], srcfiles);
+        const userpackage = [{macros: [] as string[], files: srcfiles}];
 
         //bosque apptest testfile.bsqapp ... --files ... [--flavors (sym | icpp | err | chk)*]
 
-        runtests([userpackage], [], [path.resolve(process.cwd(), entryfile)], "test", true, {}, "extra", flavors, ["*"]);
+        runtests(userpackage, [], [path.resolve(process.cwd(), entryfile)], "test", true, {}, "extra", flavors, ["*"]);
     }
     else {
         let workingdir = process.cwd();
@@ -176,7 +175,7 @@ function processAppTestAction(args: string[]) {
             process.exit(1);
         }
 
-        const userpackage = new PackageConfig([...cfg.macros, ...cfg.globalmacros], srcfiles);
+        const userpackage = [{macros: [...cfg.macros, ...cfg.globalmacros], files: srcfiles}];
 
         let dirs: string[] = ["*"];
         if(Array.isArray(cfg.params.dirs)) {
@@ -185,7 +184,7 @@ function processAppTestAction(args: string[]) {
 
         //bosque apptest [package_path.json] [--config cname]
 
-        runtests([userpackage], [], pckg.src.entrypoints.map((ef) => path.resolve(workingdir, ef.path)), cfg.buildlevel, true, {}, "extra", cfg.params.flavors, dirs);
+        runtests(userpackage, [], pckg.src.entrypoints.map((ef) => path.resolve(workingdir, ef.path)), cfg.buildlevel, true, {}, "extra", cfg.params.flavors, dirs);
     }
 }
 

@@ -59,7 +59,10 @@ function processRunAction(args: string[]) {
             process.exit(1);
         }
 
-        const userpackage = new PackageConfig([], srcfiles);
+        const usersrcinfo = srcfiles.map((sf) => {
+            return { srcpath: sf, filename: path.basename(sf), contents: fs.readFileSync(sf).toString() };
+         });
+        const userpackage = new PackageConfig([], usersrcinfo);
 
         if(fargs === undefined) {
             // bosque run [package_path.json] [--entrypoint fname] [--config cname]
@@ -160,7 +163,11 @@ function processRunAction(args: string[]) {
             process.exit(1);
         }
 
-        const userpackage = new PackageConfig([...cfg.macros, ...cfg.globalmacros], srcfiles);
+        const usersrcinfo = srcfiles.map((sf) => {
+           return { srcpath: sf, filename: path.basename(sf), contents: fs.readFileSync(sf).toString() };
+        });
+        const userpackage = new PackageConfig([...cfg.macros, ...cfg.globalmacros], usersrcinfo);
+        
 
         if(fargs === undefined) {
             // bosque run [package_path.json] [--entrypoint fname] [--config cname]

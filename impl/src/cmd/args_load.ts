@@ -9,7 +9,6 @@ import * as path from "path";
 import chalk from "chalk";
 
 import { Config, ConfigAppTest, ConfigBuild, ConfigFuzz, ConfigRun, ConfigTest, Package, parsePackage, parseURIPath, parseURIPathGlob, URIPath, URIPathGlob } from "./package_load";
-import { CodeFileInfo } from "../ast/parser";
 
 type CmdTag = "run" | "build" | "test" | "apptest" | "fuzz";
 
@@ -404,15 +403,15 @@ function extractTestFlags(args: string[], cmd: CmdTag): ("sym" | "icpp" | "err" 
     return flavors;
 }
 
-function loadUserSrc(workingdir: string, files: URIPathGlob[]): CodeFileInfo[] | undefined {
+function loadUserSrc(workingdir: string, files: URIPathGlob[]): string[] | undefined {
     try {
-        let code: CodeFileInfo[] = [];
+        let code: string[] = [];
 
         for (let i = 0; i < files.length; ++i) {
             if(files[i].scheme === "file") {
                 const fullpath = path.resolve(workingdir, files[i].path);
                 if(files[i].selection === undefined) {
-                    code.push({ srcpath: fullpath, filename: path.basename(fullpath), contents: fs.readFileSync(fullpath).toString() });
+                    code.push(fullpath);
                 }
                 else if(files[i].selection === "*") {
                     const subfiles = fs.readdirSync(fullpath);
@@ -422,15 +421,15 @@ function loadUserSrc(workingdir: string, files: URIPathGlob[]): CodeFileInfo[] |
                         const fext = path.extname(fullsubpath);
 
                         if((fext === files[i].filter || files[i].filter === undefined) && fext === "bsq") {
-                            code.push({ srcpath: fullsubpath, filename: path.basename(fullsubpath), contents: fs.readFileSync(fullsubpath).toString() });
+                            code.push(fullsubpath);
                         }
 
                         if((fext === files[i].filter || files[i].filter === undefined) && fext === "bsqapp") {
-                            code.push({ srcpath: fullsubpath, filename: path.basename(fullsubpath), contents: fs.readFileSync(fullsubpath).toString() });
+                            code.push(fullsubpath);
                         }
 
                         if((fext === files[i].filter || files[i].filter === undefined) && fext === "bsqtest") {
-                            code.push({ srcpath: fullsubpath, filename: path.basename(fullsubpath), contents: fs.readFileSync(fullsubpath).toString() });
+                            code.push(fullsubpath);
                         }
                     }
                 }
