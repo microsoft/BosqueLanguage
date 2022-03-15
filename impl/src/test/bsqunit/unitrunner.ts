@@ -6,6 +6,7 @@
 import * as FS from "fs";
 import * as Path from "path";
 
+import { PackageConfig } from "../../compiler/mir_assembly";
 import { Category, runtests } from "../runner/suite_runner";
 
 const testroot = Path.normalize(Path.join(__dirname, "tests"));
@@ -16,7 +17,7 @@ const testfiles = FS.readdirSync(testroot)
 
 //TODO: maybe we want to also read recursive in directories as well to make grouping some tests easier later (like collections)
 
-const pckg = {srcfiles: testfiles, macros: []};
+const pckg = new PackageConfig(testfiles, []);
 
 let opts: Category[] = [];
 let dirs: string[] = [];
