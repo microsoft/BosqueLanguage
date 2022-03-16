@@ -7,8 +7,6 @@ const fsx = require("fs-extra");
 const path = require("path");
 const proc = require('child_process');
 
-const chalk = require('chalk');
-
 const rootsrc = path.normalize(path.join(__dirname, "../", "src/tooling/icpp/interpreter"));
 const apisrc = path.normalize(path.join(__dirname, "../", "src/tooling/api_parse"));
 const cppfiles = [apisrc, rootsrc, path.join(rootsrc, "runtime")].map((pp) => pp + "/*.cpp");
@@ -55,6 +53,6 @@ try {
     console.log(`${outstr}`);
 }
 catch (ex) {
-    console.log(chalk.red(ex.toString()));
+    console.log(ex.toString());
     process.exit(1);
 }

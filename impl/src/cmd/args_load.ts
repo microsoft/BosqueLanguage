@@ -10,7 +10,7 @@ import chalk from "chalk";
 
 import { Config, ConfigAppTest, ConfigBuild, ConfigFuzz, ConfigRun, ConfigTest, Package, parsePackage, parseURIPath, parseURIPathGlob, URIPath, URIPathGlob } from "./package_load";
 
-type CmdTag = "run" | "build" | "test" | "apptest" | "fuzz";
+type CmdTag = "run" | "symrun" | "build" | "test" | "apptest" | "fuzz";
 
 function help(cmd: CmdTag | undefined) {
     if(cmd === "run" || cmd === undefined) {
@@ -21,9 +21,17 @@ function help(cmd: CmdTag | undefined) {
         process.stdout.write("bosque run entryfile.bsqapp [--entrypoint fname] --files ... --args \"[...]\"\n\n");
     }
 
+    if(cmd === "symrun" || cmd === undefined) {
+        process.stdout.write("Symbolic Run Application:\n");
+        process.stdout.write("bosque symrun [package_path.json] [--entrypoint fname] [--config cname]\n");
+        process.stdout.write("bosque symrun [package_path.json] [--entrypoint fname] [--config cname] --args \"[...]\"\n\n");
+    }
+
     if(cmd === "build" || cmd === undefined) {
         process.stdout.write("Build Application:\n");
-        process.stdout.write("bosque build node [package_path.json] [--config cname] [out]\n\n");
+        process.stdout.write("bosque build node [package_path.json] [--config cname] [out]\n");
+        process.stdout.write("bosque build bytecode [package_path.json] [--entrypoint fname] [--config cname] [out]\n");
+        process.stdout.write("bosque build sym chk|eval --smtlib [package_path.json] [--entrypoint fname] [--config cname] [out]\n\n");
     }
 
     if(cmd === "test" || cmd === undefined) {
