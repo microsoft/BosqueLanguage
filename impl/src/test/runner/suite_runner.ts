@@ -65,10 +65,10 @@ function generateICPPAssembly(masm: MIRAssembly, istestbuild: boolean, topts: Tr
     }
 }
 
-function generateMASMForSMT(usercode: PackageConfig[], corecode: CodeFileInfo[], entrypoint: {filename: string, names: string[]}): { masm: MIRAssembly | undefined, errors: string[] } {
+function generateMASMForSMT(usercode: PackageConfig[], corecode: CodeFileInfo[], buildlevel: BuildLevel, entrypoint: {filename: string, names: string[]}): { masm: MIRAssembly | undefined, errors: string[] } {
     const coreconfig = new PackageConfig(["CHECK_LIBS"], corecode);
 
-    return MIREmitter.generateMASM(BuildApplicationMode.ModelChecker, [coreconfig, ...usercode], "debug", entrypoint);
+    return MIREmitter.generateMASM(BuildApplicationMode.ModelChecker, [coreconfig, ...usercode], buildlevel, entrypoint);
 }
 
 function generateSMTPayload(masm: MIRAssembly, istestbuild: boolean, vopts: VerifierOptions, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey): string | undefined {
@@ -165,7 +165,7 @@ function runtestsICPP(buildlevel: BuildLevel, istestbuild: boolean, topts: Trans
     }
 }
 
-function runtestsSMT(istestbuild: boolean, usercode: PackageConfig[], entrypoint: {filename: string, namespace: string, names: string[]}[], verbose: Verbosity, category: Category[], dirs: string[], cbpre: (test: SymTest | SymTestInternalChkShouldFail) => void, cb: (result: "pass" | "passlimit" | "fail" | "error", test: SymTest | SymTestInternalChkShouldFail, start: Date, end: Date, smttime: number, info?: string) => void, cbdone: (err: string | null) => void) {
+function runtestsSMT(buildlevel: BuildLevel, istestbuild: boolean, usercode: PackageConfig[], entrypoint: {filename: string, namespace: string, names: string[]}[], verbose: Verbosity, category: Category[], dirs: string[], cbpre: (test: SymTest | SymTestInternalChkShouldFail) => void, cb: (result: "pass" | "passlimit" | "fail" | "error", test: SymTest | SymTestInternalChkShouldFail, start: Date, end: Date, smttime: number, info?: string) => void, cbdone: (err: string | null) => void) {
     if(!category.includes("sym")) {
         cbdone(null);
         return;
@@ -180,7 +180,7 @@ function runtestsSMT(istestbuild: boolean, usercode: PackageConfig[], entrypoint
     });
 
     for(let i = 0; i < filteredentry.length; ++i) {
-        const {masm, errors} = generateMASMForSMT(usercode, corecode as CodeFileInfo[], {filename: filteredentry[i].filename, names: filteredentry[i].names});
+        const {masm, errors} = generateMASMForSMT(usercode, corecode as CodeFileInfo[], buildlevel, {filename: filteredentry[i].filename, names: filteredentry[i].names});
         if(masm === undefined) {
             cbdone(errors.join("\n"));
             return;
@@ -396,7 +396,7 @@ function loadEntryPointInfo(files: string[], istestbuild: boolean): {filename: s
     }
 }
 
-function runtests(packageloads: {srcfiles: string[], macros: string[]}[], globalmacros: string[], entrypointfiles: string[], buildlevel: BuildLevel, istestbuild: boolean, topts: TranspilerOptions, verbose: Verbosity, category: Category[], dirs: string[]) {
+function runtests(packageloads: {macros: string[], files: string[]}[], globalmacros: string[], entrypointfiles: string[], buildlevel: BuildLevel, istestbuild: boolean, topts: TranspilerOptions, verbose: Verbosity, category: Category[], dirs: string[]) {
     let totalicpp = 0;
     let failedicpp: {test: ICPPTest, info: string}[] = [];
     let erroricpp: {test: ICPPTest, info: string}[] = [];
@@ -408,7 +408,7 @@ function runtests(packageloads: {srcfiles: string[], macros: string[]}[], global
 
     const start = new Date();
 
-    const usersrc = packageloads.map((psrc) => loadUserPackageSrc(psrc.srcfiles, psrc.macros, globalmacros));
+    const usersrc = packageloads.map((psrc) => loadUserPackageSrc(psrc.files.map((src) => src), psrc.macros, globalmacros));
     if(usersrc.includes(undefined)) {
         process.stdout.write(chalk.red("Failure loading user packages\n"));
         process.exit(1);
@@ -508,7 +508,7 @@ function runtests(packageloads: {srcfiles: string[], macros: string[]}[], global
             process.exit(1);
         }
         else {
-            runtestsSMT(istestbuild, usersrc as PackageConfig[], entrypoints, verbose, category, dirs, cbpre_smt, cb_smt, cbdone_smt);
+            runtestsSMT(buildlevel, istestbuild, usersrc as PackageConfig[], entrypoints, verbose, category, dirs, cbpre_smt, cb_smt, cbdone_smt);
         }
     };
 

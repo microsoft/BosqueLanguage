@@ -16,7 +16,7 @@ const testfiles = FS.readdirSync(testroot)
 
 //TODO: maybe we want to also read recursive in directories as well to make grouping some tests easier later (like collections)
 
-const pckg = {srcfiles: testfiles, macros: []};
+const pckg = {macros: [] as string[], files: testfiles};
 
 let opts: Category[] = [];
 let dirs: string[] = [];

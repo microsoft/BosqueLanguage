@@ -26,7 +26,10 @@
     "files": [
         "bin/*"
     ],
+    "bin": {
+        "bosque": "./impl/bin/cmd/bosque.js"
+    },
     "engines": {
-        "node": ">=10.0"
+        "node": ">=14.0"
     }
 }
