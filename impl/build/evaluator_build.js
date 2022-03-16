@@ -7,8 +7,6 @@ const fsx = require("fs-extra");
 const path = require("path");
 const proc = require('child_process');
 
-const chalk = require('chalk');
-
 const rootsrc = path.normalize(path.join(__dirname, "../", "src/tooling/checker/evaluator"));
 const apisrc = path.normalize(path.join(__dirname, "../", "src/tooling/api_parse"));
 const cppfiles = [rootsrc, apisrc].map((pp) => pp + "/*.cpp");
@@ -62,6 +60,6 @@ try {
     }
 }
 catch (ex) {
-    console.log(chalk.red(ex.toString()));
+    console.log(ex.toString());
     process.exit(1);
 }

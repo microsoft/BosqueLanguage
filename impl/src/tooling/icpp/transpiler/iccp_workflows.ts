@@ -16,7 +16,7 @@ import { ICPPEmitter } from "./icppdecls_emitter";
 import { CodeFileInfo } from "../../../ast/parser";
 
 import chalk from "chalk";
-import { BuildApplicationMode } from "../../../ast/assembly";
+import { BuildApplicationMode, BuildLevel } from "../../../ast/assembly";
 
 const bosque_dir: string = Path.normalize(Path.join(__dirname, "../../../../"));
 const exepath: string = Path.normalize(Path.join(bosque_dir, "/build/output/icpp" + (process.platform === "win32" ? ".exe" : "")));
@@ -58,11 +58,11 @@ function workflowLoadCoreSrc(): CodeFileInfo[] | undefined {
     }
 }
 
-function generateMASM(usercode: PackageConfig, entrypoint: {filename: string, names: string[]}): MIRAssembly {
+function generateMASM(usercode: PackageConfig, buildlevel: BuildLevel, entrypoint: {filename: string, names: string[]}): MIRAssembly {
     const corecode = workflowLoadCoreSrc() as CodeFileInfo[];
     const coreconfig = new PackageConfig(["EXEC_LIBS"], corecode);
 
-    const { masm, errors } = MIREmitter.generateMASM(BuildApplicationMode.Executable, [coreconfig, usercode], "debug", entrypoint);
+    const { masm, errors } = MIREmitter.generateMASM(BuildApplicationMode.Executable, [coreconfig, usercode], buildlevel, entrypoint);
     if (errors.length !== 0) {
         for (let i = 0; i < errors.length; ++i) {
             process.stdout.write(chalk.red(`Parse error -- ${errors[i]}\n`));
@@ -113,8 +113,8 @@ function runICPPFile(icppjson: {code: object, args: any[], main: string}, cb: (r
     }
 }
 
-function workflowEmitICPPFile(into: string, usercode: PackageConfig, istestbuild: boolean, topts: TranspilerOptions, entrypoint: {filename: string, names: string[], fkeys: MIRResolvedTypeKey[]}): boolean {
-    const massembly = generateMASM(usercode, {filename: entrypoint.filename, names: entrypoint.names});
+function workflowEmitICPPFile(into: string, usercode: PackageConfig, buildlevel: BuildLevel, istestbuild: boolean, topts: TranspilerOptions, entrypoint: {filename: string, names: string[], fkeys: MIRResolvedTypeKey[]}): boolean {
+    const massembly = generateMASM(usercode, buildlevel, {filename: entrypoint.filename, names: entrypoint.names});
     const icppasm = generateICPPAssembly(massembly, istestbuild, topts, entrypoint.fkeys);
             
     if (icppasm === undefined) {
@@ -125,8 +125,8 @@ function workflowEmitICPPFile(into: string, usercode: PackageConfig, istestbuild
     return emitICPPFile(icppjson, into);
 } 
 
-function workflowRunICPPFile(args: any[], usercode: PackageConfig, istestbuild: boolean, topts: TranspilerOptions, entrypoint: {filename: string, name: string, fkey: MIRResolvedTypeKey}, cb: (result: string | undefined) => void) {
-    const massembly = generateMASM(usercode, {filename: entrypoint.filename, names: [entrypoint.name]});
+function workflowRunICPPFile(args: any[], usercode: PackageConfig, buildlevel: BuildLevel, istestbuild: boolean, topts: TranspilerOptions, entrypoint: {filename: string, name: string, fkey: MIRResolvedTypeKey}, cb: (result: string | undefined) => void) {
+    const massembly = generateMASM(usercode, buildlevel, {filename: entrypoint.filename, names: [entrypoint.name]});
     const icppasm = generateICPPAssembly(massembly, istestbuild, topts, [entrypoint.fkey]);
             
     if (icppasm === undefined) {

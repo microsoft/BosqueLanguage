@@ -1,0 +1,62 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+function negate(arg: BigInt): BigInt {
+    return -arg;
+}
+
+function add(arg1: BigInt, arg2: BigInt): BigInt {
+    return arg1 + arg2;
+}
+
+function sub(arg1: BigInt, arg2: BigInt): BigInt {
+    return arg1 - arg2;
+}
+
+function mult(arg1: BigInt, arg2: BigInt): BigInt {
+    return arg1 * arg2;
+}
+
+function div(arg1: BigInt, arg2: BigInt): BigInt {
+    return arg1 / arg2;
+}
+
+function div_fix(arg1: BigInt, arg2: BigInt): Result<BigInt> {
+    if(arg2 == 0I) {
+        return err();
+    }
+    else {
+        return ok(arg1 / arg2);
+    }
+}
+
+function sign(arg: BigInt): Int {
+    if(arg < 0) {
+        return -1i;
+    }
+    else {
+        return 1i;
+    }
+}
+
+function abs(arg: BigInt): BigInt {
+    if(arg < 0) {
+        return -arg;
+    }
+    else {
+        return arg;
+    }
+}
+
+
+function main(op: CalcOp, arg1: BigInt, arg2: BigInt?): BigInt 
+    //requires op !== CalcOp::negate ==> arg2 !== none;
+{
+    switch (op) {
+        CalcOp::negate => return -arg1;
+        | CalcOp::add => return arg1 + arg2.as<BigInt>();
+        | CalcOp::sub => return arg1 - arg2.as<BigInt>();
+    }
+}
