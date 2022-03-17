@@ -229,7 +229,7 @@ function parseVersion(vv: any): Version | undefined {
         return undefined;
     }
 
-    if (!/^[0-9]{1-5}\.[0-9]{1-5}\.[0-9]{1-5}\.[0-9]{1-5}(-[a-zA-Z-0-9_]+)?$/.test(vv)) {
+    if (!/^[0-9]{1,5}\.[0-9]{1,5}\.[0-9]{1,5}\.[0-9]{1,5}(-[a-zA-Z-0-9_]+)?$/.test(vv)) {
         return undefined;
     }
 
@@ -326,10 +326,10 @@ function parseSourceInfo(si: any): SourceInfo | undefined {
         }
 
         if (pp.selection !== undefined && pp.filter === undefined) {
-            pp.filter = "bsq";
+            pp.filter = ".bsq";
         }
 
-        return pp.filter === "bsq" ? pp : undefined;
+        return pp.filter === ".bsq" ? pp : undefined;
     });
 
     if (!Array.isArray(si["entrypoints"])) {
@@ -342,10 +342,10 @@ function parseSourceInfo(si: any): SourceInfo | undefined {
         }
 
         if (pp.selection !== undefined && pp.filter === undefined) {
-            pp.filter = "bsqapp";
+            pp.filter = ".bsqapi";
         }
 
-        return pp.filter === "bsqapp" ? pp : undefined;
+        return (pp.filter === undefined || pp.filter === ".bsqapi") ? pp : undefined;
     });
 
     if (!Array.isArray(si["testfiles"])) {
@@ -358,10 +358,10 @@ function parseSourceInfo(si: any): SourceInfo | undefined {
         }
 
         if (pp.selection !== undefined && pp.filter === undefined) {
-            pp.filter = "bsqtest";
+            pp.filter = ".bsqtest";
         }
 
-        return pp.filter === "bsqtest" ? pp : undefined;
+        return (pp.filter === undefined || pp.filter === ".bsqtest") ? pp : undefined;
     });
 
     if (bsqsrc.includes(undefined) || entrypoints.includes(undefined) || testfiles.includes(undefined)) {

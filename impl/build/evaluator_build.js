@@ -7,14 +7,14 @@ const fsx = require("fs-extra");
 const path = require("path");
 const proc = require('child_process');
 
-const rootsrc = path.normalize(path.join(__dirname, "../", "src/tooling/checker/evaluator"));
-const apisrc = path.normalize(path.join(__dirname, "../", "src/tooling/api_parse"));
+const rootsrc = path.join(__dirname, "../", "src/tooling/checker/evaluator");
+const apisrc = path.join(__dirname, "../", "src/tooling/api_parse");
 const cppfiles = [rootsrc, apisrc].map((pp) => pp + "/*.cpp");
 
-const includebase = path.normalize(path.join(__dirname, "include"));
+const includebase = path.join(__dirname, "include");
 const includeheaders = [path.join(includebase, "headers/json"), path.join(includebase, "headers/z3")];
-const outexec = path.normalize(path.join(__dirname, "output"));
-const outobj = path.normalize(path.join(__dirname, "output", "obj"));
+const outexec = path.join(__dirname, "output");
+const outobj = path.join(__dirname, "output", "obj");
 
 let compiler = "";
 let ccflags = "";

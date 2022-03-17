@@ -3,6 +3,8 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
+namespace Main;
+
 chktest function sign_1(): Bool {
     return sign_impl(5I) == 1i;
 }
@@ -13,13 +15,4 @@ chktest function sign_2(): Bool {
 
 errtest function divok(x: BigInt, y: BigInt): Result<BigInt> {
     return div_fix_impl(x, y);
-}
-
-chktest function div_small(x: BigInt, y: BigInt): Bool 
-    requires y != 0I;
-{
-    let dval = div_fix_impl().result();
-    let dvalabs = abs_impl(dval);
-
-    return dvalabs < abs_impl(x);
 }

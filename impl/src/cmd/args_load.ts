@@ -17,8 +17,8 @@ function help(cmd: CmdTag | undefined) {
         process.stdout.write("Run Application:\n");
         process.stdout.write("bosque run [package_path.json] [--entrypoint fname] [--config cname]\n");
         process.stdout.write("bosque run [package_path.json] [--entrypoint fname] [--config cname] --args \"[...]\"\n");
-        process.stdout.write("bosque run entryfile.bsqapp [--entrypoint fname] --files ...\n");
-        process.stdout.write("bosque run entryfile.bsqapp [--entrypoint fname] --files ... --args \"[...]\"\n\n");
+        process.stdout.write("bosque run entryfile.bsqapi [--entrypoint fname] --files ...\n");
+        process.stdout.write("bosque run entryfile.bsqapi [--entrypoint fname] --files ... --args \"[...]\"\n\n");
     }
 
     if(cmd === "symrun" || cmd === undefined) {
@@ -49,7 +49,7 @@ function help(cmd: CmdTag | undefined) {
     if(cmd === "fuzz" || cmd === undefined) {
         process.stdout.write("Fuzz Application:\n");
         process.stdout.write("bosque fuzz [package_path.json] [--config cname]\n");
-        process.stdout.write("bosque fuzz testfile.bsqapp ... --files ...\n\n");
+        process.stdout.write("bosque fuzz testfile.bsqapi ... --files ...\n\n");
     }
 }
 
@@ -93,7 +93,7 @@ function generateFuzzConfigDefault(): ConfigFuzz {
 }
 
 function tryLoadPackage(pckgpath: string): Package | undefined {
-    if(path.extname(pckgpath) !== "json") {
+    if(path.extname(pckgpath) !== ".json") {
         return undefined;
     }
 
@@ -131,7 +131,7 @@ function tryLoadPackage(pckgpath: string): Package | undefined {
 
 function checkEntrypointMatch(contents: string, ns: string, fname: string): boolean {
     const okns = contents.includes(`namespace ${ns};`);
-    const okfname = contents.includes(`entrypoint function ${fname};`);
+    const okfname = contents.includes(`entrypoint function ${fname}(`);
 
     return okns && okfname;
 }
@@ -155,7 +155,7 @@ function extractEntryPointKnownFile(args: string[], workingdir: string, appfile:
 
     return {
         filename: path.resolve(workingdir, appfile),
-        name: epname,
+        name: epname.slice(ccidx + 2),
         fkey: "__i__" + epname
     }
 }
@@ -169,7 +169,7 @@ function extractEntryPoint(args: string[], workingdir: string, appfiles: URIPath
             return undefined;
         }
 
-        epname = args[epidx] + 1;
+        epname = args[epidx + 1];
     }
 
     const ccidx = epname.indexOf("::");
@@ -190,7 +190,7 @@ function extractEntryPoint(args: string[], workingdir: string, appfiles: URIPath
                     if(checkEntrypointMatch(contents, ns, fname)) {
                         return {
                             filename: fullpath,
-                            name: epname,
+                            name: epname.slice(ccidx + 2),
                             fkey: "__i__" + epname
                         };
                     }
@@ -202,12 +202,12 @@ function extractEntryPoint(args: string[], workingdir: string, appfiles: URIPath
                         const fullsubpath = path.resolve(fullpath, subfiles[j]);
                         const fext = path.extname(fullsubpath);
 
-                        if ((fext === appfiles[i].filter || appfiles[i].filter === undefined) && fext === "bsqapp") {
+                        if ((fext === appfiles[i].filter || appfiles[i].filter === undefined) && fext === ".bsqapi") {
                             const contents = fs.readFileSync(fullsubpath).toString();
                             if (checkEntrypointMatch(contents, ns, fname)) {
                                 return {
                                     filename: fullsubpath,
-                                    name: epname,
+                                    name: epname.slice(ccidx + 2),
                                     fkey: "__i__" + epname
                                 };
                             }
@@ -243,7 +243,7 @@ function extractArgs(args: string[]): any[] | undefined {
 
     let rargs: any = undefined;
     try {
-        rargs = JSON.parse(args[argsidx] + 1);
+        rargs = JSON.parse(args[argsidx + 1]);
         if(!Array.isArray(rargs)) {
             return undefined;
         }
@@ -279,7 +279,7 @@ function extractFiles(workingdir: string, args: string[]): URIPathGlob[] | undef
     let ii = fidx + 1;
     let files: string[] = [];
     while(ii < args.length && !args[ii].startsWith("--")) {
-        if(path.extname(args[ii]) !== "bsq") {
+        if(path.extname(args[ii]) !== ".bsq") {
             return undefined;
         }
 
@@ -428,15 +428,15 @@ function loadUserSrc(workingdir: string, files: URIPathGlob[]): string[] | undef
                         const fullsubpath = path.resolve(fullpath, subfiles[j]);
                         const fext = path.extname(fullsubpath);
 
-                        if((fext === files[i].filter || files[i].filter === undefined) && fext === "bsq") {
+                        if((fext === files[i].filter || files[i].filter === undefined) && fext === ".bsq") {
                             code.push(fullsubpath);
                         }
 
-                        if((fext === files[i].filter || files[i].filter === undefined) && fext === "bsqapp") {
+                        if((fext === files[i].filter || files[i].filter === undefined) && fext === ".bsqapi") {
                             code.push(fullsubpath);
                         }
 
-                        if((fext === files[i].filter || files[i].filter === undefined) && fext === "bsqtest") {
+                        if((fext === files[i].filter || files[i].filter === undefined) && fext === ".bsqtest") {
                             code.push(fullsubpath);
                         }
                     }

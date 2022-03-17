@@ -33,6 +33,6 @@ entrypoint function sign(arg: BigInt): Int {
     return sign_impl(arg);
 }
 
-entrypoint function abs_impl(arg: BigInt): BigInt {
+entrypoint function abs(arg: BigInt): BigInt {
     return abs_impl(arg);
 }

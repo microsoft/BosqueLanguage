@@ -18,9 +18,9 @@ import { VerifierOptions } from "./smt_exp";
 import { CodeFileInfo } from "../../ast/parser";
 import { BuildApplicationMode, BuildLevel } from "../../ast/assembly";
 
-const bosque_dir: string = Path.normalize(Path.join(__dirname, "../../../"));
+const bosque_dir: string = Path.join(__dirname, "../../../");
 const smtruntime_path = Path.join(bosque_dir, "bin/tooling/checker/runtime/smtruntime.smt2");
-const exepath = Path.normalize(Path.join(bosque_dir, "/build/output/chk" + (process.platform === "win32" ? ".exe" : "")));
+const exepath = Path.join(bosque_dir, "/build/output/chk" + (process.platform === "win32" ? ".exe" : ""));
 
 const smtruntime = FS.readFileSync(smtruntime_path).toString();
 
@@ -43,7 +43,7 @@ function workflowLoadUserSrc(files: string[]): CodeFileInfo[] | undefined {
 
         for (let i = 0; i < files.length; ++i) {
             const realpath = Path.resolve(files[i]);
-            code.push({ srcpath: realpath, filename: files[i], contents: FS.readFileSync(realpath).toString() });
+            code.push({ srcpath: realpath, filename: Path.basename(files[i]), contents: FS.readFileSync(realpath).toString() });
         }
 
         return code;

@@ -5,14 +5,14 @@
     "description": "A simple calculator",
     "license": "MIT",
     "src": {
-        "bosquesrc": [
+        "bsqsource": [
             "./src/*"
         ],
         "entrypoints": [
-            "./calc_app.bsqapp"
+            "./calc_app.bsqapi"
         ],
         "testfiles": [
-            "./calc_app.bsqapp"
+            "./calc_test.bsqtest"
         ]
     }
 }

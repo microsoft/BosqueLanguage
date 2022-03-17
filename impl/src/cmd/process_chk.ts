@@ -13,7 +13,7 @@ import { ConfigAppTest, ConfigFuzz, ConfigTest, Package, parseURIPathGlob } from
 import { runtests } from "../test/runner/suite_runner";
 
 function processTestAction(args: string[]) {
-    if(path.extname(args[0]) === "bsqtest") {
+    if(path.extname(args[0]) === ".bsqtest") {
         const entryfile = args[0];
 
         const files = extractFiles(process.cwd(), args);
@@ -55,12 +55,12 @@ function processTestAction(args: string[]) {
     else {
         let workingdir = process.cwd();
         let pckg: Package | undefined = undefined;
-        if(path.extname(args[0]) === "json") {
-            workingdir = path.dirname(path.normalize(args[0]));
-            pckg = tryLoadPackage(args[0]);
+        if(path.extname(args[0]) === ".json") {
+            workingdir = path.dirname(path.resolve(args[0]));
+            pckg = tryLoadPackage(path.resolve(args[0]));
         }
         else {
-            const implicitpckg = path.join(workingdir, "package.json");
+            const implicitpckg = path.resolve(workingdir, "package.json");
             if(fs.existsSync(implicitpckg)) {
                 pckg = tryLoadPackage(implicitpckg);
             }
@@ -73,7 +73,7 @@ function processTestAction(args: string[]) {
             process.exit(1);
         }
 
-        const cfg = extractConfig<ConfigTest>(args, pckg, workingdir, "build");
+        const cfg = extractConfig<ConfigTest>(args, pckg, workingdir, "test");
         if(cfg === undefined) {
             process.stderr.write(chalk.red("Could not parse 'config' option\n"));
 
@@ -101,7 +101,7 @@ function processTestAction(args: string[]) {
 }
 
 function processAppTestAction(args: string[]) {
-    if(path.extname(args[0]) === "bsqapp") {
+    if(path.extname(args[0]) === ".bsqapi") {
         const entryfile = args[0];
 
         const files = extractFiles(process.cwd(), args);
@@ -122,7 +122,7 @@ function processAppTestAction(args: string[]) {
 
         const entryglob = parseURIPathGlob(path.resolve(process.cwd(), entryfile));
         if(entryglob === undefined) {
-            process.stderr.write(chalk.red("Could not parse 'bsqapp' file\n"));
+            process.stderr.write(chalk.red("Could not parse 'bsqapi' file\n"));
 
             help("run");
             process.exit(1);
@@ -136,19 +136,19 @@ function processAppTestAction(args: string[]) {
 
         const userpackage = [{macros: [] as string[], files: srcfiles}];
 
-        //bosque apptest testfile.bsqapp ... --files ... [--flavors (sym | icpp | err | chk)*]
+        //bosque apptest testfile.bsqapi ... --files ... [--flavors (sym | icpp | err | chk)*]
 
         runtests(userpackage, [], [path.resolve(process.cwd(), entryfile)], "test", true, {}, "extra", flavors, ["*"]);
     }
     else {
         let workingdir = process.cwd();
         let pckg: Package | undefined = undefined;
-        if(path.extname(args[0]) === "json") {
-            workingdir = path.dirname(path.normalize(args[0]));
-            pckg = tryLoadPackage(args[0]);
+        if(path.extname(args[0]) === ".json") {
+            workingdir = path.dirname(path.resolve(args[0]));
+            pckg = tryLoadPackage(path.resolve(args[0]));
         }
         else {
-            const implicitpckg = path.join(workingdir, "package.json");
+            const implicitpckg = path.resolve(workingdir, "package.json");
             if(fs.existsSync(implicitpckg)) {
                 pckg = tryLoadPackage(implicitpckg);
             }
@@ -161,7 +161,7 @@ function processAppTestAction(args: string[]) {
             process.exit(1);
         }
 
-        const cfg = extractConfig<ConfigAppTest>(args, pckg, workingdir, "build");
+        const cfg = extractConfig<ConfigAppTest>(args, pckg, workingdir, "apptest");
         if(cfg === undefined) {
             process.stderr.write(chalk.red("Could not parse 'config' option\n"));
 
@@ -189,7 +189,7 @@ function processAppTestAction(args: string[]) {
 }
 
 function processFuzzAction(args: string[]) {
-    if(path.extname(args[0]) === "bsqapp") {
+    if(path.extname(args[0]) === ".bsqapi") {
         const entryfile = args[0];
 
         const files = extractFiles(process.cwd(), args);
@@ -208,7 +208,7 @@ function processFuzzAction(args: string[]) {
             process.exit(1);
         }
 
-        //bosque fuzz testfile.bsqapp ... --files ...
+        //bosque fuzz testfile.bsqapi ... --files ...
 
         process.stderr.write(chalk.red("Fuzz running is not supported yet.\n"));
         process.exit(1);
@@ -216,12 +216,12 @@ function processFuzzAction(args: string[]) {
     else {
         let workingdir = process.cwd();
         let pckg: Package | undefined = undefined;
-        if(path.extname(args[0]) === "json") {
-            workingdir = path.dirname(path.normalize(args[0]));
-            pckg = tryLoadPackage(args[0]);
+        if(path.extname(args[0]) === ".json") {
+            workingdir = path.dirname(path.resolve(args[0]));
+            pckg = tryLoadPackage(path.resolve(args[0]));
         }
         else {
-            const implicitpckg = path.join(workingdir, "package.json");
+            const implicitpckg = path.resolve(workingdir, "package.json");
             if(fs.existsSync(implicitpckg)) {
                 pckg = tryLoadPackage(implicitpckg);
             }
@@ -234,7 +234,7 @@ function processFuzzAction(args: string[]) {
             process.exit(1);
         }
 
-        const cfg = extractConfig<ConfigFuzz>(args, pckg, workingdir, "build");
+        const cfg = extractConfig<ConfigFuzz>(args, pckg, workingdir, "fuzz");
         if(cfg === undefined) {
             process.stderr.write(chalk.red("Could not parse 'config' option\n"));
 
