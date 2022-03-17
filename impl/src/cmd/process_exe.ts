@@ -470,7 +470,7 @@ function processBuildAction(args: string[]) {
         const userpackage = new PackageConfig([...cfg.macros, ...cfg.globalmacros], usersrcinfo);
 
         try {
-            fsextra.emptyDirSync(output.path);
+            fsextra.ensureDirSync(output.path);
         }
         catch(ex) {
             process.stderr.write(chalk.red("Could not create 'output' directory\n"));
@@ -545,7 +545,7 @@ function processBuildAction(args: string[]) {
         const userpackage = new PackageConfig([...cfg.macros, ...cfg.globalmacros], usersrcinfo);
 
         try {
-            fsextra.emptyDirSync(output.path);
+            fsextra.ensureDirSync(output.path);
         }
         catch(ex) {
             process.stderr.write(chalk.red("Could not create 'output' directory\n"));
