@@ -1848,7 +1848,15 @@ class Parser {
         else if (tk === "ok" || tk === "err" || tk === "something") {
             this.consumeToken();
             this.ensureAndConsumeToken("(");
-            const arg = this.parseExpression();
+            let arg = new LiteralNoneExpression(this.getCurrentSrcInfo());
+            if(tk === "ok" || tk === "something") {
+                arg = this.parseExpression();
+            }
+            else {
+                if(!this.testToken(")")) {
+                    arg = this.parseExpression();
+                }
+            }
             this.ensureAndConsumeToken(")");
 
             return new SpecialConstructorExpression(sinfo, tk, arg);

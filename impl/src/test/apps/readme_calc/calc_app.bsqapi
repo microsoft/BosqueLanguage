@@ -1,0 +1,38 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+namespace Main;
+
+entrypoint function negate(arg: BigInt): BigInt {
+    return -arg;
+}
+
+entrypoint function add(arg1: BigInt, arg2: BigInt): BigInt {
+    return arg1 + arg2;
+}
+
+entrypoint function sub(arg1: BigInt, arg2: BigInt): BigInt {
+    return arg1 - arg2;
+}
+
+entrypoint function mult(arg1: BigInt, arg2: BigInt): BigInt {
+    return arg1 * arg2;
+}
+
+entrypoint function div(arg1: BigInt, arg2: BigInt): BigInt {
+    return arg1 / arg2;
+}
+
+entrypoint function div_fix(arg1: BigInt, arg2: BigInt): Result<BigInt> {
+    return div_fix_impl(arg1, arg2);
+}
+
+entrypoint function sign(arg: BigInt): Int {
+    return sign_impl(arg);
+}
+
+entrypoint function abs(arg: BigInt): BigInt {
+    return abs_impl(arg);
+}

@@ -120,6 +120,10 @@ function parseURIScheme(str: string): [string | undefined, string] {
         if (/^[a-zA-Z]:\\/.test(str) || str.startsWith(".\\") || str.startsWith("..\\")) {
             return ["file", str];
         }
+
+        if (str.startsWith("./") || str.startsWith("../")) {
+            return ["file", str];
+        }
     }
 
     if ((process.platform === "linux" || process.platform === "darwin")) {
@@ -229,7 +233,7 @@ function parseVersion(vv: any): Version | undefined {
         return undefined;
     }
 
-    if (!/^[0-9]{1-5}\.[0-9]{1-5}\.[0-9]{1-5}\.[0-9]{1-5}(-[a-zA-Z-0-9_]+)?$/.test(vv)) {
+    if (!/^[0-9]{1,5}\.[0-9]{1,5}\.[0-9]{1,5}\.[0-9]{1,5}(-[a-zA-Z-0-9_]+)?$/.test(vv)) {
         return undefined;
     }
 
@@ -326,10 +330,10 @@ function parseSourceInfo(si: any): SourceInfo | undefined {
         }
 
         if (pp.selection !== undefined && pp.filter === undefined) {
-            pp.filter = "bsq";
+            pp.filter = ".bsq";
         }
 
-        return pp.filter === "bsq" ? pp : undefined;
+        return pp.filter === ".bsq" ? pp : undefined;
     });
 
     if (!Array.isArray(si["entrypoints"])) {
@@ -342,10 +346,10 @@ function parseSourceInfo(si: any): SourceInfo | undefined {
         }
 
         if (pp.selection !== undefined && pp.filter === undefined) {
-            pp.filter = "bsqapp";
+            pp.filter = ".bsqapi";
         }
 
-        return pp.filter === "bsqapp" ? pp : undefined;
+        return (pp.filter === undefined || pp.filter === ".bsqapi") ? pp : undefined;
     });
 
     if (!Array.isArray(si["testfiles"])) {
@@ -358,10 +362,10 @@ function parseSourceInfo(si: any): SourceInfo | undefined {
         }
 
         if (pp.selection !== undefined && pp.filter === undefined) {
-            pp.filter = "bsqtest";
+            pp.filter = ".bsqtest";
         }
 
-        return pp.filter === "bsqtest" ? pp : undefined;
+        return (pp.filter === undefined || pp.filter === ".bsqtest") ? pp : undefined;
     });
 
     if (bsqsrc.includes(undefined) || entrypoints.includes(undefined) || testfiles.includes(undefined)) {
@@ -496,56 +500,77 @@ function parseConfig<T>(cf: any, tag: "run" | "build" | "test" | "apptest" | "fu
         return undefined;
     }
 
-    if (!Array.isArray(cf["macros"])) {
-        return undefined;
-    }
-    const macros = cf["macros"].map((mm) => {
-        if (typeof (mm) !== "string" || !/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(mm)) {
+    let macros: string[] = [];
+    if (cf["macros"] !== undefined) {
+        if (!Array.isArray(cf["macros"])) {
             return undefined;
         }
-        return mm;
-    });
+        const macrosmap = cf["macros"].map((mm) => {
+            if (typeof (mm) !== "string" || !/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(mm)) {
+                return undefined;
+            }
+            return mm;
+        });
 
-    if (!Array.isArray(cf["globalmacros"])) {
-        return undefined;
-    }
-    const globalmacros = cf["globalmacros"].map((mm) => {
-        if (typeof (mm) !== "string" || !/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(mm)) {
+        if(macrosmap.includes(undefined)) {
             return undefined;
         }
-        return mm;
-    });
-
-    if (macros.includes(undefined) || globalmacros.includes(undefined)) {
-        return undefined;
+        macros = macrosmap as string[];
     }
 
-    if (cf["buildlevel"] !== "debug" && cf["buildlevel"] !== "test" && cf["buildlevel"] !== "release") {
-        return undefined
+    let globalmacros: string[] = [];
+    if (cf["globalmacros"] !== undefined) {
+        if (!Array.isArray(cf["globalmacros"])) {
+            return undefined;
+        }
+        const globalmacrosmap = cf["globalmacros"].map((mm) => {
+            if (typeof (mm) !== "string" || !/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(mm)) {
+                return undefined;
+            }
+            return mm;
+        });
+
+        if (globalmacrosmap.includes(undefined)) {
+            return undefined;
+        }
+        globalmacros = globalmacrosmap as string[];
     }
 
+    let buildlevel: "debug" | "test" | "release" = "debug";
     let pc: any = undefined;
     if (tag === "run") {
+        buildlevel = "release";
         pc = parseConfigRun(cf);
     }
     else if (tag === "build") {
+        buildlevel = "release";
         pc = parseConfigBuild(cf);
     }
     else if (tag === "test") {
+        buildlevel = "test";
         pc = parseConfigTest(cf);
     }
     else if (tag === "apptest") {
+        buildlevel = "test";
         pc = parseConfigAppTest(cf);
     }
     else {
+        buildlevel = "test";
         pc = parseConfigFuzz(cf);
     }
+
+    if(cf["buildlevel"] !== undefined) {    
+        if (cf["buildlevel"] !== "debug" && cf["buildlevel"] !== "test" && cf["buildlevel"] !== "release") {
+            return undefined
+        }
+        buildlevel = cf["buildlevel"] as "debug" | "test" | "release";
+    } 
 
     return {
         name: cf["name"] as string,
         macros: macros as string[],
         globalmacros: globalmacros as string[],
-        buildlevel: cf["buildlevel"] as "debug" | "test" | "release",
+        buildlevel: buildlevel,
         params: pc as T
     };
 }

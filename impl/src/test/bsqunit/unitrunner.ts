@@ -8,7 +8,7 @@ import * as Path from "path";
 
 import { Category, runtests } from "../runner/suite_runner";
 
-const testroot = Path.normalize(Path.join(__dirname, "tests"));
+const testroot = Path.join(__dirname, "tests");
 
 const testfiles = FS.readdirSync(testroot)
     .filter((ff) => ff.endsWith(".bsqtest"))

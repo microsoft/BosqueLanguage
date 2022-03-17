@@ -1,0 +1,26 @@
+{
+    "name": "calc",
+    "version": "0.0.0.0",
+    "format": "service",
+    "description": "A simple calculator",
+    "license": "MIT",
+    "configs": {
+        "test": [
+            {
+                "name": "Full",
+                "flavors": ["sym", "icpp" , "err" , "chk"]
+            }
+        ]
+    },
+    "src": {
+        "bsqsource": [
+            "./src/*"
+        ],
+        "entrypoints": [
+            "./calc_app.bsqapi"
+        ],
+        "testfiles": [
+            "./calc_test.bsqtest"
+        ]
+    }
+}

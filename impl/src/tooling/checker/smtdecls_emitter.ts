@@ -1107,7 +1107,7 @@ class SMTEmitter {
     }
 
     static generateSMTAssemblyAllErrors(assembly: MIRAssembly, istestbuild: boolean, vopts: VerifierOptions, entrypoint: MIRInvokeKey): { file: string, line: number, pos: number, msg: string }[] {
-        const callsafety = markSafeCalls(["__i__" + entrypoint], assembly, istestbuild, undefined);
+        const callsafety = markSafeCalls([entrypoint], assembly, istestbuild, undefined);
 
         const temitter = new SMTTypeEmitter(assembly, vopts);
         assembly.typeMap.forEach((tt) => {
