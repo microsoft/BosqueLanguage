@@ -7,8 +7,8 @@
     "configs": {
         "test": [
             {
-                "name": "SymErr",
-                "flavors": ["sym", "err"]
+                "name": "Full",
+                "flavors": ["sym", "icpp" , "err" , "chk"]
             }
         ]
     },

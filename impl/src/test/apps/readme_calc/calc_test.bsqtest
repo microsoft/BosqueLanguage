@@ -13,10 +13,6 @@ chktest function sign_2(): Bool {
     return abs_impl(-3I) == 3I;
 }
 
-errtest function divfail(x: BigInt, y: BigInt): BigInt {
-    return x / y;
-}
-
 errtest function divok(x: BigInt, y: BigInt): Result<BigInt> {
     return div_fix_impl(x, y);
 }
