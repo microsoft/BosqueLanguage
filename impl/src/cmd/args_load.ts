@@ -305,13 +305,13 @@ function extractFiles(workingdir: string, args: string[]): URIPathGlob[] | undef
 }
 
 function extractConfig<T>(args: string[], pckg: Package, workingdir: string, cmd: CmdTag): Config<T> | undefined {
-    const cfgidx = args.indexOf("--confg");
+    const cfgidx = args.indexOf("--config");
     if(cfgidx !== -1) {
         if(cfgidx === args.length - 1) {
             return undefined;
         }
 
-        const cfgname = args[cfgidx];
+        const cfgname = args[cfgidx + 1];
         if(cmd === "run") {
             return (pckg.configs.run.find((cfg) => cfg.name === cfgname) as any) as Config<T>;
         }

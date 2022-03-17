@@ -4,6 +4,14 @@
     "format": "service",
     "description": "A simple calculator",
     "license": "MIT",
+    "configs": {
+        "test": [
+            {
+                "name": "SymErr",
+                "flavors": ["sym", "err"]
+            }
+        ]
+    },
     "src": {
         "bsqsource": [
             "./src/*"
