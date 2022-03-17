@@ -15,19 +15,24 @@ function div_fix_impl(arg1: BigInt, arg2: BigInt): Result<BigInt> {
 }
 
 function sign_impl(arg: BigInt): Int {
+    var res: Int;
+
     if(arg < 0I) {
-        return -1i;
+        res = -1i;
     }
     else {
-        return 1i;
+        res = 1i;
     }
+
+    return res;
 }
 
 function abs_impl(arg: BigInt): BigInt {
+    var res = arg;
+
     if(arg < 0I) {
-        return -arg;
+        res = -arg;
     }
-    else {
-        return arg;
-    }
+   
+    return res;
 }
