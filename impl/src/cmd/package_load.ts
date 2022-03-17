@@ -120,6 +120,10 @@ function parseURIScheme(str: string): [string | undefined, string] {
         if (/^[a-zA-Z]:\\/.test(str) || str.startsWith(".\\") || str.startsWith("..\\")) {
             return ["file", str];
         }
+
+        if (str.startsWith("./") || str.startsWith("../")) {
+            return ["file", str];
+        }
     }
 
     if ((process.platform === "linux" || process.platform === "darwin")) {

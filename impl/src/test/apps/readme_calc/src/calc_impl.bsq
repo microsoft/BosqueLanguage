@@ -15,7 +15,7 @@ function div_fix_impl(arg1: BigInt, arg2: BigInt): Result<BigInt> {
 }
 
 function sign_impl(arg: BigInt): Int {
-    if(arg < 0) {
+    if(arg < 0I) {
         return -1i;
     }
     else {
@@ -24,7 +24,7 @@ function sign_impl(arg: BigInt): Int {
 }
 
 function abs_impl(arg: BigInt): BigInt {
-    if(arg < 0) {
+    if(arg < 0I) {
         return -arg;
     }
     else {
