@@ -25,13 +25,13 @@ import chalk from "chalk";
 type Verbosity = "std" | "extra" | "max";
 type Category = "sym" | "icpp" | "err" | "chk" | "fuzz" | "symexec";
 
-const bosque_dir: string = Path.normalize(Path.join(__dirname, "../../../"));
+const bosque_dir: string = Path.join(__dirname, "../../../");
 
-const icpppath: string = Path.normalize(Path.join(bosque_dir, "/build/output/icpp" + (process.platform === "win32" ? ".exe" : "")));
+const icpppath: string = Path.join(bosque_dir, "/build/output/icpp" + (process.platform === "win32" ? ".exe" : ""));
 
 const smtruntime_path = Path.join(bosque_dir, "bin/tooling/checker/runtime/smtruntime.smt2");
 const smtruntime = FS.readFileSync(smtruntime_path).toString();
-const smtpath = Path.normalize(Path.join(bosque_dir, "/build/output/chk" + (process.platform === "win32" ? ".exe" : "")));
+const smtpath = Path.join(bosque_dir, "/build/output/chk" + (process.platform === "win32" ? ".exe" : ""));
 
 function workflowLoadCoreSrc(): CodeFileInfo[] | undefined {
     try {
@@ -343,7 +343,7 @@ function loadUserPackageSrc(files: string[], macrodefs: string[], globalmacros: 
 
         for (let i = 0; i < files.length; ++i) {
             const realpath = Path.resolve(files[i]);
-            code.push({ srcpath: realpath, filename: files[i], contents: FS.readFileSync(realpath).toString() });
+            code.push({ srcpath: realpath, filename: Path.basename(files[i]), contents: FS.readFileSync(realpath).toString() });
         }
 
         return new PackageConfig([...macrodefs, ...globalmacros], code);

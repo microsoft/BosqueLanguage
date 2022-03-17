@@ -17,7 +17,7 @@ import { workflowEmitICPPFile, workflowRunICPPFile } from "../tooling/icpp/trans
 import { generateStandardVOpts, workflowEmitToFile, workflowEvaluate } from "../tooling/checker/smt_workflows";
 
 function processRunAction(args: string[]) {
-    if(path.extname(args[0]) === "bsqapp") {
+    if(path.extname(args[0]) === ".bsqapi") {
         const entryfile = args[0];
 
         const entrypoint = extractEntryPointKnownFile(args, process.cwd(), entryfile);
@@ -114,12 +114,12 @@ function processRunAction(args: string[]) {
     else {
         let workingdir = process.cwd();
         let pckg: Package | undefined = undefined;
-        if(path.extname(args[0]) === "json") {
-            workingdir = path.dirname(path.normalize(args[0]));
-            pckg = tryLoadPackage(args[0]);
+        if(path.extname(args[0]) === ".json") {
+            workingdir = path.dirname(path.resolve(args[0]));
+            pckg = tryLoadPackage(path.resolve(args[0]));
         }
         else {
-            const implicitpckg = path.join(workingdir, "package.json");
+            const implicitpckg = path.resolve(workingdir, "package.json");
             if(fs.existsSync(implicitpckg)) {
                 pckg = tryLoadPackage(implicitpckg);
             }
@@ -223,12 +223,12 @@ function processRunSymbolicAction(args: string[]) {
 
     let workingdir = process.cwd();
     let pckg: Package | undefined = undefined;
-    if (path.extname(args[0]) === "json") {
-        workingdir = path.dirname(path.normalize(args[0]));
-        pckg = tryLoadPackage(args[0]);
+    if (path.extname(args[0]) === ".json") {
+        workingdir = path.dirname(path.resolve(args[0]));
+        pckg = tryLoadPackage(path.resolve(args[0]));
     }
     else {
-        const implicitpckg = path.join(workingdir, "package.json");
+        const implicitpckg = path.resolve(workingdir, "package.json");
         if (fs.existsSync(implicitpckg)) {
             pckg = tryLoadPackage(implicitpckg);
         }
@@ -356,12 +356,12 @@ function processBuildAction(args: string[]) {
     if(args[0] === "node") {
         let workingdir = process.cwd();
         let pckg: Package | undefined = undefined;
-        if(path.extname(args[0]) === "json") {
-            workingdir = path.dirname(path.normalize(args[0]));
-            pckg = tryLoadPackage(args[0]);
+        if(path.extname(args[0]) === ".json") {
+            workingdir = path.dirname(path.resolve(args[0]));
+            pckg = tryLoadPackage(path.resolve(args[0]));
         }
         else {
-            const implicitpckg = path.join(workingdir, "package.json");
+            const implicitpckg = path.resolve(workingdir, "package.json");
             if(fs.existsSync(implicitpckg)) {
                 pckg = tryLoadPackage(implicitpckg);
             }
@@ -416,12 +416,12 @@ function processBuildAction(args: string[]) {
 
         let workingdir = process.cwd();
         let pckg: Package | undefined = undefined;
-        if(path.extname(args[0]) === "json") {
-            workingdir = path.dirname(path.normalize(args[0]));
-            pckg = tryLoadPackage(args[0]);
+        if(path.extname(args[0]) === ".json") {
+            workingdir = path.dirname(path.resolve(args[0]));
+            pckg = tryLoadPackage(path.resolve(args[0]));
         }
         else {
-            const implicitpckg = path.join(workingdir, "package.json");
+            const implicitpckg = path.resolve(workingdir, "package.json");
             if(fs.existsSync(implicitpckg)) {
                 pckg = tryLoadPackage(implicitpckg);
             }
@@ -470,7 +470,7 @@ function processBuildAction(args: string[]) {
         const userpackage = new PackageConfig([...cfg.macros, ...cfg.globalmacros], usersrcinfo);
 
         try {
-            fsextra.emptyDirSync(output.path);
+            fsextra.ensureDirSync(output.path);
         }
         catch(ex) {
             process.stderr.write(chalk.red("Could not create 'output' directory\n"));
@@ -490,12 +490,12 @@ function processBuildAction(args: string[]) {
     else if(args[0] === "bytecode") {
         let workingdir = process.cwd();
         let pckg: Package | undefined = undefined;
-        if(path.extname(args[0]) === "json") {
-            workingdir = path.dirname(path.normalize(args[0]));
-            pckg = tryLoadPackage(args[0]);
+        if(path.extname(args[0]) === ".json") {
+            workingdir = path.dirname(path.resolve(args[0]));
+            pckg = tryLoadPackage(path.resolve(args[0]));
         }
         else {
-            const implicitpckg = path.join(workingdir, "package.json");
+            const implicitpckg = path.resolve(workingdir, "package.json");
             if(fs.existsSync(implicitpckg)) {
                 pckg = tryLoadPackage(implicitpckg);
             }
@@ -545,7 +545,7 @@ function processBuildAction(args: string[]) {
         const userpackage = new PackageConfig([...cfg.macros, ...cfg.globalmacros], usersrcinfo);
 
         try {
-            fsextra.emptyDirSync(output.path);
+            fsextra.ensureDirSync(output.path);
         }
         catch(ex) {
             process.stderr.write(chalk.red("Could not create 'output' directory\n"));

@@ -6,12 +6,12 @@
 const path = require("path");
 const fsx = require("fs-extra");
 
-const rootsrc = path.normalize(path.join(__dirname, "../", "src"));
-const rootbin = path.normalize(path.join(__dirname, "../", "bin"));
+const rootsrc = path.join(__dirname, "../", "src");
+const rootbin = path.join(__dirname, "../", "bin");
 
 function copyResourceDir(dir) {
-    const srcpath = path.normalize(path.join(rootsrc, dir));
-    const dstpath = path.normalize(path.join(rootbin, dir));
+    const srcpath = path.join(rootsrc, dir);
+    const dstpath = path.join(rootbin, dir);
 
     process.stdout.write(`Copying ${srcpath} to ${dstpath}\n`);
     fsx.ensureDirSync(dstpath);

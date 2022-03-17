@@ -65,7 +65,7 @@ json workflowCheckError(std::string smt2decl, const APIModule* apimodule, const 
         return {
             {"status", "witness"},
             {"time", delta_ms},
-            {"input", argv}
+            {"witness", argv}
         };
     }
 }
@@ -127,7 +127,7 @@ json workflowTestPass(std::string smt2decl, const APIModule* apimodule, const In
         return {
             {"status", "witness"},
             {"time", delta_ms},
-            {"input", argv}
+            {"witness", argv}
         };
     }
 }

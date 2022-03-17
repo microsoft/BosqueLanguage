@@ -1,0 +1,33 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+namespace Main;
+
+function div_fix_impl(arg1: BigInt, arg2: BigInt): Result<BigInt> {
+    if(arg2 == 0I) {
+        return err();
+    }
+    else {
+        return ok(arg1 / arg2);
+    }
+}
+
+function sign_impl(arg: BigInt): Int {
+    if(arg < 0I) {
+        return -1i;
+    }
+    else {
+        return 1i;
+    }
+}
+
+function abs_impl(arg: BigInt): BigInt {
+    if(arg < 0I) {
+        return -arg;
+    }
+    else {
+        return arg;
+    }
+}

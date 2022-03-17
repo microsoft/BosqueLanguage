@@ -1064,21 +1064,23 @@ class Assembly {
 
             const fconcept = this.tryGetConceptTypeForFullyResolvedName(ttname);
             if (fconcept !== undefined) {
-                if (fconcept.terms.length !== aliasResolvedType.terms.length) {
+                const updatedbinds = this.resolveTemplateBinds(fconcept.terms, aliasResolvedType.terms, aliasResolvedBinds);
+                if(updatedbinds === undefined) {
                     return ResolvedType.createEmpty();
                 }
 
-                const cta = this.createConceptTypeAtom(fconcept, aliasResolvedType, aliasResolvedBinds);
+                const cta = this.createConceptTypeAtom(fconcept, aliasResolvedType, updatedbinds);
                 rtype = cta !== undefined ? ResolvedType.createSingle(cta) : ResolvedType.createEmpty();
             }
 
             const fobject = this.tryGetObjectTypeForFullyResolvedName(ttname);
             if (fobject !== undefined) {
-                if (fobject.terms.length !== aliasResolvedType.terms.length) {
+                const updatedbinds = this.resolveTemplateBinds(fobject.terms, aliasResolvedType.terms, aliasResolvedBinds);
+                if(updatedbinds === undefined) {
                     return ResolvedType.createEmpty();
                 }
 
-                const ota = this.createObjectTypeAtom(fobject, aliasResolvedType, aliasResolvedBinds);
+                const ota = this.createObjectTypeAtom(fobject, aliasResolvedType, updatedbinds);
                 rtype = ota !== undefined ? ResolvedType.createSingle(ota) : ResolvedType.createEmpty();
             }
         }
