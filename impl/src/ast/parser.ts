@@ -5067,7 +5067,19 @@ class Parser {
     }
 }
 
+function cleanCommentsStringsFromFileContents(str: string): string {
+    const commentRe = /(\/\/.*)|(\/\*(.|\s)*?\*\/)/ug;
+    const stringRe = /"[^"\\\r\n]*(\\(.|\r?\n)[^"\\\r\n]*)*"/ug;
+    const typedStringRe = /'[^'\\\r\n]*(\\(.|\r?\n)[^'\\\r\n]*)*'/ug;
+
+    return str
+        .replace(commentRe, "")
+        .replace(stringRe, "\"\"")
+        .replace(typedStringRe, "''");
+}
+
 export { 
     CodeFileInfo, SourceInfo, ParseError, Parser,
-    unescapeLiteralString
+    unescapeLiteralString,
+    cleanCommentsStringsFromFileContents
 };

@@ -9,6 +9,7 @@ import * as path from "path";
 import chalk from "chalk";
 
 import { Config, ConfigAppTest, ConfigBuild, ConfigFuzz, ConfigRun, ConfigTest, Package, parsePackage, parseURIPath, parseURIPathGlob, URIPath, URIPathGlob } from "./package_load";
+import { cleanCommentsStringsFromFileContents } from "../ast/parser";
 
 type CmdTag = "run" | "symrun" | "build" | "test" | "apptest" | "fuzz";
 
@@ -186,7 +187,7 @@ function extractEntryPoint(args: string[], workingdir: string, appfiles: URIPath
                 const fullpath = path.resolve(workingdir, appfiles[i].path);
 
                 if(appfiles[i].selection === undefined) {
-                    const contents = fs.readFileSync(fullpath).toString();
+                    const contents = cleanCommentsStringsFromFileContents(fs.readFileSync(fullpath).toString());
                     if(checkEntrypointMatch(contents, ns, fname)) {
                         return {
                             filename: fullpath,
@@ -203,7 +204,7 @@ function extractEntryPoint(args: string[], workingdir: string, appfiles: URIPath
                         const fext = path.extname(fullsubpath);
 
                         if ((fext === appfiles[i].filter || appfiles[i].filter === undefined) && fext === ".bsqapi") {
-                            const contents = fs.readFileSync(fullsubpath).toString();
+                            const contents = cleanCommentsStringsFromFileContents(fs.readFileSync(fullsubpath).toString());
                             if (checkEntrypointMatch(contents, ns, fname)) {
                                 return {
                                     filename: fullsubpath,
