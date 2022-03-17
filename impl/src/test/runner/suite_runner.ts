@@ -7,7 +7,7 @@ import * as FS from "fs";
 import * as Path from "path";
 
 import { BuildApplicationMode, BuildLevel } from "../../ast/assembly";
-import { CodeFileInfo } from "../../ast/parser";
+import { cleanCommentsStringsFromFileContents, CodeFileInfo } from "../../ast/parser";
 import { MIRAssembly, MIRInvokeDecl, MIRType, PackageConfig } from "../../compiler/mir_assembly";
 import { MIREmitter, MIRKeyGenerator } from "../../compiler/mir_emitter";
 import { MIRInvokeKey } from "../../compiler/mir_ops";
@@ -358,7 +358,7 @@ function loadEntryPointInfo(files: string[], istestbuild: boolean): {filename: s
         let epi: {filename: string, namespace: string, names: string[]}[] = [];
 
         for(let i = 0; i < files.length; ++i) {
-            const contents = FS.readFileSync(files[i]).toString();
+            const contents = cleanCommentsStringsFromFileContents(FS.readFileSync(files[i]).toString());
 
             const namespacere = /namespace([ \t]+)(?<nsstr>(([A-Z][_a-zA-Z0-9]+)::)*([A-Z][_a-zA-Z0-9]+));/;
             const entryre = /(entrypoint|chktest|errtest|__chktest)(\s+)function(\s+)(?<fname>([_a-z]|([_a-z][_a-zA-Z0-9]*[a-zA-Z0-9])))(\s*)\(/g;

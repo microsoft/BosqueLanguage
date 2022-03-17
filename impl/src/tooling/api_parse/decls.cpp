@@ -110,7 +110,7 @@ std::optional<std::string> JSONParseHelper::parseToBigSignedNumber(json j)
     { 
         if(j.is_number_integer())
         {
-            nval = std::to_string(j.get<uint64_t>());
+            nval = std::to_string(j.get<int64_t>());
         }
         else
         {
