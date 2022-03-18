@@ -5,6 +5,8 @@
 
 #include "bsqop.h"
 
+std::map<std::string, std::string> MarshalEnvironment::g_srcMap;
+
 std::map<std::string, BSQTypeID> MarshalEnvironment::g_typenameToIdMap;
 
 std::map<std::string, BSQFieldID> MarshalEnvironment::g_propertyToIdMap;
@@ -149,6 +151,16 @@ BSQFieldID jsonParse_BSQFieldID(json j)
 SourceInfo j_sinfo(json j)
 {
     return jsonParse_SourceInfo(j["sinfo"]);
+}
+
+SourceInfo j_sinfoStart(json j)
+{
+    return jsonParse_SourceInfo(j["sinfoStart"]);
+}
+
+SourceInfo j_sinfoEnd(json j)
+{
+    return jsonParse_SourceInfo(j["sinfoEnd"]);
 }
 
 TargetVar j_trgt(json j)

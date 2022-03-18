@@ -6438,7 +6438,7 @@ class TypeChecker {
 
         const consbody = this.m_emitter.getBody(tdecl.srcFile, tdecl.sourceLocation);
         if (consbody !== undefined) {
-            const consinv = new MIRInvokeBodyDecl(this.m_emitter.registerResolvedTypeReference(constype).typeID, bodyid, conskey, conskeyshort, ["constructor", "private"], false, tdecl.sourceLocation, tdecl.srcFile, params, optfields.length, this.m_emitter.registerResolvedTypeReference(constype).typeID, undefined, undefined, consbody);
+            const consinv = new MIRInvokeBodyDecl(this.m_emitter.registerResolvedTypeReference(constype).typeID, bodyid, conskey, conskeyshort, ["constructor", "private"], false, tdecl.sourceLocation, tdecl.sourceLocation, tdecl.srcFile, params, optfields.length, this.m_emitter.registerResolvedTypeReference(constype).typeID, undefined, undefined, consbody);
             this.m_emitter.masm.invokeDecls.set(conskey, consinv);
         }
     }
@@ -6509,7 +6509,7 @@ class TypeChecker {
 
         const invbody = this.m_emitter.getBody(tdecl.srcFile, tdecl.sourceLocation);
         if (invbody !== undefined) {
-            const consinv = new MIRInvokeBodyDecl(this.m_emitter.registerResolvedTypeReference(constype).typeID, bodyid, invkey, invkeyshort, ["invariant", "private"], false, tdecl.sourceLocation, tdecl.srcFile, params, optfields.length, this.m_emitter.registerResolvedTypeReference(this.m_assembly.getSpecialBoolType()).typeID, undefined, undefined, invbody);
+            const consinv = new MIRInvokeBodyDecl(this.m_emitter.registerResolvedTypeReference(constype).typeID, bodyid, invkey, invkeyshort, ["invariant", "private"], false, tdecl.sourceLocation, tdecl.sourceLocation, tdecl.srcFile, params, optfields.length, this.m_emitter.registerResolvedTypeReference(this.m_assembly.getSpecialBoolType()).typeID, undefined, undefined, invbody);
             this.m_emitter.masm.invokeDecls.set(invkey, consinv);
         }
     }
@@ -6561,7 +6561,7 @@ class TypeChecker {
         const params: MIRFunctionParameter[] = [new MIRFunctionParameter("$value", constype.typeID)];
         const consbody = this.m_emitter.getBody(tdecl.srcFile, tdecl.sourceLocation);
         if (consbody !== undefined) {
-            const consinv = new MIRInvokeBodyDecl(this.m_emitter.registerResolvedTypeReference(constype).typeID, bodyid, conskey, conskeyshort, ["constructor", "private"], false, tdecl.sourceLocation, tdecl.srcFile, params, 0, this.m_emitter.registerResolvedTypeReference(constype).typeID, undefined, undefined, consbody);
+            const consinv = new MIRInvokeBodyDecl(this.m_emitter.registerResolvedTypeReference(constype).typeID, bodyid, conskey, conskeyshort, ["constructor", "private"], false, tdecl.sourceLocation, tdecl.sourceLocation, tdecl.srcFile, params, 0, this.m_emitter.registerResolvedTypeReference(constype).typeID, undefined, undefined, consbody);
             this.m_emitter.masm.invokeDecls.set(conskey, consinv);
         }
     }
@@ -6594,7 +6594,7 @@ class TypeChecker {
         const params: MIRFunctionParameter[] = [new MIRFunctionParameter("$value", constype.typeID)];
         const invbody = this.m_emitter.getBody(tdecl.srcFile, tdecl.sourceLocation);
         if (invbody !== undefined) {
-            const consinv = new MIRInvokeBodyDecl(this.m_emitter.registerResolvedTypeReference(constype).typeID, bodyid, invkey, invkeyshort, ["invariant", "private"], false, tdecl.sourceLocation, tdecl.srcFile, params, 0, this.m_emitter.registerResolvedTypeReference(this.m_assembly.getSpecialBoolType()).typeID, undefined, undefined, invbody);
+            const consinv = new MIRInvokeBodyDecl(this.m_emitter.registerResolvedTypeReference(constype).typeID, bodyid, invkey, invkeyshort, ["invariant", "private"], false, tdecl.sourceLocation, tdecl.sourceLocation, tdecl.srcFile, params, 0, this.m_emitter.registerResolvedTypeReference(this.m_assembly.getSpecialBoolType()).typeID, undefined, undefined, invbody);
             this.m_emitter.masm.invokeDecls.set(invkey, consinv);
         }
     }
@@ -6871,7 +6871,7 @@ class TypeChecker {
         const env = TypeEnvironment.createInitialEnvForCall(ikey, bodyID, binds, new Map<string, PCode>(), new Map<string, VarInfo>(), declaredResult);
             
         const mirbody = this.checkBodyExpression(srcFile, env, exp, declaredResult, []);
-        return new MIRInvokeBodyDecl(undefined, bodyID, ikey, ishort, attributes, false, sinfo, this.m_file, [], 0, resultType.typeID, undefined, undefined, mirbody as MIRBody);
+        return new MIRInvokeBodyDecl(undefined, bodyID, ikey, ishort, attributes, false, sinfo, sinfo, this.m_file, [], 0, resultType.typeID, undefined, undefined, mirbody as MIRBody);
     }
 
     //e.g. expressions as default arguments or field values which can only have other specific refs (but not pcodes or random other values)
@@ -6891,7 +6891,7 @@ class TypeChecker {
         const env = TypeEnvironment.createInitialEnvForCall(ikey, bodyID, binds, new Map<string, PCode>(), cargs, declaredResult);
         
         const mirbody = this.checkBodyExpression(srcFile, env, exp, declaredResult, []);
-        return new MIRInvokeBodyDecl(undefined, bodyID, ikey, ishort, attributes, false, sinfo, this.m_file, params, 0, resultType.typeID, undefined, undefined, mirbody as MIRBody);
+        return new MIRInvokeBodyDecl(undefined, bodyID, ikey, ishort, attributes, false, sinfo, sinfo, this.m_file, params, 0, resultType.typeID, undefined, undefined, mirbody as MIRBody);
     }
 
     //e.g. things like pre and post conditions
@@ -6918,11 +6918,11 @@ class TypeChecker {
         const env = TypeEnvironment.createInitialEnvForCall(ikey, bodyID, binds, pcodes, cargs, declaredResult);
         
         const mirbody = this.checkBodyExpression(srcFile, env, exp, declaredResult, []);
-        return new MIRInvokeBodyDecl(undefined, bodyID, ikey, ishort, attributes, false, sinfo, this.m_file, params, 0, resultType.typeID, undefined, undefined, mirbody as MIRBody);
+        return new MIRInvokeBodyDecl(undefined, bodyID, ikey, ishort, attributes, false, sinfo, sinfo, this.m_file, params, 0, resultType.typeID, undefined, undefined, mirbody as MIRBody);
     }
 
     private processInvokeInfo(name: string, ikey: MIRInvokeKey, shortname: string, enclosingDecl: [MIRType, OOPTypeDecl, Map<string, ResolvedType>] | undefined, kind: "namespace" | "static" | "member" | "operator", invoke: InvokeDecl, binds: Map<string, ResolvedType>, pcodes: PCode[], pargs: [string, ResolvedType][]): MIRInvokeDecl {
-        this.checkInvokeDecl(invoke.sourceLocation, invoke, binds, pcodes);
+        this.checkInvokeDecl(invoke.startSourceLocation, invoke, binds, pcodes);
 
         let terms = new Map<string, MIRType>();
         invoke.terms.forEach((term) => terms.set(term.name, this.m_emitter.registerResolvedTypeReference(binds.get(term.name) as ResolvedType)));
@@ -6965,7 +6965,7 @@ class TypeChecker {
         });
 
         if (invoke.optRestType !== undefined) {
-            const rtype = this.resolveAndEnsureTypeOnly(invoke.sourceLocation, invoke.optRestType, binds);
+            const rtype = this.resolveAndEnsureTypeOnly(invoke.startSourceLocation, invoke.optRestType, binds);
             cargs.set(invoke.optRestName as string, new VarInfo(rtype, true, false, true, rtype));
 
             const resttype = this.m_emitter.registerResolvedTypeReference(rtype);
@@ -6989,7 +6989,7 @@ class TypeChecker {
             const pdecltype = this.m_assembly.normalizeTypeGeneral(p.type, binds);
             if (pdecltype instanceof ResolvedType && p.isOptional) {
                 if (p.defaultexp === undefined) {
-                    const ii = new InitializerEvaluationLiteralExpression(new LiteralNoneExpression(invoke.sourceLocation));
+                    const ii = new InitializerEvaluationLiteralExpression(new LiteralNoneExpression(invoke.startSourceLocation));
                     optparaminfo.push({pname: p.name, ptype: pdecltype, maskidx: optparaminfo.length, initaction: ii});
                 }
                 else {
@@ -6999,8 +6999,8 @@ class TypeChecker {
             }
         });
 
-        const declaredResult = this.resolveAndEnsureTypeOnly(invoke.sourceLocation, invoke.resultType, binds);
-        const resultType = this.generateExpandedReturnSig(invoke.sourceLocation, declaredResult, entrycallparams);
+        const declaredResult = this.resolveAndEnsureTypeOnly(invoke.startSourceLocation, invoke.resultType, binds);
+        const resultType = this.generateExpandedReturnSig(invoke.startSourceLocation, declaredResult, entrycallparams);
 
         let rprs: { name: string, refKind: "ref" | "out" | "out?" | undefined, ptype: ResolvedType }[] = [];
         rprs.push({ name: "$return", refKind: undefined, ptype: declaredResult });
@@ -7018,10 +7018,10 @@ class TypeChecker {
         let realbody = invoke.body;
         if (kind === "namespace") {
             if (invoke.preconditions.length !== 0) {
-                this.raiseErrorIf(invoke.sourceLocation, invoke.preconditions.some((pre) => pre.isvalidate) && !invoke.preconditions.some((pre) => pre.isvalidate), "Cannot mix terminal and validate preconditions");
+                this.raiseErrorIf(invoke.startSourceLocation, invoke.preconditions.some((pre) => pre.isvalidate) && !invoke.preconditions.some((pre) => pre.isvalidate), "Cannot mix terminal and validate preconditions");
 
                 if (invoke.preconditions.every((pre) => pre.isvalidate)) {
-                    realbody = this.processGenerateSpecialPreFunction_ResultT(invoke.sourceLocation, invoke.preconditions, invoke.body as BodyImplementation);
+                    realbody = this.processGenerateSpecialPreFunction_ResultT(invoke.startSourceLocation, invoke.preconditions, invoke.body as BodyImplementation);
                 }
                 else {
                     const preclauses = this.processGenerateSpecialPreFunction_FailFast(entrycallparams, fargs, pargs, invoke.preconditions, binds, invoke.srcFile);
@@ -7040,7 +7040,7 @@ class TypeChecker {
             const absconds = this.m_assembly.getAbstractPrePostConds(name, ootype, oobinds, binds);
 
             if ((absconds !== undefined && absconds.pre[0].length !== 0) || invoke.preconditions.length !== 0) {
-                this.raiseErrorIf(invoke.sourceLocation, invoke.preconditions.some((pre) => pre.isvalidate) || (absconds !== undefined && absconds.pre[0].some((pre) => pre.isvalidate)), "Cannot use validate preconditions on non-entrypoint functions");
+                this.raiseErrorIf(invoke.startSourceLocation, invoke.preconditions.some((pre) => pre.isvalidate) || (absconds !== undefined && absconds.pre[0].some((pre) => pre.isvalidate)), "Cannot use validate preconditions on non-entrypoint functions");
 
                 const abspreclauses = absconds !== undefined ? this.processGenerateSpecialPreFunction_FailFast(entrycallparams, fargs, pargs, absconds.pre[0], absconds.pre[1], invoke.srcFile) : [];
                 const preclauses = this.processGenerateSpecialPreFunction_FailFast(entrycallparams, fargs, pargs, invoke.preconditions, binds, invoke.srcFile);
@@ -7063,27 +7063,27 @@ class TypeChecker {
                 let mpc = new Map<string, MIRPCode>();
                 fargs.forEach((v, k) => mpc.set(k, { code: v.ikey, cargs: [...v.captured].map((cv) => { return {cname: cv[0], ctype: cv[1].typeID}; }) }));
 
-                return new MIRInvokePrimitiveDecl(encdecl, invoke.bodyID, ikey, shortname, invoke.attributes, recursive, invoke.sourceLocation, invoke.srcFile, mbinds, params, resultType.typeID, (invoke.body as BodyImplementation).body as string, mpc);
+                return new MIRInvokePrimitiveDecl(encdecl, invoke.bodyID, ikey, shortname, invoke.attributes, recursive, invoke.startSourceLocation, invoke.endSourceLocation, invoke.srcFile, mbinds, params, resultType.typeID, (invoke.body as BodyImplementation).body as string, mpc);
             }
             else {
                 //
                 //TODO: support typed numbers with default
                 //
-                assert(false, "We only handle default ops on primitive types -- need to do better to support TypedNumbers");
+                assert(false, "We only handle 'default' ops on primitive types -- need to do better to support TypedNumbers");
                 
-                return new MIRInvokePrimitiveDecl(encdecl, invoke.bodyID, ikey, shortname, invoke.attributes, recursive, invoke.sourceLocation, invoke.srcFile, new Map<string, string>(), [], resultType.typeID, "[INVALID]", new Map<string, MIRPCode>());
+                return new MIRInvokePrimitiveDecl(encdecl, invoke.bodyID, ikey, shortname, invoke.attributes, recursive, invoke.startSourceLocation, invoke.endSourceLocation, invoke.srcFile, new Map<string, string>(), [], resultType.typeID, "[INVALID]", new Map<string, MIRPCode>());
             }
         }
         else {
             const env = TypeEnvironment.createInitialEnvForCall(ikey, invoke.bodyID, binds, fargs, cargs, declaredResult);
 
             const mirbody = this.checkBodyStatement(invoke.srcFile, env, (realbody as BodyImplementation).body as BlockStatement, declaredResult, optparaminfo, outparaminfo, preject, postject);
-            return new MIRInvokeBodyDecl(encdecl, invoke.bodyID, ikey, shortname, invoke.attributes, recursive, invoke.sourceLocation, invoke.srcFile, params, optparaminfo.length, resultType.typeID, preject !== undefined ? preject[0].map((pc) => pc.ikey) : undefined, postject !== undefined ? postject[0].map((pc) => pc.ikey) : undefined, mirbody as MIRBody);
+            return new MIRInvokeBodyDecl(encdecl, invoke.bodyID, ikey, shortname, invoke.attributes, recursive, invoke.startSourceLocation, invoke.endSourceLocation, invoke.srcFile, params, optparaminfo.length, resultType.typeID, preject !== undefined ? preject[0].map((pc) => pc.ikey) : undefined, postject !== undefined ? postject[0].map((pc) => pc.ikey) : undefined, mirbody as MIRBody);
         }
     }
 
-    private processPCodeInfo(ikey: MIRInvokeKey, shortname: string, sinfo: SourceInfo, pci: InvokeDecl, binds: Map<string, ResolvedType>, fsig: ResolvedFunctionType, pargs: [string, ResolvedType][], capturedpcodes: [string, PCode][]): MIRInvokeDecl {
-        this.checkPCodeDecl(sinfo, fsig, pci.recursive, capturedpcodes.map((cpc) => cpc[1]));
+    private processPCodeInfo(ikey: MIRInvokeKey, shortname: string, pci: InvokeDecl, binds: Map<string, ResolvedType>, fsig: ResolvedFunctionType, pargs: [string, ResolvedType][], capturedpcodes: [string, PCode][]): MIRInvokeDecl {
+        this.checkPCodeDecl(pci.startSourceLocation, fsig, pci.recursive, capturedpcodes.map((cpc) => cpc[1]));
 
         let cargs = new Map<string, VarInfo>();
         let refnames: string[] = [];
@@ -7131,10 +7131,10 @@ class TypeChecker {
         }
 
         let resolvedResult = fsig.resultType;
-        const resultType = this.generateExpandedReturnSig(sinfo, resolvedResult, entrycallparams);
+        const resultType = this.generateExpandedReturnSig(pci.startSourceLocation, resolvedResult, entrycallparams);
 
         const realbody = ((pci.body as BodyImplementation).body instanceof Expression) 
-            ? new BlockStatement(sinfo, [new ReturnStatement(sinfo, [(pci.body as BodyImplementation).body as Expression])])
+            ? new BlockStatement(pci.startSourceLocation, [new ReturnStatement(pci.startSourceLocation, [(pci.body as BodyImplementation).body as Expression])])
             : ((pci.body as BodyImplementation).body as BlockStatement);
 
         let pcodes = new Map<string, PCode>();
@@ -7144,7 +7144,7 @@ class TypeChecker {
         const env = TypeEnvironment.createInitialEnvForCall(ikey, pci.bodyID, binds, pcodes, cargs, fsig.resultType);
 
         const mirbody = this.checkBodyStatement(pci.srcFile, env, realbody, fsig.resultType, [], outparaminfo, undefined, undefined);
-        return new MIRInvokeBodyDecl(undefined, pci.bodyID, ikey, shortname, pci.attributes, pci.recursive === "yes", sinfo, pci.srcFile, params, 0, resultType.typeID, undefined, undefined, mirbody as MIRBody);
+        return new MIRInvokeBodyDecl(undefined, pci.bodyID, ikey, shortname, pci.attributes, pci.recursive === "yes", pci.startSourceLocation, pci.endSourceLocation, pci.srcFile, params, 0, resultType.typeID, undefined, undefined, mirbody as MIRBody);
     }
 
     processConstExpr(gkey: MIRGlobalKey, shortname: string, name: string, srcFile: string, containingType: [MIRType, OOPTypeDecl, Map<string, ResolvedType>] | undefined, cexp: ConstantExpressionValue, attribs: string[], binds: Map<string, ResolvedType>, ddecltype: ResolvedType) {
@@ -7187,7 +7187,7 @@ class TypeChecker {
     processLambdaFunction(lkey: MIRInvokeKey, lshort: string, invoke: InvokeDecl, sigt: ResolvedFunctionType, bodybinds: Map<string, ResolvedType>, cargs: [string, ResolvedType][], capturedpcodes: [string, PCode][]) {
         try {
             this.m_file = invoke.srcFile;
-            const invinfo = this.processPCodeInfo(lkey, lshort, invoke.sourceLocation, invoke, bodybinds, sigt, cargs, capturedpcodes);
+            const invinfo = this.processPCodeInfo(lkey, lshort, invoke, bodybinds, sigt, cargs, capturedpcodes);
 
             this.m_emitter.masm.invokeDecls.set(lkey, invinfo as MIRInvokeBodyDecl);
         }

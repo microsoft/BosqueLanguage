@@ -270,7 +270,7 @@ class ICPPBodyEmitter {
         ops.push(ICPPOpEmitter.genConstructorEphemeralListOp(sinfo, rt, geninfo.resulttype.typeID, pargs));
         ops.push(ICPPOpEmitter.genJumpOp(sinfo, 1, "exit")); //dummy final jump block
         
-        return new ICPPInvokeBodyDecl(name, name, "[GENERATED]", sinfo, false, params, paraminfo, geninfo.resulttype.typeID, this.getStackInfoForArgVar("$$return"), this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), 0, ops, 0);
+        return new ICPPInvokeBodyDecl(name, name, "[GENERATED]", sinfo, sinfo, false, params, paraminfo, geninfo.resulttype.typeID, this.getStackInfoForArgVar("$$return"), this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), 0, ops, 0);
     }
 
     generateProjectRecordPropertyVirtual(geninfo: { inv: string, argflowtype: MIRType, properties: string[], resulttype: MIRType }, sinfo: SourceInfo, recordtype: MIRType): ICPPInvokeDecl {
@@ -308,7 +308,7 @@ class ICPPBodyEmitter {
         ops.push(ICPPOpEmitter.genConstructorEphemeralListOp(sinfo, rt, geninfo.resulttype.typeID, pargs));
         ops.push(ICPPOpEmitter.genJumpOp(sinfo, 1, "exit")); //dummy final jump block
         
-        return new ICPPInvokeBodyDecl(name, name, "[GENERATED]", sinfo, false, params, paraminfo, geninfo.resulttype.typeID, this.getStackInfoForArgVar("$$return"), this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), 0, ops, 0);
+        return new ICPPInvokeBodyDecl(name, name, "[GENERATED]", sinfo, sinfo, false, params, paraminfo, geninfo.resulttype.typeID, this.getStackInfoForArgVar("$$return"), this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), 0, ops, 0);
     }
 
     generateProjectEntityFieldVirtual(geninfo: { inv: string, argflowtype: MIRType, fields: MIRFieldDecl[], resulttype: MIRType }, sinfo: SourceInfo, entitytype: MIRType): ICPPInvokeDecl {
@@ -346,7 +346,7 @@ class ICPPBodyEmitter {
         ops.push(ICPPOpEmitter.genConstructorEphemeralListOp(sinfo, rt, geninfo.resulttype.typeID, pargs));
         ops.push(ICPPOpEmitter.genJumpOp(sinfo, 1, "exit")); //dummy final jump block
         
-        return new ICPPInvokeBodyDecl(name, name, "[GENERATED]", sinfo, false, params, paraminfo, geninfo.resulttype.typeID, this.getStackInfoForArgVar("$$return"), this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), 0, ops, 0);
+        return new ICPPInvokeBodyDecl(name, name, "[GENERATED]", sinfo, sinfo, false, params, paraminfo, geninfo.resulttype.typeID, this.getStackInfoForArgVar("$$return"), this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), 0, ops, 0);
     }
 
     generateSingletonConstructorList(geninfo: { inv: string, argc: number, resulttype: MIRType }): ICPPInvokeDecl {
@@ -358,7 +358,7 @@ class ICPPBodyEmitter {
             params.push(new ICPPFunctionParameter(`arg${j}`, etype));
         }
         
-        return new ICPPInvokePrimitiveDecl(geninfo.inv, geninfo.inv, "[Generated]", new SourceInfo(-1, -1, -1 ,-1), false, params, geninfo.resulttype.typeID, geninfo.resulttype.typeID, "s_list_build_k", new Map<string, MIRResolvedTypeKey>().set("T", etype), new Map<string, ICPPPCode>());
+        return new ICPPInvokePrimitiveDecl(geninfo.inv, geninfo.inv, "[Generated]", new SourceInfo(-1, -1, -1 ,-1), new SourceInfo(-1, -1, -1 ,-1), false, params, geninfo.resulttype.typeID, geninfo.resulttype.typeID, "s_list_build_k", new Map<string, MIRResolvedTypeKey>().set("T", etype), new Map<string, ICPPPCode>());
     }
 
     generateSingletonConstructorMap(geninfo: { inv: string, argc: number, resulttype: MIRType }): ICPPInvokeDecl {
@@ -370,7 +370,7 @@ class ICPPBodyEmitter {
             params.push(new ICPPFunctionParameter(`arg${j}`, etype));
         }
         
-        return new ICPPInvokePrimitiveDecl(geninfo.inv, geninfo.inv, "[Generated]", new SourceInfo(-1, -1, -1 ,-1), false, params, geninfo.resulttype.typeID, geninfo.resulttype.typeID, "s_map_build_k", new Map<string, MIRResolvedTypeKey>().set("K", ldecl.getTypeK().typeID).set("V", ldecl.getTypeV().typeID), new Map<string, ICPPPCode>());
+        return new ICPPInvokePrimitiveDecl(geninfo.inv, geninfo.inv, "[Generated]", new SourceInfo(-1, -1, -1 ,-1), new SourceInfo(-1, -1, -1 ,-1), false, params, geninfo.resulttype.typeID, geninfo.resulttype.typeID, "s_map_build_k", new Map<string, MIRResolvedTypeKey>().set("K", ldecl.getTypeK().typeID).set("V", ldecl.getTypeV().typeID), new Map<string, ICPPPCode>());
     }
 
     constructor(assembly: MIRAssembly, typegen: ICPPTypeEmitter, vopts: TranspilerOptions) {
@@ -1822,7 +1822,7 @@ class ICPPBodyEmitter {
             const revblocks = [...inorderblocks].reverse();
             const body = this.generateBlockExps((idecl as MIRInvokeBodyDecl).body.body, inorderblocks, revblocks);
 
-            return new ICPPInvokeBodyDecl(idecl.shortname, idecl.ikey, idecl.srcFile, idecl.sourceLocation, idecl.recursive, params, paraminfo, idecl.resultType, this.getStackInfoForArgVar("$$return"), this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), this.masksize, body, idecl.masksize);
+            return new ICPPInvokeBodyDecl(idecl.shortname, idecl.ikey, idecl.srcFile, idecl.sinfoStart, idecl.sinfoEnd, idecl.recursive, params, paraminfo, idecl.resultType, this.getStackInfoForArgVar("$$return"), this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), this.masksize, body, idecl.masksize);
         }
         else {
             assert(idecl instanceof MIRInvokePrimitiveDecl);
@@ -1849,7 +1849,7 @@ class ICPPBodyEmitter {
             pcodes.set(pcname, icpppc);
         });
 
-        return new ICPPInvokePrimitiveDecl(idecl.shortname, idecl.ikey, idecl.srcFile, idecl.sourceLocation, idecl.recursive, params, idecl.resultType, idecl.enclosingDecl, idecl.implkey, idecl.binds, pcodes);
+        return new ICPPInvokePrimitiveDecl(idecl.shortname, idecl.ikey, idecl.srcFile, idecl.sinfoStart, idecl.sinfoEnd, idecl.recursive, params, idecl.resultType, idecl.enclosingDecl, idecl.implkey, idecl.binds, pcodes);
     }
 }
 
