@@ -28,7 +28,7 @@ else {
     cmdargs = fullargs.slice(2);
 }
 
-if(cmdop === "run") {
+if(cmdop === "run" || cmdop === "debug") {
     processRunAction(cmdargs);
 }
 else if(cmdop === "build") {

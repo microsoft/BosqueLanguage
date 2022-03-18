@@ -194,8 +194,8 @@ void loadAssembly(json j, Evaluator& ee)
         std::for_each(jsrc.cbegin(), jsrc.cend(), [](json sj) {
             std::string fname = sj["fname"].get<std::string>();
             std::string contents = sj["contents"].get<std::string>();
-            
-            xxxx;
+
+            MarshalEnvironment::g_srcMap[fname] = contents;
         });
     }
 
