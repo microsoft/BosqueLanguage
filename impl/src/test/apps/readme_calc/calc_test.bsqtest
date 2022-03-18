@@ -6,13 +6,16 @@
 namespace Main;
 
 chktest function sign_1(): Bool {
-    return sign_impl(5I) == 1i;
+    return sign_impl(5I) > 0I;
 }
 
 chktest function sign_2(): Bool {
     return abs_impl(-3I) == 3I;
 }
 
-errtest function divok(x: BigInt, y: BigInt): Result<BigInt> {
-    return div_fix_impl(x, y);
+/*
+chktest function sign_bug(x: BigInt): Bool {
+    let sv = sign_impl(x);
+    return sv == 1I || sv == -1I;
 }
+*/

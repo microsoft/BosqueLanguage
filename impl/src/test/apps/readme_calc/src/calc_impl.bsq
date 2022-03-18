@@ -5,28 +5,6 @@
 
 namespace Main;
 
-function div_fix_impl(arg1: BigInt, arg2: BigInt): Result<BigInt> {
-    if(arg2 == 0I) {
-        return err();
-    }
-    else {
-        return ok(arg1 / arg2);
-    }
-}
-
-function sign_impl(arg: BigInt): Int {
-    var res: Int;
-
-    if(arg < 0I) {
-        res = -1i;
-    }
-    else {
-        res = 1i;
-    }
-
-    return res;
-}
-
 function abs_impl(arg: BigInt): BigInt {
     var res = arg;
 
@@ -35,4 +13,9 @@ function abs_impl(arg: BigInt): BigInt {
     }
    
     return res;
+}
+
+function sign_impl(arg: BigInt): BigInt {
+    return arg < 0I ? -1I : 1I;
+    //return arg;
 }
