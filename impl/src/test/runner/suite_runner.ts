@@ -57,9 +57,9 @@ function generateMASMForICPP(buildlevel: BuildLevel, usercode: PackageConfig[], 
     return MIREmitter.generateMASM(BuildApplicationMode.Executable, [coreconfig, ...usercode], buildlevel, entrypoint);
 }
 
-function generateICPPAssembly(masm: MIRAssembly, istestbuild: boolean, topts: TranspilerOptions, entrypoints: MIRInvokeKey[]): [boolean, any] {
+function generateICPPAssembly(srcCode: { fname: string, contents: string }[], masm: MIRAssembly, istestbuild: boolean, topts: TranspilerOptions, entrypoints: MIRInvokeKey[]): [boolean, any] {
     try {
-        return [true, ICPPEmitter.generateICPPAssembly(masm, istestbuild, topts, entrypoints)];
+        return [true, ICPPEmitter.generateICPPAssembly(srcCode, masm, istestbuild, topts, entrypoints)];
     } catch(e: any) {
         return [false, e.toString()];
     }
@@ -105,7 +105,7 @@ function runtestsICPP(buildlevel: BuildLevel, istestbuild: boolean, topts: Trans
         }
 
         const entrykeys = filteredentry[i].names.map((fname) => [fname, MIRKeyGenerator.generateFunctionKeyWNamespace(filteredentry[i].namespace, fname, new Map<string, ResolvedType>(), []).keyid]);
-        const icppasm = generateICPPAssembly(masm, istestbuild, topts, entrykeys.map((kp) => kp[1]));
+        const icppasm = generateICPPAssembly([], masm, istestbuild, topts, entrykeys.map((kp) => kp[1]));
         if(!icppasm[0]) {
             cbdone("Failed to generate ICPP assembly");
         }

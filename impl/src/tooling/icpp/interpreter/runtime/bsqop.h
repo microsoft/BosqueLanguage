@@ -11,6 +11,8 @@
 class MarshalEnvironment
 {
 public:
+    static std::map<std::string, std::string> g_srcMap;
+
     static std::map<std::string, BSQTypeID> g_typenameToIdMap;
 
     static std::map<std::string, BSQFieldID> g_propertyToIdMap;
@@ -224,6 +226,8 @@ const BSQType* jsonParse_BSQType(json j);
 BSQRecordPropertyID jsonParse_BSQRecordPropertyID(json j);
 BSQFieldID jsonParse_BSQFieldID(json j);
 SourceInfo j_sinfo(json j);
+SourceInfo j_sinfoStart(json j);
+SourceInfo j_sinfoEnd(json j);
 
 class InterpOp
 {

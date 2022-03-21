@@ -74,10 +74,10 @@ function generateMASM(usercode: PackageConfig, buildlevel: BuildLevel, entrypoin
     return masm as MIRAssembly;
 }
 
-function generateICPPAssembly(masm: MIRAssembly, istestbuild: boolean, topts: TranspilerOptions, entrypoints: MIRInvokeKey[]): any {
+function generateICPPAssembly(srcCode: { fname: string, contents: string }[], masm: MIRAssembly, istestbuild: boolean, topts: TranspilerOptions, entrypoints: MIRInvokeKey[]): any {
     let res: any = undefined;
     try {
-        res = ICPPEmitter.generateICPPAssembly(masm, istestbuild, topts, entrypoints);
+        res = ICPPEmitter.generateICPPAssembly(srcCode, masm, istestbuild, topts, entrypoints);
     } catch(e) {
         process.stdout.write(chalk.red(`ICPP bytecode generate error -- ${e}\n`));
         process.exit(1);
@@ -113,9 +113,13 @@ function runICPPFile(icppjson: {code: object, args: any[], main: string}, cb: (r
     }
 }
 
-function workflowEmitICPPFile(into: string, usercode: PackageConfig, buildlevel: BuildLevel, istestbuild: boolean, topts: TranspilerOptions, entrypoint: {filename: string, names: string[], fkeys: MIRResolvedTypeKey[]}): boolean {
+function workflowEmitICPPFile(into: string, usercode: PackageConfig, emitsrcmap: boolean, buildlevel: BuildLevel, istestbuild: boolean, topts: TranspilerOptions, entrypoint: {filename: string, names: string[], fkeys: MIRResolvedTypeKey[]}): boolean {
     const massembly = generateMASM(usercode, buildlevel, {filename: entrypoint.filename, names: entrypoint.names});
-    const icppasm = generateICPPAssembly(massembly, istestbuild, topts, entrypoint.fkeys);
+
+    //TODO: we want to strip to a relative path here to avoid shipping any system specific info
+    const srcCode = emitsrcmap ? usercode.src.map((sf) => { return {fname: sf.srcpath, contents: sf.contents}; }) : [];
+
+    const icppasm = generateICPPAssembly(srcCode, massembly, istestbuild, topts, entrypoint.fkeys);
             
     if (icppasm === undefined) {
         return false;
@@ -125,9 +129,13 @@ function workflowEmitICPPFile(into: string, usercode: PackageConfig, buildlevel:
     return emitICPPFile(icppjson, into);
 } 
 
-function workflowRunICPPFile(args: any[], usercode: PackageConfig, buildlevel: BuildLevel, istestbuild: boolean, topts: TranspilerOptions, entrypoint: {filename: string, name: string, fkey: MIRResolvedTypeKey}, cb: (result: string | undefined) => void) {
+function workflowRunICPPFile(args: any[], usercode: PackageConfig, emitsrcmap: boolean, buildlevel: BuildLevel, istestbuild: boolean, topts: TranspilerOptions, entrypoint: {filename: string, name: string, fkey: MIRResolvedTypeKey}, cb: (result: string | undefined) => void) {
     const massembly = generateMASM(usercode, buildlevel, {filename: entrypoint.filename, names: [entrypoint.name]});
-    const icppasm = generateICPPAssembly(massembly, istestbuild, topts, [entrypoint.fkey]);
+
+    //TODO: we want to strip to a relative path here to avoid shipping any system specific info
+    const srcCode = emitsrcmap ? usercode.src.map((sf) => { return {fname: sf.srcpath, contents: sf.contents}; }) : [];
+
+    const icppasm = generateICPPAssembly(srcCode, massembly, istestbuild, topts, [entrypoint.fkey]);
             
     if (icppasm === undefined) {
         return undefined;

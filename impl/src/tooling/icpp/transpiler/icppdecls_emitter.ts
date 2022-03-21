@@ -56,7 +56,7 @@ class ICPPEmitter {
         this.icppasm = icppasm;
     }
 
-    private static initializeICPPAssembly(assembly: MIRAssembly, temitter: ICPPTypeEmitter, entrypoints: MIRInvokeKey[]): ICPPAssembly {
+    private static initializeICPPAssembly(srcCode: { fname: string, contents: string }[], assembly: MIRAssembly, temitter: ICPPTypeEmitter): ICPPAssembly {
         const decltypes = [...assembly.typeMap].filter((v) => !(assembly.entityDecls.get(v[0]) instanceof MIRPrimitiveInternalEntityTypeDecl)).map((v) => temitter.getICPPLayoutInfo(temitter.getMIRType(v[1].typeID)));
 
         const alltypenames = [...assembly.typeMap].map((tt) => tt[0]);
@@ -70,7 +70,7 @@ class ICPPEmitter {
         const vcallarray = [...assembly.entityDecls].filter((edcl) => edcl[1] instanceof MIRObjectEntityTypeDecl).map((edcl) => [...(edcl[1] as MIRObjectEntityTypeDecl).vcallMap].map((ee) => ee[0]));
         const allvinvokes = new Set<string>((([] as MIRVirtualMethodKey[]).concat(...vcallarray)));
 
-        return new ICPPAssembly(alltypenames, [...allproperties].sort(), [...allfields].sort().map((fkey) => assembly.fieldDecls.get(fkey) as MIRFieldDecl), [...allinvokes].sort(), [...allvinvokes].sort());
+        return new ICPPAssembly(alltypenames, [...allproperties].sort(), [...allfields].sort().map((fkey) => assembly.fieldDecls.get(fkey) as MIRFieldDecl), srcCode, [...allinvokes].sort(), [...allvinvokes].sort());
     }
 
     private processVirtualEntityUpdates() {
@@ -231,16 +231,16 @@ class ICPPEmitter {
         });
     }
 
-    static generateICPPAssembly(assembly: MIRAssembly, istestbuild: boolean, vopts: TranspilerOptions, entrypoints: MIRInvokeKey[]): object {
+    static generateICPPAssembly(srcCode: { fname: string, contents: string }[], assembly: MIRAssembly, istestbuild: boolean, vopts: TranspilerOptions, entrypoints: MIRInvokeKey[]): object {
         const temitter = new ICPPTypeEmitter(assembly, vopts);
         const bemitter = new ICPPBodyEmitter(assembly, temitter, vopts);
 
-        const icppasm = ICPPEmitter.initializeICPPAssembly(assembly, temitter, entrypoints);
+        const icppasm = ICPPEmitter.initializeICPPAssembly(srcCode, assembly, temitter);
         let icppemit = new ICPPEmitter(assembly, temitter, bemitter, icppasm);
 
         icppemit.processAssembly(assembly, istestbuild, entrypoints);
 
-        return icppemit.icppasm.jsonEmit(assembly, entrypoints);
+        return icppemit.icppasm.jsonEmit(assembly);
     }
 }
 

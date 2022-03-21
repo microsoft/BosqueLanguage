@@ -298,7 +298,8 @@ class ICPPInvokeDecl {
     readonly ikey: MIRInvokeKey;
 
     readonly srcFile: string;
-    readonly sinfo: SourceInfo;
+    readonly sinfoStart: SourceInfo; 
+    readonly sinfoEnd: SourceInfo;
     
     readonly recursive: boolean;
 
@@ -311,11 +312,12 @@ class ICPPInvokeDecl {
 
     readonly maskSlots: number;
 
-    constructor(name: string, ikey: MIRInvokeKey, srcFile: string, sinfo: SourceInfo, recursive: boolean, params: ICPPFunctionParameter[], resultType: MIRResolvedTypeKey, scalarStackBytes: number, mixedStackBytes: number, mixedStackMask: RefMask, maskSlots: number) {
+    constructor(name: string, ikey: MIRInvokeKey, srcFile: string, sinfoStart: SourceInfo, sinfoEnd: SourceInfo, recursive: boolean, params: ICPPFunctionParameter[], resultType: MIRResolvedTypeKey, scalarStackBytes: number, mixedStackBytes: number, mixedStackMask: RefMask, maskSlots: number) {
         this.name = name;
         this.ikey = ikey;
         this.srcFile = srcFile;
-        this.sinfo = sinfo;
+        this.sinfoStart = sinfoStart;
+        this.sinfoEnd = sinfoEnd;
         this.recursive = recursive;
         this.params = params;
         this.resultType = resultType;
@@ -328,7 +330,7 @@ class ICPPInvokeDecl {
     }
 
     jsonEmit(): object {
-        return {name: this.name, ikey: this.ikey, srcFile: this.srcFile, sinfo: this.sinfo, recursive: this.recursive, params: this.params.map((param) => param.jsonEmit()), resultType: this.resultType, scalarStackBytes: this.scalarStackBytes, mixedStackBytes: this.mixedStackBytes, mixedStackMask: this.mixedStackMask, maskSlots: this.maskSlots};
+        return {name: this.name, ikey: this.ikey, srcFile: this.srcFile, sinfoStart: this.sinfoStart, sinfoEnd: this.sinfoEnd, recursive: this.recursive, params: this.params.map((param) => param.jsonEmit()), resultType: this.resultType, scalarStackBytes: this.scalarStackBytes, mixedStackBytes: this.mixedStackBytes, mixedStackMask: this.mixedStackMask, maskSlots: this.maskSlots};
     }
 }
 
@@ -338,8 +340,8 @@ class ICPPInvokeBodyDecl extends ICPPInvokeDecl {
     readonly resultArg: Argument;
     readonly argmaskSize: number;
 
-    constructor(name: string, ikey: MIRInvokeKey, srcFile: string, sinfo: SourceInfo, recursive: boolean, params: ICPPFunctionParameter[], paraminfo: ParameterInfo[], resultType: MIRResolvedTypeKey, resultArg: Argument, scalarStackBytes: number, mixedStackBytes: number, mixedStackMask: RefMask, maskSlots: number, body: ICPPOp[], argmaskSize: number) {
-        super(name, ikey, srcFile, sinfo, recursive, params, resultType, scalarStackBytes, mixedStackBytes, mixedStackMask, maskSlots);
+    constructor(name: string, ikey: MIRInvokeKey, srcFile: string, sinfoStart: SourceInfo, sinfoEnd: SourceInfo, recursive: boolean, params: ICPPFunctionParameter[], paraminfo: ParameterInfo[], resultType: MIRResolvedTypeKey, resultArg: Argument, scalarStackBytes: number, mixedStackBytes: number, mixedStackMask: RefMask, maskSlots: number, body: ICPPOp[], argmaskSize: number) {
+        super(name, ikey, srcFile, sinfoStart, sinfoEnd, recursive, params, resultType, scalarStackBytes, mixedStackBytes, mixedStackMask, maskSlots);
         this.body = body;
         this.paraminfo = paraminfo;
         this.resultArg = resultArg;
@@ -374,8 +376,8 @@ class ICPPInvokePrimitiveDecl extends ICPPInvokeDecl {
     readonly binds: Map<string, MIRResolvedTypeKey>;
     readonly pcodes: Map<string, ICPPPCode>;
 
-    constructor(name: string, ikey: MIRInvokeKey, srcFile: string, sinfo: SourceInfo, recursive: boolean, params: ICPPFunctionParameter[], resultType: MIRResolvedTypeKey, enclosingtype: string | undefined, implkeyname: string, binds: Map<string, MIRResolvedTypeKey>, pcodes: Map<string, ICPPPCode>) {
-        super(name, ikey, srcFile, sinfo, recursive, params, resultType, 0, 0, "", 0);
+    constructor(name: string, ikey: MIRInvokeKey, srcFile: string, sinfoStart: SourceInfo, sinfoEnd: SourceInfo, recursive: boolean, params: ICPPFunctionParameter[], resultType: MIRResolvedTypeKey, enclosingtype: string | undefined, implkeyname: string, binds: Map<string, MIRResolvedTypeKey>, pcodes: Map<string, ICPPPCode>) {
+        super(name, ikey, srcFile, sinfoStart, sinfoEnd, recursive, params, resultType, 0, 0, "", 0);
         this.enclosingtype = enclosingtype;
         this.implkeyname = implkeyname;
         this.binds = binds;
@@ -425,6 +427,8 @@ class ICPPAssembly
     readonly propertynames: string[];
     readonly fields: MIRFieldDecl[];
 
+    readonly srcCode: { fname: string, contents: string }[];
+
     invokenames: Set<MIRInvokeKey>;
     vinvokenames: Set<MIRVirtualMethodKey>;
 
@@ -437,10 +441,12 @@ class ICPPAssembly
     litdecls: { offset: number, storage: ICPPTypeSizeInfo, value: string }[] = [];
     constdecls: ICPPConstDecl[] = [];
 
-    constructor(typenames: MIRResolvedTypeKey[], propertynames: string[], fields: MIRFieldDecl[], invokenames: MIRInvokeKey[], vinvokenames: MIRVirtualMethodKey[]) {
+    constructor(typenames: MIRResolvedTypeKey[], propertynames: string[], fields: MIRFieldDecl[], srcCode: { fname: string, contents: string }[], invokenames: MIRInvokeKey[], vinvokenames: MIRVirtualMethodKey[]) {
         this.typenames = typenames;
         this.propertynames = propertynames;
         this.fields = fields;
+
+        this.srcCode = srcCode;
 
         this.invokenames = new Set<MIRInvokeKey>(invokenames);
         this.vinvokenames = new Set<MIRVirtualMethodKey>(vinvokenames);
@@ -765,7 +771,7 @@ class ICPPAssembly
         }
     }
 
-    jsonEmit(assembly: MIRAssembly, entrypoints: MIRInvokeKey[]): object {
+    jsonEmit(assembly: MIRAssembly): object {
         const entitydecls = [...assembly.entityDecls].sort((a, b) => a[0].localeCompare(b[0])).map((dclp) => dclp[1]).map((edcl) => {
             const icpplayout = this.typedecls.find((dd) => dd.tkey === edcl.tkey) as ICPPLayoutInfo;
 
@@ -922,6 +928,8 @@ class ICPPAssembly
         });
 
         return {
+            src: this.srcCode,
+            
             cmask: this.cmask,
             cbuffsize: this.cbuffsize,
             
