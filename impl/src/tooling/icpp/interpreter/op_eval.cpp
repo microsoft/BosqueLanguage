@@ -1938,9 +1938,9 @@ void Evaluator::invokePrelude(const BSQInvokeBodyDecl* invk, uint8_t* cstack, ui
 
     GCStack::pushFrame((void**)mixedslots, invk->mixedMask);
 #ifdef BSQ_DEBUG_BUILD
-    this->pushFrame<false>(&invk->srcFile, &invk->name, cstack, mixedslots, optmask, maskslots, &invk->body);
+    this->pushFrame(&invk->srcFile, &invk->name, , cstack, mixedslots, optmask, maskslots, &invk->body);
 #else
-    this->pushFrame<false>(, cstack, mixedslots, optmask, maskslots, &invk->body);
+    this->pushFrame(cstack, mixedslots, optmask, maskslots, &invk->body);
 #endif
 }
     

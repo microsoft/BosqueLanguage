@@ -14,6 +14,21 @@
 
 #include "collection_eval.h"
 
+enum class StepMode
+{
+    Run,
+    Step,
+    StepInto
+};
+
+class BreakPoint
+{
+public:
+    std::string file;
+    int64_t line;
+    int64_t callCount;
+};
+
 class EvaluatorFrame
 {
 public:
@@ -22,6 +37,9 @@ public:
     const std::string* dbg_function;
     int64_t dbg_prevline;
     int64_t dbg_line;
+    bool dbg_ignore;
+    StepMode dbg_mode_intro;
+    StepMode dbg_mode_current;
 #endif
 
     uint8_t* scalarbase;
@@ -61,31 +79,105 @@ private:
     int32_t cpos = 0;
 
 #ifdef BSQ_DEBUG_BUILD
-    template <bool isbultin>
-    inline void pushFrame(const std::string* dbg_file, const std::string* dbg_function, uint8_t* scalarbase, uint8_t* mixedbase, BSQBool* argmask, BSQBool* masksbase, const std::vector<InterpOp*>* ops)
+    int64_t call_count = 0;
+    BreakPoint ttdBreakpoint = {"[Not Set]", 0, -1};
+    std::vector<BreakPoint> breakpoints;
+
+    bool advanceLineAndProcsssBP(InterpOp* op)
     {
+        if(this->cframe->dbg_ignore)
+        {
+            return false;
+        }
+
+        if(op == nullptr || op->sinfo.line == -1 || op->sinfo.line == this->cframe->dbg_line)
+        {
+            return false;
+        }
+
+        if(op->sinfo.line == this->cframe->dbg_line)
+        {
+            return (op->tag == OpCodeTag::InvokeFixedFunctionOp || op->tag == OpCodeTag::InvokeVirtualFunctionOp || op->tag == OpCodeTag::InvokeVirtualOperatorOp);
+        }
+
+        this->cframe->dbg_prevline = this->cframe->dbg_line;
+        this->cframe->dbg_line = (*this->cframe->cpos)->sinfo.line;
+
+        if(this->cframe->dbg_mode_current == StepMode::Step || this->cframe->dbg_mode_current == StepMode::StepInto)
+        {
+            this->cframe->dbg_mode_current == StepMode::Step;
+            return true;
+        }
+
+        if(this->ttdBreakpoint.line == this->cframe->dbg_line && this->call_count == ttdBreakpoint.callCount)
+        {
+            this->cframe->dbg_mode_current == StepMode::Step;
+            this->ttdBreakpoint = {"[Not Set]", 0, -1};
+            return true;
+        }
+
+        auto fbp = std::find_if(breakpoints.cbegin(), breakpoints.cend(), [this](const BreakPoint& bp) {
+            return bp.line == this->cframe->dbg_line && bp.file == *this->cframe->dbg_file;
+        });
+
+        if(fbp != breakpoints.cend())
+        {
+            this->cframe->dbg_mode_current == StepMode::Step;
+            return true;
+        }
+
+        return false;
+    }
+
+    std::pair<StepMode, StepMode> computeCallIntoStepMode()
+    {
+        if(this->cframe->dbg_mode_current == StepMode::Step)
+        {
+            return std::make_pair(StepMode::Step, StepMode::Run);
+        }
+        else if(this->cframe->dbg_mode_current == StepMode::StepInto)
+        {
+            return std::make_pair(StepMode::StepInto, StepMode::Step);
+        }
+        else
+        {
+            return std::make_pair(StepMode::Run, StepMode::Run);
+        }
+    }
+
+    StepMode computeReturnFromStepMode()
+    {
+        return this->cframe->dbg_mode_intro;
+    }
+
+    inline void pushFrame(const std::string* dbg_file, const std::string* dbg_function, bool isuser, std::pair<StepMode, StepMode> modes, uint8_t* scalarbase, uint8_t* mixedbase, BSQBool* argmask, BSQBool* masksbase, const std::vector<InterpOp*>* ops)
+    {
+        this->call_count++;
+
         this->cpos++;
         auto cf = Evaluator::g_callstack + this->cpos;
+
         cf->dbg_file = dbg_file;
         cf->dbg_function = dbg_function;
-        cf->dbg_prevline = 0;
+        cf->dbg_line = -1;
+        cf->dbg_prevline = -1;
+        cf->dbg_ignore = !isuser;
+        cf->dbg_mode_intro = modes.first;
+        cf->dbg_mode_current = modes.second;
+        
         cf->scalarbase = scalarbase;
         cf->mixedbase = mixedbase;
         cf->argmask = argmask;
         cf->masksbase = masksbase;
         cf->ops = ops;
 
-        if constexpr(!isbultin) 
-        {
-            cf->cpos = cf->ops->cbegin();
-            cf->epos = cf->ops->cend();
-            cf->dbg_line = (*cf->cpos)->sinfo.line;
-        }
+        cf->cpos = cf->ops->cbegin();
+        cf->epos = cf->ops->cend();
+        cf->dbg_line = (*cf->cpos)->sinfo.line;
 
         this->cframe = Evaluator::g_callstack + this->cpos;
     }
 #else
-    template <bool isbultin>
     inline void pushFrame(uint8_t* scalarbase, uint8_t* mixedbase, BSQBool* argmask, BSQBool* masksbase, const std::vector<InterpOp*>* ops) 
     {
         this->cpos++;
@@ -119,18 +211,6 @@ private:
         }
     }
 
-#ifdef BSQ_DEBUG_BUILD
-    const std::string* getCurrentFile() { return cframe->dbg_file; }
-    const std::string* getCurrentFunction() { return cframe->dbg_function; }
-    int64_t getPrevLine() { return cframe->dbg_prevline; }
-    int64_t getCurrentLine() { return cframe->dbg_line; }
-#else
-    const std::string* getCurrentFile() { return nullptr; }
-    const std::string* getCurrentfunction() { return nullptr; }
-    int64_t getPrevLine() { return -1; }
-    int64_t getCurrentLine() { return 0; }
-#endif
-
     inline InterpOp* getCurrentOp()
     {
         return *this->cframe->cpos;
@@ -151,11 +231,6 @@ private:
         }
         else
         {
-#ifdef BSQ_DEBUG_BUILD
-            this->cframe->dbg_prevline = this->cframe->dbg_line;
-            this->cframe->dbg_line = (*this->cframe->cpos)->sinfo.line;  
-#endif
-
             return *this->cframe->cpos;
         }
     }
@@ -163,12 +238,6 @@ private:
     inline InterpOp* advanceCurrentOp()
     {
         this->cframe->cpos++;
-
-#ifdef BSQ_DEBUG_BUILD
-        this->cframe->dbg_prevline = this->cframe->dbg_line;
-        this->cframe->dbg_line = (*this->cframe->cpos)->sinfo.line;  
-#endif
-
         return *this->cframe->cpos;
     }
 

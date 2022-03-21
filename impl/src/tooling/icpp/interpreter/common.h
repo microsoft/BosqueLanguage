@@ -197,7 +197,14 @@ enum class BSQTypeLayoutKind : uint32_t
 typedef const char* RefMask;
 
 typedef void (*GCProcessOperatorFP)(const BSQType*, void**);
-typedef std::string (*DisplayFP)(const BSQType*, StorageLocationPtr);
+
+enum class DisplayMode
+{
+    Full,
+    Debug
+};
+
+typedef std::string (*DisplayFP)(const BSQType*, StorageLocationPtr, DisplayMode);
 
 struct BSQTypeSizeInfo
 {
