@@ -188,6 +188,18 @@ void initializeConst(Evaluator& runner, size_t storageOffset, BSQInvokeID ikey, 
 void loadAssembly(json j, Evaluator& ee)
 {
     ////
+    //Load the application sources if they are provided
+    auto jsrc = j["src"];
+    if(!jsrc.is_null()) {
+        std::for_each(jsrc.cbegin(), jsrc.cend(), [](json sj) {
+            std::string fname = sj["fname"].get<std::string>();
+            std::string contents = sj["contents"].get<std::string>();
+
+            MarshalEnvironment::g_srcMap[fname] = contents;
+        });
+    }
+
+    ////
     //Initialize builtin stuff
     auto gmaskstr = j["cmask"].get<std::string>();
     auto gmask = (char*)malloc(gmaskstr.size() + 1);

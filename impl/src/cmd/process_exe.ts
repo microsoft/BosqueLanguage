@@ -67,7 +67,7 @@ function processRunAction(args: string[]) {
         const userpackage = new PackageConfig([], usersrcinfo);
 
         if(fargs === undefined) {
-            // bosque run [package_path.json] [--entrypoint fname] [--config cname]
+            // bosque run|debug [package_path.json] [--entrypoint fname] [--config cname]
             
             let rl = readline.createInterface({
                 input: process.stdin,
@@ -80,7 +80,7 @@ function processRunAction(args: string[]) {
         
                     process.stdout.write(`Evaluating...\n`);
         
-                    workflowRunICPPFile(jargs, userpackage, "release", false, {}, entrypoint, (result: string | undefined) => {
+                    workflowRunICPPFile(jargs, userpackage, args[0] === "debug", "release", false, {}, entrypoint, (result: string | undefined) => {
                         if (result !== undefined) {
                             process.stdout.write(`${result}\n`);
                         }
@@ -98,8 +98,8 @@ function processRunAction(args: string[]) {
             });
         }
         else {
-            // bosque run [package_path.json] [--entrypoint fname] [--config cname] --args "[...]"
-            workflowRunICPPFile(fargs, userpackage, "release", false, {}, entrypoint, (result: string | undefined) => {
+            // bosque run|debug [package_path.json] [--entrypoint fname] [--config cname] --args "[...]"
+            workflowRunICPPFile(fargs, userpackage, args[0] === "debug", "release", false, {}, entrypoint, (result: string | undefined) => {
                 if (result !== undefined) {
                     process.stdout.write(`${result}\n`);
                 }
@@ -171,7 +171,7 @@ function processRunAction(args: string[]) {
         const userpackage = new PackageConfig([...cfg.macros, ...cfg.globalmacros], usersrcinfo);
         
         if(fargs === undefined) {
-            // bosque run [package_path.json] [--entrypoint fname] [--config cname]
+            // bosque run|debug [package_path.json] [--entrypoint fname] [--config cname]
             
             let rl = readline.createInterface({
                 input: process.stdin,
@@ -184,7 +184,7 @@ function processRunAction(args: string[]) {
         
                     process.stdout.write(`Evaluating...\n`);
         
-                    workflowRunICPPFile(jargs, userpackage, cfg.buildlevel, false, {}, entrypoint, (result: string | undefined) => {
+                    workflowRunICPPFile(jargs, userpackage, args[0] === "debug", cfg.buildlevel, false, {}, entrypoint, (result: string | undefined) => {
                         if (result !== undefined) {
                             process.stdout.write(`${result}\n`);
                         }
@@ -202,8 +202,8 @@ function processRunAction(args: string[]) {
             });
         }
         else {
-            // bosque run [package_path.json] [--entrypoint fname] [--config cname] --args "[...]"
-            workflowRunICPPFile(fargs, userpackage, cfg.buildlevel, false, {}, entrypoint, (result: string | undefined) => {
+            // bosque run|debug [package_path.json] [--entrypoint fname] [--config cname] --args "[...]"
+            workflowRunICPPFile(fargs, userpackage, args[0] === "debug", cfg.buildlevel, false, {}, entrypoint, (result: string | undefined) => {
                 if (result !== undefined) {
                     process.stdout.write(`${result}\n`);
                 }
@@ -555,7 +555,7 @@ function processBuildAction(args: string[]) {
         }
 
         //bosque build bytecode [package_path.json] [--config cname] [--output out]
-        workflowEmitICPPFile(path.join(output.path, cfg.name + ".json"), userpackage, cfg.buildlevel, false, {}, rrep);
+        workflowEmitICPPFile(path.join(output.path, cfg.name + ".json"), userpackage, false, cfg.buildlevel, false, {}, rrep);
     }
     else {
         process.stderr.write(chalk.red(`Unknown build target '${args[0]}'\n`));

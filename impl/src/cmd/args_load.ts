@@ -16,10 +16,10 @@ type CmdTag = "run" | "symrun" | "build" | "test" | "apptest" | "fuzz";
 function help(cmd: CmdTag | undefined) {
     if(cmd === "run" || cmd === undefined) {
         process.stdout.write("Run Application:\n");
-        process.stdout.write("bosque run [package_path.json] [--entrypoint fname] [--config cname]\n");
-        process.stdout.write("bosque run [package_path.json] [--entrypoint fname] [--config cname] --args \"[...]\"\n");
-        process.stdout.write("bosque run entryfile.bsqapi [--entrypoint fname] --files ...\n");
-        process.stdout.write("bosque run entryfile.bsqapi [--entrypoint fname] --files ... --args \"[...]\"\n\n");
+        process.stdout.write("bosque run|debug [package_path.json] [--entrypoint fname] [--config cname]\n");
+        process.stdout.write("bosque run|debug [package_path.json] [--entrypoint fname] [--config cname] --args \"[...]\"\n");
+        process.stdout.write("bosque run|debug entryfile.bsqapi [--entrypoint fname] --files ...\n");
+        process.stdout.write("bosque run|debug entryfile.bsqapi [--entrypoint fname] --files ... --args \"[...]\"\n\n");
     }
 
     if(cmd === "symrun" || cmd === undefined) {
