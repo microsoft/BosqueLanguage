@@ -436,6 +436,23 @@ public:
     static std::list<BSQCollectionIterator*> collectioniters;
     static std::vector<std::list<BSQTempRootNode>> alloctemps;
 
+#ifdef BSQ_DEBUG_BUILD
+    static std::map<size_t, void*> dbg_idToObjMap;
+
+    static void resetDbgObjIDMap(void* obj)
+    {
+        Allocator::dbg_idToObjMap.clear();
+    }
+
+    static std::string registerDbgObjID(void* obj)
+    {
+        auto id = Allocator::dbg_idToObjMap.size();
+        Allocator::dbg_idToObjMap[id] = obj;
+
+        return std::string("*") + std::to_string(id);
+    }
+#endif
+
 private:
     BumpSpaceAllocator bumpalloc;
 

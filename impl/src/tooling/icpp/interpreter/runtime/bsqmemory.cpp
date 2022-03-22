@@ -22,6 +22,10 @@ BSQCollectionGCReprNode Allocator::collectionnodes[BSQ_MAX_STACK];
 std::list<BSQCollectionIterator*> Allocator::collectioniters;
 std::vector<std::list<BSQTempRootNode>> Allocator::alloctemps;
 
+#ifdef BSQ_DEBUG_BUILD
+    std::map<size_t, void*> Allocator::dbg_idToObjMap;
+#endif
+
 void gcProcessRootOperator_nopImpl(const BSQType* btype, void** data)
 {
     return;

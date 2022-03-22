@@ -1063,8 +1063,9 @@ void* BSQMapOps::s_remove_ne(const BSQMapTypeFlavor& mflavor, void* t, const BSQ
     return res;
 }
 
-std::string entityPartialVectorDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+std::string entityPartialVectorDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
+    xxx;
     auto pvtype = dynamic_cast<const BSQPartialVectorType*>(btype);
     auto lflavor = BSQListOps::g_flavormap.find(pvtype->entrytype)->second;
     auto lv = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data);
@@ -1084,13 +1085,15 @@ std::string entityPartialVectorDisplay_impl(const BSQType* btype, StorageLocatio
     return res;
 }
 
-std::string entityListTreeDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+std::string entityListTreeDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
+    xxxx;
     return "[ListTree]";
 }
 
-std::string entityListDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+std::string entityListDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
+    xxxx;
     if(LIST_LOAD_TYPE_INFO(data)->tid == BSQ_TYPE_ID_NONE)
     {
         return btype->name + "{}";
@@ -1120,8 +1123,9 @@ std::string entityListDisplay_impl(const BSQType* btype, StorageLocationPtr data
     }
 }
 
-std::string entityMapDisplay_impl_rec(const BSQMapTypeFlavor& mflavor, BSQMapSpineIterator& iter)
+std::string entityMapDisplay_impl_rec(const BSQMapTypeFlavor& mflavor, BSQMapSpineIterator& iter, DisplayMode mode)
 {
+    xxxx;
     if(iter.lcurr == nullptr)
     {
         return "";
@@ -1142,8 +1146,9 @@ std::string entityMapDisplay_impl_rec(const BSQMapTypeFlavor& mflavor, BSQMapSpi
     }
 }
 
-std::string entityMapDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+std::string entityMapDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
+    xxxx;
     if(MAP_LOAD_TYPE_INFO(data)->tid == BSQ_TYPE_ID_NONE)
     {
         return btype->name + "{}";
