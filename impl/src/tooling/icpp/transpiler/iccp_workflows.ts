@@ -95,12 +95,12 @@ function emitICPPFile(cfile: string, into: string): boolean {
     }
 }
 
-function runICPPFile(icppjson: {code: object, args: any[], main: string}, cb: (result: string | undefined) => void) {
+function runICPPFile(icppjson: {code: object, args: any[], main: string}, debug: boolean, cb: (result: string | undefined) => void) {
     try {
-        const cmd = `${exepath} --stream`;
+        const cmd = `${exepath} ${debug ? "--debug " : ""}--stream`;
 
         const proc = exec(cmd, (err, stdout) => {
-           cb(stdout.toString().trim());
+           cb(err === null ? stdout.toString().trim() : undefined);
         });
 
         proc.stdin.setDefaultEncoding('utf-8');
@@ -125,11 +125,11 @@ function workflowEmitICPPFile(into: string, usercode: PackageConfig, emitsrcmap:
         return false;
     }
 
-    const icppjson = JSON.stringify({code: {api: massembly.emitAPIInfo(entrypoint.fkeys, istestbuild), bytecode: icppasm }, args: []}, undefined, 2);
+    const icppjson = JSON.stringify({code: {api: massembly.emitAPIInfo(entrypoint.fkeys, istestbuild), bytecode: icppasm }}, undefined, 2);
     return emitICPPFile(icppjson, into);
 } 
 
-function workflowRunICPPFile(args: any[], usercode: PackageConfig, emitsrcmap: boolean, buildlevel: BuildLevel, istestbuild: boolean, topts: TranspilerOptions, entrypoint: {filename: string, name: string, fkey: MIRResolvedTypeKey}, cb: (result: string | undefined) => void) {
+function workflowRunICPPFile(args: any[], usercode: PackageConfig, emitsrcmap: boolean, buildlevel: BuildLevel, istestbuild: boolean, debug: boolean, topts: TranspilerOptions, entrypoint: {filename: string, name: string, fkey: MIRResolvedTypeKey}, cb: (result: string | undefined) => void) {
     const massembly = generateMASM(usercode, buildlevel, {filename: entrypoint.filename, names: [entrypoint.name]});
 
     //TODO: we want to strip to a relative path here to avoid shipping any system specific info
@@ -141,7 +141,7 @@ function workflowRunICPPFile(args: any[], usercode: PackageConfig, emitsrcmap: b
         return undefined;
     }
 
-    return runICPPFile({code: {api: massembly.emitAPIInfo([entrypoint.fkey], istestbuild), bytecode: icppasm }, args: args, main: entrypoint.fkey}, cb);
+    return runICPPFile({code: {api: massembly.emitAPIInfo([entrypoint.fkey], istestbuild), bytecode: icppasm }, args: args, main: entrypoint.fkey}, debug, cb);
 }
 
 export {

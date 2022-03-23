@@ -56,6 +56,13 @@ std::pair<bool, json> run(Evaluator& runner, const APIModule* api, const std::st
         return std::make_pair(false, "Could not load given entrypoint");
     }
 
+    if(args.size() > jsig.value()->argtypes.size())
+    {
+        return std::make_pair(false, "Too many arguments provided to call");
+    }
+
+    //TODO: we need to check that all required arguments are provided
+
     if(setjmp(Evaluator::g_entrybuff) > 0)
     {
         return std::make_pair(false, "Failed in argument parsing");
@@ -99,22 +106,32 @@ std::pair<bool, json> run(Evaluator& runner, const APIModule* api, const std::st
     }
 }
 
-void parseArgs(int argc, char** argv, std::string& mode, std::string& prog, std::string& input)
+void parseArgs(int argc, char** argv, std::string& mode, bool& debugger, std::string& prog, std::string& input)
 {
-    if(argc == 2 && std::string(argv[1]) == std::string("--stream"))
+    bool isstream = false;
+    debugger = false;
+    for(int i = 0; i < argc; ++i)
+    {
+        std::string sarg(argv[i]);
+
+        isstream |= (sarg == "--stream");
+        debugger |= (sarg == "--debug");
+    }
+
+    if(isstream)
     {
         mode = "stream";
     }
     else if(argc == 3)
     {
         mode = "run";
-        prog = std::string(argv[1]);
-        input = std::string(argv[2]);
+        prog = std::string(debugger ? argv[2] : argv[1]);
+        input = std::string(debugger ? argv[3] : argv[2]);
     }
     else
     {
-        fprintf(stderr, "Usage: icpp bytecode.bsqir args[]\n");
-        fprintf(stderr, "Usage: icpp --stream\n");
+        fprintf(stderr, "Usage: icpp [--debug] bytecode.bsqir args[]\n");
+        fprintf(stderr, "Usage: icpp [--debug] --stream\n");
         fflush(stderr);
         exit(1);
     }
@@ -122,10 +139,11 @@ void parseArgs(int argc, char** argv, std::string& mode, std::string& prog, std:
 
 int main(int argc, char** argv)
 {
-    std::string mode; 
+    std::string mode;
+    bool debugger = false;
     std::string prog;
     std::string input;
-    parseArgs(argc, argv, mode, prog, input);
+    parseArgs(argc, argv, mode, debugger, prog, input);
 
     const char* outputenv = std::getenv("ICPP_OUTPUT_MODE");
     std::string outmode(outputenv != nullptr ? outputenv : "simple");
@@ -154,6 +172,7 @@ int main(int argc, char** argv)
         const APIModule* api = APIModule::jparse(jcode["api"]);
 
         Evaluator runner;
+        runner.debuggerattached = debugger;
         loadAssembly(jcode["bytecode"], runner);
 
         auto start = std::chrono::system_clock::now();

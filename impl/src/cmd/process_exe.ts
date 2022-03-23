@@ -84,7 +84,7 @@ function processRunAction(args: string[]) {
         
                     process.stdout.write(`Evaluating...\n`);
         
-                    workflowRunICPPFile(jargs, userpackage, args[0] === "debug", "release", false, {}, entrypoint, (result: string | undefined) => {
+                    workflowRunICPPFile(jargs, userpackage, args[0] === "debug", "release", false, args[0] === "debug", {}, entrypoint, (result: string | undefined) => {
                         if (result !== undefined) {
                             process.stdout.write(`${result}\n`);
                         }
@@ -103,7 +103,7 @@ function processRunAction(args: string[]) {
         }
         else {
             // bosque run|debug [package_path.json] [--entrypoint fname] [--config cname] --args "[...]"
-            workflowRunICPPFile(fargs, userpackage, args[0] === "debug", "release", false, {}, entrypoint, (result: string | undefined) => {
+            workflowRunICPPFile(fargs, userpackage, args[0] === "debug", "release", false, args[0] === "debug", {}, entrypoint, (result: string | undefined) => {
                 if (result !== undefined) {
                     process.stdout.write(`${result}\n`);
                 }
@@ -188,7 +188,7 @@ function processRunAction(args: string[]) {
         
                     process.stdout.write(`Evaluating...\n`);
         
-                    workflowRunICPPFile(jargs, userpackage, args[0] === "debug", cfg.buildlevel, false, {}, entrypoint, (result: string | undefined) => {
+                    workflowRunICPPFile(jargs, userpackage, args[0] === "debug", cfg.buildlevel, false, args[0] === "debug", {}, entrypoint, (result: string | undefined) => {
                         if (result !== undefined) {
                             process.stdout.write(`${result}\n`);
                         }
@@ -207,7 +207,7 @@ function processRunAction(args: string[]) {
         }
         else {
             // bosque run|debug [package_path.json] [--entrypoint fname] [--config cname] --args "[...]"
-            workflowRunICPPFile(fargs, userpackage, args[0] === "debug", cfg.buildlevel, false, {}, entrypoint, (result: string | undefined) => {
+            workflowRunICPPFile(fargs, userpackage, args[0] === "debug", cfg.buildlevel, false, args[0] === "debug", {}, entrypoint, (result: string | undefined) => {
                 if (result !== undefined) {
                     process.stdout.write(`${result}\n`);
                 }
@@ -361,16 +361,16 @@ function processRunSymbolicAction(args: string[]) {
 }
 
 function processBuildAction(args: string[]) {
-    if(args.length === 0) {
+    if(args.length === 1) {
         args.push("./package.json");
     }
-    
+
     if(args[0] === "node") {
         let workingdir = process.cwd();
         let pckg: Package | undefined = undefined;
-        if(path.extname(args[0]) === ".json") {
-            workingdir = path.dirname(path.resolve(args[0]));
-            pckg = tryLoadPackage(path.resolve(args[0]));
+        if(path.extname(args[1]) === ".json") {
+            workingdir = path.dirname(path.resolve(args[1]));
+            pckg = tryLoadPackage(path.resolve(args[1]));
         }
         else {
             const implicitpckg = path.resolve(workingdir, "package.json");
@@ -428,9 +428,9 @@ function processBuildAction(args: string[]) {
 
         let workingdir = process.cwd();
         let pckg: Package | undefined = undefined;
-        if(path.extname(args[0]) === ".json") {
-            workingdir = path.dirname(path.resolve(args[0]));
-            pckg = tryLoadPackage(path.resolve(args[0]));
+        if(path.extname(args[1]) === ".json") {
+            workingdir = path.dirname(path.resolve(args[1]));
+            pckg = tryLoadPackage(path.resolve(args[1]));
         }
         else {
             const implicitpckg = path.resolve(workingdir, "package.json");
@@ -502,9 +502,9 @@ function processBuildAction(args: string[]) {
     else if(args[0] === "bytecode") {
         let workingdir = process.cwd();
         let pckg: Package | undefined = undefined;
-        if(path.extname(args[0]) === ".json") {
-            workingdir = path.dirname(path.resolve(args[0]));
-            pckg = tryLoadPackage(path.resolve(args[0]));
+        if(path.extname(args[1]) === ".json") {
+            workingdir = path.dirname(path.resolve(args[1]));
+            pckg = tryLoadPackage(path.resolve(args[1]));
         }
         else {
             const implicitpckg = path.resolve(workingdir, "package.json");

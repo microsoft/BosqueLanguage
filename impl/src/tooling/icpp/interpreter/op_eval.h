@@ -21,6 +21,22 @@ enum class StepMode
     StepInto
 };
 
+enum class DebuggerCmd
+{
+    Invalid,
+    Help,
+    PrintFunction,
+    CallStack,
+    LocalDisplay,
+    ExpDisplay,
+    Step,
+    StepInto,
+    Run,
+    ReverseStep,
+    ReverseStepInto,
+    Quit
+};
+
 class BreakPoint
 {
 public:
@@ -79,10 +95,15 @@ private:
     int32_t cpos = 0;
 
 #ifdef BSQ_DEBUG_BUILD
+public:
     int64_t call_count = 0;
+    bool debuggerattached;
     BreakPoint ttdBreakpoint = {"[Not Set]", 0, -1};
     std::vector<BreakPoint> breakpoints;
 
+    std::vector<std::pair<DebuggerCmd, std::string>> dbg_history;
+
+private:
     bool advanceLineAndProcsssBP(InterpOp* op)
     {
         if(this->cframe->dbg_ignore)
@@ -131,17 +152,32 @@ private:
 
     std::pair<StepMode, StepMode> computeCallIntoStepMode()
     {
-        if(this->cframe->dbg_mode_current == StepMode::Step)
+        if(this->cframe == nullptr)
         {
-            return std::make_pair(StepMode::Step, StepMode::Run);
-        }
-        else if(this->cframe->dbg_mode_current == StepMode::StepInto)
-        {
-            return std::make_pair(StepMode::StepInto, StepMode::Step);
+            //main entrypoint so do break if debugger is attached
+            if(this->debuggerattached)
+            {
+                return std::make_pair(StepMode::Step, StepMode::Step);
+            }
+            else
+            {
+                return std::make_pair(StepMode::Run, StepMode::Run);
+            }
         }
         else
         {
-            return std::make_pair(StepMode::Run, StepMode::Run);
+            if(this->cframe->dbg_mode_current == StepMode::Step)
+            {
+                return std::make_pair(StepMode::Step, StepMode::Run);
+            }
+            else if(this->cframe->dbg_mode_current == StepMode::StepInto)
+            {
+                return std::make_pair(StepMode::StepInto, StepMode::Step);
+            }
+            else
+            {
+                return std::make_pair(StepMode::Run, StepMode::Run);
+            }
         }
     }
 
