@@ -111,7 +111,7 @@ private:
 
         if(this->ttdBreakpoint.line == this->cframe->dbg_line && this->call_count == ttdBreakpoint.callCount)
         {
-            this->cframe->dbg_mode_current == StepMode::Step;
+            this->cframe->dbg_mode_current = StepMode::Step;
             this->ttdBreakpoint = {"[Not Set]", 0, -1};
             return true;
         }

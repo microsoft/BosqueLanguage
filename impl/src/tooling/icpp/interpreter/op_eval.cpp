@@ -106,7 +106,7 @@ void Evaluator::evalDebugOp(const DebugOp* op)
         auto sl = this->evalArgument(op->arg);
         auto oftype = SLPTR_LOAD_UNION_INLINE_TYPE(sl);
 
-        auto dval = oftype->fpDisplay(oftype, SLPTR_LOAD_UNION_INLINE_DATAPTR(sl));
+        auto dval = oftype->fpDisplay(oftype, SLPTR_LOAD_UNION_INLINE_DATAPTR(sl), DisplayMode::Standard);
 
         printf("%s\n", dval.c_str());
         fflush(stdout);
@@ -1938,7 +1938,7 @@ void Evaluator::invokePrelude(const BSQInvokeBodyDecl* invk, uint8_t* cstack, ui
 
     GCStack::pushFrame((void**)mixedslots, invk->mixedMask);
 #ifdef BSQ_DEBUG_BUILD
-    this->pushFrame(&invk->srcFile, &invk->name, , cstack, mixedslots, optmask, maskslots, &invk->body);
+    this->pushFrame(&invk->srcFile, &invk->name, invk->isUserCode, this->computeCallIntoStepMode(), cstack, mixedslots, optmask, maskslots, &invk->body);
 #else
     this->pushFrame(cstack, mixedslots, optmask, maskslots, &invk->body);
 #endif

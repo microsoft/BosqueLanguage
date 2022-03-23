@@ -1065,7 +1065,6 @@ void* BSQMapOps::s_remove_ne(const BSQMapTypeFlavor& mflavor, void* t, const BSQ
 
 std::string entityPartialVectorDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
-    xxx;
     auto pvtype = dynamic_cast<const BSQPartialVectorType*>(btype);
     auto lflavor = BSQListOps::g_flavormap.find(pvtype->entrytype)->second;
     auto lv = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data);
@@ -1078,7 +1077,7 @@ std::string entityPartialVectorDisplay_impl(const BSQType* btype, StorageLocatio
         {
             res += ", ";
         }
-        res += lflavor.entrytype->fpDisplay(lflavor.entrytype, pvtype->get(lv, i));
+        res += lflavor.entrytype->fpDisplay(lflavor.entrytype, pvtype->get(lv, i), mode);
     }
     res += "}";
 
@@ -1087,19 +1086,19 @@ std::string entityPartialVectorDisplay_impl(const BSQType* btype, StorageLocatio
 
 std::string entityListTreeDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
-    xxxx;
     return "[ListTree]";
 }
 
 std::string entityListDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
-{
-    xxxx;
+{    
     if(LIST_LOAD_TYPE_INFO(data)->tid == BSQ_TYPE_ID_NONE)
     {
         return btype->name + "{}";
     }
     else
     {
+        PROCESS_DISPLAY_MODE(btype, mode, data);
+
         auto ltype = dynamic_cast<const BSQListType*>(btype);
         auto lflavor = BSQListOps::g_flavormap.find(ltype->etype)->second;
 
@@ -1114,7 +1113,7 @@ std::string entityListDisplay_impl(const BSQType* btype, StorageLocationPtr data
             }
             first = false;
 
-            res += lflavor.entrytype->fpDisplay(lflavor.entrytype, iter.getlocation());
+            res += lflavor.entrytype->fpDisplay(lflavor.entrytype, iter.getlocation(), mode);
             iter.advance();
         }
         res += "}";
@@ -1125,7 +1124,6 @@ std::string entityListDisplay_impl(const BSQType* btype, StorageLocationPtr data
 
 std::string entityMapDisplay_impl_rec(const BSQMapTypeFlavor& mflavor, BSQMapSpineIterator& iter, DisplayMode mode)
 {
-    xxxx;
     if(iter.lcurr == nullptr)
     {
         return "";
@@ -1133,13 +1131,13 @@ std::string entityMapDisplay_impl_rec(const BSQMapTypeFlavor& mflavor, BSQMapSpi
     else
     {
         iter.moveLeft();
-        auto ll = entityMapDisplay_impl_rec(mflavor, iter);
+        auto ll = entityMapDisplay_impl_rec(mflavor, iter, mode);
         iter.pop();
 
-        auto iistr = mflavor.keytype->fpDisplay(mflavor.keytype, mflavor.treetype->getKeyLocation(iter.lcurr)) + " => " + mflavor.valuetype->fpDisplay(mflavor.valuetype, mflavor.treetype->getValueLocation(iter.lcurr));
+        auto iistr = mflavor.keytype->fpDisplay(mflavor.keytype, mflavor.treetype->getKeyLocation(iter.lcurr), mode) + " => " + mflavor.valuetype->fpDisplay(mflavor.valuetype, mflavor.treetype->getValueLocation(iter.lcurr), mode);
 
         iter.moveRight();
-        auto rr = entityMapDisplay_impl_rec(mflavor, iter);
+        auto rr = entityMapDisplay_impl_rec(mflavor, iter, mode);
         iter.pop();
 
         return ll + (ll.empty() ? "" : ", ") + iistr + (rr.empty() ? "" : ", ") + rr;
@@ -1148,13 +1146,14 @@ std::string entityMapDisplay_impl_rec(const BSQMapTypeFlavor& mflavor, BSQMapSpi
 
 std::string entityMapDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
-    xxxx;
     if(MAP_LOAD_TYPE_INFO(data)->tid == BSQ_TYPE_ID_NONE)
     {
         return btype->name + "{}";
     }
     else
     {
+        PROCESS_DISPLAY_MODE(btype, mode, data);
+
         auto mtype = dynamic_cast<const BSQMapType*>(btype);
         auto mflavor = BSQMapOps::g_flavormap.find(std::make_pair(mtype->ktype, mtype->vtype))->second;
 
@@ -1162,7 +1161,7 @@ std::string entityMapDisplay_impl(const BSQType* btype, StorageLocationPtr data,
         BSQMapSpineIterator iter(MAP_LOAD_TYPE_INFO(data), MAP_LOAD_REPR(data));
         if(iter.valid())
         {
-            res += entityMapDisplay_impl_rec(mflavor, iter);
+            res += entityMapDisplay_impl_rec(mflavor, iter, mode);
         }
         res += "}";
 
