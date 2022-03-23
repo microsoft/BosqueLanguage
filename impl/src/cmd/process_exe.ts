@@ -17,6 +17,10 @@ import { workflowEmitICPPFile, workflowRunICPPFile } from "../tooling/icpp/trans
 import { generateStandardVOpts, workflowEmitToFile, workflowEvaluate } from "../tooling/checker/smt_workflows";
 
 function processRunAction(args: string[]) {
+    if(args.length === 0) {
+        args.push("./package.json");
+    }
+
     if(path.extname(args[0]) === ".bsqapi") {
         const entryfile = args[0];
 
@@ -221,6 +225,10 @@ function processRunSymbolicAction(args: string[]) {
     const timeout = 10000;
     const eval_opts = generateStandardVOpts(SymbolicActionMode.EvaluateSymbolic);
 
+    if(args.length === 0) {
+        args.push("./package.json");
+    }
+
     let workingdir = process.cwd();
     let pckg: Package | undefined = undefined;
     if (path.extname(args[0]) === ".json") {
@@ -353,6 +361,10 @@ function processRunSymbolicAction(args: string[]) {
 }
 
 function processBuildAction(args: string[]) {
+    if(args.length === 0) {
+        args.push("./package.json");
+    }
+    
     if(args[0] === "node") {
         let workingdir = process.cwd();
         let pckg: Package | undefined = undefined;

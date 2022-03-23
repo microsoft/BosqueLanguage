@@ -13,6 +13,10 @@ import { ConfigAppTest, ConfigFuzz, ConfigTest, Package, parseURIPathGlob } from
 import { runtests } from "../test/runner/suite_runner";
 
 function processTestAction(args: string[]) {
+    if(args.length === 0) {
+        args.push("./package.json");
+    }
+
     if(path.extname(args[0]) === ".bsqtest") {
         const entryfile = args[0];
 
@@ -101,6 +105,10 @@ function processTestAction(args: string[]) {
 }
 
 function processAppTestAction(args: string[]) {
+    if(args.length === 0) {
+        args.push("./package.json");
+    }
+    
     if(path.extname(args[0]) === ".bsqapi") {
         const entryfile = args[0];
 
