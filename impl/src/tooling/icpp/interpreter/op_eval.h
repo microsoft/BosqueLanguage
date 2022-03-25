@@ -34,6 +34,9 @@ enum class DebuggerCmd
     Run,
     ReverseStep,
     ReverseStepInto,
+    ListBreakPoint,
+    AddBreakPoint,
+    DeleteBreakpoint,
     Quit
 };
 
