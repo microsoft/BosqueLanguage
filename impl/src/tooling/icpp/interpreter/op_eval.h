@@ -52,14 +52,16 @@ class EvaluatorFrame
 {
 public:
 #ifdef BSQ_DEBUG_BUILD
-    const std::string* dbg_file;
-    const std::string* dbg_function;
     int64_t dbg_prevline;
     int64_t dbg_line;
+    
     bool dbg_ignore;
+    
     StepMode dbg_mode_intro;
     StepMode dbg_mode_current;
 #endif
+
+    const BSQInvokeDecl* invoke;
 
     uint8_t* scalarbase;
     uint8_t* mixedbase;
@@ -99,6 +101,16 @@ private:
 
 #ifdef BSQ_DEBUG_BUILD
 public:
+    int32_t dbg_getCPos()
+    { 
+        return this->cpos;
+    }
+
+    EvaluatorFrame* dbg_getCFrame()
+    { 
+        return this->cframe;
+    }
+
     int64_t call_count = 0;
     bool debuggerattached;
     BreakPoint ttdBreakpoint = {"[Not Set]", 0, -1};
@@ -141,7 +153,7 @@ private:
         }
 
         auto fbp = std::find_if(breakpoints.cbegin(), breakpoints.cend(), [this](const BreakPoint& bp) {
-            return bp.line == this->cframe->dbg_line && bp.file == *this->cframe->dbg_file;
+            return bp.line == this->cframe->dbg_line && bp.file == this->cframe->invoke->srcFile;
         });
 
         if(fbp != breakpoints.cend())
@@ -189,21 +201,30 @@ private:
         return this->cframe->dbg_mode_intro;
     }
 
-    inline void pushFrame(const std::string* dbg_file, const std::string* dbg_function, bool isuser, std::pair<StepMode, StepMode> modes, uint8_t* scalarbase, uint8_t* mixedbase, BSQBool* argmask, BSQBool* masksbase, const std::vector<InterpOp*>* ops)
+    void computePreviousPositionOnCallReturn()
+    {
+        if(this->cpos == 0)
+        {
+            return;
+        }
+
+        xxxx;
+    }
+
+    inline void pushFrame(bool isuser, std::pair<StepMode, StepMode> modes, const BSQInvokeDecl* invk, uint8_t* scalarbase, uint8_t* mixedbase, BSQBool* argmask, BSQBool* masksbase, const std::vector<InterpOp*>* ops)
     {
         this->call_count++;
 
         this->cpos++;
         auto cf = Evaluator::g_callstack + this->cpos;
 
-        cf->dbg_file = dbg_file;
-        cf->dbg_function = dbg_function;
         cf->dbg_line = -1;
         cf->dbg_prevline = -1;
         cf->dbg_ignore = !isuser;
         cf->dbg_mode_intro = modes.first;
         cf->dbg_mode_current = modes.second;
         
+        cf->invoke = invk;
         cf->scalarbase = scalarbase;
         cf->mixedbase = mixedbase;
         cf->argmask = argmask;
@@ -217,10 +238,11 @@ private:
         this->cframe = Evaluator::g_callstack + this->cpos;
     }
 #else
-    inline void pushFrame(uint8_t* scalarbase, uint8_t* mixedbase, BSQBool* argmask, BSQBool* masksbase, const std::vector<InterpOp*>* ops) 
+    inline void pushFrame(const BSQInvokeDecl* invk, uint8_t* scalarbase, uint8_t* mixedbase, BSQBool* argmask, BSQBool* masksbase, const std::vector<InterpOp*>* ops) 
     {
         this->cpos++;
         auto cf = Evaluator::g_callstack + cpos;
+        cf->invoke = invk;
         cf->scalarbase = scalarbase;
         cf->mixedbase = mixedbase;
         cf->argmask = argmask;

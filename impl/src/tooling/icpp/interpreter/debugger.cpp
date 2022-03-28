@@ -5,6 +5,62 @@
 
 #include "debugger.h"
 
+DebuggerException::DebuggerException(uint32_t abortCode, int64_t optEventTime, int64_t optMoveMode, const char* staticAbortMessage)
+    : m_abortCode(abortCode), m_optEventTime(optEventTime), m_optMoveMode(optMoveMode), m_staticAbortMessage(staticAbortMessage)
+{
+    ;
+}
+
+DebuggerException::~DebuggerException()
+{
+    ;
+}
+
+DebuggerException DebuggerException::CreateAbortEndOfLog(const char* staticMessage)
+{
+    return DebuggerException(1, -1, 0, staticMessage);
+}
+
+DebuggerException DebuggerException::CreateTopLevelAbortRequest(int64_t targetEventTime, int64_t moveMode, const char* staticMessage)
+{
+    return DebuggerException(2, targetEventTime, moveMode, staticMessage);
+}
+
+DebuggerException DebuggerException::CreateUncaughtExceptionAbortRequest(int64_t targetEventTime, const char* staticMessage)
+{
+    return DebuggerException(3, targetEventTime, 0, staticMessage);
+}
+
+bool DebuggerException::IsEndOfLog() const
+{
+    return this->m_abortCode == 1;
+}
+
+bool DebuggerException::IsEventTimeMove() const
+{
+    return this->m_abortCode == 2;
+}
+
+bool DebuggerException::IsTopLevelException() const
+{
+    return this->m_abortCode == 3;
+}
+
+int64_t DebuggerException::GetTargetEventTime() const
+{
+    return this->m_optEventTime;
+}
+
+int64_t DebuggerException::GetMoveMode() const
+{
+    return this->m_optMoveMode;
+}
+
+const char* DebuggerException::GetStaticAbortMessage() const
+{
+    return this->m_staticAbortMessage;
+}
+
 std::pair<DebuggerCmd, std::string> dbg_parseDebuggerCmd(Evaluator* vv)
 {
     std::string opstr;
@@ -177,22 +233,51 @@ void dbg_printHelp(std::string ofop)
 
 void dbg_printFunction(Evaluator* vv)
 {
-    xxxx;
+    auto cframe = vv->dbg_getCFrame();
+
+    std::string contents = MarshalEnvironment::g_srcMap.find(cframe->invoke->srcFile)->second;
+    
+    int64_t cpos = 0;
+    for(int64_t i = 0; i <= cframe->invoke->sinfoEnd.line; ++i)
+    {
+        int64_t lcpos = cpos;
+        while(cpos < contents.size() && contents[cpos] != '\n')
+        {
+            cpos++;
+        }
+        cpos++;
+
+        if(i >= cframe->invoke->sinfoStart.line)
+        {
+            std::string line = contents.substr(lcpos, cpos);
+            printf("%s", line.c_str());
+        }
+    }
+
+    fflush(stdout);
 }
 
 void dbg_displayStack(Evaluator* vv)
 {
-    xxxx;
+    printf("++++\n");
+
+    for(int32_t i = 0; i < vv->dbg_getCPos(); ++i)
+    {
+        printf("  %s\n", Evaluator::g_callstack[i].invoke->name.c_str());
+    }
+
+    printf("----\n");
+    fflush(stdout);
 }
 
 void dbg_processStep(Evaluator* vv)
 {
-    xxxx;
+    vv->dbg_getCFrame()->dbg_mode_current = StepMode::Step;
 }
 
 void dbg_processStepInto(Evaluator* vv)
 {
-    xxxx;
+    vv->dbg_getCFrame()->dbg_mode_current = StepMode::StepInto;
 }
 
 void dbg_processReverseStep(Evaluator* vv)

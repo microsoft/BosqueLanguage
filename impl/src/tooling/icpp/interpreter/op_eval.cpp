@@ -26,7 +26,7 @@ SLPTR_STORE_CONTENTS_AS(REPRTYPE, THIS->evalTargetVar(bop->trgt), res);
 #define PrimitiveNegateOperatorMacroChecked(THIS, OP, TAG, REPRTYPE, ERROR) const PrimitiveNegateOperatorOp<TAG>* bop = static_cast<const PrimitiveNegateOperatorOp<TAG>*>(op); \
 REPRTYPE res; \
 bool err = __builtin_mul_overflow(SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->arg)), -1, &res); \
-BSQ_LANGUAGE_ASSERT(!err, THIS->cframe->dbg_file, THIS->cframe->dbg_line, ERROR); \
+BSQ_LANGUAGE_ASSERT(!err, &(THIS->cframe->invoke->srcFile), THIS->cframe->dbg_line, ERROR); \
 \
 SLPTR_STORE_CONTENTS_AS(REPRTYPE, THIS->evalTargetVar(bop->trgt), res);
 
@@ -34,7 +34,7 @@ SLPTR_STORE_CONTENTS_AS(REPRTYPE, THIS->evalTargetVar(bop->trgt), res);
 #define PrimitiveBinaryOperatorMacroChecked(THIS, OP, TAG, REPRTYPE, OPERATORW, OPERATORP, ERROR) const PrimitiveBinaryOperatorOp<TAG>* bop = static_cast<const PrimitiveBinaryOperatorOp<TAG>*>(op); \
 REPRTYPE res; \
 bool err = OPERATORP(SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->larg)), SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->rarg)), &res); \
-BSQ_LANGUAGE_ASSERT(!err, THIS->cframe->dbg_file, THIS->cframe->dbg_line, ERROR); \
+BSQ_LANGUAGE_ASSERT(!err, &(THIS->cframe->invoke->srcFile), THIS->cframe->dbg_line, ERROR); \
 \
 SLPTR_STORE_CONTENTS_AS(REPRTYPE, THIS->evalTargetVar(bop->trgt), res);
 #endif
@@ -48,7 +48,7 @@ SLPTR_STORE_CONTENTS_AS(REPRTYPE, THIS->evalTargetVar(bop->trgt), -SLPTR_LOAD_CO
 REPRTYPE larg = SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->larg)); \
 REPRTYPE rarg = SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->rarg)); \
 \
-BSQ_LANGUAGE_ASSERT(rarg != (REPRTYPE)0, THIS->cframe->dbg_file, THIS->cframe->dbg_line, "Division by zero"); \
+BSQ_LANGUAGE_ASSERT(rarg != (REPRTYPE)0, &(THIS->cframe->invoke->srcFile), THIS->cframe->dbg_line, "Division by zero"); \
 SLPTR_STORE_CONTENTS_AS(REPRTYPE, THIS->evalTargetVar(bop->trgt), larg / rarg);
 
 //Big Macro for generating code for primitive un-checked infix binary operations
@@ -64,8 +64,8 @@ SLPTR_STORE_CONTENTS_AS(BSQBool, THIS->evalTargetVar(bop->trgt), SLPTR_LOAD_CONT
 REPRTYPE larg = SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->larg)); \
 REPRTYPE rarg = SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->rarg)); \
 \
-BSQ_LANGUAGE_ASSERT(!ISNAN(rarg) & !ISNAN(larg), THIS->cframe->dbg_file, THIS->cframe->dbg_line, "NaN cannot be ordered"); \
-BSQ_LANGUAGE_ASSERT((!ISINFINITE(rarg) | !ISINFINITE(larg)) || ((rarg <= 0) & (0 <= larg)) || ((larg <= 0) & (0 <= rarg)), THIS->cframe->dbg_file, THIS->cframe->dbg_line, "Infinte values cannot be ordered"); \
+BSQ_LANGUAGE_ASSERT(!ISNAN(rarg) & !ISNAN(larg), &(THIS->cframe->invoke->srcFile), THIS->cframe->dbg_line, "NaN cannot be ordered"); \
+BSQ_LANGUAGE_ASSERT((!ISINFINITE(rarg) | !ISINFINITE(larg)) || ((rarg <= 0) & (0 <= larg)) || ((larg <= 0) & (0 <= rarg)), &(THIS->cframe->invoke->srcFile), THIS->cframe->dbg_line, "Infinte values cannot be ordered"); \
 SLPTR_STORE_CONTENTS_AS(BSQBool, THIS->evalTargetVar(bop->trgt), larg OPERATOR rarg);
 
 jmp_buf Evaluator::g_entrybuff;
@@ -83,14 +83,14 @@ void Evaluator::evalDeadFlowOp()
 
 void Evaluator::evalAbortOp(const AbortOp *op)
 {
-    BSQ_LANGUAGE_ABORT(op->msg.c_str(), this->cframe->dbg_file, this->cframe->dbg_line);
+    BSQ_LANGUAGE_ABORT(op->msg.c_str(), &this->cframe->invoke->srcFile, this->cframe->dbg_line);
 }
 
 void Evaluator::evalAssertCheckOp(const AssertOp *op)
 {
     if (!SLPTR_LOAD_CONTENTS_AS(BSQBool, this->evalArgument(op->arg)))
     {
-        BSQ_LANGUAGE_ABORT(op->msg.c_str(), this->cframe->dbg_file, this->cframe->dbg_line);
+        BSQ_LANGUAGE_ABORT(op->msg.c_str(), &this->cframe->invoke->srcFile, this->cframe->dbg_line);
     }
 }
 
@@ -1938,9 +1938,9 @@ void Evaluator::invokePrelude(const BSQInvokeBodyDecl* invk, uint8_t* cstack, ui
 
     GCStack::pushFrame((void**)mixedslots, invk->mixedMask);
 #ifdef BSQ_DEBUG_BUILD
-    this->pushFrame(&invk->srcFile, &invk->name, invk->isUserCode, this->computeCallIntoStepMode(), cstack, mixedslots, optmask, maskslots, &invk->body);
+    this->pushFrame(invk->isUserCode, this->computeCallIntoStepMode(), invk, cstack, mixedslots, optmask, maskslots, &invk->body);
 #else
-    this->pushFrame(cstack, mixedslots, optmask, maskslots, &invk->body);
+    this->pushFrame(invk, cstack, mixedslots, optmask, maskslots, &invk->body);
 #endif
 }
     
