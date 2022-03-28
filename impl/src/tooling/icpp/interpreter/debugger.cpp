@@ -305,8 +305,8 @@ void dbg_processReverseContinue(Evaluator* vv)
 void dbg_displayLocals(Evaluator* vv)
 {
     std::string locals("**params**\n");
-
     const std::vector<BSQFunctionParameter>& params = vv->dbg_getCFrame()->invoke->params;
+
     for(size_t i = 0; i < params.size(); ++i)
     {
         auto binvoke = dynamic_cast<const BSQInvokeBodyDecl*>(vv->dbg_getCFrame()->invoke);
@@ -320,8 +320,11 @@ void dbg_displayLocals(Evaluator* vv)
         locals += "\n";
     }
 
-    locals += "**locals**";
+    locals += "**locals**\n";
     xxxx;
+
+    printf(locals.c_str());
+    fflush(stdout);
 }
 
 void dbg_displayExp(Evaluator* vv, std::string vexp)
@@ -331,7 +334,14 @@ void dbg_displayExp(Evaluator* vv, std::string vexp)
 
 void dbg_bpList(Evaluator* vv)
 {
-    xxxx;
+    std::string bps("**breakpoints**\n");
+    for(size_t i = 0; i < vv->breakpoints.size(); ++i)
+    {
+        bps += vv->breakpoints[i].invk->srcFile + ":" + std::to_string(vv->breakpoints[i].line) + "\n";
+    }
+
+    printf(bps.c_str());
+    fflush(stdout);
 }
 
 void dbg_bpAdd(Evaluator* vv, std::string bpstr)
