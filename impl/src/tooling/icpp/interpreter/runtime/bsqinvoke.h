@@ -38,10 +38,12 @@ public:
     const std::vector<BSQFunctionParameter> params;
     const BSQType* resultType;
 
+    const bool isUserCode;
+
     static std::vector<const BSQInvokeDecl*> g_invokes;
 
-    BSQInvokeDecl(std::string name, BSQInvokeID ikey, std::string srcFile, SourceInfo sinfoStart, SourceInfo sinfoEnd, bool recursive, std::vector<BSQFunctionParameter> params, const BSQType* resultType)
-    : name(name), ikey(ikey), srcFile(srcFile), sinfoStart(sinfoStart), sinfoEnd(sinfoEnd), recursive(recursive), params(params), resultType(resultType)
+    BSQInvokeDecl(std::string name, BSQInvokeID ikey, std::string srcFile, SourceInfo sinfoStart, SourceInfo sinfoEnd, bool recursive, std::vector<BSQFunctionParameter> params, const BSQType* resultType, bool isUserCode)
+    : name(name), ikey(ikey), srcFile(srcFile), sinfoStart(sinfoStart), sinfoEnd(sinfoEnd), recursive(recursive), params(params), resultType(resultType), isUserCode(isUserCode)
     {;}
 
     virtual ~BSQInvokeDecl() {;}
@@ -66,10 +68,8 @@ public:
 
     const uint32_t maskSlots;
 
-    const bool isUserCode;
-
     BSQInvokeBodyDecl(std::string name, BSQInvokeID ikey, std::string srcFile, SourceInfo sinfoStart, SourceInfo sinfoEnd, bool recursive, std::vector<BSQFunctionParameter> params, const BSQType* resultType, std::vector<ParameterInfo> paraminfo, Argument resultArg, size_t scalarstackBytes, size_t mixedstackBytes, RefMask mixedMask, uint32_t maskSlots, std::vector<InterpOp*> body, uint32_t argmaskSize, bool isusercode)
-    : BSQInvokeDecl(name, ikey, srcFile, sinfoStart, sinfoEnd, recursive, params, resultType), body(body), argmaskSize(argmaskSize), paraminfo(paraminfo), resultArg(resultArg), scalarstackBytes(scalarstackBytes), mixedstackBytes(mixedstackBytes), mixedMask(mixedMask), maskSlots(maskSlots), isUserCode(isusercode)
+    : BSQInvokeDecl(name, ikey, srcFile, sinfoStart, sinfoEnd, recursive, params, resultType, isusercode), body(body), argmaskSize(argmaskSize), paraminfo(paraminfo), resultArg(resultArg), scalarstackBytes(scalarstackBytes), mixedstackBytes(mixedstackBytes), mixedMask(mixedMask), maskSlots(maskSlots)
     {;}
 
     virtual ~BSQInvokeBodyDecl()
@@ -117,7 +117,7 @@ public:
     const std::map<std::string, BSQPCode*> pcodes;
 
     BSQInvokePrimitiveDecl(std::string name, BSQInvokeID ikey, std::string srcFile, SourceInfo sinfoStart, SourceInfo sinfoEnd, bool recursive, std::vector<BSQFunctionParameter> params, const BSQType* resultType, size_t scalarstackBytes, size_t mixedstackBytes, RefMask mixedMask, uint32_t maskSlots, const BSQType* enclosingtype, BSQPrimitiveImplTag implkey, std::string implkeyname, std::map<std::string, const BSQType*> binds, std::map<std::string, BSQPCode*> pcodes)
-    : BSQInvokeDecl(name, ikey, srcFile, sinfoStart, sinfoEnd, recursive, params, resultType), enclosingtype(enclosingtype), implkey(implkey), implkeyname(implkeyname), binds(binds), pcodes(pcodes)
+    : BSQInvokeDecl(name, ikey, srcFile, sinfoStart, sinfoEnd, recursive, params, resultType, false), enclosingtype(enclosingtype), implkey(implkey), implkeyname(implkeyname), binds(binds), pcodes(pcodes)
     {;}
 
     virtual ~BSQInvokePrimitiveDecl() {;}

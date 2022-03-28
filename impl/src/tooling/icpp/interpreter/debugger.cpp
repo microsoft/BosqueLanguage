@@ -5,8 +5,8 @@
 
 #include "debugger.h"
 
-DebuggerException::DebuggerException(uint32_t abortCode, int64_t optEventTime, int64_t optMoveMode, const char* staticAbortMessage)
-    : m_abortCode(abortCode), m_optEventTime(optEventTime), m_optMoveMode(optMoveMode), m_staticAbortMessage(staticAbortMessage)
+DebuggerException::DebuggerException(DebuggerExceptionMode abortMode, BreakPoint eTime)
+    : m_abortMode(abortMode), m_eTime(eTime)
 {
     ;
 }
@@ -16,49 +16,19 @@ DebuggerException::~DebuggerException()
     ;
 }
 
-DebuggerException DebuggerException::CreateAbortEndOfLog(const char* staticMessage)
+DebuggerException DebuggerException::CreateAbortEndOfLog()
 {
-    return DebuggerException(1, -1, 0, staticMessage);
+    return DebuggerException(DebuggerExceptionMode::EndOfReplay, {});
 }
 
-DebuggerException DebuggerException::CreateTopLevelAbortRequest(int64_t targetEventTime, int64_t moveMode, const char* staticMessage)
+DebuggerException DebuggerException::CreateMoveToBP(BreakPoint eTime)
 {
-    return DebuggerException(2, targetEventTime, moveMode, staticMessage);
+    return DebuggerException(DebuggerExceptionMode::MoveToBP, eTime);
 }
 
-DebuggerException DebuggerException::CreateUncaughtExceptionAbortRequest(int64_t targetEventTime, const char* staticMessage)
+DebuggerException DebuggerException::CreateErrorAbortRequest(BreakPoint eTime)
 {
-    return DebuggerException(3, targetEventTime, 0, staticMessage);
-}
-
-bool DebuggerException::IsEndOfLog() const
-{
-    return this->m_abortCode == 1;
-}
-
-bool DebuggerException::IsEventTimeMove() const
-{
-    return this->m_abortCode == 2;
-}
-
-bool DebuggerException::IsTopLevelException() const
-{
-    return this->m_abortCode == 3;
-}
-
-int64_t DebuggerException::GetTargetEventTime() const
-{
-    return this->m_optEventTime;
-}
-
-int64_t DebuggerException::GetMoveMode() const
-{
-    return this->m_optMoveMode;
-}
-
-const char* DebuggerException::GetStaticAbortMessage() const
-{
-    return this->m_staticAbortMessage;
+    return DebuggerException(DebuggerExceptionMode::ErrorPreTime, eTime);
 }
 
 std::pair<DebuggerCmd, std::string> dbg_parseDebuggerCmd(Evaluator* vv)
@@ -125,6 +95,10 @@ std::pair<DebuggerCmd, std::string> dbg_parseDebuggerCmd(Evaluator* vv)
     {
         return std::make_pair(DebuggerCmd::StepInto, opstr);
     }
+    else if(opstr == "continue" || opstr == "c")
+    {
+        return std::make_pair(DebuggerCmd::Continue, opstr);
+    }
     else if(opstr == "reverse step" || opstr == "rs")
     {
         return std::make_pair(DebuggerCmd::ReverseStep, opstr);
@@ -132,6 +106,10 @@ std::pair<DebuggerCmd, std::string> dbg_parseDebuggerCmd(Evaluator* vv)
     else if(opstr == "reverse into" || opstr == "ri")
     {
         return std::make_pair(DebuggerCmd::ReverseStepInto, opstr);
+    }
+    else if(opstr == "reverse continue" || opstr == "rc")
+    {
+        return std::make_pair(DebuggerCmd::ReverseContinue, opstr);
     }
     else if(opstr == "quit" || opstr == "q")
     {
@@ -218,8 +196,10 @@ void dbg_printHelp(std::string ofop)
     printf("----\n");
     printf("  (s)tep\n");
     printf("  (i)nto\n");
+    printf("  (c)ontinue\n");
     printf("  (r)everse (s)tep\n");
     printf("  (r)everse (i)nto\n");
+    printf("  (r)everse (c)ontinue\n");
     printf("----\n");
     printf("  (l)ocals\n");
     printf("  (d)isplay vexp\n");
@@ -272,26 +252,75 @@ void dbg_displayStack(Evaluator* vv)
 
 void dbg_processStep(Evaluator* vv)
 {
-    vv->dbg_getCFrame()->dbg_mode_current = StepMode::Step;
+    vv->dbg_getCFrame()->dbg_step_mode = StepMode::Step;
 }
 
 void dbg_processStepInto(Evaluator* vv)
 {
-    vv->dbg_getCFrame()->dbg_mode_current = StepMode::StepInto;
+    vv->dbg_getCFrame()->dbg_step_mode = StepMode::StepInto;
+}
+
+void dbg_processContinue(Evaluator* vv)
+{
+    for(int32_t i = 0; i < vv->dbg_getCPos(); ++i)
+    {
+        Evaluator::g_callstack[i].dbg_step_mode = StepMode::Run;
+    }
 }
 
 void dbg_processReverseStep(Evaluator* vv)
 {
-    xxxx;
+    if(vv->dbg_getCFrame()->dbg_prevbp.isValid())
+    {
+        throw DebuggerException::CreateMoveToBP(vv->dbg_getCFrame()->dbg_prevbp);
+    }
 }
 
 void dbg_processReverseStepInto(Evaluator* vv)
 {
-    xxxx;
+    if(vv->dbg_getCFrame()->dbg_prevreturnbp.first == -1)
+    {
+        if(vv->dbg_getCFrame()->dbg_prevbp.isValid())
+        {
+            throw DebuggerException::CreateMoveToBP(vv->dbg_getCFrame()->dbg_prevbp);
+        }
+    }
+    else
+    {
+        if(vv->dbg_getCFrame()->dbg_prevreturnbp.first == vv->dbg_getCFrame()->dbg_currentline || vv->dbg_getCFrame()->dbg_prevreturnbp.first == vv->dbg_getCFrame()->dbg_prevbp.line)
+        {
+            throw DebuggerException::CreateMoveToBP(vv->dbg_getCFrame()->dbg_prevreturnbp.second);
+        }
+    }
+}
+
+void dbg_processReverseContinue(Evaluator* vv)
+{
+    if(vv->ttdBreakpoint_LastHit.isValid())
+    {
+        throw DebuggerException::CreateMoveToBP(vv->ttdBreakpoint_LastHit);
+    }
 }
 
 void dbg_displayLocals(Evaluator* vv)
 {
+    std::string locals("**params**\n");
+
+    const std::vector<BSQFunctionParameter>& params = vv->dbg_getCFrame()->invoke->params;
+    for(size_t i = 0; i < params.size(); ++i)
+    {
+        auto binvoke = dynamic_cast<const BSQInvokeBodyDecl*>(vv->dbg_getCFrame()->invoke);
+        auto val = Evaluator::evalParameterInfo(binvoke->paraminfo[i], vv->dbg_getCFrame()->scalarbase, vv->dbg_getCFrame()->mixedbase);
+        
+        locals += "  " + params[i].name + ": " + params[i].ptype->fpDisplay(params[i].ptype, val, DisplayMode::CmdDebug) + "\n";
+    }
+
+    if(!params.empty())
+    {
+        locals += "\n";
+    }
+
+    locals += "**locals**";
     xxxx;
 }
 

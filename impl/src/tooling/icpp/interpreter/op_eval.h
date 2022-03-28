@@ -31,9 +31,10 @@ enum class DebuggerCmd
     ExpDisplay,
     Step,
     StepInto,
-    Run,
+    Continue,
     ReverseStep,
     ReverseStepInto,
+    ReverseContinue,
     ListBreakPoint,
     AddBreakPoint,
     DeleteBreakpoint,
@@ -43,22 +44,53 @@ enum class DebuggerCmd
 class BreakPoint
 {
 public:
-    std::string file;
+    const BSQInvokeDecl* invk;
     int64_t line;
     int64_t callCount;
+
+    bool isValid() const
+    {
+        return this->invk != nullptr;
+    }
+};
+
+
+enum class DebuggerExceptionMode
+{
+    EndOfReplay,
+    MoveToBP,
+    ErrorPreTime
+};
+
+class DebuggerException
+{
+    //An integer code to describe the reason for the abort
+    const DebuggerExceptionMode m_abortMode;
+
+    //An optional target event time -- intent is interpreted based on the abort code
+    const BreakPoint m_eTime;
+
+private:
+    DebuggerException(DebuggerExceptionMode abortMode, BreakPoint eTime);
+
+    public:
+        ~DebuggerException();
+
+        static DebuggerException CreateAbortEndOfLog();
+        static DebuggerException CreateMoveToBP(BreakPoint eTime);
+        static DebuggerException CreateErrorAbortRequest(BreakPoint eTime);
 };
 
 class EvaluatorFrame
 {
 public:
 #ifdef BSQ_DEBUG_BUILD
-    int64_t dbg_prevline;
-    int64_t dbg_line;
+    std::pair<int64_t, BreakPoint> dbg_prevreturnbp;
+    BreakPoint dbg_prevbp;
+
+    int64_t dbg_currentline;
     
-    bool dbg_ignore;
-    
-    StepMode dbg_mode_intro;
-    StepMode dbg_mode_current;
+    StepMode dbg_step_mode;
 #endif
 
     const BSQInvokeDecl* invoke;
@@ -113,7 +145,8 @@ public:
 
     int64_t call_count = 0;
     bool debuggerattached;
-    BreakPoint ttdBreakpoint = {"[Not Set]", 0, -1};
+    BreakPoint ttdBreakpoint = {nullptr, 0, -1};
+    BreakPoint ttdBreakpoint_LastHit = {nullptr, 0, -1};
     std::vector<BreakPoint> breakpoints;
 
     std::vector<std::pair<DebuggerCmd, std::string>> dbg_history;
@@ -121,84 +154,142 @@ public:
 private:
     bool advanceLineAndProcsssBP(InterpOp* op)
     {
-        if(this->cframe->dbg_ignore)
+        if(!this->cframe->invoke->isUserCode)
         {
             return false;
         }
 
-        if(op == nullptr || op->sinfo.line == -1 || op->sinfo.line == this->cframe->dbg_line)
+        if(op == nullptr || op->sinfo.line == -1)
         {
             return false;
         }
 
-        if(op->sinfo.line == this->cframe->dbg_line)
+        if(op->sinfo.line == this->cframe->dbg_currentline)
         {
-            return (op->tag == OpCodeTag::InvokeFixedFunctionOp || op->tag == OpCodeTag::InvokeVirtualFunctionOp || op->tag == OpCodeTag::InvokeVirtualOperatorOp);
+            if(op->tag == OpCodeTag::InvokeFixedFunctionOp || op->tag == OpCodeTag::InvokeVirtualFunctionOp || op->tag == OpCodeTag::InvokeVirtualOperatorOp)
+            {
+                if(this->cframe->dbg_step_mode == StepMode::StepInto)
+                {
+                    return true;
+                }
+
+                if(this->ttdBreakpoint.line == this->cframe->dbg_currentline && this->call_count == ttdBreakpoint.callCount)
+                {
+                    this->cframe->dbg_step_mode = StepMode::Step;
+                    this->ttdBreakpoint = {nullptr, 0, -1};
+
+                    for(int32_t i = 0; i < this->cpos; ++i)
+                    {
+                        if(Evaluator::g_callstack[i].invoke->isUserCode)
+                        {
+                            Evaluator::g_callstack[i].dbg_step_mode = StepMode::Step;
+                        }
+                    }
+
+                    return true;
+                }
+            }
+
+            return false;
         }
-
-        this->cframe->dbg_prevline = this->cframe->dbg_line;
-        this->cframe->dbg_line = (*this->cframe->cpos)->sinfo.line;
-
-        if(this->cframe->dbg_mode_current == StepMode::Step || this->cframe->dbg_mode_current == StepMode::StepInto)
+        else
         {
-            this->cframe->dbg_mode_current == StepMode::Step;
-            return true;
+            if(this->cframe->dbg_currentline != -1)
+            {
+                this->cframe->dbg_prevbp = {this->cframe->invoke, this->cframe->dbg_currentline, this->call_count};
+            }
+            this->cframe->dbg_currentline = (*this->cframe->cpos)->sinfo.line;
+
+            if(this->cframe->dbg_step_mode == StepMode::Step || this->cframe->dbg_step_mode == StepMode::StepInto)
+            {
+                return true;
+            }
+
+            if(this->ttdBreakpoint.line == this->cframe->dbg_currentline && this->call_count == ttdBreakpoint.callCount)
+            {
+                this->cframe->dbg_step_mode = StepMode::Step;
+                this->ttdBreakpoint = {nullptr, 0, -1};
+
+                for(int32_t i = 0; i < this->cpos; ++i)
+                {
+                    if(Evaluator::g_callstack[i].invoke->isUserCode)
+                    {
+                        Evaluator::g_callstack[i].dbg_step_mode = StepMode::Step;
+                    }
+                }
+
+                return true;
+            }
+
+            auto fbp = std::find_if(breakpoints.cbegin(), breakpoints.cend(), [this](const BreakPoint& bp) {
+                return bp.line == this->cframe->dbg_currentline && bp.invk->srcFile == this->cframe->invoke->srcFile;
+            });
+
+            if(fbp != breakpoints.cend())
+            {
+                this->ttdBreakpoint_LastHit = {this->cframe->invoke, this->cframe->dbg_currentline, this->call_count};
+
+                if(!this->ttdBreakpoint.isValid())
+                {
+                    this->cframe->dbg_step_mode == StepMode::Step;
+
+                    for(int32_t i = 0; i < this->cpos; ++i)
+                    {
+                        if(Evaluator::g_callstack[i].invoke->isUserCode)
+                        {
+                            Evaluator::g_callstack[i].dbg_step_mode = StepMode::Step;
+                        }
+                    }
+
+                    return true;
+                }
+            }
+
+            return false;
         }
-
-        if(this->ttdBreakpoint.line == this->cframe->dbg_line && this->call_count == ttdBreakpoint.callCount)
-        {
-            this->cframe->dbg_mode_current = StepMode::Step;
-            this->ttdBreakpoint = {"[Not Set]", 0, -1};
-            return true;
-        }
-
-        auto fbp = std::find_if(breakpoints.cbegin(), breakpoints.cend(), [this](const BreakPoint& bp) {
-            return bp.line == this->cframe->dbg_line && bp.file == this->cframe->invoke->srcFile;
-        });
-
-        if(fbp != breakpoints.cend())
-        {
-            this->cframe->dbg_mode_current == StepMode::Step;
-            return true;
-        }
-
-        return false;
     }
 
-    std::pair<StepMode, StepMode> computeCallIntoStepMode()
+    StepMode computeCallIntoStepMode()
     {
         if(this->cframe == nullptr)
         {
             //main entrypoint so do break if debugger is attached
             if(this->debuggerattached)
             {
-                return std::make_pair(StepMode::Step, StepMode::Step);
+                return StepMode::Step;
             }
             else
             {
-                return std::make_pair(StepMode::Run, StepMode::Run);
+                return StepMode::Run;
             }
         }
         else
         {
-            if(this->cframe->dbg_mode_current == StepMode::Step)
+            if(this->cframe->dbg_step_mode == StepMode::Step)
             {
-                return std::make_pair(StepMode::Step, StepMode::Run);
+                return StepMode::Run;
             }
-            else if(this->cframe->dbg_mode_current == StepMode::StepInto)
+            else if(this->cframe->dbg_step_mode == StepMode::StepInto)
             {
-                return std::make_pair(StepMode::StepInto, StepMode::Step);
+                return StepMode::Step;
             }
             else
             {
-                return std::make_pair(StepMode::Run, StepMode::Run);
+                return StepMode::Run;
             }
         }
     }
 
-    StepMode computeReturnFromStepMode()
+    BreakPoint computeCurrentBreakpoint() const
     {
-        return this->cframe->dbg_mode_intro;
+        if(this->cframe == nullptr)
+        {
+            return {nullptr, -1, 0};
+        }
+        else
+        {
+            return {this->cframe->invoke, this->cframe->dbg_currentline, this->call_count};
+        }
     }
 
     void computePreviousPositionOnCallReturn()
@@ -208,21 +299,21 @@ private:
             return;
         }
 
-        xxxx;
+        Evaluator::g_callstack[this->cpos - 1].dbg_prevreturnbp = std::make_pair(Evaluator::g_callstack[this->cpos - 1].dbg_currentline, BreakPoint{this->cframe->invoke, this->cframe->dbg_currentline, this->call_count});
     }
 
-    inline void pushFrame(bool isuser, std::pair<StepMode, StepMode> modes, const BSQInvokeDecl* invk, uint8_t* scalarbase, uint8_t* mixedbase, BSQBool* argmask, BSQBool* masksbase, const std::vector<InterpOp*>* ops)
+    inline void pushFrame(StepMode smode, const BreakPoint& callerpos, const BSQInvokeDecl* invk, uint8_t* scalarbase, uint8_t* mixedbase, BSQBool* argmask, BSQBool* masksbase, const std::vector<InterpOp*>* ops)
     {
         this->call_count++;
 
         this->cpos++;
         auto cf = Evaluator::g_callstack + this->cpos;
 
-        cf->dbg_line = -1;
-        cf->dbg_prevline = -1;
-        cf->dbg_ignore = !isuser;
-        cf->dbg_mode_intro = modes.first;
-        cf->dbg_mode_current = modes.second;
+        cf->dbg_currentline = -1;
+        cf->dbg_prevbp = callerpos;
+        cf->dbg_prevreturnbp = std::make_pair(-1, callerpos);
+
+        cf->dbg_step_mode = smode;
         
         cf->invoke = invk;
         cf->scalarbase = scalarbase;
@@ -233,7 +324,6 @@ private:
 
         cf->cpos = cf->ops->cbegin();
         cf->epos = cf->ops->cend();
-        cf->dbg_line = (*cf->cpos)->sinfo.line;
 
         this->cframe = Evaluator::g_callstack + this->cpos;
     }
