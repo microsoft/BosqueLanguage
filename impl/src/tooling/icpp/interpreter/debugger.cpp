@@ -321,7 +321,20 @@ void dbg_displayLocals(Evaluator* vv)
     }
 
     locals += "**locals**\n";
-    xxxx;
+    const std::list<VariableHomeLocationInfo>& vhomeinfo = vv->dbg_getCFrame()->dbg_locals;
+    for(auto iter = vhomeinfo.cbegin(); iter != vhomeinfo.cend(); ++iter)
+    {
+        const std::string& vname = iter->vname;
+        auto isparam = std::find_if(params.cbegin(), params.cend(), [&vname](const BSQFunctionParameter& pp) {
+            return pp.name == vname;
+        }) != params.cend();
+
+        if(!isparam)
+        {
+            auto val = vv->evalArgument(iter->location);
+            locals += "  " + iter->vname + ": " + iter->vtype->fpDisplay(iter->vtype, val, DisplayMode::CmdDebug) + "\n";
+        }
+    }
 
     printf(locals.c_str());
     fflush(stdout);
@@ -346,12 +359,63 @@ void dbg_bpList(Evaluator* vv)
 
 void dbg_bpAdd(Evaluator* vv, std::string bpstr)
 {
-    xxxx;
+    auto spos = bpstr.find(':');
+    assert(spos != -1);
+
+    std::string file = bpstr.substr(0, spos);
+    std::string lstr = bpstr.substr(spos + 1);
+    int64_t ll = std::strtol(&lstr[0], nullptr, 10);
+
+    auto bpc = std::count_if(vv->breakpoints.begin(), vv->breakpoints.end(), [&bpstr, ll](const BreakPoint& bp) {
+        return bp.invk->name.ends_with(bpstr) && bp.line == ll;
+    });
+
+    if(bpc != 0)
+    {
+        printf("Breakpoint already set at position\n");
+        fflush(stdout);
+    }
+    else
+    {
+        std::string ffile = xxxx;
+
+        //find file/invoke with line
+
+        vv->breakpoints.emplace_back(ffile, ll, 0);
+    }
 }
 
 void dbg_bpDelete(Evaluator* vv, std::string bpstr)
 {
-    xxxx;
+    auto spos = bpstr.find(':');
+    assert(spos != -1);
+
+    std::string file = bpstr.substr(0, spos);
+    std::string lstr = bpstr.substr(spos + 1);
+    int64_t ll = std::strtol(&lstr[0], nullptr, 10);
+
+    auto bpc = std::count_if(vv->breakpoints.begin(), vv->breakpoints.end(), [&bpstr, ll](const BreakPoint& bp) {
+        return bp.invk->name.ends_with(bpstr) && bp.line == ll;
+    });
+
+    if(bpc == 0)
+    {
+        printf("No breakpoints match the spec\n");
+        fflush(stdout);
+    }
+    else if(bpc > 1)
+    {
+        printf("Ambigious breakpoint spec -- multiple files match\n");
+        fflush(stdout);
+    }
+    else
+    {
+        auto ebp = std::remove_if(vv->breakpoints.begin(), vv->breakpoints.end(), [&bpstr, ll](const BreakPoint& bp) {
+            return bp.invk->name.ends_with(bpstr) && bp.line == ll;
+        });
+
+        vv->breakpoints.erase(ebp, vv->breakpoints.end());
+    }
 }
 
 void dbg_quit(Evaluator* vv)

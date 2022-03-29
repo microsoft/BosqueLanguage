@@ -1099,23 +1099,21 @@ void Evaluator::evalReturnAssignOfConsOp(const ReturnAssignOfConsOp* op)
 void Evaluator::evalVarLifetimeStartOp(const VarLifetimeStartOp* op)
 {
 #ifdef BSQ_DEBUG_BUILD 
-    //TODO: currently nop for variable lifetime intro 
+    this->cframe->dbg_locals.emplace_back(op->name, op->oftype, op->homelocation);
 #endif    
 }
 
 void Evaluator::evalVarLifetimeEndOp(const VarLifetimeEndOp* op)
 {
 #ifdef BSQ_DEBUG_BUILD 
-    //TODO: currently nop for variable lifetime end 
+    this->cframe->dbg_locals.remove_if([op](const VariableHomeLocationInfo& vinfo) {
+        return vinfo.vname == op->name;
+    });
 #endif    
 } 
 
 void Evaluator::evaluateOpCode(const InterpOp* op)
-{
-#ifdef BSQ_DEBUG_BUILD 
-    //TODO: update position info for debugging
-#endif
-    
+{    
     switch(op->tag)
     {
     case OpCodeTag::DeadFlowOp:
@@ -1850,6 +1848,10 @@ void Evaluator::evaluateOpCodeBlocks()
     InterpOp* op = this->getCurrentOp();
     do
     {
+#ifdef BSQ_DEBUG_BUILD 
+        xxxx;
+#endif
+
         switch(op->tag)
         {
         case OpCodeTag::JumpOp:

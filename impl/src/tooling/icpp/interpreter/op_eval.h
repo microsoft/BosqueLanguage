@@ -54,7 +54,6 @@ public:
     }
 };
 
-
 enum class DebuggerExceptionMode
 {
     EndOfReplay,
@@ -81,16 +80,23 @@ private:
         static DebuggerException CreateErrorAbortRequest(BreakPoint eTime);
 };
 
+class VariableHomeLocationInfo
+{
+public:
+    std::string vname;
+    const BSQType* vtype;
+    Argument location;
+};
+
 class EvaluatorFrame
 {
 public:
 #ifdef BSQ_DEBUG_BUILD
     std::pair<int64_t, BreakPoint> dbg_prevreturnbp;
     BreakPoint dbg_prevbp;
-
     int64_t dbg_currentline;
-    
     StepMode dbg_step_mode;
+    std::list<VariableHomeLocationInfo> dbg_locals;
 #endif
 
     const BSQInvokeDecl* invoke;
@@ -115,6 +121,44 @@ public:
     static std::map<BSQTypeID, const BSQRegex*> g_validators;
     static std::map<std::string, const BSQRegex*> g_regexs;
 
+private:
+    EvaluatorFrame* cframe = nullptr;
+    int32_t cpos = 0;
+
+public:
+    inline StorageLocationPtr evalConstArgument(Argument arg)
+    {
+        return (StorageLocationPtr)(Evaluator::g_constantbuffer + arg.location);
+    }
+
+    inline StorageLocationPtr evalArgument(Argument arg)
+    {
+        if(arg.kind == ArgumentTag::ScalarVal)
+        {
+            return this->cframe->scalarbase + arg.location;
+        }
+        else if(arg.kind == ArgumentTag::MixedVal)
+        {
+            return this->cframe->mixedbase + arg.location;
+        }
+        else 
+        {
+            return evalConstArgument(arg);
+        }
+    }
+
+    inline StorageLocationPtr evalTargetVar(TargetVar trgt)
+    {
+        if(trgt.kind == ArgumentTag::ScalarVal)
+        {
+            return this->cframe->scalarbase + trgt.offset;
+        }
+        else
+        {
+            return this->cframe->mixedbase + trgt.offset;
+        }
+    }
+
     static inline StorageLocationPtr evalParameterInfo(ParameterInfo pinfo, uint8_t* scalarbase, uint8_t* mixedbase)
     {
         if(pinfo.kind == ArgumentTag::ScalarVal)
@@ -126,10 +170,6 @@ public:
             return mixedbase + pinfo.poffset;
         }
     }
-
-private:
-    EvaluatorFrame* cframe = nullptr;
-    int32_t cpos = 0;
 
 #ifdef BSQ_DEBUG_BUILD
 public:
@@ -390,39 +430,6 @@ private:
     {
         this->cframe->cpos++;
         return *this->cframe->cpos;
-    }
-
-    inline StorageLocationPtr evalConstArgument(Argument arg)
-    {
-        return (StorageLocationPtr)(Evaluator::g_constantbuffer + arg.location);
-    }
-
-    inline StorageLocationPtr evalArgument(Argument arg)
-    {
-        if(arg.kind == ArgumentTag::ScalarVal)
-        {
-            return this->cframe->scalarbase + arg.location;
-        }
-        else if(arg.kind == ArgumentTag::MixedVal)
-        {
-            return this->cframe->mixedbase + arg.location;
-        }
-        else 
-        {
-            return evalConstArgument(arg);
-        }
-    }
-
-    inline StorageLocationPtr evalTargetVar(TargetVar trgt)
-    {
-        if(trgt.kind == ArgumentTag::ScalarVal)
-        {
-            return this->cframe->scalarbase + trgt.offset;
-        }
-        else
-        {
-            return this->cframe->mixedbase + trgt.offset;
-        }
     }
 
     inline BSQBool* evalMaskLocation(int32_t gmaskoffset)
