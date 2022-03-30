@@ -33,6 +33,27 @@ DebuggerException DebuggerException::CreateErrorAbortRequest(BreakPoint eTime)
     return DebuggerException(DebuggerExceptionMode::ErrorPreTime, eTime);
 }
 
+std::string trimWS(const std::string& str)
+{
+    std::string rstr = str;
+
+    int32_t fpos = 0;
+    while(str.size() < fpos && (str[fpos] == ' ' || str[fpos] == '\t' || str[fpos] == '\n' || str[fpos] == ' \r'))
+    { 
+        ++fpos;
+    }
+    rstr = rstr.substr(fpos);
+   
+    int32_t epos = str.size();
+    while(0 < epos && (str[epos - 1] == ' ' || str[epos - 1] == '\t' || str[epos - 1] == '\n' || str[epos - 1] == ' \r'))
+    { 
+        --epos;
+    }
+    rstr = rstr.substr(0, epos);
+
+    return rstr;
+}
+
 std::pair<DebuggerCmd, std::string> dbg_parseDebuggerCmd(Evaluator* vv)
 {
     std::string opstr;
@@ -229,7 +250,8 @@ void dbg_printLine(Evaluator* vv)
 
         if(i == cframe->invoke->sinfoStart.line)
         {
-            std::string line = contents.substr(lcpos, (cpos - lcpos));
+            std::string line = trimWS(contents.substr(lcpos, (cpos - lcpos)));
+
             printf("%s", line.c_str());
         }
     }
