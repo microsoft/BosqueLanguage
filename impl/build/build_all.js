@@ -44,10 +44,10 @@ exec("node ./resource_copy.js", {cwd: builddir}, (err, stdout, stderr) => {
 
 exec("node ./evaluator_build.js", {cwd: builddir}, (err, stdout, stderr) => {
     donesmt = true;
-    doneop(err !== null, err !== null ? stderr : "done smt..."); 
+    doneop(err !== null, err !== null ? stdout : "done smt..."); 
 
     exec("node ./interpreter_build.js", {cwd: builddir}, (err, stdout, stderr) => {
         doneicpp = true;
-        doneop(err !== null, err !== null ? stderr : "done icpp..."); 
+        doneop(err !== null, err !== null ? stdout : "done icpp..."); 
     });
 });

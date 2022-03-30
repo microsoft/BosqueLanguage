@@ -9,9 +9,6 @@
 
 #include "op_eval.h"
 
-void stepAction(Evaluator* vv)
-{
-    
-}
+void debuggerStepAction(Evaluator* vv);
 
 #endif

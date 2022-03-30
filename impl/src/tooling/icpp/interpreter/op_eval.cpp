@@ -1848,8 +1848,14 @@ void Evaluator::evaluateOpCodeBlocks()
     InterpOp* op = this->getCurrentOp();
     do
     {
-#ifdef BSQ_DEBUG_BUILD 
-        xxxx;
+#ifdef BSQ_DEBUG_BUILD
+        if(this->debuggerattached)
+        {
+            if(this->advanceLineAndProcsssBP(op))
+            {
+                Evaluator::fpDebuggerAction(this);
+            }
+        }
 #endif
 
         switch(op->tag)

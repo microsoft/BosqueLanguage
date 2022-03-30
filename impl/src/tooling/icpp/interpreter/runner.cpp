@@ -90,19 +90,68 @@ std::pair<bool, json> run(Evaluator& runner, const APIModule* api, const std::st
     }
     else
     {
-        auto result = BSQ_STACK_SPACE_ALLOC(call->resultType->allocinfo.inlinedatasize);
-        runner.invokeMain(call, result, call->resultType, call->resultArg);
-
-        ICPPParseJSON jextract;
-        auto rtype = jsig.value()->restype;
-
-        std::optional<json> res = rtype->textract(jextract, api, result, runner); //call->resultType->fpDisplay(call->resultType, result);
-        if(res == std::nullopt)
+#ifdef BSQ_DEBUG_BUILD
+        if(runner.debuggerattached)
         {
-            return std::make_pair(false, "Failed in result extraction");
-        }
+            auto result = BSQ_STACK_SPACE_ALLOC(call->resultType->allocinfo.inlinedatasize);
+            std::optional<json> res = std::nullopt;
+
+            while(true)
+            {
+                Allocator::dbg_idToObjMap.clear();
+                runner.ttdBreakpoint_LastHit = {nullptr, 0, -1};
+
+                try
+                {
+                    runner.invokeMain(call, result, call->resultType, call->resultArg);
+
+                    ICPPParseJSON jextract;
+                    auto rtype = jsig.value()->restype;
+                    res = rtype->textract(jextract, api, result, runner);
+                }
+                catch(const DebuggerException& e)
+                {
+                    if(e.m_abortMode == DebuggerExceptionMode::ErrorPreTime)
+                    {
+                        runner.ttdBreakpoint = e.m_eTime;
+                    }
+                    else if(e.m_abortMode == DebuggerExceptionMode::MoveToBP)
+                    {
+                        runner.ttdBreakpoint = e.m_eTime;
+                    }
+                    else
+                    {
+                        ;
+                    }
+                }
+
+                if(res == std::nullopt)
+                {
+                    return std::make_pair(false, "Failed in result extraction");
+                }
         
-        return std::make_pair(true, res.value());
+                return std::make_pair(true, res.value());
+            }
+        }
+        else
+        {
+#endif
+            auto result = BSQ_STACK_SPACE_ALLOC(call->resultType->allocinfo.inlinedatasize);
+            runner.invokeMain(call, result, call->resultType, call->resultArg);
+
+            ICPPParseJSON jextract;
+            auto rtype = jsig.value()->restype;
+
+            std::optional<json> res = rtype->textract(jextract, api, result, runner); //call->resultType->fpDisplay(call->resultType, result);
+            if(res == std::nullopt)
+            {
+                return std::make_pair(false, "Failed in result extraction");
+            }
+        
+            return std::make_pair(true, res.value());
+#ifdef BSQ_DEBUG_BUILD
+        }
+#endif
     }
 }
 
@@ -122,7 +171,7 @@ void parseArgs(int argc, char** argv, std::string& mode, bool& debugger, std::st
     {
         mode = "stream";
     }
-    else if(argc == 3)
+    else if(argc == 3 || (argc == 4 && debugger))
     {
         mode = "run";
         prog = std::string(debugger ? argv[2] : argv[1]);

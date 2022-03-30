@@ -14,6 +14,9 @@
 
 #include "collection_eval.h"
 
+class Evaluator;
+typedef void (*DebuggerActionFP)(Evaluator* vv);
+
 enum class StepMode
 {
     Run,
@@ -63,10 +66,8 @@ enum class DebuggerExceptionMode
 
 class DebuggerException
 {
-    //An integer code to describe the reason for the abort
+public:
     const DebuggerExceptionMode m_abortMode;
-
-    //An optional target event time -- intent is interpreted based on the abort code
     const BreakPoint m_eTime;
 
 private:
@@ -173,6 +174,8 @@ public:
 
 #ifdef BSQ_DEBUG_BUILD
 public:
+    static DebuggerActionFP fpDebuggerAction;
+
     int32_t dbg_getCPos()
     { 
         return this->cpos;
@@ -271,7 +274,7 @@ private:
 
                 if(!this->ttdBreakpoint.isValid())
                 {
-                    this->cframe->dbg_step_mode == StepMode::Step;
+                    this->cframe->dbg_step_mode = StepMode::Step;
 
                     for(int32_t i = 0; i < this->cpos; ++i)
                     {

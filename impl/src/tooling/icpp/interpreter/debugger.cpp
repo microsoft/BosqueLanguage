@@ -5,6 +5,8 @@
 
 #include "debugger.h"
 
+DebuggerActionFP Evaluator::fpDebuggerAction = debuggerStepAction;
+
 DebuggerException::DebuggerException(DebuggerExceptionMode abortMode, BreakPoint eTime)
     : m_abortMode(abortMode), m_eTime(eTime)
 {
@@ -187,7 +189,7 @@ std::pair<DebuggerCmd, std::string> dbg_parseDebuggerCmd(Evaluator* vv)
     }
 }
 
-void dbg_printHelp(std::string ofop)
+void dbg_printHelp()
 {
     printf("Available commands are:\n");
     printf("----\n");
@@ -211,10 +213,34 @@ void dbg_printHelp(std::string ofop)
     printf("  (q)uit\n");
 }
 
+void dbg_printLine(Evaluator* vv)
+{
+    auto cframe = vv->dbg_getCFrame();
+    std::string contents = MarshalEnvironment::g_srcMap.find(cframe->invoke->srcFile)->second;
+    
+    int64_t cpos = 0;
+    for(int64_t i = 0; i <= cframe->dbg_currentline; ++i)
+    {
+        int64_t lcpos = cpos;
+        while(cpos < contents.size() && contents[cpos] != '\n')
+        {
+            cpos++;
+        }
+        cpos++;
+
+        if(i == cframe->invoke->sinfoStart.line)
+        {
+            std::string line = contents.substr(lcpos, cpos);
+            printf("%s", line.c_str());
+        }
+    }
+
+    fflush(stdout);
+}
+
 void dbg_printFunction(Evaluator* vv)
 {
     auto cframe = vv->dbg_getCFrame();
-
     std::string contents = MarshalEnvironment::g_srcMap.find(cframe->invoke->srcFile)->second;
     
     int64_t cpos = 0;
@@ -552,6 +578,8 @@ bool dbg_processStringKey(Evaluator* vv, const BSQType*& btype, StorageLocationP
 
     btype = BSQType::g_typetable[mtype->vtype];
     ktype->storeValue(cpos, reprtype->getValueLocation(res));
+
+    return true;
 }
 
 void dbg_displayExp(Evaluator* vv, std::string vexp)
@@ -771,7 +799,7 @@ void dbg_bpAdd(Evaluator* vv, std::string bpstr)
         }
         else
         {
-            vv->breakpoints.emplace_back(iid->srcFile, ll, 0);
+            vv->breakpoints.emplace_back(iid, ll, 0);
         }
     }
 }
@@ -813,4 +841,85 @@ void dbg_quit(Evaluator* vv)
 {
     printf("Exiting debugging session...");
     exit(0);
+}
+
+void debuggerStepAction(Evaluator* vv)
+{
+    dbg_printLine(vv);
+
+    while(true)
+    {
+        auto cmd = dbg_parseDebuggerCmd(vv);
+
+        if(cmd.first == DebuggerCmd::Help)
+        {
+            dbg_printHelp();
+        }
+        else if(cmd.first == DebuggerCmd::PrintFunction)
+        {
+            dbg_printFunction(vv);
+        }
+        else if(cmd.first == DebuggerCmd::CallStack)
+        {
+            dbg_displayStack(vv);
+        }
+        else if(cmd.first == DebuggerCmd::LocalDisplay)
+        {
+            dbg_displayLocals(vv);
+        }
+        else if(cmd.first == DebuggerCmd::ExpDisplay)
+        {
+            dbg_displayExp(vv, cmd.second);
+        }
+        else if(cmd.first == DebuggerCmd::Step)
+        {
+            dbg_processStep(vv);
+            break;
+        }
+        else if(cmd.first == DebuggerCmd::StepInto)
+        {
+            dbg_processStepInto(vv);
+            break;
+        }
+        else if(cmd.first == DebuggerCmd::Continue)
+        {
+            dbg_processContinue(vv);
+            break;
+        }
+        else if(cmd.first == DebuggerCmd::ReverseStep)
+        {
+            dbg_processReverseStep(vv);
+        }
+        else if(cmd.first == DebuggerCmd::ReverseStepInto)
+        {
+            dbg_processReverseStepInto(vv);
+        }
+        else if(cmd.first == DebuggerCmd::ReverseContinue)
+        {
+            dbg_processReverseContinue(vv);
+        }
+        else if(cmd.first == DebuggerCmd::ListBreakPoint)
+        {
+            dbg_bpList(vv);
+        }
+        else if(cmd.first == DebuggerCmd::AddBreakPoint)
+        {
+            dbg_bpAdd(vv, cmd.second);
+        }
+        else if(cmd.first == DebuggerCmd::DeleteBreakpoint)
+        {
+            dbg_bpDelete(vv, cmd.second);
+        }
+        else if(cmd.first == DebuggerCmd::Quit)
+        {
+            dbg_quit(vv);
+        }
+        else
+        {
+            printf("Unknown command\n");
+            fflush(stdout);
+        }
+    }
+
+    Allocator::dbg_idToObjMap.clear();
 }
