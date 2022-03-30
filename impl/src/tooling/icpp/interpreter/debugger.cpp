@@ -157,7 +157,7 @@ std::pair<DebuggerCmd, std::string> dbg_parseDebuggerCmd(Evaluator* vv)
 
         std::string bpstr = actionstr.substr(matchaction.str(0).size());
 
-        std::regex bpfx("^[a-zA-Z0-9_/]+:(0-9)+");
+        std::regex bpfx("^[a-zA-Z0-9_/]+:[0-9]+");
         std::smatch matchbp;
         bool bpok = std::regex_match(bpstr, matchbp, bpfx);
         if(!bpok)
@@ -340,9 +340,136 @@ void dbg_displayLocals(Evaluator* vv)
     fflush(stdout);
 }
 
+std::optional<std::pair<int64_t, std::string>> dbg_extract_accessor_numeric(std::string vexp)
+{
+    auto spos = 0;
+    while(spos != vexp.size() && vexp[spos] != '.' && vexp[spos] != '[' && vexp[spos] != ']')
+    {
+        spos++;
+    }
+
+    auto nstr = vexp.substr(0, spos);
+    std::regex nre("^[0-9]+$");
+    bool nok = std::regex_match(nstr, nre);
+    if(!nok)
+    {
+        return std::nullopt;
+    }
+
+    return std::make_optional(std::make_pair(std::strtol(&nstr[0], nullptr, 10), vexp.substr(spos)));
+}
+
+std::optional<std::pair<std::string, std::string>> dbg_extract_accessor_qstring(std::string vexp)
+{
+    auto spos = 1;
+    while(spos != vexp.size() && vexp[spos] != '"')
+    {
+        spos++;
+    }
+
+    if(vexp[0] != '"' || vexp[spos] != '"')
+    {
+        return std::nullopt;
+    }
+
+    return std::make_optional(std::make_pair(vexp.substr(1, spos), vexp.substr(spos + 2)));
+}
+
+std::optional<std::pair<std::string, std::string>> dbg_extract_accessor_name(std::string vexp)
+{
+    auto spos = 0;
+    while(spos != vexp.size() && vexp[spos] != '.' && vexp[spos] != '[')
+    {
+        spos++;
+    }
+
+    auto nstr = vexp.substr(0, spos);
+    std::regex nre("^[$]?[_a-zA-Z0-9]+$");
+    bool nok = std::regex_match(nstr, nre);
+    if(!nok)
+    {
+        return std::nullopt;
+    }
+
+    return std::make_optional(std::make_pair(nstr, vexp.substr(spos)));
+}
+
 void dbg_displayExp(Evaluator* vv, std::string vexp)
 {
-    xxxx;
+    const BSQType* btype = nullptr;
+    StorageLocationPtr cpos = nullptr;
+    if(vexp.starts_with("*"))
+    {
+        vexp = vexp.substr(1);
+        auto rvp = dbg_extract_accessor_numeric(vexp);
+        if(!rvp.has_value())
+        {
+            printf("Bad value id format\n");
+            fflush(stdout);
+            return;
+        }
+
+        if(vv->dbg_history.size() <= rvp.value().first)
+        {
+            printf("Unknown value id: %i\n", (int)rvp.value().first);
+            fflush(stdout);
+            return;
+        }
+
+        btype = xxx;
+        cpos = &(Allocator::dbg_idToObjMap.find(rvp.value().first)->second);
+        vexp = rvp.value().second;
+    }
+    else
+    {   
+        auto np = dbg_extract_accessor_name(vexp);
+        if(!np.has_value())
+        {
+            printf("Bad value name format\n");
+            fflush(stdout);
+            return;
+        }
+
+        auto name = np.value().first;
+
+        const std::vector<BSQFunctionParameter>& params = vv->dbg_getCFrame()->invoke->params;
+        auto ppos = std::find_if(params.cbegin(), params.cend(), [&name](const BSQFunctionParameter& param) {
+            return param.name == name;
+        });
+        
+        const std::list<VariableHomeLocationInfo>& vhomeinfo = vv->dbg_getCFrame()->dbg_locals;
+        auto lpos = std::find_if(vhomeinfo.cbegin(), vhomeinfo.cend(), [&name](const VariableHomeLocationInfo& vinfo) {
+            return vinfo.vname == name;
+        });
+
+        if(ppos == params.cend() && lpos == vhomeinfo.cend())
+        {
+            printf("Unknown variable: %s\n", np.value().first.c_str());
+            fflush(stdout);
+            return;
+        }
+        else if(ppos != params.cend())
+        {
+            auto binvoke = dynamic_cast<const BSQInvokeBodyDecl*>(vv->dbg_getCFrame()->invoke);
+            auto pdist = std::distance(params.cbegin(), ppos);
+            btype = ppos->ptype;
+            cpos = Evaluator::evalParameterInfo(binvoke->paraminfo[pdist], vv->dbg_getCFrame()->scalarbase, vv->dbg_getCFrame()->mixedbase);
+        }
+        else
+        {
+            btype = lpos->vtype;
+            cpos = vv->evalArgument(lpos->location);
+        }
+
+        vexp = np.value().second;
+    }
+
+    while(!vexp.empty())
+    {
+        xxxx;
+    }
+
+    std::string disp = btype->fpDisplay(btype, cpos, DisplayMode::CmdDebug);
 }
 
 void dbg_bpList(Evaluator* vv)
@@ -366,22 +493,38 @@ void dbg_bpAdd(Evaluator* vv, std::string bpstr)
     std::string lstr = bpstr.substr(spos + 1);
     int64_t ll = std::strtol(&lstr[0], nullptr, 10);
 
-    auto bpc = std::count_if(vv->breakpoints.begin(), vv->breakpoints.end(), [&bpstr, ll](const BreakPoint& bp) {
-        return bp.invk->name.ends_with(bpstr) && bp.line == ll;
+    std::vector<const BSQInvokeDecl*> candfuncs;
+    std::copy_if(BSQInvokeDecl::g_invokes.cbegin(), BSQInvokeDecl::g_invokes.cend(), std::back_inserter(candfuncs), [&file, ll](const BSQInvokeDecl* iid) {
+        return iid->srcFile.ends_with(file) && iid->sinfoStart.line <= ll && ll <= iid->sinfoEnd.line;
     });
-
-    if(bpc != 0)
+        
+    if(candfuncs.size() == 0)
     {
-        printf("Breakpoint already set at position\n");
+        printf("No files match the given breakpoint spec\n");
+        fflush(stdout);
+    }
+    else if(candfuncs.size() > 1)
+    {
+        printf("Ambigious breakpoint spec -- multiple files match\n");
         fflush(stdout);
     }
     else
     {
-        std::string ffile = xxxx;
+        const BSQInvokeDecl* iid = candfuncs.front();
 
-        //find file/invoke with line
+        auto bpc = std::count_if(vv->breakpoints.begin(), vv->breakpoints.end(), [iid, ll](const BreakPoint& bp) {
+            return bp.invk->srcFile == iid->srcFile && bp.line == ll;
+        });
 
-        vv->breakpoints.emplace_back(ffile, ll, 0);
+        if(bpc != 0)
+        {
+            printf("Breakpoint already set at position\n");
+            fflush(stdout);
+        }
+        else
+        {
+            vv->breakpoints.emplace_back(iid->srcFile, ll, 0);
+        }
     }
 }
 
