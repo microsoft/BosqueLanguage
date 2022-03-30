@@ -798,7 +798,7 @@ void dbg_bpAdd(Evaluator* vv, std::string bpstr)
         }
         else
         {
-            vv->breakpoints.emplace_back(iid, ll, 0);
+            vv->breakpoints.emplace_back(iid, (int64_t)ll, (int64_t)-1);
         }
     }
 }

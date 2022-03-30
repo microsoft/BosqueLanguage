@@ -567,7 +567,7 @@ function processBuildAction(args: string[]) {
         }
 
         //bosque build bytecode [package_path.json] [--config cname] [--output out]
-        workflowEmitICPPFile(path.join(output.path, cfg.name + ".json"), userpackage, false, cfg.buildlevel, false, {}, rrep);
+        workflowEmitICPPFile(path.join(output.path, cfg.name + ".json"), userpackage, true, cfg.buildlevel, false, {}, rrep);
     }
     else {
         process.stderr.write(chalk.red(`Unknown build target '${args[0]}'\n`));

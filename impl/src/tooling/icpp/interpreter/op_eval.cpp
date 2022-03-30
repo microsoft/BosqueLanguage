@@ -1098,8 +1098,8 @@ void Evaluator::evalReturnAssignOfConsOp(const ReturnAssignOfConsOp* op)
 
 void Evaluator::evalVarLifetimeStartOp(const VarLifetimeStartOp* op)
 {
-#ifdef BSQ_DEBUG_BUILD 
-    this->cframe->dbg_locals.emplace_back(op->name, op->oftype, op->homelocation);
+#ifdef BSQ_DEBUG_BUILD
+    this->cframe->dbg_locals.push_back(op->name, op->oftype, op->homelocation);
 #endif    
 }
 
@@ -3401,8 +3401,6 @@ std::optional<size_t> ICPPParseJSON::extractUnionChoice(const APIModule* apimodu
 
 StorageLocationPtr ICPPParseJSON::extractUnionValue(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
 {
-    auto utype = dynamic_cast<const UnionType*>(itype);
-
     auto bsqutypeid = MarshalEnvironment::g_typenameToIdMap.find(itype->name)->second;
     auto bsqutype = dynamic_cast<const BSQUnionType*>(BSQType::g_typetable[bsqutypeid]);
 
