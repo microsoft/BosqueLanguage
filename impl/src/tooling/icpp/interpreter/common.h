@@ -211,7 +211,7 @@ enum DisplayMode
     {\
         if(BTYPE->tkind == BSQTypeLayoutKind::Ref)\
         {\
-            return Allocator::registerDbgObjID(SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(OBJ));\
+            return Allocator::registerDbgObjID(BTYPE, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(OBJ));\
         }\
     }\
     if(MODE & DisplayMode::CmdDebug)\

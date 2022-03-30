@@ -437,17 +437,17 @@ public:
     static std::vector<std::list<BSQTempRootNode>> alloctemps;
 
 #ifdef BSQ_DEBUG_BUILD
-    static std::map<size_t, void*> dbg_idToObjMap;
+    static std::map<size_t, std::pair<const BSQType*, void*>> dbg_idToObjMap;
 
     static void resetDbgObjIDMap(void* obj)
     {
         Allocator::dbg_idToObjMap.clear();
     }
 
-    static std::string registerDbgObjID(void* obj)
+    static std::string registerDbgObjID(const BSQType* btype, void* obj)
     {
         auto id = Allocator::dbg_idToObjMap.size();
-        Allocator::dbg_idToObjMap[id] = obj;
+        Allocator::dbg_idToObjMap[id] = std::make_pair(btype, obj);
 
         return std::string("*") + std::to_string(id);
     }
