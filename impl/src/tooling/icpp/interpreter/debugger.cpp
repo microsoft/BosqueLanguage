@@ -229,7 +229,7 @@ void dbg_printLine(Evaluator* vv)
 
         if(i == cframe->invoke->sinfoStart.line)
         {
-            std::string line = contents.substr(lcpos, cpos);
+            std::string line = contents.substr(lcpos, (lcpos - cpos));
             printf("%s", line.c_str());
         }
     }
@@ -254,7 +254,7 @@ void dbg_printFunction(Evaluator* vv)
 
         if(i >= cframe->invoke->sinfoStart.line)
         {
-            std::string line = contents.substr(lcpos, cpos);
+            std::string line = contents.substr(lcpos, (lcpos - cpos));
             printf("%s", line.c_str());
         }
     }
@@ -798,7 +798,8 @@ void dbg_bpAdd(Evaluator* vv, std::string bpstr)
         }
         else
         {
-            vv->breakpoints.emplace_back(iid, (int64_t)ll, (int64_t)-1);
+            BreakPoint bp{iid, ll, -1};
+            vv->breakpoints.push_back(bp);
         }
     }
 }
