@@ -37,7 +37,6 @@ std::pair<DebuggerCmd, std::string> dbg_parseDebuggerCmd(Evaluator* vv)
 {
     std::string opstr;
     int cc = 0;
-    int hpos = vv->dbg_history.size() - 1;
 
     do
     {
@@ -362,7 +361,7 @@ void dbg_displayLocals(Evaluator* vv)
         }
     }
 
-    printf(locals.c_str());
+    printf("%s\n", locals.c_str());
     fflush(stdout);
 }
 
@@ -756,7 +755,7 @@ void dbg_bpList(Evaluator* vv)
         bps += vv->breakpoints[i].invk->srcFile + ":" + std::to_string(vv->breakpoints[i].line) + "\n";
     }
 
-    printf(bps.c_str());
+    printf("%s\n", bps.c_str());
     fflush(stdout);
 }
 
