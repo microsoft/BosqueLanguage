@@ -1,7 +1,6 @@
 {
     "name": "calc",
     "version": "0.0.0.0",
-    "format": "service",
     "description": "A simple calculator",
     "license": "MIT",
     "configs": {

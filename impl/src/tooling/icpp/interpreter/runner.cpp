@@ -56,6 +56,13 @@ std::pair<bool, json> run(Evaluator& runner, const APIModule* api, const std::st
         return std::make_pair(false, "Could not load given entrypoint");
     }
 
+    if(args.size() > jsig.value()->argtypes.size())
+    {
+        return std::make_pair(false, "Too many arguments provided to call");
+    }
+
+    //TODO: we need to check that all required arguments are provided
+
     if(setjmp(Evaluator::g_entrybuff) > 0)
     {
         return std::make_pair(false, "Failed in argument parsing");
@@ -83,38 +90,97 @@ std::pair<bool, json> run(Evaluator& runner, const APIModule* api, const std::st
     }
     else
     {
-        auto result = BSQ_STACK_SPACE_ALLOC(call->resultType->allocinfo.inlinedatasize);
-        runner.invokeMain(call, result, call->resultType, call->resultArg);
-
-        ICPPParseJSON jextract;
-        auto rtype = jsig.value()->restype;
-
-        std::optional<json> res = rtype->textract(jextract, api, result, runner); //call->resultType->fpDisplay(call->resultType, result);
-        if(res == std::nullopt)
+#ifdef BSQ_DEBUG_BUILD
+        if(runner.debuggerattached)
         {
-            return std::make_pair(false, "Failed in result extraction");
-        }
+            auto result = BSQ_STACK_SPACE_ALLOC(call->resultType->allocinfo.inlinedatasize);
+            std::optional<json> res = std::nullopt;
+
+            while(true)
+            {
+                Allocator::dbg_idToObjMap.clear();
+                runner.ttdBreakpoint_LastHit = {nullptr, 0, -1};
+
+                try
+                {
+                    runner.invokeMain(call, result, call->resultType, call->resultArg);
+
+                    ICPPParseJSON jextract;
+                    auto rtype = jsig.value()->restype;
+                    res = rtype->textract(jextract, api, result, runner);
+                }
+                catch(const DebuggerException& e)
+                {
+                    if(e.m_abortMode == DebuggerExceptionMode::ErrorPreTime)
+                    {
+                        runner.ttdBreakpoint = e.m_eTime;
+                    }
+                    else if(e.m_abortMode == DebuggerExceptionMode::MoveToBP)
+                    {
+                        runner.ttdBreakpoint = e.m_eTime;
+                    }
+                    else
+                    {
+                        ;
+                    }
+                }
+
+                if(res == std::nullopt)
+                {
+                    return std::make_pair(false, "Failed in result extraction");
+                }
         
-        return std::make_pair(true, res.value());
+                return std::make_pair(true, res.value());
+            }
+        }
+        else
+        {
+#endif
+            auto result = BSQ_STACK_SPACE_ALLOC(call->resultType->allocinfo.inlinedatasize);
+            runner.invokeMain(call, result, call->resultType, call->resultArg);
+
+            ICPPParseJSON jextract;
+            auto rtype = jsig.value()->restype;
+
+            std::optional<json> res = rtype->textract(jextract, api, result, runner); //call->resultType->fpDisplay(call->resultType, result);
+            if(res == std::nullopt)
+            {
+                return std::make_pair(false, "Failed in result extraction");
+            }
+        
+            return std::make_pair(true, res.value());
+#ifdef BSQ_DEBUG_BUILD
+        }
+#endif
     }
 }
 
-void parseArgs(int argc, char** argv, std::string& mode, std::string& prog, std::string& input)
+void parseArgs(int argc, char** argv, std::string& mode, bool& debugger, std::string& prog, std::string& input)
 {
-    if(argc == 2 && std::string(argv[1]) == std::string("--stream"))
+    bool isstream = false;
+    debugger = false;
+    for(int i = 0; i < argc; ++i)
+    {
+        std::string sarg(argv[i]);
+
+        isstream |= (sarg == "--stream");
+        debugger |= (sarg == "--debug");
+    }
+
+    if(isstream)
     {
         mode = "stream";
     }
-    else if(argc == 3)
+    else if(argc == 3 || (argc == 4 && debugger))
     {
         mode = "run";
-        prog = std::string(argv[1]);
-        input = std::string(argv[2]);
+        prog = std::string(debugger ? argv[2] : argv[1]);
+        input = std::string(debugger ? argv[3] : argv[2]);
     }
     else
     {
-        fprintf(stderr, "Usage: icpp bytecode.bsqir args[]\n");
-        fprintf(stderr, "Usage: icpp --stream\n");
+        fprintf(stderr, "Usage: icpp [--debug] bytecode.bsqir args[]\n");
+        fprintf(stderr, "Usage: icpp [--debug] --stream\n");
         fflush(stderr);
         exit(1);
     }
@@ -122,10 +188,11 @@ void parseArgs(int argc, char** argv, std::string& mode, std::string& prog, std:
 
 int main(int argc, char** argv)
 {
-    std::string mode; 
+    std::string mode;
+    bool debugger = false;
     std::string prog;
     std::string input;
-    parseArgs(argc, argv, mode, prog, input);
+    parseArgs(argc, argv, mode, debugger, prog, input);
 
     const char* outputenv = std::getenv("ICPP_OUTPUT_MODE");
     std::string outmode(outputenv != nullptr ? outputenv : "simple");
@@ -154,6 +221,7 @@ int main(int argc, char** argv)
         const APIModule* api = APIModule::jparse(jcode["api"]);
 
         Evaluator runner;
+        runner.debuggerattached = debugger;
         loadAssembly(jcode["bytecode"], runner);
 
         auto start = std::chrono::system_clock::now();

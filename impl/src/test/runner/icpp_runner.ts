@@ -16,13 +16,13 @@ function runICPPTest(exepath: string, verbose: boolean, test: ICPPTest, icppjson
             cbpre(test);
         }
 
-        const proc = exec(cmd, {env: {...process.env, ICPP_OUTPUT_MODE: "json"}}, (err, stdout) => {
+        const proc = exec(cmd, {env: {...process.env, ICPP_OUTPUT_MODE: "json"}}, (err, stdout, stderr) => {
             const end = new Date();
             let status: "error" | "success" | "failure" = "error";
             let msg: string = "";
             let value: any = undefined;
             let icpptime: number = -1;
-
+            
             try {
                 const robj = JSON.parse(stdout.toString().trim());
                 status = robj["status"] as "error" | "success" | "failure";

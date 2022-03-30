@@ -197,7 +197,31 @@ enum class BSQTypeLayoutKind : uint32_t
 typedef const char* RefMask;
 
 typedef void (*GCProcessOperatorFP)(const BSQType*, void**);
-typedef std::string (*DisplayFP)(const BSQType*, StorageLocationPtr);
+
+enum DisplayMode
+{
+    Standard = 0x0,
+    CmdDebug = 0x1,
+    CmdDebugLeaf = 0x2 
+};
+
+////////////////
+#define PROCESS_DISPLAY_MODE(BTYPE, MODE, OBJ) {\
+    if(MODE & DisplayMode::CmdDebugLeaf)\
+    {\
+        if(BTYPE->tkind == BSQTypeLayoutKind::Ref)\
+        {\
+            return Allocator::registerDbgObjID(BTYPE, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(OBJ));\
+        }\
+    }\
+    if(MODE & DisplayMode::CmdDebug)\
+    {\
+        MODE = (DisplayMode)(MODE | DisplayMode::CmdDebugLeaf);\
+    }\
+}
+////////////////
+
+typedef std::string (*DisplayFP)(const BSQType*, StorageLocationPtr, DisplayMode);
 
 struct BSQTypeSizeInfo
 {

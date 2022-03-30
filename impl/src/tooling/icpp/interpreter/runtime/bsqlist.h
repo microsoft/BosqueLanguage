@@ -38,7 +38,7 @@ public:
     virtual uint64_t getCount(void* repr) const = 0;
 };
 
-std::string entityPartialVectorDisplay_impl(const BSQType* btype, StorageLocationPtr data);
+std::string entityPartialVectorDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode);
 
 class BSQPartialVectorType : public BSQListReprType
 {
@@ -141,7 +141,7 @@ struct BSQListTreeRepr
     uint64_t size;
 };
 
-std::string entityListTreeDisplay_impl(const BSQType* btype, StorageLocationPtr data);
+std::string entityListTreeDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode);
 
 class BSQListTreeType : public BSQListReprType
 {

@@ -573,7 +573,7 @@ BSQInvokeBodyDecl* BSQInvokeBodyDecl::jsonLoad(json v)
         return InterpOp::jparse(jop);
     });
 
-    return new BSQInvokeBodyDecl(j_name(v), ikey, srcfile, j_sinfoStart(v), j_sinfoEnd(v), recursive, params, rtype, paraminfo, resultArg, v["scalarStackBytes"].get<size_t>(), v["mixedStackBytes"].get<size_t>(), mask, v["maskSlots"].get<uint32_t>(), body, v["argmaskSize"].get<uint32_t>());
+    return new BSQInvokeBodyDecl(j_name(v), ikey, srcfile, j_sinfoStart(v), j_sinfoEnd(v), recursive, params, rtype, paraminfo, resultArg, v["scalarStackBytes"].get<size_t>(), v["mixedStackBytes"].get<size_t>(), mask, v["maskSlots"].get<uint32_t>(), body, v["argmaskSize"].get<uint32_t>(), v["isUserCode"].get<bool>());
 }
 
 BSQInvokePrimitiveDecl* BSQInvokePrimitiveDecl::jsonLoad(json v)

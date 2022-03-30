@@ -41,8 +41,10 @@ const BSQType* BSQWellKnownType::g_typeRegex = CONS_BSQ_REGEX_TYPE();
 
 std::map<BSQRecordPropertyID, std::string> BSQRecordInfo::g_propertynamemap;
 
-std::string tupleDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+std::string tupleDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
+    PROCESS_DISPLAY_MODE(btype, mode, data);
+
     const BSQTupleInfo* ttype = dynamic_cast<const BSQTupleInfo*>(btype);
     std::string res = "[";
     for(size_t i = 0; i < ttype->idxoffsets.size(); ++i)
@@ -54,15 +56,18 @@ std::string tupleDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 
         auto itype = BSQType::g_typetable[ttype->ttypes[i]];
         auto idata = btype->indexStorageLocationOffset(data, ttype->idxoffsets[i]);
-        res += itype->fpDisplay(itype, idata);
+
+        res += itype->fpDisplay(itype, idata, mode);
     }
     res += "]";
 
     return res;
 }
 
-std::string recordDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+std::string recordDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
+    PROCESS_DISPLAY_MODE(btype, mode, data);
+
     const BSQRecordInfo* ttype = dynamic_cast<const BSQRecordInfo*>(btype);
     std::string res = "{";
     for(size_t i = 0; i < ttype->properties.size(); ++i)
@@ -76,15 +81,17 @@ std::string recordDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 
         auto itype = BSQType::g_typetable[ttype->rtypes[i]];
         auto idata = btype->indexStorageLocationOffset(data, ttype->propertyoffsets[i]);
-        res += itype->fpDisplay(itype, idata);
+        res += itype->fpDisplay(itype, idata, mode);
     }
     res += "}";
 
     return res;
 }
 
-std::string entityDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+std::string entityDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
+    PROCESS_DISPLAY_MODE(btype, mode, data);
+
     const BSQEntityInfo* ttype = dynamic_cast<const BSQEntityInfo*>(btype);
     std::string res = btype->name + "{";
     for(size_t i = 0; i < ttype->fields.size(); ++i)
@@ -98,21 +105,21 @@ std::string entityDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 
         auto itype = BSQType::g_typetable[BSQField::g_fieldtable[ttype->fields[i]]->declaredType];
         auto idata = btype->indexStorageLocationOffset(data, ttype->fieldoffsets[i]);
-        res += itype->fpDisplay(itype, idata);
+        res += itype->fpDisplay(itype, idata, mode);
     }
     res += "}";
 
     return res;
 }
 
-std::string constructableEntityDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+std::string constructableEntityDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
     const BSQType* oftype = BSQType::g_typetable[dynamic_cast<const BSQConstructableEntityInfo*>(btype)->oftype];
 
-    return btype->name + "{" + oftype->fpDisplay(oftype, data) + "}";
+    return btype->name + "{" + oftype->fpDisplay(oftype, data, mode) + "}";
 }
 
-std::string ephemeralDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+std::string ephemeralDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
     const BSQEphemeralListType* ttype = dynamic_cast<const BSQEphemeralListType*>(btype);
     std::string res = "@(|";
@@ -125,17 +132,17 @@ std::string ephemeralDisplay_impl(const BSQType* btype, StorageLocationPtr data)
 
         auto itype = BSQType::g_typetable[ttype->etypes[i]];
         auto idata = SLPTR_INDEX_DATAPTR(data, ttype->idxoffsets[i]);
-        res += itype->fpDisplay(itype, idata);
+        res += itype->fpDisplay(itype, idata, mode);
     }
     res += "|)";
 
     return res;
 }
 
-std::string unionDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+std::string unionDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
     auto rtype = dynamic_cast<const BSQUnionType*>(btype)->getVType(data);
-    return rtype->fpDisplay(rtype, dynamic_cast<const BSQUnionType*>(btype)->getVData_NoAlloc(data));
+    return rtype->fpDisplay(rtype, dynamic_cast<const BSQUnionType*>(btype)->getVData_NoAlloc(data), mode);
 }
 
 int unionInlineKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2)
@@ -268,7 +275,7 @@ std::pair<const BSQType*, StorageLocationPtr> extractFromUnionVCall(const BSQUni
 ////
 //Primitive value representations
 
-std::string entityNoneDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+std::string entityNoneDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
     return "none";
 }
@@ -278,7 +285,7 @@ int entityNoneKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, Storag
     return 0;
 }
 
-std::string entityNothingDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+std::string entityNothingDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
     return "nothing";
 }
@@ -288,7 +295,7 @@ int entityNothingKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, Sto
     return 0;
 }
 
-std::string entityBoolDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+std::string entityBoolDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
     return SLPTR_LOAD_CONTENTS_AS(BSQBool, data) ? "true" : "false";
 }
@@ -307,7 +314,7 @@ int entityBoolKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, Storag
     }
 }
 
-std::string entityNatDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+std::string entityNatDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
     return std::to_string(SLPTR_LOAD_CONTENTS_AS(BSQNat, data)) + ((btype->name == "Nat") ? "n" : ("_" + btype->name));
 }
@@ -326,7 +333,7 @@ int entityNatKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, Storage
     }
 }
 
-std::string entityIntDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+std::string entityIntDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
     return std::to_string(SLPTR_LOAD_CONTENTS_AS(BSQInt, data)) + ((btype->name == "Int") ? "i" : ("_" + btype->name));
 }
@@ -345,7 +352,7 @@ int entityIntKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, Storage
     }
 }
 
-std::string entityBigNatDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+std::string entityBigNatDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
     return std::to_string(SLPTR_LOAD_CONTENTS_AS(BSQBigNat, data)) + ((btype->name == "BigNat") ? "N" : ("_" + btype->name));
 }
@@ -364,7 +371,7 @@ int entityBigNatKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, Stor
     }
 }
 
-std::string entityBigIntDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+std::string entityBigIntDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
     return std::to_string(SLPTR_LOAD_CONTENTS_AS(BSQBigInt, data)) + ((btype->name == "BigInt") ? "I" : ("_" + btype->name));
 }
@@ -383,24 +390,24 @@ int entityBigIntKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, Stor
     }
 }
 
-std::string entityFloatDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+std::string entityFloatDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
     return std::to_string(SLPTR_LOAD_CONTENTS_AS(BSQFloat, data)) + ((btype->name == "Float") ? "f" : ("_" + btype->name));
 }
 
-std::string entityDecimalDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+std::string entityDecimalDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
     return std::to_string(SLPTR_LOAD_CONTENTS_AS(BSQDecimal, data)) + ((btype->name == "Decmial") ? "d" : ("_" + btype->name));
 }
 
-std::string entityRationalDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+std::string entityRationalDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
     auto rval = SLPTR_LOAD_CONTENTS_AS(BSQRational, data);
 
     return std::to_string(rval.numerator) + "/" + std::to_string(rval.denominator) + ((btype->name == "Rational") ? "R" : ("_" + btype->name));
 }
 
-std::string entityStringReprDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+std::string entityStringReprDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
     BSQStringForwardIterator iter((BSQString*)data, 0);
 
@@ -587,7 +594,7 @@ void BSQStringReverseIterator::increment_utf8byte()
     }
 }
 
-std::string entityStringDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+std::string entityStringDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
     BSQString str = SLPTR_LOAD_CONTENTS_AS(BSQString, data);
 
@@ -822,17 +829,17 @@ BSQString BSQStringImplType::slice(StorageLocationPtr str, int64_t startpos, int
     }
 }
 
-std::string entityByteBufferLeafDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+std::string entityByteBufferLeafDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
     return "[ByteBufferEntry]"; 
 }
 
-std::string entityByteBufferNodeDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+std::string entityByteBufferNodeDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
     return "[ByteBufferNode]";   
 }
 
-std::string entityByteBufferDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+std::string entityByteBufferDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
     BSQByteBuffer* bbuff = SLPTR_LOAD_CONTENTS_AS(BSQByteBuffer*, data);
     std::string bstr;
@@ -876,7 +883,7 @@ std::string emitDateTimeRaw_v(uint16_t y, uint8_t m, uint8_t d, uint8_t hh, uint
     return res;
 }
 
-std::string entityDateTimeDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+std::string entityDateTimeDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
     BSQDateTime* t = SLPTR_LOAD_CONTENTS_AS(BSQDateTime*, data);
 
@@ -899,12 +906,12 @@ std::string entityDateTimeDisplay_impl(const BSQType* btype, StorageLocationPtr 
     }
 }
 
-std::string entityTickTimeDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+std::string entityTickTimeDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
     return "T" + std::to_string(SLPTR_LOAD_CONTENTS_AS(BSQTickTime, data)) + ((btype->name == "TickTime") ? "ns" : ("_" + btype->name));
 }
 
-std::string entityLogicalTimeDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+std::string entityLogicalTimeDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
     return "L" + std::to_string(SLPTR_LOAD_CONTENTS_AS(BSQLogicalTime, data)) + ((btype->name == "LogicalTime") ? "" : ("_" + btype->name));
 }
@@ -923,7 +930,7 @@ int entityLogicalTimeKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1,
     }
 }
 
-std::string entityUUIDDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+std::string entityUUIDDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
     auto uuid = SLPTR_LOAD_CONTENTS_AS(BSQUUID, data);
 
@@ -956,7 +963,7 @@ int entityUUIDKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, Storag
     }
 }
 
-std::string entityContentHashDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+std::string entityContentHashDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
     auto v1 = (BSQContentHash*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data);
 
@@ -989,12 +996,12 @@ int entityContentHashKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1,
     }
 }
 
-std::string entityRegexDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+std::string entityRegexDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
     return ((BSQRegex*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data))->restr;
 }
 
-std::string entityEnumDisplay_impl(const BSQType* btype, StorageLocationPtr data)
+std::string entityEnumDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
     auto val = SLPTR_LOAD_CONTENTS_AS(uint64_t, data);
     return btype->name + "::" + static_cast<const BSQEnumType*>(btype)->enumnames[val];

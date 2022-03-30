@@ -84,6 +84,7 @@ type Config<T> = {
 type Dependency = {
     name: string,
     version: VersionConstraint,
+    format: PackageFormat, //string encoded
     internal: boolean,
     src: URIPath | undefined //optional fixed lookup -- repo, manager ref, file system -- otherwise we do standard resolution
 };
@@ -92,7 +93,6 @@ type Dependency = {
 type Package = {
     name: string;
     version: Version, //string encoded
-    format: PackageFormat, //string encoded
     description: string,
     keywords: string[],
     homepage: URIPath | undefined, //string encoded
@@ -580,6 +580,11 @@ function parseAppDependency(dep: any): Dependency | undefined {
         return undefined;
     }
 
+    const format = parsePackageFormat(dep["format"]);
+    if (format === undefined) {
+        return undefined;
+    }
+
     if (typeof (dep["name"]) !== "string") {
         return undefined
     }
@@ -600,7 +605,8 @@ function parseAppDependency(dep: any): Dependency | undefined {
     return {
         name: dep["name"] as string,
         version: vc,
-        internal: dep["version"] === true,
+        format: format,
+        internal: dep["internal"] === true,
         src: src
     };
 }
@@ -610,6 +616,11 @@ function parseDevDependency(dep: any): Dependency | undefined {
         return undefined;
     }
 
+    const format = parsePackageFormat(dep["format"]);
+    if (format === undefined) {
+        return undefined;
+    }
+
     if (typeof (dep["name"]) !== "string") {
         return undefined
     }
@@ -630,6 +641,7 @@ function parseDevDependency(dep: any): Dependency | undefined {
     return {
         name: dep["name"] as string,
         version: vc,
+        format: format,
         internal: true,
         src: src
     };
@@ -647,11 +659,6 @@ function parsePackage(jp: any): Package | string {
     const version = parseVersion(jp["version"]);
     if (version === undefined) {
         return "invalid 'version' field";
-    }
-
-    const format = parsePackageFormat(jp["format"]);
-    if (format === undefined) {
-        return "invalid 'format' field";
     }
 
     if (typeof (jp["description"]) !== "string") {
@@ -835,7 +842,6 @@ function parsePackage(jp: any): Package | string {
     return {
         name: jp["name"] as string,
         version: version,
-        format: format, //string encoded
         description: jp["description"] as string,
         keywords: keywords,
         homepage: homepage,
