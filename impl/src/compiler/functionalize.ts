@@ -206,7 +206,7 @@ function processInvoke(emitter: MIREmitter, inv: MIRInvokeBodyDecl, masm: MIRAss
 
         const bmap = new Map<string, MIRBasicBlock>();
         bproc.nblocks.map((bb) => bmap.set(bb.label, bb));
-        const ninv = new MIRInvokeBodyDecl(inv.enclosingDecl, inv.bodyID, bproc.nname, bproc.nname, [...inv.attributes], inv.recursive, inv.sinfoStart, inv.sinfoEnd, inv.srcFile, bproc.nparams, 0, inv.resultType, undefined, item.post, new MIRBody(inv.srcFile, inv.sinfoStart, bmap));
+        const ninv = new MIRInvokeBodyDecl(inv.enclosingDecl, inv.bodyID, bproc.nname, bproc.nname, [...inv.attributes], inv.recursive, inv.sinfoStart, inv.sinfoEnd, inv.srcFile, bproc.nparams, 0, inv.resultType, undefined, item.post, inv.isUserCode, new MIRBody(inv.srcFile, inv.sinfoStart, bmap));
         rbl.push(ninv);
 
         const ff = processBody(emitter, inv.ikey, masm, inv.body, inv.params);

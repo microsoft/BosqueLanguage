@@ -26,7 +26,7 @@ SLPTR_STORE_CONTENTS_AS(REPRTYPE, THIS->evalTargetVar(bop->trgt), res);
 #define PrimitiveNegateOperatorMacroChecked(THIS, OP, TAG, REPRTYPE, ERROR) const PrimitiveNegateOperatorOp<TAG>* bop = static_cast<const PrimitiveNegateOperatorOp<TAG>*>(op); \
 REPRTYPE res; \
 bool err = __builtin_mul_overflow(SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->arg)), -1, &res); \
-BSQ_LANGUAGE_ASSERT(!err, THIS->cframe->dbg_file, THIS->cframe->dbg_line, ERROR); \
+BSQ_LANGUAGE_ASSERT(!err, &(THIS->cframe->invoke->srcFile), THIS->cframe->dbg_currentline, ERROR); \
 \
 SLPTR_STORE_CONTENTS_AS(REPRTYPE, THIS->evalTargetVar(bop->trgt), res);
 
@@ -34,7 +34,7 @@ SLPTR_STORE_CONTENTS_AS(REPRTYPE, THIS->evalTargetVar(bop->trgt), res);
 #define PrimitiveBinaryOperatorMacroChecked(THIS, OP, TAG, REPRTYPE, OPERATORW, OPERATORP, ERROR) const PrimitiveBinaryOperatorOp<TAG>* bop = static_cast<const PrimitiveBinaryOperatorOp<TAG>*>(op); \
 REPRTYPE res; \
 bool err = OPERATORP(SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->larg)), SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->rarg)), &res); \
-BSQ_LANGUAGE_ASSERT(!err, THIS->cframe->dbg_file, THIS->cframe->dbg_line, ERROR); \
+BSQ_LANGUAGE_ASSERT(!err, &(THIS->cframe->invoke->srcFile), THIS->cframe->dbg_currentline, ERROR); \
 \
 SLPTR_STORE_CONTENTS_AS(REPRTYPE, THIS->evalTargetVar(bop->trgt), res);
 #endif
@@ -48,7 +48,7 @@ SLPTR_STORE_CONTENTS_AS(REPRTYPE, THIS->evalTargetVar(bop->trgt), -SLPTR_LOAD_CO
 REPRTYPE larg = SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->larg)); \
 REPRTYPE rarg = SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->rarg)); \
 \
-BSQ_LANGUAGE_ASSERT(rarg != (REPRTYPE)0, THIS->cframe->dbg_file, THIS->cframe->dbg_line, "Division by zero"); \
+BSQ_LANGUAGE_ASSERT(rarg != (REPRTYPE)0, &(THIS->cframe->invoke->srcFile), THIS->cframe->dbg_currentline, "Division by zero"); \
 SLPTR_STORE_CONTENTS_AS(REPRTYPE, THIS->evalTargetVar(bop->trgt), larg / rarg);
 
 //Big Macro for generating code for primitive un-checked infix binary operations
@@ -64,8 +64,8 @@ SLPTR_STORE_CONTENTS_AS(BSQBool, THIS->evalTargetVar(bop->trgt), SLPTR_LOAD_CONT
 REPRTYPE larg = SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->larg)); \
 REPRTYPE rarg = SLPTR_LOAD_CONTENTS_AS(REPRTYPE, THIS->evalArgument(bop->rarg)); \
 \
-BSQ_LANGUAGE_ASSERT(!ISNAN(rarg) & !ISNAN(larg), THIS->cframe->dbg_file, THIS->cframe->dbg_line, "NaN cannot be ordered"); \
-BSQ_LANGUAGE_ASSERT((!ISINFINITE(rarg) | !ISINFINITE(larg)) || ((rarg <= 0) & (0 <= larg)) || ((larg <= 0) & (0 <= rarg)), THIS->cframe->dbg_file, THIS->cframe->dbg_line, "Infinte values cannot be ordered"); \
+BSQ_LANGUAGE_ASSERT(!ISNAN(rarg) & !ISNAN(larg), &(THIS->cframe->invoke->srcFile), THIS->cframe->dbg_currentline, "NaN cannot be ordered"); \
+BSQ_LANGUAGE_ASSERT((!ISINFINITE(rarg) | !ISINFINITE(larg)) || ((rarg <= 0) & (0 <= larg)) || ((larg <= 0) & (0 <= rarg)), &(THIS->cframe->invoke->srcFile), THIS->cframe->dbg_currentline, "Infinte values cannot be ordered"); \
 SLPTR_STORE_CONTENTS_AS(BSQBool, THIS->evalTargetVar(bop->trgt), larg OPERATOR rarg);
 
 jmp_buf Evaluator::g_entrybuff;
@@ -83,14 +83,28 @@ void Evaluator::evalDeadFlowOp()
 
 void Evaluator::evalAbortOp(const AbortOp *op)
 {
-    BSQ_LANGUAGE_ABORT(op->msg.c_str(), this->cframe->dbg_file, this->cframe->dbg_line);
+    if(this->debuggerattached)
+    {
+        throw DebuggerException::CreateErrorAbortRequest({this->cframe->invoke, this->cframe->dbg_currentline, this->call_count});
+    }
+    else
+    {
+        BSQ_LANGUAGE_ABORT(op->msg.c_str(), &this->cframe->invoke->srcFile, this->cframe->dbg_currentline);
+    }
 }
 
 void Evaluator::evalAssertCheckOp(const AssertOp *op)
 {
     if (!SLPTR_LOAD_CONTENTS_AS(BSQBool, this->evalArgument(op->arg)))
     {
-        BSQ_LANGUAGE_ABORT(op->msg.c_str(), this->cframe->dbg_file, this->cframe->dbg_line);
+        if(this->debuggerattached)
+        {
+            throw DebuggerException::CreateErrorAbortRequest({this->cframe->invoke, this->cframe->dbg_currentline, this->call_count});
+        }
+        else
+        {
+            BSQ_LANGUAGE_ABORT(op->msg.c_str(), &this->cframe->invoke->srcFile, this->cframe->dbg_currentline);
+        }
     }
 }
 
@@ -106,7 +120,7 @@ void Evaluator::evalDebugOp(const DebugOp* op)
         auto sl = this->evalArgument(op->arg);
         auto oftype = SLPTR_LOAD_UNION_INLINE_TYPE(sl);
 
-        auto dval = oftype->fpDisplay(oftype, SLPTR_LOAD_UNION_INLINE_DATAPTR(sl));
+        auto dval = oftype->fpDisplay(oftype, SLPTR_LOAD_UNION_INLINE_DATAPTR(sl), DisplayMode::Standard);
 
         printf("%s\n", dval.c_str());
         fflush(stdout);
@@ -1084,24 +1098,23 @@ void Evaluator::evalReturnAssignOfConsOp(const ReturnAssignOfConsOp* op)
 
 void Evaluator::evalVarLifetimeStartOp(const VarLifetimeStartOp* op)
 {
-#ifdef BSQ_DEBUG_BUILD 
-    //TODO: currently nop for variable lifetime intro 
+#ifdef BSQ_DEBUG_BUILD
+    VariableHomeLocationInfo vhome{op->name, op->oftype, op->homelocation};
+    this->cframe->dbg_locals.push_back(vhome);
 #endif    
 }
 
 void Evaluator::evalVarLifetimeEndOp(const VarLifetimeEndOp* op)
 {
 #ifdef BSQ_DEBUG_BUILD 
-    //TODO: currently nop for variable lifetime end 
+    this->cframe->dbg_locals.remove_if([op](const VariableHomeLocationInfo& vinfo) {
+        return vinfo.vname == op->name;
+    });
 #endif    
 } 
 
 void Evaluator::evaluateOpCode(const InterpOp* op)
-{
-#ifdef BSQ_DEBUG_BUILD 
-    //TODO: update position info for debugging
-#endif
-    
+{    
     switch(op->tag)
     {
     case OpCodeTag::DeadFlowOp:
@@ -1836,6 +1849,16 @@ void Evaluator::evaluateOpCodeBlocks()
     InterpOp* op = this->getCurrentOp();
     do
     {
+#ifdef BSQ_DEBUG_BUILD
+        if(this->debuggerattached)
+        {
+            if(this->advanceLineAndProcsssBP(op))
+            {
+                Evaluator::fpDebuggerAction(this);
+            }
+        }
+#endif
+
         switch(op->tag)
         {
         case OpCodeTag::JumpOp:
@@ -1938,9 +1961,9 @@ void Evaluator::invokePrelude(const BSQInvokeBodyDecl* invk, uint8_t* cstack, ui
 
     GCStack::pushFrame((void**)mixedslots, invk->mixedMask);
 #ifdef BSQ_DEBUG_BUILD
-    this->pushFrame<false>(&invk->srcFile, &invk->name, cstack, mixedslots, optmask, maskslots, &invk->body);
+    this->pushFrame(this->computeCallIntoStepMode(), this->computeCurrentBreakpoint(), invk, cstack, mixedslots, optmask, maskslots, &invk->body);
 #else
-    this->pushFrame<false>(, cstack, mixedslots, optmask, maskslots, &invk->body);
+    this->pushFrame(invk, cstack, mixedslots, optmask, maskslots, &invk->body);
 #endif
 }
     
@@ -3379,8 +3402,6 @@ std::optional<size_t> ICPPParseJSON::extractUnionChoice(const APIModule* apimodu
 
 StorageLocationPtr ICPPParseJSON::extractUnionValue(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
 {
-    auto utype = dynamic_cast<const UnionType*>(itype);
-
     auto bsqutypeid = MarshalEnvironment::g_typenameToIdMap.find(itype->name)->second;
     auto bsqutype = dynamic_cast<const BSQUnionType*>(BSQType::g_typetable[bsqutypeid]);
 

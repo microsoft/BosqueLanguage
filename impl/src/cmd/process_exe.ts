@@ -17,6 +17,10 @@ import { workflowEmitICPPFile, workflowRunICPPFile } from "../tooling/icpp/trans
 import { generateStandardVOpts, workflowEmitToFile, workflowEvaluate } from "../tooling/checker/smt_workflows";
 
 function processRunAction(args: string[]) {
+    if(args.length === 0) {
+        args.push("./package.json");
+    }
+
     if(path.extname(args[0]) === ".bsqapi") {
         const entryfile = args[0];
 
@@ -80,7 +84,7 @@ function processRunAction(args: string[]) {
         
                     process.stdout.write(`Evaluating...\n`);
         
-                    workflowRunICPPFile(jargs, userpackage, args[0] === "debug", "release", false, {}, entrypoint, (result: string | undefined) => {
+                    workflowRunICPPFile(jargs, userpackage, args[0] === "debug", "release", false, args[0] === "debug", {}, entrypoint, (result: string | undefined) => {
                         if (result !== undefined) {
                             process.stdout.write(`${result}\n`);
                         }
@@ -99,7 +103,7 @@ function processRunAction(args: string[]) {
         }
         else {
             // bosque run|debug [package_path.json] [--entrypoint fname] [--config cname] --args "[...]"
-            workflowRunICPPFile(fargs, userpackage, args[0] === "debug", "release", false, {}, entrypoint, (result: string | undefined) => {
+            workflowRunICPPFile(fargs, userpackage, args[0] === "debug", "release", false, args[0] === "debug", {}, entrypoint, (result: string | undefined) => {
                 if (result !== undefined) {
                     process.stdout.write(`${result}\n`);
                 }
@@ -184,7 +188,7 @@ function processRunAction(args: string[]) {
         
                     process.stdout.write(`Evaluating...\n`);
         
-                    workflowRunICPPFile(jargs, userpackage, args[0] === "debug", cfg.buildlevel, false, {}, entrypoint, (result: string | undefined) => {
+                    workflowRunICPPFile(jargs, userpackage, args[0] === "debug", cfg.buildlevel, false, args[0] === "debug", {}, entrypoint, (result: string | undefined) => {
                         if (result !== undefined) {
                             process.stdout.write(`${result}\n`);
                         }
@@ -203,7 +207,7 @@ function processRunAction(args: string[]) {
         }
         else {
             // bosque run|debug [package_path.json] [--entrypoint fname] [--config cname] --args "[...]"
-            workflowRunICPPFile(fargs, userpackage, args[0] === "debug", cfg.buildlevel, false, {}, entrypoint, (result: string | undefined) => {
+            workflowRunICPPFile(fargs, userpackage, args[0] === "debug", cfg.buildlevel, false, args[0] === "debug", {}, entrypoint, (result: string | undefined) => {
                 if (result !== undefined) {
                     process.stdout.write(`${result}\n`);
                 }
@@ -220,6 +224,10 @@ function processRunAction(args: string[]) {
 function processRunSymbolicAction(args: string[]) {
     const timeout = 10000;
     const eval_opts = generateStandardVOpts(SymbolicActionMode.EvaluateSymbolic);
+
+    if(args.length === 0) {
+        args.push("./package.json");
+    }
 
     let workingdir = process.cwd();
     let pckg: Package | undefined = undefined;
@@ -353,12 +361,16 @@ function processRunSymbolicAction(args: string[]) {
 }
 
 function processBuildAction(args: string[]) {
+    if(args.length === 1) {
+        args.push("./package.json");
+    }
+
     if(args[0] === "node") {
         let workingdir = process.cwd();
         let pckg: Package | undefined = undefined;
-        if(path.extname(args[0]) === ".json") {
-            workingdir = path.dirname(path.resolve(args[0]));
-            pckg = tryLoadPackage(path.resolve(args[0]));
+        if(path.extname(args[1]) === ".json") {
+            workingdir = path.dirname(path.resolve(args[1]));
+            pckg = tryLoadPackage(path.resolve(args[1]));
         }
         else {
             const implicitpckg = path.resolve(workingdir, "package.json");
@@ -416,9 +428,9 @@ function processBuildAction(args: string[]) {
 
         let workingdir = process.cwd();
         let pckg: Package | undefined = undefined;
-        if(path.extname(args[0]) === ".json") {
-            workingdir = path.dirname(path.resolve(args[0]));
-            pckg = tryLoadPackage(path.resolve(args[0]));
+        if(path.extname(args[1]) === ".json") {
+            workingdir = path.dirname(path.resolve(args[1]));
+            pckg = tryLoadPackage(path.resolve(args[1]));
         }
         else {
             const implicitpckg = path.resolve(workingdir, "package.json");
@@ -490,9 +502,9 @@ function processBuildAction(args: string[]) {
     else if(args[0] === "bytecode") {
         let workingdir = process.cwd();
         let pckg: Package | undefined = undefined;
-        if(path.extname(args[0]) === ".json") {
-            workingdir = path.dirname(path.resolve(args[0]));
-            pckg = tryLoadPackage(path.resolve(args[0]));
+        if(path.extname(args[1]) === ".json") {
+            workingdir = path.dirname(path.resolve(args[1]));
+            pckg = tryLoadPackage(path.resolve(args[1]));
         }
         else {
             const implicitpckg = path.resolve(workingdir, "package.json");
@@ -555,7 +567,7 @@ function processBuildAction(args: string[]) {
         }
 
         //bosque build bytecode [package_path.json] [--config cname] [--output out]
-        workflowEmitICPPFile(path.join(output.path, cfg.name + ".json"), userpackage, false, cfg.buildlevel, false, {}, rrep);
+        workflowEmitICPPFile(path.join(output.path, cfg.name + ".json"), userpackage, true, cfg.buildlevel, false, {}, rrep);
     }
     else {
         process.stderr.write(chalk.red(`Unknown build target '${args[0]}'\n`));
