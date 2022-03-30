@@ -229,7 +229,7 @@ void dbg_printLine(Evaluator* vv)
 
         if(i == cframe->invoke->sinfoStart.line)
         {
-            std::string line = contents.substr(lcpos, (lcpos - cpos));
+            std::string line = contents.substr(lcpos, (cpos - lcpos));
             printf("%s", line.c_str());
         }
     }
@@ -254,7 +254,7 @@ void dbg_printFunction(Evaluator* vv)
 
         if(i >= cframe->invoke->sinfoStart.line)
         {
-            std::string line = contents.substr(lcpos, (lcpos - cpos));
+            std::string line = contents.substr(lcpos, (cpos - lcpos));
             printf("%s", line.c_str());
         }
     }
