@@ -1754,7 +1754,7 @@ class ICPPBodyEmitter {
 
                 phi.src.forEach((arg, bfrom) => {
                     let insblock = icppblocks.get(bfrom) as ICPPOp[];
-                    insblock.push(ICPPOpEmitter.genRegisterAssignOp(phi.sinfo, icpptrgt, this.argToICPPLocation(arg), phi.layouttype, ICPPOpEmitter.genNoStatmentGuard()));
+                    insblock.push(ICPPOpEmitter.genRegisterAssignOp(SourceInfo.createIgnoreSourceInfo(), icpptrgt, this.argToICPPLocation(arg), phi.layouttype, ICPPOpEmitter.genNoStatmentGuard()));
                 });
             }
         });

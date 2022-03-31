@@ -243,6 +243,11 @@ class SourceInfo {
         this.pos = cpos;
         this.span = span;
     }
+
+    static createIgnoreSourceInfo(): SourceInfo
+    {
+        return new SourceInfo(-1, -1, -1, -1);
+    }
 }
 
 type CodeFileInfo = { 

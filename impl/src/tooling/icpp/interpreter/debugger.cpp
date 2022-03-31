@@ -37,26 +37,28 @@ std::string trimWS(const std::string& str)
 {
     std::string rstr = str;
 
-    int32_t fpos = 0;
-    while(fpos < str.size() && (str[fpos] == ' ' || str[fpos] == '\t' || str[fpos] == '\n' || str[fpos] == ' \r'))
-    { 
-        ++fpos;
+    std::regex wsfront("^\\s+");
+    std::smatch matchfront;
+    bool foundfront = std::regex_search(rstr, matchfront, wsfront);
+    if(foundfront)
+    {
+        rstr = rstr.substr(matchfront.str(0).size());
     }
-    rstr = rstr.substr(fpos);
-   
-    int32_t epos = str.size();
-    while(0 < epos && (str[epos - 1] == ' ' || str[epos - 1] == '\t' || str[epos - 1] == '\n' || str[epos - 1] == ' \r'))
-    { 
-        --epos;
-    }
-    rstr = rstr.substr(0, epos);
+
+    std::regex wsback("\\s+$");
+    std::smatch matchback;
+    bool foundback = std::regex_search(rstr, matchback, wsback);
+    if(foundback)
+    {
+        rstr = rstr.substr(0, matchback.str(0).size());
+    }  
 
     return rstr;
 }
 
 std::vector<std::string> splitString(const std::string& str)
 {
-    const std::regex rgx("(?:\\r\\n|\\r|\\n)");
+    std::regex rgx("(?:\\r\\n|\\r|\\n)");
     std::sregex_token_iterator iter(str.begin(), str.end(), rgx, -1);
 
     std::vector<std::string> result;
@@ -250,8 +252,6 @@ void dbg_printHelp()
     printf("  (q)uit\n");
 }
 
-
-
 void dbg_printLine(Evaluator* vv)
 {
     auto cframe = vv->dbg_getCFrame();
@@ -260,7 +260,7 @@ void dbg_printLine(Evaluator* vv)
     auto lines = splitString(contents);
     std::string line = trimWS(lines[cframe->dbg_currentline - 1]);
 
-    printf("%i: %s", (int)cframe->dbg_currentline, line.c_str());
+    printf("%i: %s\n", (int)cframe->dbg_currentline, line.c_str());
     fflush(stdout);
 }
 
@@ -269,21 +269,10 @@ void dbg_printFunction(Evaluator* vv)
     auto cframe = vv->dbg_getCFrame();
     std::string contents = MarshalEnvironment::g_srcMap.find(cframe->invoke->srcFile)->second;
     
-    int64_t cpos = 0;
-    for(int64_t i = 0; i < cframe->invoke->sinfoEnd.line; ++i)
-    {
-        int64_t lcpos = cpos;
-        while(cpos < contents.size() && contents[cpos] != '\n')
-        {
-            cpos++;
-        }
-        cpos++;
-
-        if(i >= cframe->invoke->sinfoStart.line - 1)
-        {
-            std::string line = contents.substr(lcpos, (cpos - lcpos));
-            printf("%i: %s", (int)i, line.c_str());
-        }
+    auto lines = splitString(contents);
+    for(int64_t i = cframe->invoke->sinfoStart.line; i <= cframe->invoke->sinfoEnd.line; ++i)
+    { 
+        printf("%3i: %s\n", (int)i, lines[i - 1].c_str());
     }
 
     fflush(stdout);
