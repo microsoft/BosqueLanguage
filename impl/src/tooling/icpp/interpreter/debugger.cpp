@@ -38,7 +38,7 @@ std::string trimWS(const std::string& str)
     std::string rstr = str;
 
     int32_t fpos = 0;
-    while(str.size() < fpos && (str[fpos] == ' ' || str[fpos] == '\t' || str[fpos] == '\n' || str[fpos] == ' \r'))
+    while(fpos < str.size() && (str[fpos] == ' ' || str[fpos] == '\t' || str[fpos] == '\n' || str[fpos] == ' \r'))
     { 
         ++fpos;
     }
@@ -54,16 +54,30 @@ std::string trimWS(const std::string& str)
     return rstr;
 }
 
+std::vector<std::string> splitString(const std::string& str)
+{
+    const std::regex rgx("(?:\\r\\n|\\r|\\n)");
+    std::sregex_token_iterator iter(str.begin(), str.end(), rgx, -1);
+
+    std::vector<std::string> result;
+    for (std::sregex_token_iterator end; iter != end; ++iter)
+    {
+        result.push_back(iter->str());
+    }
+
+    return result;
+}
+
 std::pair<DebuggerCmd, std::string> dbg_parseDebuggerCmd(Evaluator* vv)
 {
     std::string opstr;
     int cc = 0;
 
-    do
-    {
-        printf("> ");
-        fflush(stdout);
+    printf("> ");
+    fflush(stdout);
 
+    do
+    {    
         cc = std::getchar();
         if(opstr.empty() && cc == '.')
         {
@@ -88,7 +102,10 @@ std::pair<DebuggerCmd, std::string> dbg_parseDebuggerCmd(Evaluator* vv)
         }
         else
         {
-            opstr.push_back(cc);
+            if(cc != '\n')
+            {
+                opstr.push_back(cc);
+            }
         }
     } while (cc != '\n');
 
@@ -139,16 +156,16 @@ std::pair<DebuggerCmd, std::string> dbg_parseDebuggerCmd(Evaluator* vv)
     }
     else if(opstr.starts_with("display ") || opstr.starts_with("d "))
     {
-        std::regex pfx("^(display|d)(\\s+)");
+        std::regex pfx("^(display|d)(\\s)+");
         std::smatch matchpfx;
-        std::regex_match(opstr, matchpfx, pfx);
-
+        std::regex_search(opstr, matchpfx, pfx);
+        
         std::string path = opstr.substr(matchpfx.str(0).size());
 
         std::regex pathx("^(([*][0-9]+)|([$]?[a-zA-Z]+))(([.][a-zA-Z0-9]+)?([\\[]([0-9]+|[\\\"]([^\\\"])+[\\\"])+[\\]])*)*$");
         std::smatch matchpath;
-        auto pathok = std::regex_match(path, matchpath, pathx);
-        if(pathok)
+        auto pathok = std::regex_search(path, matchpath, pathx);
+        if(!pathok)
         {
             printf("Bad display argument...\n");
             fflush(stdout);
@@ -162,13 +179,13 @@ std::pair<DebuggerCmd, std::string> dbg_parseDebuggerCmd(Evaluator* vv)
     {
         std::regex pfx("^(breakpoint|b)(\\s+)");
         std::smatch matchpfx;
-        std::regex_match(opstr, matchpfx, pfx);
+        std::regex_search(opstr, matchpfx, pfx);
 
         std::string actionstr = opstr.substr(matchpfx.str(0).size());
 
         std::regex afx("^(list|add|delete)(\\s+)");
         std::smatch matchaction;
-        bool actionok = std::regex_match(actionstr, matchaction, afx);
+        bool actionok = std::regex_search(actionstr, matchaction, afx);
         if(!actionok)
         {
             printf("Bad breakpoint action...\n");
@@ -181,7 +198,7 @@ std::pair<DebuggerCmd, std::string> dbg_parseDebuggerCmd(Evaluator* vv)
 
         std::regex bpfx("^[a-zA-Z0-9_/]+:[0-9]+");
         std::smatch matchbp;
-        bool bpok = std::regex_match(bpstr, matchbp, bpfx);
+        bool bpok = std::regex_search(bpstr, matchbp, bpfx);
         if(!bpok)
         {
             printf("Bad breakpoint location...\n");
@@ -233,29 +250,17 @@ void dbg_printHelp()
     printf("  (q)uit\n");
 }
 
+
+
 void dbg_printLine(Evaluator* vv)
 {
     auto cframe = vv->dbg_getCFrame();
     std::string contents = MarshalEnvironment::g_srcMap.find(cframe->invoke->srcFile)->second;
     
-    int64_t cpos = 0;
-    for(int64_t i = 0; i <= cframe->dbg_currentline; ++i)
-    {
-        int64_t lcpos = cpos;
-        while(cpos < contents.size() && contents[cpos] != '\n')
-        {
-            cpos++;
-        }
-        cpos++;
+    auto lines = splitString(contents);
+    std::string line = trimWS(lines[cframe->dbg_currentline - 1]);
 
-        if(i == cframe->invoke->sinfoStart.line)
-        {
-            std::string line = trimWS(contents.substr(lcpos, (cpos - lcpos)));
-
-            printf("%s", line.c_str());
-        }
-    }
-
+    printf("%i: %s", (int)cframe->dbg_currentline, line.c_str());
     fflush(stdout);
 }
 
@@ -265,7 +270,7 @@ void dbg_printFunction(Evaluator* vv)
     std::string contents = MarshalEnvironment::g_srcMap.find(cframe->invoke->srcFile)->second;
     
     int64_t cpos = 0;
-    for(int64_t i = 0; i <= cframe->invoke->sinfoEnd.line; ++i)
+    for(int64_t i = 0; i < cframe->invoke->sinfoEnd.line; ++i)
     {
         int64_t lcpos = cpos;
         while(cpos < contents.size() && contents[cpos] != '\n')
@@ -274,10 +279,10 @@ void dbg_printFunction(Evaluator* vv)
         }
         cpos++;
 
-        if(i >= cframe->invoke->sinfoStart.line)
+        if(i >= cframe->invoke->sinfoStart.line - 1)
         {
             std::string line = contents.substr(lcpos, (cpos - lcpos));
-            printf("%s", line.c_str());
+            printf("%i: %s", (int)i, line.c_str());
         }
     }
 
@@ -861,7 +866,7 @@ void dbg_bpDelete(Evaluator* vv, std::string bpstr)
 
 void dbg_quit(Evaluator* vv)
 {
-    printf("Exiting debugging session...");
+    printf("Exiting debugging session...\n");
     exit(0);
 }
 

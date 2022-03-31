@@ -176,6 +176,14 @@ public:
 public:
     static DebuggerActionFP fpDebuggerAction;
 
+    void reset()
+    {
+        this->cframe = Evaluator::g_callstack;
+        this->cpos = 1;
+
+        this->ttdBreakpoint_LastHit = {nullptr, 0, -1};          
+    }
+
     int32_t dbg_getCPos()
     { 
         return this->cpos;
