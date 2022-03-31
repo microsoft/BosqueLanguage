@@ -2430,23 +2430,17 @@ void Evaluator::invokeGlobalCons(const BSQInvokeBodyDecl* invk, StorageLocationP
     this->invokePostlude();
 }
 
-uint8_t* Evaluator::prepareMainStack(const BSQInvokeBodyDecl* invk)
+void Evaluator::invokeMain(const BSQInvokeBodyDecl* invk, uint8_t* istack, StorageLocationPtr resultsl, const BSQType* restype, Argument resarg)
 {
     size_t cssize = invk->scalarstackBytes + invk->mixedstackBytes;
-    uint8_t* cstack = (uint8_t*)zxalloc(cssize);
-    GC_MEM_ZERO(cstack, cssize);
+    uint8_t* cstack = (uint8_t*)BSQ_STACK_SPACE_ALLOC(cssize);
+    GC_MEM_COPY(cstack, istack, cssize);
 
     size_t maskslotbytes = invk->maskSlots * sizeof(BSQBool);
     BSQBool* maskslots = (BSQBool*)zxalloc(maskslotbytes);
     GC_MEM_ZERO(maskslots, maskslotbytes);
 
     this->invokePrelude(invk, cstack, maskslots, nullptr);
-
-    return cstack;
-}
-
-void Evaluator::invokeMain(const BSQInvokeBodyDecl* invk, StorageLocationPtr resultsl, const BSQType* restype, Argument resarg)
-{
     this->evaluateBody(resultsl, restype, resarg);
     this->invokePostlude();
 }

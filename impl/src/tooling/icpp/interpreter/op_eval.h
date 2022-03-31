@@ -176,14 +176,6 @@ public:
 public:
     static DebuggerActionFP fpDebuggerAction;
 
-    void reset()
-    {
-        this->cframe = Evaluator::g_callstack;
-        this->cpos = 1;
-
-        this->ttdBreakpoint_LastHit = {nullptr, 0, -1};          
-    }
-
     int32_t dbg_getCPos()
     { 
         return this->cpos;
@@ -201,6 +193,16 @@ public:
     std::vector<BreakPoint> breakpoints;
 
     std::vector<std::pair<DebuggerCmd, std::string>> dbg_history;
+
+    void reset()
+    {
+
+        this->cframe = nullptr;
+        this->cpos = 0;
+
+        this->call_count = 0;
+        this->ttdBreakpoint_LastHit = {nullptr, 0, -1};          
+    }
 
 private:
     bool advanceLineAndProcsssBP(InterpOp* op)
@@ -624,8 +626,8 @@ private:
 public:
     void invokeGlobalCons(const BSQInvokeBodyDecl* invk, StorageLocationPtr resultsl, const BSQType* restype, Argument resarg);
 
-    uint8_t* prepareMainStack(const BSQInvokeBodyDecl* invk);
-    void invokeMain(const BSQInvokeBodyDecl* invk, StorageLocationPtr resultsl, const BSQType* restype, Argument resarg);
+    static size_t initialMainStackSize(const BSQInvokeBodyDecl* invk);
+    void invokeMain(const BSQInvokeBodyDecl* invk, uint8_t* istack, StorageLocationPtr resultsl, const BSQType* restype, Argument resarg);
 
     void linvoke(const BSQInvokeBodyDecl* call, const std::vector<StorageLocationPtr>& args, StorageLocationPtr resultsl);
     bool iinvoke(const BSQInvokeBodyDecl* call, const std::vector<StorageLocationPtr>& args, BSQBool* optmask);

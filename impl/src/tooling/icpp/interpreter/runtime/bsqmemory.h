@@ -130,6 +130,11 @@ public:
     static GCStackEntry frames[BSQ_MAX_STACK];
     static uint32_t stackp;
 
+    static void reset()
+    {
+        stackp = 1;
+    }
+
     inline static void pushFrame(void** framep, RefMask mask)
     {
         if (GCStack::stackp < BSQ_MAX_STACK)
@@ -452,6 +457,16 @@ public:
         return std::string("*") + std::to_string(id);
     }
 #endif
+
+    void reset()
+    {
+        Allocator::collectionnodesend = Allocator::collectionnodes;
+
+        Allocator::collectioniters.clear();
+        Allocator::alloctemps.clear();
+
+        Allocator::dbg_idToObjMap.clear();
+    }
 
 private:
     BumpSpaceAllocator bumpalloc;
