@@ -33,16 +33,53 @@ DebuggerException DebuggerException::CreateErrorAbortRequest(BreakPoint eTime)
     return DebuggerException(DebuggerExceptionMode::ErrorPreTime, eTime);
 }
 
+std::string trimWS(const std::string& str)
+{
+    std::string rstr = str;
+
+    std::regex wsfront("^\\s+");
+    std::smatch matchfront;
+    bool foundfront = std::regex_search(rstr, matchfront, wsfront);
+    if(foundfront)
+    {
+        rstr = rstr.substr(matchfront.str(0).size());
+    }
+
+    std::regex wsback("\\s+$");
+    std::smatch matchback;
+    bool foundback = std::regex_search(rstr, matchback, wsback);
+    if(foundback)
+    {
+        rstr = rstr.substr(0, matchback.str(0).size());
+    }  
+
+    return rstr;
+}
+
+std::vector<std::string> splitString(const std::string& str)
+{
+    std::regex rgx("(?:\\r\\n|\\r|\\n)");
+    std::sregex_token_iterator iter(str.begin(), str.end(), rgx, -1);
+
+    std::vector<std::string> result;
+    for (std::sregex_token_iterator end; iter != end; ++iter)
+    {
+        result.push_back(iter->str());
+    }
+
+    return result;
+}
+
 std::pair<DebuggerCmd, std::string> dbg_parseDebuggerCmd(Evaluator* vv)
 {
     std::string opstr;
     int cc = 0;
 
-    do
-    {
-        printf("> ");
-        fflush(stdout);
+    printf("> ");
+    fflush(stdout);
 
+    do
+    {    
         cc = std::getchar();
         if(opstr.empty() && cc == '.')
         {
@@ -67,7 +104,10 @@ std::pair<DebuggerCmd, std::string> dbg_parseDebuggerCmd(Evaluator* vv)
         }
         else
         {
-            opstr.push_back(cc);
+            if(cc != '\n')
+            {
+                opstr.push_back(cc);
+            }
         }
     } while (cc != '\n');
 
@@ -118,16 +158,16 @@ std::pair<DebuggerCmd, std::string> dbg_parseDebuggerCmd(Evaluator* vv)
     }
     else if(opstr.starts_with("display ") || opstr.starts_with("d "))
     {
-        std::regex pfx("^(display|d)(\\s+)");
+        std::regex pfx("^(display|d)(\\s)+");
         std::smatch matchpfx;
-        std::regex_match(opstr, matchpfx, pfx);
-
+        std::regex_search(opstr, matchpfx, pfx);
+        
         std::string path = opstr.substr(matchpfx.str(0).size());
 
         std::regex pathx("^(([*][0-9]+)|([$]?[a-zA-Z]+))(([.][a-zA-Z0-9]+)?([\\[]([0-9]+|[\\\"]([^\\\"])+[\\\"])+[\\]])*)*$");
         std::smatch matchpath;
-        auto pathok = std::regex_match(path, matchpath, pathx);
-        if(pathok)
+        auto pathok = std::regex_search(path, matchpath, pathx);
+        if(!pathok)
         {
             printf("Bad display argument...\n");
             fflush(stdout);
@@ -141,13 +181,13 @@ std::pair<DebuggerCmd, std::string> dbg_parseDebuggerCmd(Evaluator* vv)
     {
         std::regex pfx("^(breakpoint|b)(\\s+)");
         std::smatch matchpfx;
-        std::regex_match(opstr, matchpfx, pfx);
+        std::regex_search(opstr, matchpfx, pfx);
 
         std::string actionstr = opstr.substr(matchpfx.str(0).size());
 
         std::regex afx("^(list|add|delete)(\\s+)");
         std::smatch matchaction;
-        bool actionok = std::regex_match(actionstr, matchaction, afx);
+        bool actionok = std::regex_search(actionstr, matchaction, afx);
         if(!actionok)
         {
             printf("Bad breakpoint action...\n");
@@ -160,7 +200,7 @@ std::pair<DebuggerCmd, std::string> dbg_parseDebuggerCmd(Evaluator* vv)
 
         std::regex bpfx("^[a-zA-Z0-9_/]+:[0-9]+");
         std::smatch matchbp;
-        bool bpok = std::regex_match(bpstr, matchbp, bpfx);
+        bool bpok = std::regex_search(bpstr, matchbp, bpfx);
         if(!bpok)
         {
             printf("Bad breakpoint location...\n");
@@ -217,23 +257,10 @@ void dbg_printLine(Evaluator* vv)
     auto cframe = vv->dbg_getCFrame();
     std::string contents = MarshalEnvironment::g_srcMap.find(cframe->invoke->srcFile)->second;
     
-    int64_t cpos = 0;
-    for(int64_t i = 0; i <= cframe->dbg_currentline; ++i)
-    {
-        int64_t lcpos = cpos;
-        while(cpos < contents.size() && contents[cpos] != '\n')
-        {
-            cpos++;
-        }
-        cpos++;
+    auto lines = splitString(contents);
+    std::string line = trimWS(lines[cframe->dbg_currentline - 1]);
 
-        if(i == cframe->invoke->sinfoStart.line)
-        {
-            std::string line = contents.substr(lcpos, (cpos - lcpos));
-            printf("%s", line.c_str());
-        }
-    }
-
+    printf("%i: %s\n", (int)cframe->dbg_currentline, line.c_str());
     fflush(stdout);
 }
 
@@ -242,21 +269,10 @@ void dbg_printFunction(Evaluator* vv)
     auto cframe = vv->dbg_getCFrame();
     std::string contents = MarshalEnvironment::g_srcMap.find(cframe->invoke->srcFile)->second;
     
-    int64_t cpos = 0;
-    for(int64_t i = 0; i <= cframe->invoke->sinfoEnd.line; ++i)
-    {
-        int64_t lcpos = cpos;
-        while(cpos < contents.size() && contents[cpos] != '\n')
-        {
-            cpos++;
-        }
-        cpos++;
-
-        if(i >= cframe->invoke->sinfoStart.line)
-        {
-            std::string line = contents.substr(lcpos, (cpos - lcpos));
-            printf("%s", line.c_str());
-        }
+    auto lines = splitString(contents);
+    for(int64_t i = cframe->invoke->sinfoStart.line; i <= cframe->invoke->sinfoEnd.line; ++i)
+    { 
+        printf("%3i: %s\n", (int)i, lines[i - 1].c_str());
     }
 
     fflush(stdout);
@@ -266,7 +282,7 @@ void dbg_displayStack(Evaluator* vv)
 {
     printf("++++\n");
 
-    for(int32_t i = 0; i < vv->dbg_getCPos(); ++i)
+    for(int32_t i = 0; i <= vv->dbg_getCPos(); ++i)
     {
         printf("  %s\n", Evaluator::g_callstack[i].invoke->name.c_str());
     }
@@ -287,7 +303,7 @@ void dbg_processStepInto(Evaluator* vv)
 
 void dbg_processContinue(Evaluator* vv)
 {
-    for(int32_t i = 0; i < vv->dbg_getCPos(); ++i)
+    for(int32_t i = 0; i <= vv->dbg_getCPos(); ++i)
     {
         Evaluator::g_callstack[i].dbg_step_mode = StepMode::Run;
     }
@@ -346,18 +362,18 @@ void dbg_displayLocals(Evaluator* vv)
     }
 
     locals += "**locals**\n";
-    const std::list<VariableHomeLocationInfo>& vhomeinfo = vv->dbg_getCFrame()->dbg_locals;
+    const std::map<std::string, VariableHomeLocationInfo>& vhomeinfo = vv->dbg_getCFrame()->dbg_locals;
     for(auto iter = vhomeinfo.cbegin(); iter != vhomeinfo.cend(); ++iter)
     {
-        const std::string& vname = iter->vname;
+        const std::string& vname = iter->first;
         auto isparam = std::find_if(params.cbegin(), params.cend(), [&vname](const BSQFunctionParameter& pp) {
             return pp.name == vname;
         }) != params.cend();
 
         if(!isparam)
         {
-            auto val = vv->evalArgument(iter->location);
-            locals += "  " + iter->vname + ": " + iter->vtype->fpDisplay(iter->vtype, val, DisplayMode::CmdDebug) + "\n";
+            auto val = vv->evalArgument(iter->second.location);
+            locals += "  " + iter->first + ": " + iter->second.vtype->fpDisplay(iter->second.vtype, val, DisplayMode::CmdDebug) + "\n";
         }
     }
 
@@ -625,9 +641,9 @@ void dbg_displayExp(Evaluator* vv, std::string vexp)
             return param.name == name;
         });
         
-        const std::list<VariableHomeLocationInfo>& vhomeinfo = vv->dbg_getCFrame()->dbg_locals;
-        auto lpos = std::find_if(vhomeinfo.cbegin(), vhomeinfo.cend(), [&name](const VariableHomeLocationInfo& vinfo) {
-            return vinfo.vname == name;
+        const std::map<std::string, VariableHomeLocationInfo>& vhomeinfo = vv->dbg_getCFrame()->dbg_locals;
+        auto lpos = std::find_if(vhomeinfo.cbegin(), vhomeinfo.cend(), [&name](const std::pair<std::string, VariableHomeLocationInfo>& vinfo) {
+            return vinfo.first == name;
         });
 
         if(ppos == params.cend() && lpos == vhomeinfo.cend())
@@ -645,8 +661,8 @@ void dbg_displayExp(Evaluator* vv, std::string vexp)
         }
         else
         {
-            btype = lpos->vtype;
-            cpos = vv->evalArgument(lpos->location);
+            btype = lpos->second.vtype;
+            cpos = vv->evalArgument(lpos->second.location);
         }
 
         vexp = np.value().second;
@@ -839,7 +855,7 @@ void dbg_bpDelete(Evaluator* vv, std::string bpstr)
 
 void dbg_quit(Evaluator* vv)
 {
-    printf("Exiting debugging session...");
+    printf("Exiting debugging session...\n");
     exit(0);
 }
 

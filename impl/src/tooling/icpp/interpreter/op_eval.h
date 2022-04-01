@@ -97,7 +97,7 @@ public:
     BreakPoint dbg_prevbp;
     int64_t dbg_currentline;
     StepMode dbg_step_mode;
-    std::list<VariableHomeLocationInfo> dbg_locals;
+    std::map<std::string, VariableHomeLocationInfo> dbg_locals;
 #endif
 
     const BSQInvokeDecl* invoke;
@@ -124,7 +124,7 @@ public:
 
 private:
     EvaluatorFrame* cframe = nullptr;
-    int32_t cpos = 0;
+    int32_t cpos = -1;
 
 public:
     inline StorageLocationPtr evalConstArgument(Argument arg)
@@ -194,6 +194,16 @@ public:
 
     std::vector<std::pair<DebuggerCmd, std::string>> dbg_history;
 
+    void reset()
+    {
+
+        this->cframe = nullptr;
+        this->cpos = -1;
+
+        this->call_count = 0;
+        this->ttdBreakpoint_LastHit = {nullptr, 0, -1};          
+    }
+
 private:
     bool advanceLineAndProcsssBP(InterpOp* op)
     {
@@ -221,7 +231,7 @@ private:
                     this->cframe->dbg_step_mode = StepMode::Step;
                     this->ttdBreakpoint = {nullptr, 0, -1};
 
-                    for(int32_t i = 0; i < this->cpos; ++i)
+                    for(int32_t i = 0; i <= this->cpos; ++i)
                     {
                         if(Evaluator::g_callstack[i].invoke->isUserCode)
                         {
@@ -253,7 +263,7 @@ private:
                 this->cframe->dbg_step_mode = StepMode::Step;
                 this->ttdBreakpoint = {nullptr, 0, -1};
 
-                for(int32_t i = 0; i < this->cpos; ++i)
+                for(int32_t i = 0; i <= this->cpos; ++i)
                 {
                     if(Evaluator::g_callstack[i].invoke->isUserCode)
                     {
@@ -297,7 +307,7 @@ private:
         if(this->cframe == nullptr)
         {
             //main entrypoint so do break if debugger is attached
-            if(this->debuggerattached)
+            if(this->debuggerattached && this->ttdBreakpoint.invk == nullptr)
             {
                 return StepMode::Step;
             }
@@ -374,6 +384,7 @@ private:
     inline void pushFrame(const BSQInvokeDecl* invk, uint8_t* scalarbase, uint8_t* mixedbase, BSQBool* argmask, BSQBool* masksbase, const std::vector<InterpOp*>* ops) 
     {
         this->cpos++;
+
         auto cf = Evaluator::g_callstack + cpos;
         cf->invoke = invk;
         cf->scalarbase = scalarbase;
@@ -395,7 +406,7 @@ private:
     inline void popFrame()
     {
         this->cpos--;
-        if(this->cpos == 0)
+        if(this->cpos == -1)
         {
             this->cframe = nullptr;
         }
@@ -600,6 +611,7 @@ private:
 
     void evalVarLifetimeStartOp(const VarLifetimeStartOp* op);
     void evalVarLifetimeEndOp(const VarLifetimeEndOp* op);
+    void evalVarHomeLocationValueUpdate(const VarHomeLocationValueUpdate* op);
     void evaluateOpCode(const InterpOp* op);
 
     void evaluateOpCodeBlocks();
@@ -616,8 +628,8 @@ private:
 public:
     void invokeGlobalCons(const BSQInvokeBodyDecl* invk, StorageLocationPtr resultsl, const BSQType* restype, Argument resarg);
 
-    uint8_t* prepareMainStack(const BSQInvokeBodyDecl* invk);
-    void invokeMain(const BSQInvokeBodyDecl* invk, StorageLocationPtr resultsl, const BSQType* restype, Argument resarg);
+    static size_t initialMainStackSize(const BSQInvokeBodyDecl* invk);
+    void invokeMain(const BSQInvokeBodyDecl* invk, uint8_t* istack, StorageLocationPtr resultsl, const BSQType* restype, Argument resarg);
 
     void linvoke(const BSQInvokeBodyDecl* call, const std::vector<StorageLocationPtr>& args, StorageLocationPtr resultsl);
     bool iinvoke(const BSQInvokeBodyDecl* call, const std::vector<StorageLocationPtr>& args, BSQBool* optmask);

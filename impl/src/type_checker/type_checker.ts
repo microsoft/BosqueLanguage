@@ -5457,12 +5457,12 @@ class TypeChecker {
             else if (cflow.fenvs.length === 0) {
                 //go though true block (without jump) and then skip else
                 const trueblck = this.m_emitter.createNewBlock(`Lifstmt_${i}true`);
-                this.m_emitter.emitDirectJump(stmt.sinfo, trueblck);
+                this.m_emitter.emitDirectJump(SourceInfo.createIgnoreSourceInfo(), trueblck);
                 this.m_emitter.setActiveBlock(trueblck);
 
                 const truestate = this.checkStatement(TypeEnvironment.join(this.m_assembly, ...cflow.tenvs), stmt.flow.conds[i].action);
                 if(truestate.hasNormalFlow()) {
-                    this.m_emitter.emitDirectJump(stmt.sinfo, doneblck);
+                    this.m_emitter.emitDirectJump(SourceInfo.createIgnoreSourceInfo(), doneblck);
                 }
 
                 results.push(truestate);
@@ -5472,12 +5472,12 @@ class TypeChecker {
                 const trueblck = this.m_emitter.createNewBlock(`Lifstmt_${i}true`);
                 const falseblck = this.m_emitter.createNewBlock(`Lifstmt_${i}false`);
                 
-                this.m_emitter.emitBoolJump(stmt.sinfo, testreg, trueblck, falseblck);
+                this.m_emitter.emitBoolJump(SourceInfo.createIgnoreSourceInfo(), testreg, trueblck, falseblck);
                 this.m_emitter.setActiveBlock(trueblck);
                 
                 const truestate = this.checkStatement(TypeEnvironment.join(this.m_assembly, ...cflow.tenvs), stmt.flow.conds[i].action);
                 if (truestate.hasNormalFlow()) {
-                    this.m_emitter.emitDirectJump(stmt.sinfo, doneblck);
+                    this.m_emitter.emitDirectJump(SourceInfo.createIgnoreSourceInfo(), doneblck);
                 }
                 
                 this.m_emitter.setActiveBlock(falseblck);
@@ -5491,7 +5491,7 @@ class TypeChecker {
             results.push(cenv);
 
             if(cenv.hasNormalFlow()) {
-                this.m_emitter.emitDirectJump(stmt.sinfo, doneblck);
+                this.m_emitter.emitDirectJump(SourceInfo.createIgnoreSourceInfo(), doneblck);
             }
         }
         else {
@@ -5499,7 +5499,7 @@ class TypeChecker {
             results.push(aenv);
 
             if (aenv.hasNormalFlow()) {
-                this.m_emitter.emitDirectJump(stmt.sinfo, doneblck);
+                this.m_emitter.emitDirectJump(SourceInfo.createIgnoreSourceInfo(), doneblck);
             }
         }
 
@@ -5637,11 +5637,11 @@ class TypeChecker {
             const nextlabel = this.m_emitter.createNewBlock(`Lswitchstmt_${i}next`);
             const actionlabel = this.m_emitter.createNewBlock(`Lswitchstmt_${i}action`);
 
-            const test = this.checkSwitchGuard(stmt.sinfo, cenv, matchvar, stmt.flow[i].check, nextlabel, actionlabel);
+            const test = this.checkSwitchGuard(SourceInfo.createIgnoreSourceInfo(), cenv, matchvar, stmt.flow[i].check, nextlabel, actionlabel);
 
             if(test.tenv === undefined) {
                 this.m_emitter.setActiveBlock(actionlabel);
-                this.m_emitter.emitDeadBlock(stmt.sinfo);
+                this.m_emitter.emitDeadBlock(SourceInfo.createIgnoreSourceInfo());
 
                 this.m_emitter.setActiveBlock(nextlabel);
                 cenv = test.fenv as TypeEnvironment;
@@ -5658,7 +5658,7 @@ class TypeChecker {
                 }
 
                 this.m_emitter.setActiveBlock(nextlabel);
-                this.m_emitter.emitDeadBlock(stmt.sinfo);
+                this.m_emitter.emitDeadBlock(SourceInfo.createIgnoreSourceInfo());
 
                 hasfalseflow = false;
             }
@@ -5685,7 +5685,7 @@ class TypeChecker {
             const rcb = rblocks[i];
             this.m_emitter.setActiveBlock(rcb);
 
-            this.m_emitter.emitDirectJump(stmt.sinfo, doneblck);
+            this.m_emitter.emitDirectJump(SourceInfo.createIgnoreSourceInfo(), doneblck);
         }
 
         this.m_emitter.setActiveBlock(doneblck);
@@ -5717,7 +5717,7 @@ class TypeChecker {
 
             if(test.tenv === undefined) {
                 this.m_emitter.setActiveBlock(actionlabel);
-                this.m_emitter.emitDeadBlock(stmt.sinfo);
+                this.m_emitter.emitDeadBlock(SourceInfo.createIgnoreSourceInfo());
 
                 this.m_emitter.setActiveBlock(nextlabel);
                 cenv = test.fenv as TypeEnvironment;
@@ -5734,7 +5734,7 @@ class TypeChecker {
                 }
 
                 this.m_emitter.setActiveBlock(nextlabel);
-                this.m_emitter.emitDeadBlock(stmt.sinfo);
+                this.m_emitter.emitDeadBlock(SourceInfo.createIgnoreSourceInfo());
 
                 hasfalseflow = false;
             }
@@ -5761,12 +5761,12 @@ class TypeChecker {
             const rcb = rblocks[i];
             this.m_emitter.setActiveBlock(rcb[0]);
 
-            this.m_emitter.localLifetimeEnd(stmt.sinfo, matchvar);
+            this.m_emitter.localLifetimeEnd(SourceInfo.createIgnoreSourceInfo(), matchvar);
             for (let i = 0; i < rcb[1].length; ++i) {
-                this.m_emitter.localLifetimeEnd(stmt.sinfo, rcb[1][i]);
+                this.m_emitter.localLifetimeEnd(SourceInfo.createIgnoreSourceInfo(), rcb[1][i]);
             }
 
-            this.m_emitter.emitDirectJump(stmt.sinfo, doneblck);
+            this.m_emitter.emitDirectJump(SourceInfo.createIgnoreSourceInfo(), doneblck);
         }
 
         this.m_emitter.setActiveBlock(doneblck);
@@ -6082,20 +6082,20 @@ class TypeChecker {
 
         for (let i = 0; i < outparaminfo.length; ++i) {
             const opi = outparaminfo[i];
-            this.m_emitter.emitLoadUninitVariableValue(body.sinfo, this.m_emitter.registerResolvedTypeReference(opi.ptype), new MIRRegisterArgument(opi.pname));
+            this.m_emitter.emitLoadUninitVariableValue(SourceInfo.createIgnoreSourceInfo(), this.m_emitter.registerResolvedTypeReference(opi.ptype), new MIRRegisterArgument(opi.pname));
         }
 
         const etreg = this.m_emitter.generateTmpRegister();
         const evalue = this.checkExpression(env, body, etreg, undefined);
 
-        this.m_emitter.emitReturnAssign(body.sinfo, this.emitInlineConvertIfNeeded(body.sinfo, etreg, evalue.getExpressionResult().valtype, env.inferResult || evalue.getExpressionResult().valtype.flowtype), this.m_emitter.registerResolvedTypeReference(evalue.getExpressionResult().valtype.flowtype));
-        this.m_emitter.emitDirectJump(body.sinfo, "returnassign");
+        this.m_emitter.emitReturnAssign(SourceInfo.createIgnoreSourceInfo(), this.emitInlineConvertIfNeeded(SourceInfo.createIgnoreSourceInfo(), etreg, evalue.getExpressionResult().valtype, env.inferResult || evalue.getExpressionResult().valtype.flowtype), this.m_emitter.registerResolvedTypeReference(evalue.getExpressionResult().valtype.flowtype));
+        this.m_emitter.emitDirectJump(SourceInfo.createIgnoreSourceInfo(), "returnassign");
 
         this.m_emitter.setActiveBlock("returnassign");
 
         const rrinfo = this.generateRefInfoForReturnEmit(evalue.getExpressionResult().valtype.flowtype, []);
-        this.emitPrologForReturn(body.sinfo, rrinfo, false);
-        this.m_emitter.emitDirectJump(body.sinfo, "exit");
+        this.emitPrologForReturn(SourceInfo.createIgnoreSourceInfo(), rrinfo, false);
+        this.m_emitter.emitDirectJump(SourceInfo.createIgnoreSourceInfo(), "exit");
 
         return this.m_emitter.getBody(srcFile, body.sinfo);
     }
@@ -6106,7 +6106,7 @@ class TypeChecker {
         for (let i = 0; i < outparaminfo.length; ++i) {
             const opi = outparaminfo[i];
             if(!opi.defonentry) {
-                this.m_emitter.emitLoadUninitVariableValue(body.sinfo, this.m_emitter.registerResolvedTypeReference(opi.ptype), new MIRRegisterArgument(opi.pname));
+                this.m_emitter.emitLoadUninitVariableValue(SourceInfo.createIgnoreSourceInfo(), this.m_emitter.registerResolvedTypeReference(opi.ptype), new MIRRegisterArgument(opi.pname));
             }
         }
 
@@ -6123,14 +6123,14 @@ class TypeChecker {
                 const ttmp = this.m_emitter.generateTmpRegister();
                 const oftt = this.checkExpression(env, iv.constexp, ttmp, oftype).getExpressionResult().valtype;
 
-                this.m_emitter.emitRegisterStore(body.sinfo, storevar, storevar, this.m_emitter.registerResolvedTypeReference(oftype), new MIRStatmentGuard(guard, "defaultonfalse", this.emitInlineConvertIfNeeded(iv.constexp.sinfo, ttmp, oftt, oftype)));
+                this.m_emitter.emitRegisterStore(SourceInfo.createIgnoreSourceInfo(), storevar, storevar, this.m_emitter.registerResolvedTypeReference(oftype), new MIRStatmentGuard(guard, "defaultonfalse", this.emitInlineConvertIfNeeded(iv.constexp.sinfo, ttmp, oftt, oftype)));
             }
             else if (iv instanceof InitializerEvaluationConstantLoad) {
-                this.m_emitter.emitRegisterStore(body.sinfo, storevar, storevar, this.m_emitter.registerResolvedTypeReference(oftype), new MIRStatmentGuard(guard, "defaultonfalse", new MIRGlobalVariable(iv.gkey, iv.shortgkey)));
+                this.m_emitter.emitRegisterStore(SourceInfo.createIgnoreSourceInfo(), storevar, storevar, this.m_emitter.registerResolvedTypeReference(oftype), new MIRStatmentGuard(guard, "defaultonfalse", new MIRGlobalVariable(iv.gkey, iv.shortgkey)));
             }
             else {
                 const civ = iv as InitializerEvaluationCallAction;
-                this.m_emitter.emitInvokeFixedFunctionWithGuard(body.sinfo, civ.ikey, civ.args, undefined, this.m_emitter.registerResolvedTypeReference(oftype), storevar, new MIRStatmentGuard(guard, "defaultontrue", storevar));
+                this.m_emitter.emitInvokeFixedFunctionWithGuard(SourceInfo.createIgnoreSourceInfo(), civ.ikey, civ.args, undefined, this.m_emitter.registerResolvedTypeReference(oftype), storevar, new MIRStatmentGuard(guard, "defaultontrue", storevar));
             }
 
             opidone.add(opi.pname);
@@ -6142,14 +6142,14 @@ class TypeChecker {
                 const prechk = preject[0][i];
 
                 const prereg = this.m_emitter.generateTmpRegister();
-                this.m_emitter.emitInvokeFixedFunction(body.sinfo, prechk.ikey, preargs, undefined, this.m_emitter.registerResolvedTypeReference(this.m_assembly.getSpecialBoolType()), prereg);
-                this.m_emitter.emitAssertCheck(body.sinfo, "Fail pre-condition", prereg);
+                this.m_emitter.emitInvokeFixedFunction(SourceInfo.createIgnoreSourceInfo(), prechk.ikey, preargs, undefined, this.m_emitter.registerResolvedTypeReference(this.m_assembly.getSpecialBoolType()), prereg);
+                this.m_emitter.emitAssertCheck(SourceInfo.createIgnoreSourceInfo(), "Fail pre-condition", prereg);
             }
         }
 
         let postrnames: string[] = [];
         if (postject !== undefined) {
-            postrnames = this.emitPrelogForRefParamsAndPostCond(body.sinfo, env, outparaminfo.filter((op) => op.defonentry).map((op) => op.pname));
+            postrnames = this.emitPrelogForRefParamsAndPostCond(SourceInfo.createIgnoreSourceInfo(), env, outparaminfo.filter((op) => op.defonentry).map((op) => op.pname));
         }
 
         const renv = this.checkBlock(env, body);
@@ -6158,7 +6158,7 @@ class TypeChecker {
         this.m_emitter.setActiveBlock("returnassign");
 
         const rrinfo = this.generateRefInfoForReturnEmit(renv.inferResult as ResolvedType, outparaminfo.map((op) => [op.pname, op.ptype]));
-        this.emitPrologForReturn(body.sinfo, rrinfo, postject !== undefined);
+        this.emitPrologForReturn(SourceInfo.createIgnoreSourceInfo(), rrinfo, postject !== undefined);
 
         if (postject !== undefined) {
             const postargs = [...postject[1].map((pn) => new MIRRegisterArgument(pn)), ...postrnames.map((prn) => new MIRRegisterArgument(prn))];
@@ -6167,12 +6167,12 @@ class TypeChecker {
                 const postchk = postject[0][i];
 
                 const postreg = this.m_emitter.generateTmpRegister();
-                this.m_emitter.emitInvokeFixedFunction(body.sinfo, postchk.ikey, postargs, undefined, this.m_emitter.registerResolvedTypeReference(this.m_assembly.getSpecialBoolType()), postreg);
-                this.m_emitter.emitAssertCheck(body.sinfo, "Fail post-condition", postreg);
+                this.m_emitter.emitInvokeFixedFunction(SourceInfo.createIgnoreSourceInfo(), postchk.ikey, postargs, undefined, this.m_emitter.registerResolvedTypeReference(this.m_assembly.getSpecialBoolType()), postreg);
+                this.m_emitter.emitAssertCheck(SourceInfo.createIgnoreSourceInfo(), "Fail post-condition", postreg);
             }
         }
 
-        this.m_emitter.emitDirectJump(body.sinfo, "exit");
+        this.m_emitter.emitDirectJump(SourceInfo.createIgnoreSourceInfo(), "exit");
 
         return this.m_emitter.getBody(srcFile, body.sinfo);
     }
