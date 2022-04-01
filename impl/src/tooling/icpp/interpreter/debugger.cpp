@@ -362,18 +362,18 @@ void dbg_displayLocals(Evaluator* vv)
     }
 
     locals += "**locals**\n";
-    const std::list<VariableHomeLocationInfo>& vhomeinfo = vv->dbg_getCFrame()->dbg_locals;
+    const std::map<std::string, VariableHomeLocationInfo>& vhomeinfo = vv->dbg_getCFrame()->dbg_locals;
     for(auto iter = vhomeinfo.cbegin(); iter != vhomeinfo.cend(); ++iter)
     {
-        const std::string& vname = iter->vname;
+        const std::string& vname = iter->first;
         auto isparam = std::find_if(params.cbegin(), params.cend(), [&vname](const BSQFunctionParameter& pp) {
             return pp.name == vname;
         }) != params.cend();
 
         if(!isparam)
         {
-            auto val = vv->evalArgument(iter->location);
-            locals += "  " + iter->vname + ": " + iter->vtype->fpDisplay(iter->vtype, val, DisplayMode::CmdDebug) + "\n";
+            auto val = vv->evalArgument(iter->second.location);
+            locals += "  " + iter->first + ": " + iter->second.vtype->fpDisplay(iter->second.vtype, val, DisplayMode::CmdDebug) + "\n";
         }
     }
 
@@ -641,9 +641,9 @@ void dbg_displayExp(Evaluator* vv, std::string vexp)
             return param.name == name;
         });
         
-        const std::list<VariableHomeLocationInfo>& vhomeinfo = vv->dbg_getCFrame()->dbg_locals;
-        auto lpos = std::find_if(vhomeinfo.cbegin(), vhomeinfo.cend(), [&name](const VariableHomeLocationInfo& vinfo) {
-            return vinfo.vname == name;
+        const std::map<std::string, VariableHomeLocationInfo>& vhomeinfo = vv->dbg_getCFrame()->dbg_locals;
+        auto lpos = std::find_if(vhomeinfo.cbegin(), vhomeinfo.cend(), [&name](const std::pair<std::string, VariableHomeLocationInfo>& vinfo) {
+            return vinfo.first == name;
         });
 
         if(ppos == params.cend() && lpos == vhomeinfo.cend())
@@ -661,8 +661,8 @@ void dbg_displayExp(Evaluator* vv, std::string vexp)
         }
         else
         {
-            btype = lpos->vtype;
-            cpos = vv->evalArgument(lpos->location);
+            btype = lpos->second.vtype;
+            cpos = vv->evalArgument(lpos->second.location);
         }
 
         vexp = np.value().second;

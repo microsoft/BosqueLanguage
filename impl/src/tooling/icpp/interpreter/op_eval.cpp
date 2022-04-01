@@ -1099,17 +1099,18 @@ void Evaluator::evalReturnAssignOfConsOp(const ReturnAssignOfConsOp* op)
 void Evaluator::evalVarLifetimeStartOp(const VarLifetimeStartOp* op)
 {
 #ifdef BSQ_DEBUG_BUILD
-    VariableHomeLocationInfo vhome{op->name, op->oftype, op->homelocation};
-    this->cframe->dbg_locals.push_back(vhome);
+    if(!this->cframe->dbg_locals.contains(op->name))
+    {
+        VariableHomeLocationInfo vhome{op->name, op->oftype, op->homelocation};
+        this->cframe->dbg_locals[op->name] = vhome;
+    }
 #endif    
 }
 
 void Evaluator::evalVarLifetimeEndOp(const VarLifetimeEndOp* op)
 {
-#ifdef BSQ_DEBUG_BUILD 
-    this->cframe->dbg_locals.remove_if([op](const VariableHomeLocationInfo& vinfo) {
-        return vinfo.vname == op->name;
-    });
+#ifdef BSQ_DEBUG_BUILD
+    this->cframe->dbg_locals.erase(op->name);
 #endif    
 } 
 

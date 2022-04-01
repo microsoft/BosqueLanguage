@@ -97,7 +97,7 @@ public:
     BreakPoint dbg_prevbp;
     int64_t dbg_currentline;
     StepMode dbg_step_mode;
-    std::list<VariableHomeLocationInfo> dbg_locals;
+    std::map<std::string, VariableHomeLocationInfo> dbg_locals;
 #endif
 
     const BSQInvokeDecl* invoke;
@@ -383,7 +383,6 @@ private:
 #else
     inline void pushFrame(const BSQInvokeDecl* invk, uint8_t* scalarbase, uint8_t* mixedbase, BSQBool* argmask, BSQBool* masksbase, const std::vector<InterpOp*>* ops) 
     {
-        this->cpos++;
         auto cf = Evaluator::g_callstack + cpos;
         cf->invoke = invk;
         cf->scalarbase = scalarbase;
@@ -399,6 +398,7 @@ private:
         }
 
         this->cframe = Evaluator::g_callstack + this->cpos;
+        this->cpos++;
     }
 #endif
 
