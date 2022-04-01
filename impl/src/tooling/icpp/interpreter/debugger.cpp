@@ -282,7 +282,7 @@ void dbg_displayStack(Evaluator* vv)
 {
     printf("++++\n");
 
-    for(int32_t i = 0; i < vv->dbg_getCPos(); ++i)
+    for(int32_t i = 0; i <= vv->dbg_getCPos(); ++i)
     {
         printf("  %s\n", Evaluator::g_callstack[i].invoke->name.c_str());
     }
@@ -303,7 +303,7 @@ void dbg_processStepInto(Evaluator* vv)
 
 void dbg_processContinue(Evaluator* vv)
 {
-    for(int32_t i = 0; i < vv->dbg_getCPos(); ++i)
+    for(int32_t i = 0; i <= vv->dbg_getCPos(); ++i)
     {
         Evaluator::g_callstack[i].dbg_step_mode = StepMode::Run;
     }

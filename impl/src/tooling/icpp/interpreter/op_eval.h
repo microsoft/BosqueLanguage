@@ -124,7 +124,7 @@ public:
 
 private:
     EvaluatorFrame* cframe = nullptr;
-    int32_t cpos = 0;
+    int32_t cpos = -1;
 
 public:
     inline StorageLocationPtr evalConstArgument(Argument arg)
@@ -198,7 +198,7 @@ public:
     {
 
         this->cframe = nullptr;
-        this->cpos = 0;
+        this->cpos = -1;
 
         this->call_count = 0;
         this->ttdBreakpoint_LastHit = {nullptr, 0, -1};          
@@ -231,7 +231,7 @@ private:
                     this->cframe->dbg_step_mode = StepMode::Step;
                     this->ttdBreakpoint = {nullptr, 0, -1};
 
-                    for(int32_t i = 0; i < this->cpos; ++i)
+                    for(int32_t i = 0; i <= this->cpos; ++i)
                     {
                         if(Evaluator::g_callstack[i].invoke->isUserCode)
                         {
@@ -263,7 +263,7 @@ private:
                 this->cframe->dbg_step_mode = StepMode::Step;
                 this->ttdBreakpoint = {nullptr, 0, -1};
 
-                for(int32_t i = 0; i < this->cpos; ++i)
+                for(int32_t i = 0; i <= this->cpos; ++i)
                 {
                     if(Evaluator::g_callstack[i].invoke->isUserCode)
                     {
@@ -383,6 +383,8 @@ private:
 #else
     inline void pushFrame(const BSQInvokeDecl* invk, uint8_t* scalarbase, uint8_t* mixedbase, BSQBool* argmask, BSQBool* masksbase, const std::vector<InterpOp*>* ops) 
     {
+        this->cpos++;
+
         auto cf = Evaluator::g_callstack + cpos;
         cf->invoke = invk;
         cf->scalarbase = scalarbase;
@@ -398,14 +400,13 @@ private:
         }
 
         this->cframe = Evaluator::g_callstack + this->cpos;
-        this->cpos++;
     }
 #endif
 
     inline void popFrame()
     {
         this->cpos--;
-        if(this->cpos == 0)
+        if(this->cpos == -1)
         {
             this->cframe = nullptr;
         }
