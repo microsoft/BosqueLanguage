@@ -307,7 +307,7 @@ private:
         if(this->cframe == nullptr)
         {
             //main entrypoint so do break if debugger is attached
-            if(this->debuggerattached)
+            if(this->debuggerattached && this->ttdBreakpoint.invk == nullptr)
             {
                 return StepMode::Step;
             }
@@ -610,6 +610,7 @@ private:
 
     void evalVarLifetimeStartOp(const VarLifetimeStartOp* op);
     void evalVarLifetimeEndOp(const VarLifetimeEndOp* op);
+    void evalVarHomeLocationValueUpdate(const VarHomeLocationValueUpdate* op);
     void evaluateOpCode(const InterpOp* op);
 
     void evaluateOpCodeBlocks();

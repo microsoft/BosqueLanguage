@@ -66,6 +66,7 @@ std::pair<bool, json> run(Evaluator& runner, const APIModule* api, const std::st
     //Create a 0 stack frame that we can parse the arguments onto and that will keep them live (for reuse)
     // -- may need to revisit as it creates hidden sharing if/when we support mutation in place
     uint8_t* istack = (uint8_t*)BSQ_STACK_SPACE_ALLOC(call->scalarstackBytes + call->mixedstackBytes);
+    GC_MEM_ZERO(istack, call->scalarstackBytes + call->mixedstackBytes);
     GCStack::pushFrame((void**)(istack + call->scalarstackBytes), call->mixedMask);
 
     if(setjmp(Evaluator::g_entrybuff) > 0)

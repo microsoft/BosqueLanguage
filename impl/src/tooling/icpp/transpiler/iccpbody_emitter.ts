@@ -172,8 +172,30 @@ class ICPPBodyEmitter {
             return { kind: ArgumentTag.ScalarVal, offset: this.scalarStackMap.get(vname.nameID) as number };
         }
         else {
-            return { kind: ArgumentTag.MixedVal, offset:  this.mixedStackMap.get(vname.nameID) as number };
+            return { kind: ArgumentTag.MixedVal, offset: this.mixedStackMap.get(vname.nameID) as number };
         }
+    }
+
+    private generateVarInfoForHomeUpdate(homename: string, rname: string): [TargetVar, Argument, ICPPLayoutInfo] {
+        let oftype: ICPPLayoutInfo | undefined = undefined; 
+        let kind: ArgumentTag = ArgumentTag.InvalidOp;
+        let hnlocation: number = -1;
+        let rlocation: number = -1;
+
+        if(this.scalarStackMap.has(rname)) {
+            oftype = (this.scalarStackLayout.find((entry) => entry.name === rname) as {offset: number, name: string, storage: ICPPLayoutInfo}).storage;
+            kind = ArgumentTag.ScalarVal;
+            hnlocation = this.scalarStackMap.get(homename) as number;
+            rlocation = this.scalarStackMap.get(rname) as number;
+        }
+        else {
+            oftype = (this.mixedStackLayout.find((entry) => entry.name === rname) as {offset: number, name: string, storage: ICPPLayoutInfo}).storage;
+            kind = ArgumentTag.MixedVal;
+            hnlocation = this.mixedStackMap.get(homename) as number;
+            rlocation = this.mixedStackMap.get(rname) as number;
+        }
+
+        return [{kind: kind, offset: hnlocation}, {kind: kind, location: rlocation}, oftype];
     }
 
     private genMaskForStack(): RefMask {
@@ -1710,6 +1732,28 @@ class ICPPBodyEmitter {
         }
     }
 
+    generateVarHomeLocationUpdates(op: MIROp): ICPPOp[] | undefined {
+        const uhvars = op.getModVars().filter((vv) => { 
+            if(vv.nameID.startsWith("@tmp") || vv.nameID === "$$return" || vv.nameID === "$__ir_ret__")
+            {
+                return false;
+            }
+
+            return vv.nameID !== vv.origname;
+        });
+
+        if(uhvars.length === 0) {
+            return undefined;
+        }
+        else {
+            return uhvars.map((uvh) => {
+                const [trgt, src, tinfo] = this.generateVarInfoForHomeUpdate(uvh.origname, uvh.nameID);
+
+                return ICPPOpEmitter.genVarHomeLocationValueUpdate(op.sinfo, trgt, src, tinfo.tkey);
+            });
+        }
+    }
+
     generateBlockExps(blocks: Map<string, MIRBasicBlock>, blockinorder: string[], blockrevorder: string[]): ICPPOp[] {
         let icppblocks = new Map<string, ICPPOp[]>();
 
@@ -1737,6 +1781,11 @@ class ICPPBodyEmitter {
                 const icppop = this.processOp(op);
                 if (icppop !== undefined) {
                     icpp.push(icppop);
+                }
+
+                const homeupdate = this.generateVarHomeLocationUpdates(op);
+                if(homeupdate !== undefined) {
+                    homeupdate.forEach((updop) => icpp.push(updop))
                 }
 
                 ii++;

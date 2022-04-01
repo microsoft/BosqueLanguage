@@ -96,6 +96,7 @@ enum OpCodeTag
     ReturnAssignOfConsOp,
     VarLifetimeStartOp,
     VarLifetimeEndOp,
+    VarHomeLocationValueUpdate,
 
     NegateIntOp,
     NegateBigIntOp,
@@ -480,6 +481,10 @@ class ICPPOpEmitter
         return { tag: OpCodeTag.VarLifetimeEndOp, sinfo: sinfo, name: name };
     }
     
+    static genVarHomeLocationValueUpdate(sinfo: SourceInfo, homelocation: TargetVar, updatevar: Argument, oftype: MIRResolvedTypeKey): ICPPOp {
+        return { tag: OpCodeTag.VarHomeLocationValueUpdate, sinfo: sinfo, homelocation: homelocation, updatevar: updatevar, oftype: oftype };
+    }
+
     static genNegateOp(sinfo: SourceInfo, tag: OpCodeTag, trgt: TargetVar, oftype: MIRResolvedTypeKey, arg: Argument): ICPPOp {
         return {tag: tag, sinfo: sinfo, trgt: trgt, oftype: oftype, arg: arg};
     }

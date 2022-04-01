@@ -109,6 +109,7 @@ enum class OpCodeTag
     ReturnAssignOfConsOp,
     VarLifetimeStartOp,
     VarLifetimeEndOp,
+    VarHomeLocationValueUpdate,
 
     NegateIntOp,
     NegateBigIntOp,
@@ -1166,6 +1167,20 @@ public:
     virtual ~VarLifetimeEndOp() {;}
 
     static VarLifetimeEndOp* jparse(json v);
+};
+
+
+class VarHomeLocationValueUpdate : public InterpOp
+{
+public:
+    const TargetVar homelocation;
+    const Argument updatevar;
+    const BSQType* oftype;
+    
+    VarHomeLocationValueUpdate(SourceInfo sinfo, TargetVar homelocation, Argument updatevar, const BSQType* oftype) : InterpOp(sinfo, OpCodeTag::VarHomeLocationValueUpdate), homelocation(homelocation), updatevar(updatevar), oftype(oftype) {;}
+    virtual ~VarHomeLocationValueUpdate() {;}
+
+    static VarHomeLocationValueUpdate* jparse(json v);
 };
 
 template <OpCodeTag ttag>

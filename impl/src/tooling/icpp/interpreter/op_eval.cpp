@@ -1113,6 +1113,13 @@ void Evaluator::evalVarLifetimeEndOp(const VarLifetimeEndOp* op)
 #endif    
 } 
 
+void Evaluator::evalVarHomeLocationValueUpdate(const VarHomeLocationValueUpdate* op)
+{
+#ifdef BSQ_DEBUG_BUILD 
+    op->oftype->storeValue(this->evalTargetVar(op->homelocation), this->evalArgument(op->updatevar));
+#endif    
+} 
+
 void Evaluator::evaluateOpCode(const InterpOp* op)
 {    
     switch(op->tag)
@@ -1519,7 +1526,6 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
         this->evalReturnAssignOfConsOp(static_cast<const ReturnAssignOfConsOp*>(op));
         break;
     }
-#ifdef BSQ_DEBUG_BUILD 
     case OpCodeTag::VarLifetimeStartOp:
     {
         this->evalVarLifetimeStartOp(static_cast<const VarLifetimeStartOp*>(op));
@@ -1530,7 +1536,11 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
         this->evalVarLifetimeEndOp(static_cast<const VarLifetimeEndOp*>(op));
         break;
     }
-#endif
+    case OpCodeTag::VarHomeLocationValueUpdate:
+    {
+        this->evalVarHomeLocationValueUpdate(static_cast<const VarHomeLocationValueUpdate*>(op));
+        break;
+    }
     case OpCodeTag::NegateIntOp:
     {
         PrimitiveNegateOperatorMacroChecked(this, op, OpCodeTag::NegateDecimalOp, BSQInt, "Int negation overflow/underflow");
