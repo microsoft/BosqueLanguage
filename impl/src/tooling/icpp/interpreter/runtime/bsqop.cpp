@@ -660,6 +660,11 @@ VarLifetimeEndOp* VarLifetimeEndOp::jparse(json v)
     return new VarLifetimeEndOp(j_sinfo(v), v["name"].get<std::string>());
 }
 
+VarHomeLocationValueUpdate* VarHomeLocationValueUpdate::jparse(json v)
+{
+    return new VarHomeLocationValueUpdate(j_sinfo(v), jsonParse_TargetVar(v["homelocation"]), jsonParse_Argument(v["updatevar"]), j_oftype(v));
+}
+
 template <OpCodeTag tag>
 PrimitiveNegateOperatorOp<tag>* PrimitiveNegateOperatorOp<tag>::jparse(json v)
 {
@@ -813,6 +818,8 @@ InterpOp* InterpOp::jparse(json v)
         return VarLifetimeStartOp::jparse(v);
     case OpCodeTag::VarLifetimeEndOp:
         return VarLifetimeEndOp::jparse(v);
+    case OpCodeTag::VarHomeLocationValueUpdate:
+        return VarHomeLocationValueUpdate::jparse(v);
     case OpCodeTag::NegateIntOp:
         return PrimitiveNegateOperatorOp<OpCodeTag::NegateIntOp>::jparse(v);
     case OpCodeTag::NegateBigIntOp:

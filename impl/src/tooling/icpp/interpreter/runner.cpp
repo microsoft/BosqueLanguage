@@ -63,6 +63,12 @@ std::pair<bool, json> run(Evaluator& runner, const APIModule* api, const std::st
 
     //TODO: we need to check that all required arguments are provided
 
+    //Create a 0 stack frame that we can parse the arguments onto and that will keep them live (for reuse)
+    // -- may need to revisit as it creates hidden sharing if/when we support mutation in place
+    uint8_t* istack = (uint8_t*)BSQ_STACK_SPACE_ALLOC(call->scalarstackBytes + call->mixedstackBytes);
+    GC_MEM_ZERO(istack, call->scalarstackBytes + call->mixedstackBytes);
+    GCStack::pushFrame((void**)(istack + call->scalarstackBytes), call->mixedMask);
+
     if(setjmp(Evaluator::g_entrybuff) > 0)
     {
         return std::make_pair(false, "Failed in argument parsing");
@@ -70,12 +76,10 @@ std::pair<bool, json> run(Evaluator& runner, const APIModule* api, const std::st
     else
     {
         ICPPParseJSON jloader;
-        uint8_t* mstack = runner.prepareMainStack(call);
-
         for(size_t i = 0; i < args.size(); ++i)
         {
             auto itype = jsig.value()->argtypes[i];
-            StorageLocationPtr pv = Evaluator::evalParameterInfo(call->paraminfo[i], mstack, mstack + call->scalarstackBytes);
+            StorageLocationPtr pv = Evaluator::evalParameterInfo(call->paraminfo[i], istack, istack + call->scalarstackBytes);
             bool ok = itype->tparse(jloader, api, args[i], pv, runner);
             if(!ok)
             {
@@ -83,6 +87,10 @@ std::pair<bool, json> run(Evaluator& runner, const APIModule* api, const std::st
             }
         }
     }
+
+    Allocator::GlobalAllocator.reset();
+    GCStack::reset();
+    runner.reset();
 
     if(setjmp(Evaluator::g_entrybuff) > 0)
     {
@@ -98,16 +106,14 @@ std::pair<bool, json> run(Evaluator& runner, const APIModule* api, const std::st
 
             while(true)
             {
-                Allocator::dbg_idToObjMap.clear();
-                runner.ttdBreakpoint_LastHit = {nullptr, 0, -1};
-
                 try
                 {
-                    runner.invokeMain(call, result, call->resultType, call->resultArg);
+                    runner.invokeMain(call, istack, result, call->resultType, call->resultArg);
 
                     ICPPParseJSON jextract;
                     auto rtype = jsig.value()->restype;
                     res = rtype->textract(jextract, api, result, runner);
+                    break;
                 }
                 catch(const DebuggerException& e)
                 {
@@ -123,21 +129,25 @@ std::pair<bool, json> run(Evaluator& runner, const APIModule* api, const std::st
                     {
                         ;
                     }
-                }
 
-                if(res == std::nullopt)
-                {
-                    return std::make_pair(false, "Failed in result extraction");
+                    Allocator::GlobalAllocator.reset();
+                    GCStack::reset();
+                    runner.reset();
                 }
-        
-                return std::make_pair(true, res.value());
             }
+
+            if(res == std::nullopt)
+            {
+                return std::make_pair(false, "Failed in result extraction");
+            }
+        
+            return std::make_pair(true, res.value());
         }
         else
         {
 #endif
             auto result = BSQ_STACK_SPACE_ALLOC(call->resultType->allocinfo.inlinedatasize);
-            runner.invokeMain(call, result, call->resultType, call->resultArg);
+            runner.invokeMain(call, istack, result, call->resultType, call->resultArg);
 
             ICPPParseJSON jextract;
             auto rtype = jsig.value()->restype;
@@ -221,7 +231,6 @@ int main(int argc, char** argv)
         const APIModule* api = APIModule::jparse(jcode["api"]);
 
         Evaluator runner;
-        runner.debuggerattached = debugger;
         loadAssembly(jcode["bytecode"], runner);
 
         auto start = std::chrono::system_clock::now();
@@ -288,6 +297,10 @@ int main(int argc, char** argv)
 
         Evaluator runner;
         loadAssembly(jcode["bytecode"], runner);
+
+#ifdef BSQ_DEBUG_BUILD
+        runner.debuggerattached = debugger;
+#endif
 
         auto start = std::chrono::system_clock::now();
         auto res = run(runner, api, jmain, jargs);

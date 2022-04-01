@@ -1099,17 +1099,25 @@ void Evaluator::evalReturnAssignOfConsOp(const ReturnAssignOfConsOp* op)
 void Evaluator::evalVarLifetimeStartOp(const VarLifetimeStartOp* op)
 {
 #ifdef BSQ_DEBUG_BUILD
-    VariableHomeLocationInfo vhome{op->name, op->oftype, op->homelocation};
-    this->cframe->dbg_locals.push_back(vhome);
+    if(!this->cframe->dbg_locals.contains(op->name))
+    {
+        VariableHomeLocationInfo vhome{op->name, op->oftype, op->homelocation};
+        this->cframe->dbg_locals[op->name] = vhome;
+    }
 #endif    
 }
 
 void Evaluator::evalVarLifetimeEndOp(const VarLifetimeEndOp* op)
 {
+#ifdef BSQ_DEBUG_BUILD
+    this->cframe->dbg_locals.erase(op->name);
+#endif    
+} 
+
+void Evaluator::evalVarHomeLocationValueUpdate(const VarHomeLocationValueUpdate* op)
+{
 #ifdef BSQ_DEBUG_BUILD 
-    this->cframe->dbg_locals.remove_if([op](const VariableHomeLocationInfo& vinfo) {
-        return vinfo.vname == op->name;
-    });
+    op->oftype->storeValue(this->evalTargetVar(op->homelocation), this->evalArgument(op->updatevar));
 #endif    
 } 
 
@@ -1519,7 +1527,6 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
         this->evalReturnAssignOfConsOp(static_cast<const ReturnAssignOfConsOp*>(op));
         break;
     }
-#ifdef BSQ_DEBUG_BUILD 
     case OpCodeTag::VarLifetimeStartOp:
     {
         this->evalVarLifetimeStartOp(static_cast<const VarLifetimeStartOp*>(op));
@@ -1530,7 +1537,11 @@ void Evaluator::evaluateOpCode(const InterpOp* op)
         this->evalVarLifetimeEndOp(static_cast<const VarLifetimeEndOp*>(op));
         break;
     }
-#endif
+    case OpCodeTag::VarHomeLocationValueUpdate:
+    {
+        this->evalVarHomeLocationValueUpdate(static_cast<const VarHomeLocationValueUpdate*>(op));
+        break;
+    }
     case OpCodeTag::NegateIntOp:
     {
         PrimitiveNegateOperatorMacroChecked(this, op, OpCodeTag::NegateDecimalOp, BSQInt, "Int negation overflow/underflow");
@@ -2430,23 +2441,17 @@ void Evaluator::invokeGlobalCons(const BSQInvokeBodyDecl* invk, StorageLocationP
     this->invokePostlude();
 }
 
-uint8_t* Evaluator::prepareMainStack(const BSQInvokeBodyDecl* invk)
+void Evaluator::invokeMain(const BSQInvokeBodyDecl* invk, uint8_t* istack, StorageLocationPtr resultsl, const BSQType* restype, Argument resarg)
 {
     size_t cssize = invk->scalarstackBytes + invk->mixedstackBytes;
-    uint8_t* cstack = (uint8_t*)zxalloc(cssize);
-    GC_MEM_ZERO(cstack, cssize);
+    uint8_t* cstack = (uint8_t*)BSQ_STACK_SPACE_ALLOC(cssize);
+    GC_MEM_COPY(cstack, istack, cssize);
 
     size_t maskslotbytes = invk->maskSlots * sizeof(BSQBool);
     BSQBool* maskslots = (BSQBool*)zxalloc(maskslotbytes);
     GC_MEM_ZERO(maskslots, maskslotbytes);
 
     this->invokePrelude(invk, cstack, maskslots, nullptr);
-
-    return cstack;
-}
-
-void Evaluator::invokeMain(const BSQInvokeBodyDecl* invk, StorageLocationPtr resultsl, const BSQType* restype, Argument resarg)
-{
     this->evaluateBody(resultsl, restype, resarg);
     this->invokePostlude();
 }
