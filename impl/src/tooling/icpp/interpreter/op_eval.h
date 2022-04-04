@@ -187,7 +187,7 @@ public:
     }
 
     int64_t call_count = 0;
-    bool debuggerattached;
+    bool debuggerattached = false;
     BreakPoint ttdBreakpoint = {nullptr, 0, -1};
     BreakPoint ttdBreakpoint_LastHit = {nullptr, 0, -1};
     std::vector<BreakPoint> breakpoints;
