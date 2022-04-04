@@ -1,0 +1,43 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+namespace Main;
+
+const test_empty_board: Board = Board::createEmpty();
+const test_no_win_2: Board = test_empty_board.setCellMark(BoardPostion{1, 1}, PlayerMark::x).setCellMark(BoardPostion{0, 2}, PlayerMark::o);
+const test_no_win_4: Board = test_no_win_2.setCellMark(BoardPostion{1, 2}, PlayerMark::x).setCellMark(BoardPostion{0, 1}, PlayerMark::o);
+const test_win_5: Board = test_no_win_4.setCellMark(BoardPostion{1, 0}, PlayerMark::x);
+const test_blocked_5: Board = test_no_win_4.setCellMark(BoardPostion{0, 0}, PlayerMark::x);
+
+chktest function no_winner_empty(): Bool {
+    return !test_empty_board.hasWinner();
+}
+
+chktest function no_winner_2(): Bool {
+    return !test_no_win_2.hasWinner();
+}
+
+chktest function no_winner_3(c: BoardPostion): Bool
+    requires test_no_win_2.isMoveLegal(c);
+{
+    let nb = test_no_win_2.makeExplicitMove(c, PlayerMark::x);
+    return !nb.hasWinner();
+}
+
+chktest function no_winner_4(): Bool {
+    return !test_no_win_4.hasWinner();
+}
+
+chktest function winner_5(): Bool {
+    return test_win_5.hasWinner() && test_win_5.getWinner() === PlayerMark::x;
+}
+
+chktest function blocked_5(c: BoardPostion): Bool
+    requires test_blocked_5.isMoveLegal(c);
+{
+    let nb = test_blocked_5.makeExplicitMove(c, PlayerMark::o);
+    return !nb.hasWinner();
+}
+

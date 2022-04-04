@@ -1,0 +1,32 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+namespace Main;
+
+
+entrypoint function hasWinner(b: Board): Bool {
+    let winner = b.checkAnyWinner();
+    return winner === PlayerMark::x || winner === PlayerMark::o;
+}
+
+entrypoint function getWinner(b: Board): PlayerMark? {
+    return nboard.checkAnyWinner();
+}
+
+entrypoint isMoveLegal(b: Board, cell: BoardPostion): Bool {
+    return !b.isCellOccupied(cell);
+}
+
+method makeExplicitMove(b: Board, cell: BoardPostion, mark: PlayerMark): Result<[Board, Bool], String> {
+    if(b.isCellOccupied(cell)) {
+        return err("Location is Occupied");
+    }
+    else {
+        let bb = b.setCellMark(cell, mark);
+        let winner = b.checkAnyWinner();
+
+        return [bb, winner === PlayerMark::x || winner === PlayerMark::o];
+    }
+}

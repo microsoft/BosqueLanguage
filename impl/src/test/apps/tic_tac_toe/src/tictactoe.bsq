@@ -1,0 +1,121 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+namespace NSMain;
+
+enum PlayerMark {
+    empty,
+    x,
+    o
+}
+
+typedef Cells List<List<PlayerMark>>;
+
+entity BoardPostion APIType {
+    //From top left corner -- 0 indexed
+    //r0c0 r0c1 r0c2 
+    //r1c0 r1c1 r1c2
+    //r2c0 r2c1 r2c2
+
+    field rowpos: Nat;
+    field colpos: Nat;
+
+    invariant $rowpos < 3;
+    invariant $colpos < 3;
+
+    const r0c0: BoardPostion = BoardPostion{0, 0};
+    const r0c1: BoardPostion = BoardPostion{0, 1};
+    const r0c2: BoardPostion = BoardPostion{0, 2};
+    
+    const r1c0: BoardPostion = BoardPostion{1, 0};
+    const r1c1: BoardPostion = BoardPostion{1, 1};
+    const r1c2: BoardPostion = BoardPostion{1, 2};
+
+    const r2c0: BoardPostion = BoardPostion{2, 0};
+    const r2c1: BoardPostion = BoardPostion{2, 1};
+    const r2c2: BoardPostion = BoardPostion{2, 2};
+}
+
+entity Board provides APIType {
+    //Board is a map from cells to marks (or not in map if cell is unoccupied)
+    field cells: Cells;
+
+    invariant debug $cells.size() == 3n && $cells.allOf(pred(row) => row.size() == 3n);
+
+    factory function createEmpty(): { cells: Cells } {
+        return 
+        {
+            cells=List<List<PlayerMark>>{
+                List<PlayerMark>{PlayerMark::empty, PlayerMark::empty, PlayerMark::empty},
+                List<PlayerMark>{PlayerMark::empty, PlayerMark::empty, PlayerMark::empty},
+                List<PlayerMark>{PlayerMark::empty, PlayerMark::empty, PlayerMark::empty},
+            }
+        };
+    }
+
+    method isCellEmpty(c: BoardPostion): Bool {
+        return this.cells.get(c.rowpos).get(c.colpos) === PlayerMark::empty;
+    }
+
+    method getCellMark(c: BoardPostion): PlayerMark {
+        return this.cells.get(c.rowpos).get(c.colpos);
+    }
+
+    method setCellMark(c: BoardPostion, mark: PlayerMark): Board 
+        requires debug this.isCellEmpty(c);
+    {
+        let newrow = this.cells.get(c.rowpos).set(c.colpos, mark);
+        let newcells = this.cells.set(c.rowpos, newrow);
+
+        return this.{cells=newcells};
+    }
+
+    private method check3(c1: BoardPostion, c2: BoardPostion, c3: BoardPostion, player: PlayerMark): Bool {
+        return this.getCellMark(c1) === player && this.getCellMark(c2) === player && this.getCellMark(c3) === player;
+    }
+
+    method checkWinner(player: PlayerMark): Bool {
+        //check rows across
+        if(this.check3(BoardPostion::r0c0, BoardPostion::r0c1, BoardPostion::r0c2, player) 
+            || this.check3(BoardPostion::r1c0, BoardPostion::r1c1, BoardPostion::r1c2, player) 
+            || this.check3(BoardPostion::r2c0, BoardPostion::r2c1, BoardPostion::r2c2, player)) {
+            return true;
+        }
+
+        //check columns down
+        if(this.check3(BoardPostion::r0c0, BoardPostion::r1c0, BoardPostion::r2c0, player) 
+            || this.check3(BoardPostion::r0c1, BoardPostion::r1c1, BoardPostion::r2c1, player) 
+            || this.check3(BoardPostion::r0c2, BoardPostion::r1c2, BoardPostion::r2c2, player)) {
+            return true;
+        }
+
+        //check diagonals
+        if(this.check3(BoardPostion::r0c0, BoardPostion::r1c1, BoardPostion::r2c2, player) 
+            || this.check3(BoardPostion::r0c2, BoardPostion::r1c1, BoardPostion::r2c0, player)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    method checkDraw(): Bool {
+        return !this.cells.containsNone();
+    }
+
+    method checkAnyWinner(): PlayerMark? {
+        if(this.checkWinner(PlayerMark::x)) {
+            return PlayerMark::x;
+        }
+        elif(this.checkWinner(PlayerMark::o)) {
+            return PlayerMark::o;
+        }
+        elif(this.checkDraw()) {
+            return PlayerMark::empty;
+        }
+        else {
+            return none;
+        }
+    }
+}
