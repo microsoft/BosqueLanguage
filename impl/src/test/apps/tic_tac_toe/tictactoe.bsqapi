@@ -6,6 +6,10 @@
 namespace Main;
 
 
+entrypoint function getInitialBoard(): Board {
+    return Board::createEmpty{};
+}
+
 entrypoint function hasWinner(b: Board): Bool {
     let winner = b.checkAnyWinner();
     return winner === PlayerMark::x || winner === PlayerMark::o;
@@ -19,7 +23,7 @@ entrypoint isMoveLegal(b: Board, cell: BoardPostion): Bool {
     return !b.isCellOccupied(cell);
 }
 
-method makeExplicitMove(b: Board, cell: BoardPostion, mark: PlayerMark): Result<[Board, Bool], String> {
+entrypoint makeExplicitMove(b: Board, cell: BoardPostion, mark: PlayerMark): Result<[Board, Bool], String> {
     if(b.isCellOccupied(cell)) {
         return err("Location is Occupied");
     }

@@ -5,7 +5,7 @@
 
 namespace Main;
 
-const test_empty_board: Board = Board::createEmpty();
+const test_empty_board: Board = Board::createEmpty{};
 const test_no_win_2: Board = test_empty_board.setCellMark(BoardPostion{1, 1}, PlayerMark::x).setCellMark(BoardPostion{0, 2}, PlayerMark::o);
 const test_no_win_4: Board = test_no_win_2.setCellMark(BoardPostion{1, 2}, PlayerMark::x).setCellMark(BoardPostion{0, 1}, PlayerMark::o);
 const test_win_5: Board = test_no_win_4.setCellMark(BoardPostion{1, 0}, PlayerMark::x);
