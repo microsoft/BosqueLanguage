@@ -231,6 +231,10 @@ int main(int argc, char** argv)
         const APIModule* api = APIModule::jparse(jcode["api"]);
 
         Evaluator runner;
+#ifdef BSQ_DEBUG_BUILD
+        runner.debuggerattached = debugger;
+#endif 
+
         loadAssembly(jcode["bytecode"], runner);
 
         auto start = std::chrono::system_clock::now();
