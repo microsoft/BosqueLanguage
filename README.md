@@ -264,6 +264,8 @@ A function can be exported from the application in a `.bsqapi` file (see info on
 
 ## The `bosque` Command 
 
+The `bosque` command is the primary tools for buidling, testing, and managing bosque packages and applications. 
+
 [TODO: Need to update]
 
 A unique feature of the Bosque systems is the `bsqcheck` tool. This tool combines verification and bug triggering input generation tools in a unique configuration. For each possible failure in the program it first attempts to prove that a given failure is impossible under all inputs or generate a debuggable input that will trigger the error. If it cannot do either of these, which can happen due to the computational cost of theorem proving, then it will try to prove that, under a variety of simplifying assumptions, that the error cannot occur. 
@@ -311,7 +313,7 @@ Which will report that errors are possible and generate a set of inputs that wil
 
 However, if we uncomment the requires clause, which asserts that the `arg2` parameter is only `none` if the op is `CalcOp::negate`, when we run the `bsqcheck` tool it will be able to successfully _prove_ that no runtime errors can ever occur.
 
-## Using the Bosque Language
+## Installing the Bosque Language (Development)
 
 In order to install/build the project the following are needed:
 
