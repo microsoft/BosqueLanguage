@@ -2193,6 +2193,22 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         SLPTR_STORE_CONTENTS_AS(BSQNat, resultsl, count);
         break;
     }
+    case BSQPrimitiveImplTag::s_list_set_ne: {
+        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
+        auto ii = SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]);
+        
+        auto rr = BSQListOps::s_set_ne(lflavor, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), ii, params[2]);
+        LIST_STORE_RESULT_REPR(rr, resultsl);
+        break;
+    }
+    case BSQPrimitiveImplTag::s_list_remove_ne: {
+        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
+        auto ii = SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]);
+        
+        auto rr = BSQListOps::s_remove_ne(lflavor, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), ii);
+        LIST_STORE_RESULT_REPR(rr, resultsl);
+        break;
+    }
     case BSQPrimitiveImplTag::s_list_reduce_ne: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
 

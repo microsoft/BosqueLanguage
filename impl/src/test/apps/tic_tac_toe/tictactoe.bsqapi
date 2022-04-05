@@ -5,7 +5,6 @@
 
 namespace Main;
 
-
 entrypoint function getInitialBoard(): Board {
     return Board::createEmpty{};
 }
@@ -16,21 +15,21 @@ entrypoint function hasWinner(b: Board): Bool {
 }
 
 entrypoint function getWinner(b: Board): PlayerMark? {
-    return nboard.checkAnyWinner();
+    return b.checkAnyWinner();
 }
 
-entrypoint isMoveLegal(b: Board, cell: BoardPostion): Bool {
-    return !b.isCellOccupied(cell);
+entrypoint function isMoveLegal(b: Board, cell: BoardPostion): Bool {
+    return b.isCellEmpty(cell);
 }
 
-entrypoint makeExplicitMove(b: Board, cell: BoardPostion, mark: PlayerMark): Result<[Board, Bool], String> {
-    if(b.isCellOccupied(cell)) {
+entrypoint function makeExplicitMove(b: Board, cell: BoardPostion, mark: PlayerMark): Result<[Board, Bool], String> {
+    if(!b.isCellEmpty(cell)) {
         return err("Location is Occupied");
     }
     else {
         let bb = b.setCellMark(cell, mark);
         let winner = b.checkAnyWinner();
 
-        return [bb, winner === PlayerMark::x || winner === PlayerMark::o];
+        return ok([bb, winner === PlayerMark::x || winner === PlayerMark::o]);
     }
 }

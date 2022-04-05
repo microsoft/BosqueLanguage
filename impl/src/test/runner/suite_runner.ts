@@ -386,7 +386,7 @@ function loadEntryPointInfo(files: string[], istestbuild: boolean): {filename: s
                 mm = entryre.exec(contents);
             }
 
-            epi.push({filename: files[i], namespace: nsstr, names: names})
+            epi.push({filename: files[i], namespace: nsstr, names: names});
         }
 
         return epi;

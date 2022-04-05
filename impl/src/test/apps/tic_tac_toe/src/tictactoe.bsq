@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-namespace NSMain;
+namespace Main;
 
 enum PlayerMark {
     empty,
@@ -11,9 +11,9 @@ enum PlayerMark {
     o
 }
 
-typedef Cells List<List<PlayerMark>>;
+typedef Cells = List<List<PlayerMark>>;
 
-entity BoardPostion APIType {
+entity BoardPostion provides APIType {
     //From top left corner -- 0 indexed
     //r0c0 r0c1 r0c2 
     //r1c0 r1c1 r1c2
@@ -22,8 +22,8 @@ entity BoardPostion APIType {
     field rowpos: Nat;
     field colpos: Nat;
 
-    invariant $rowpos < 3;
-    invariant $colpos < 3;
+    invariant $rowpos < 3n;
+    invariant $colpos < 3n;
 
     const r0c0: BoardPostion = BoardPostion{0, 0};
     const r0c1: BoardPostion = BoardPostion{0, 1};
@@ -50,7 +50,7 @@ entity Board provides APIType {
             cells=List<List<PlayerMark>>{
                 List<PlayerMark>{PlayerMark::empty, PlayerMark::empty, PlayerMark::empty},
                 List<PlayerMark>{PlayerMark::empty, PlayerMark::empty, PlayerMark::empty},
-                List<PlayerMark>{PlayerMark::empty, PlayerMark::empty, PlayerMark::empty},
+                List<PlayerMark>{PlayerMark::empty, PlayerMark::empty, PlayerMark::empty}
             }
         };
     }

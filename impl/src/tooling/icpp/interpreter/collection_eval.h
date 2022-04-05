@@ -413,6 +413,9 @@ public:
         return LIST_LOAD_TYPE_INFO_REPR(sl)->getCount(LIST_LOAD_DATA(sl));
     }
 
+    static void* s_set_ne(const BSQListTypeFlavor& lflavor, void* t, const BSQListReprType* ttype, BSQNat i, StorageLocationPtr v);
+    static void* s_remove_ne(const BSQListTypeFlavor& lflavor, void* t, const BSQListReprType* ttype, BSQNat i);
+
     static void s_range_ne(const BSQType* oftype, StorageLocationPtr start, StorageLocationPtr end, StorageLocationPtr count, StorageLocationPtr res);
     static void s_fill_ne(const BSQType* oftype, StorageLocationPtr val, StorageLocationPtr count, StorageLocationPtr res);
 
