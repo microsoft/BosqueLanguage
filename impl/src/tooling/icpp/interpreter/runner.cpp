@@ -289,12 +289,12 @@ int main(int argc, char** argv)
         }
 
         json jcode = cc.value()["code"];
-        auto jargs = json::parse(input);
         std::string jmain("__i__Main::main");
+        auto jargs = json::parse(input);
         if(jargs.is_object())
         {
-            jargs = jargs["args"];
             jmain = "__i__" + jargs["main"].get<std::string>();
+            jargs = jargs["args"];
         }
 
         const APIModule* api = APIModule::jparse(jcode["api"]);

@@ -2,5 +2,6 @@
 /bin
 /.vscode
 /src/test/apps/*/*.smt2
+/src/test/apps/*/bin/_build_.json
 *.xml
 *.dgml

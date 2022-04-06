@@ -94,11 +94,11 @@
 			"patterns": [
 				{
 					"name": "keyword.control.bosque",
-					"match": "\\b(#if|#else|#endif|_debug|abort|assert|elif|else|ensures|if|invariant|match|release|return|requires|spec|doc|switch|test|validate|yield)\\b"
+					"match": "\\b(#if|#else|#endif|_debug|abort|assert|elif|else|ensures|if|invariant|match|release|return|requires|spec|doc|switch|debug|test|validate|yield)\\b"
 				},
 				{
 					"name": "keyword.bosque",
-					"match": "\\b(#if|#else|#endif|recursive?|recursive|_debug|abort|assert|astype|conceptconst|elif|else|enum|entity|ensures|err|field|fn|pred|function|if|invariant|istype|let|match|method|namespace|of|ok|operator|provides|ref|out|out?|release|return|requires|something|spec|doc|switch|test|type|typedef|typedecl|using|validate|var|when|yield)\\b"
+					"match": "\\b(#if|#else|#endif|recursive?|recursive|_debug|abort|assert|astype|concept|const|elif|else|enum|entity|ensures|err|field|fn|pred|function|if|invariant|istype|let|match|method|namespace|of|ok|operator|provides|ref|out|out?|release|return|requires|something|spec|doc|switch|debug|test|type|typedef|typedecl|using|validate|var|when|yield)\\b"
 				}
 			]
 		},

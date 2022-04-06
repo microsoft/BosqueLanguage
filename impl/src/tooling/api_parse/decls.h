@@ -1549,7 +1549,7 @@ public:
             return std::nullopt;
         }
 
-        return std::make_optional(this->enums[nval.value()]);
+        return std::make_optional(this->name + "::" + this->enums[nval.value()]);
     }
 };
 
@@ -1572,7 +1572,7 @@ public:
         std::vector<std::pair<std::string, std::string>> consfields;
         auto jprops = j["consfields"];
         std::transform(jprops.cbegin(), jprops.cend(), std::back_inserter(consfields), [](const json& jv) {
-            return std::make_pair(jv["fkey"].get<std::string>(), jv["fname"].get<std::string>());
+            return std::make_pair(jv["fname"].get<std::string>(), jv["fkey"].get<std::string>());
         });
 
         std::vector<std::pair<std::string, bool>> ttypes;

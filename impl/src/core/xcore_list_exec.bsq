@@ -10,6 +10,9 @@ namespace Core;
 internal entity ListOps provides Some {
     function s_size_ne<T>(l: ListRepr<T>): Nat = s_list_size_ne;
 
+    function s_set_ne<T>(l: ListRepr<T>, i: Nat, v: T): ListRepr<T> = s_list_set;
+    function s_remove_ne<T>(l: ListRepr<T>, i: Nat): ListRepr<T> = s_list_remove;
+
     recursive? function s_reduce_ne<T, U>(l: ListRepr<T>, iv: U, f: recursive? fn(_: U, _: T) -> U): U = s_list_reduce_ne;
     recursive? function s_reduce_idx_ne<T, U>(l: ListRepr<T>, iv: U, f: recursive? fn(_: U, _: T, _: Nat) -> U): U = s_list_reduce_idx_ne;
 
@@ -155,7 +158,7 @@ internal entity ListOps provides Some {
     }
 
     function s_safe_get<T>(l: ListRepr<T>, i: Nat): T {
-        ListOps::s_safe_get_ne<T>(l, i);
+        return ListOps::s_safe_get_ne<T>(l, i);
     }
 
     recursive? function s_has_pred<T>(l: ListRepr<T>, p: recursive? pred(_: T) -> Bool): Bool {
@@ -308,6 +311,19 @@ internal entity ListOps provides Some {
         }
         else {
             return ListOps::s_reverse_ne(l);
+        }
+    }
+
+    function s_set<T>(l: ListRepr<T>, i: Nat, v: T): ListRepr<T> {
+        return ListOps::s_set_ne<T>(l, i, v);
+    }
+
+    function s_remove<T>(l: ListRepr<T>, i: Nat): ListRepr<T> {
+        if(ListOps::s_size<T>(l) == 1n) {
+            return none;
+        }
+        else {
+            return ListOps::s_remove_ne<T>(l, i);
         }
     }
 

@@ -52,6 +52,7 @@ const KeywordStrings = [
     "something",
     "spec",
     "doc",
+    "debug",
     "switch",
     "test",
     "true",
@@ -1993,7 +1994,7 @@ class Parser {
             if (this.testFollows("::", TokenStrings.Identifier)) {
                 this.consumeToken();
                 const name = this.consumeTokenAndGetValue();
-                if (!this.testToken("<") && !this.testToken("[") && !this.testToken("(")) {
+                if (!this.testToken("<") && !this.testToken("[") && !this.testToken("(") && !this.testToken("{")) {
                     //just a static access
                     return new AccessStaticFieldExpression(sinfo, ttype, name);
                 }

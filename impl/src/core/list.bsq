@@ -1141,50 +1141,13 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     method set(i: Nat, v: T): List<T> {
         assert i < ListOps::s_size<T>(this.value());
 
-        let count = ListOps::s_size<T>(this.value());
-        let vl = List<T>{v};
-
-        if(count == 1n) {
-            return vl;
-        }
-        else {
-            if(i == 0n) {
-                return List<T>::s_into(ListOps::s_append<T>(vl, ListOps::s_slice_front<T>(this.value(), 1n)));
-            }
-            elif(i == count - 1n) {
-                return List<T>::s_into(ListOps::s_append<T>(ListOps::s_slice_end<T>(this.value(), count - 1n), vl));
-            }
-            else {
-                let front = ListOps::s_slice_end<T>(this.value(), i);
-                let back = ListOps::s_slice_front<T>(this.value(), i + 1n);
-
-                return List<T>::s_into(ListOps::s_append<T>(ListOps::s_append<T>(front, vl), back));
-            }
-        } 
+        return List<T>::s_into(ListOps::s_set<T>(this.value(), i, v));
     }
 
     method remove(i: Nat): List<T> {
         assert i < ListOps::s_size<T>(this.value());
 
-        let count = ListOps::s_size<T>(this.value());
-
-        if(count == 1n) {
-            return List<T>{};
-        }
-        else {
-            if(i == 0n) {
-                return List<T>::s_into(ListOps::s_slice_front<T>(this.value(), 1n));
-            }
-            elif(i == count - 1n) {
-                return List<T>::s_into(ListOps::s_slice_end<T>(this.value(), count - 1n));
-            }
-            else {
-                let front = ListOps::s_slice_end<T>(this.value(), i);
-                let back = ListOps::s_slice_front<T>(this.value(), i + 1n);
-
-                return List<T>::s_into(ListOps::s_append<T>(front, back));
-            }
-        } 
+        return List<T>::s_into(ListOps::s_remove<T>(this.value(), i));
     }
 
     recursive? method reduce<U=?>(init: U, f: recursive? fn(_: U, _: T) -> U): U {

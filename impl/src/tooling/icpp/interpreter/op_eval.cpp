@@ -2193,6 +2193,22 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         SLPTR_STORE_CONTENTS_AS(BSQNat, resultsl, count);
         break;
     }
+    case BSQPrimitiveImplTag::s_list_set_ne: {
+        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
+        auto ii = SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]);
+        
+        auto rr = BSQListOps::s_set_ne(lflavor, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), ii, params[2]);
+        LIST_STORE_RESULT_REPR(rr, resultsl);
+        break;
+    }
+    case BSQPrimitiveImplTag::s_list_remove_ne: {
+        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
+        auto ii = SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]);
+        
+        auto rr = BSQListOps::s_remove_ne(lflavor, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), ii);
+        LIST_STORE_RESULT_REPR(rr, resultsl);
+        break;
+    }
     case BSQPrimitiveImplTag::s_list_reduce_ne: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
 
@@ -3275,18 +3291,26 @@ StorageLocationPtr ICPPParseJSON::extractValueForRecordProperty(const APIModule*
 {
     BSQTypeID recid = MarshalEnvironment::g_typenameToIdMap.find(itype->name)->second;
     const BSQType* rectype = BSQType::g_typetable[recid];
+    auto recinfo = dynamic_cast<const BSQRecordInfo*>(rectype);
 
     BSQRecordPropertyID pid = MarshalEnvironment::g_propertyToIdMap.find(itype->name)->second;
-    return rectype->indexStorageLocationOffset(value, dynamic_cast<const BSQRecordInfo*>(rectype)->propertyoffsets[pid]);
+    auto piter = std::find(recinfo->properties.cbegin(), recinfo->properties.cend(), pid);
+    auto pidx = std::distance(recinfo->properties.cbegin(), piter);
+
+    return rectype->indexStorageLocationOffset(value, recinfo->propertyoffsets[pidx]);
 }
 
 StorageLocationPtr ICPPParseJSON::extractValueForEntityField(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, std::pair<std::string, std::string> fnamefkey, Evaluator& ctx)
 {
     BSQTypeID ooid = MarshalEnvironment::g_typenameToIdMap.find(itype->name)->second;
     const BSQType* ootype = BSQType::g_typetable[ooid];
+    auto ooinfo = dynamic_cast<const BSQEntityInfo*>(ootype);
 
     BSQFieldID fid = MarshalEnvironment::g_fieldToIdMap.find(fnamefkey.second)->second;
-    return SLPTR_INDEX_DATAPTR(value, dynamic_cast<const BSQEntityInfo*>(ootype)->fieldoffsets[fid]);
+    auto fiter = std::find(ooinfo->fields.cbegin(), ooinfo->fields.cend(), fid);
+    auto fidx = std::distance(ooinfo->fields.cbegin(), fiter);
+
+    return ootype->indexStorageLocationOffset(value, ooinfo->fieldoffsets[fidx]);
 }
 
 void ICPPParseJSON::prepareExtractContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)

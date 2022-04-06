@@ -1344,7 +1344,7 @@ class MIREmitter {
 
                 for (let i = 0; i < nsfiles.length; ++i) {
                     const parseok = p.parseCompilationUnitPass1(nsfiles[i][1], nsfiles[i][3], nsfiles[i][0].macrodefs);
-                    if (!parseok) {
+                    if (!parseok || p.getParseErrors() !== undefined) {
                         const parseErrors = p.getParseErrors();
                         if (parseErrors !== undefined) {
                             return { masm: undefined, errors: parseErrors.map((err: [string, number, string]) => JSON.stringify(err)) };
@@ -1354,7 +1354,7 @@ class MIREmitter {
     
                 for (let i = 0; i < nsfiles.length; ++i) {
                     const parseok = p.parseCompilationUnitPass2(nsfiles[i][1], nsfiles[i][3], nsfiles[i][0].macrodefs, filetonsnamemap.get(nsfiles[i][1]) as Set<string>);
-                    if (!parseok) {
+                    if (!parseok || p.getParseErrors() !== undefined) {
                         const parseErrors = p.getParseErrors();
                         if (parseErrors !== undefined) {
                             return { masm: undefined, errors: parseErrors.map((err: [string, number, string]) => JSON.stringify(err)) };
