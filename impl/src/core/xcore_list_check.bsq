@@ -930,7 +930,67 @@ internal entity ListOps provides Some {
         }
     }
 
-    recursive? function s_reduce<T, U>(init: U, op: recursive? fn(_: U, _: T) -> U): U {
+    function s_set<T>(l: ListRepr<T>, i: Nat, v: T): ListRepr<T> {
+        if(l.is<Vector1<T>>()) {
+            return Vector1<T>{v};
+        }
+        elif(l.is<Vector2<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
+            if(i == 0n) {
+                return Vector2<T>{v, ll.v1};
+            }
+            else {
+                return Vector2<T>{ll.v0, v};
+            }
+        }
+        elif(l.is<Vector3<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
+            if(i == 0n) {
+                return Vector3<T>{v, ll.v1, ll.v2};
+            }
+            elif(i == 1n) {
+                return Vector3<T>{ll.v0, v, ll.v2};
+            }
+            else {
+                return Vector3<T>{ll.v0, ll.v1, v};
+            }
+        }
+        else {
+            return l.set<T>[recursive](i, v);
+        }
+    }
+
+    function s_remove<T>(l: ListRepr<T>, i: Nat): ListRepr<T> {
+        if(l.is<Vector1<T>>()) {
+            return none;
+        }
+        elif(l.is<Vector2<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
+            if(i == 0n) {
+                return Vector1<T>{ll.v1};
+            }
+            else {
+                return Vector1<T>{ll.v0};
+            }
+        }
+        elif(l.is<Vector3<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
+            if(i == 0n) {
+                return Vector2<T>{ll.v1, ll.v2};
+            }
+            elif(i == 1n) {
+                return Vector2<T>{ll.v0, ll.v2};
+            }
+            else {
+                return Vector2<T>{ll.v0, ll.v1};
+            }
+        }
+        else {
+            return l.remove<T>[recursive](i);
+        }
+    }
+
+    recursive? function s_reduce<T, U>(l: ListRepr<T>, init: U, op: recursive? fn(_: U, _: T) -> U): U {
         if(l === none) {
             return init;
         }
@@ -951,7 +1011,7 @@ internal entity ListOps provides Some {
         }
     }
 
-    recursive? function s_reduce_idx<T, U>(init: U, op: recursive? fn(_: U, _: T, _: Nat) -> U): U {
+    recursive? function s_reduce_idx<T, U>(l: ListRepr<T>, init: U, op: recursive? fn(_: U, _: T, _: Nat) -> U): U {
         if(l === none) {
             return init;
         }
@@ -972,7 +1032,7 @@ internal entity ListOps provides Some {
         }
     }
 
-    recursive? function s_transduce<T, E, U>(env: E, op: recursive? fn(_: T, _: T) -> (|E, U|)): (|E, ListRepr<U>|) {
+    recursive? function s_transduce<T, E, U>(l: ListRepr<T>, env: E, op: recursive? fn(_: T, _: T) -> (|E, U|)): (|E, ListRepr<U>|) {
         if(l === none) {
             return (|env, none|);
         }
@@ -999,7 +1059,7 @@ internal entity ListOps provides Some {
         }
     }
 
-    recursive? function s_transduce_idx<T, E, U>(env: E, op: recursive? fn(_: E, _: T, _: Nat) -> (|E, U|)): (|E, ListRepr<U>|) {
+    recursive? function s_transduce_idx<T, E, U>(l: ListRepr<T>, env: E, op: recursive? fn(_: E, _: T, _: Nat) -> (|E, U|)): (|E, ListRepr<U>|) {
         if(l === none) {
             return (|env, none|);
         }
@@ -1488,6 +1548,42 @@ internal entity RecList<T> provides Some {
         }
         else {
             return tl.reverse[recursive](RecList<T>{hh, rl});
+        }
+    }
+
+    recursive method set(i: Nat, v: T): RecList<T> {
+        let tl = this.tail;
+        let hh = this.head;
+
+        if(tl === none) {
+            return none;
+        }
+        else {
+            if(i == 0n) {
+                return RecList<T>{v, tl};
+            }
+            else {
+                let rl = tl.set[recursive](i - 1n, v);
+                return RecList<T>{hh, rl};
+            }
+        }
+    }
+
+    recursive method remove(i: Nat): RecList<T> {
+        let tl = this.tail;
+        let hh = this.head;
+
+        if(tl === none) {
+            return none;
+        }
+        else {
+            if(i == 0n) {
+                return tl;
+            }
+            else {
+                let rl = tl.set[recursive](i - 1n, v);
+                return RecList<T>{hh, rl};
+            }
         }
     }
 

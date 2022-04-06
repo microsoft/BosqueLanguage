@@ -64,6 +64,8 @@ std::map<std::string, BSQPrimitiveImplTag> MarshalEnvironment::g_primitiveinvoke
 
     {"s_list_build_k", BSQPrimitiveImplTag::s_list_build_k},
     {"s_list_size_ne", BSQPrimitiveImplTag::s_list_size_ne},
+    {"s_list_set_ne", BSQPrimitiveImplTag::s_list_set_ne},
+    {"s_list_remove_ne", BSQPrimitiveImplTag::s_list_remove_ne},
     {"s_list_reduce_ne", BSQPrimitiveImplTag::s_list_reduce_ne},
     {"s_list_reduce_idx_ne", BSQPrimitiveImplTag::s_list_reduce_idx_ne},
     {"s_list_transduce_ne", BSQPrimitiveImplTag::s_list_transduce_ne},

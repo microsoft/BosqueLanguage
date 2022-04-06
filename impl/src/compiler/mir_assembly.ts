@@ -608,6 +608,10 @@ class MIRPrimitiveSetEntityTypeDecl extends MIRPrimitiveCollectionEntityTypeDecl
         super(srcInfo, srcFile, tkey, attributes, ns, name, terms, provides, oftype, binds);
     }
 
+    getTypeT(): MIRType {
+        return this.binds.get("T") as MIRType;
+    }
+
     jemit(): object {
         return { tag: "set", ...this.jemitcollection() };
     }
@@ -1172,20 +1176,20 @@ class MIRAssembly {
                 assert(entity instanceof MIRPrimitiveCollectionEntityTypeDecl);
 
                 if(entity instanceof MIRPrimitiveListEntityTypeDecl) {
-                    return {tag: APIEmitTypeTag.ContainerTag, name: tt.typeID, category: ContainerCategory.List, elemtype: entity.oftype};
+                    return {tag: APIEmitTypeTag.ContainerTag, name: tt.typeID, category: ContainerCategory.List, elemtype: entity.getTypeT().typeID};
                 }
                 else if(entity instanceof MIRPrimitiveStackEntityTypeDecl) {
-                    return {tag: APIEmitTypeTag.ContainerTag, name: tt.typeID, category: ContainerCategory.Stack, elemtype: entity.oftype};
+                    return {tag: APIEmitTypeTag.ContainerTag, name: tt.typeID, category: ContainerCategory.Stack, elemtype: entity.getTypeT().typeID};
                 }
                 else if(entity instanceof MIRPrimitiveQueueEntityTypeDecl) {
-                    return {tag: APIEmitTypeTag.ContainerTag, name: tt.typeID, category: ContainerCategory.Queue, elemtype: entity.oftype};
+                    return {tag: APIEmitTypeTag.ContainerTag, name: tt.typeID, category: ContainerCategory.Queue, elemtype: entity.getTypeT().typeID};
                 }
                 else if(entity instanceof MIRPrimitiveSetEntityTypeDecl) {
-                    return {tag: APIEmitTypeTag.ContainerTag, name: tt.typeID, category: ContainerCategory.Set, elemtype: entity.oftype};
+                    return {tag: APIEmitTypeTag.ContainerTag, name: tt.typeID, category: ContainerCategory.Set, elemtype: entity.getTypeT().typeID};
                 }
                 else {
                     const mentity = entity as MIRPrimitiveMapEntityTypeDecl;
-                    return {tag: APIEmitTypeTag.ContainerTag, name: tt.typeID, category: ContainerCategory.Map, elemtype: mentity.oftype};
+                    return {tag: APIEmitTypeTag.ContainerTag, name: tt.typeID, category: ContainerCategory.Map, elemtype: mentity.tupentrytype};
                 }
             }
         }

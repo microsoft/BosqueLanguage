@@ -6,6 +6,9 @@
 
 
 ## The Bosque Project
+
+[TODO Revise -- center on MVP features]
+
 The Bosque Programming Language project is a ground up language & tooling co-design effort focused on is investigating the theoretical and the practical implications of:
 
 1. Explicitly designing a code intermediate representation language (bytecode) that enables deep automated code reasoning and the deployment of next-generation development tools, compilers, and runtime systems.
@@ -250,9 +253,18 @@ isFreezing(-5_Celsius) //true
 
 ## API Types
 
-[TODO]
+Bosque is designed to integrate easily into existing codebases and the fundamentally polyglot world of service based cloud applications. To support this Bosque uses the concept of *API Types*. These are a set of Bosque types that can be:
+1. Encoded and understood independently of (most) details of the Bosque type system or operational semantics.
+2. Efficiently serialized/deserialized in a language agnostic manner -- the default is JSON.
+3. Have auto-generated validation and structured generator code produced from the type signature.
 
-## Application Validation
+Most primitive types are valid APITypes including the exptected `None`, `Bool`, `Nat`, `Int`, `String`, `DateTime`, `UUID`, etc. The structured type `StringOf<T>` is also an APIType and both `DataString<T>` and `DataBuffer<T>` are also valid APITypes when the underlying type is as well. Lifting is applied to `typedecl` declared types, Tuples, Records, `List<T>`, `Map<K, V>`, `Option<T>`, and `Result<T, E>`. Arbitrary `entity` and `concept` types can also be declared as APITypes by having them `provide` the concept `APIType` and when all fields are publicly visible APITypes. 
+
+A function can be exported from the application in a `.bsqapi` file (see info on the `bosque` command) using the `entrypoint` annotation and ensuring that it consumes and returns APITypes. These functions can be run from the command line using the `bosque run` command and providing the arguments as a JSON list or the code can be compiled for integration into other applications with JSON as the foreign-function interface.
+
+## The `bosque` Command 
+
+The `bosque` command is the primary tools for buidling, testing, and managing bosque packages and applications. 
 
 [TODO: Need to update]
 
@@ -301,51 +313,17 @@ Which will report that errors are possible and generate a set of inputs that wil
 
 However, if we uncomment the requires clause, which asserts that the `arg2` parameter is only `none` if the op is `CalcOp::negate`, when we run the `bsqcheck` tool it will be able to successfully _prove_ that no runtime errors can ever occur.
 
-More details on this checking systems can be found in our [technical report](https://www.microsoft.com/en-us/research/uploads/prod/2021/08/BosqueIR.pdf).
+## Installing the Bosque Language (Development)
 
-Note: we recommend specifying preconditions as always checked, `requires release`, on entrypoint functions to ensure that these externally exposed API endpdoints are not misused.
-
-## Execution
-
-[TODO: Need to update]
-
-**Interpreter:** 
-
-An interpreter is under-development. See the [icpp](https://github.com/microsoft/BosqueLanguage/tree/master/impl/src/tooling/icpp) sources in the `impl` repository.
-
-**Evaluation with Solver:**
-
-In addition to using symbolic solvers to prove correctness or to find bugs we can also use them to _symbolically execute_ Bosque programs. The `bsqcheck.js` script has an `--evaluate` mode that takes (small) inputs and can compute the output value.
-
-If we take the calculator example that we previously ran validation on we can use the evaluator mode to compute the sum of 2 and 3 as follows:
-```
-> node bin/runtimes/bsqcheck.js --evaluate calc.bsq
-```
-
-When prompted we can enter the arguments as a JSON array:
-```
-["NSMain::CalcOp::add", 2, 3]
-```
-
-The solver will take these values along with the logical encoding of the program and will infer that the only valid output value is `5`.
-
-## Using the Bosque Language
-
-[TODO: Need to update]
-
-The current focus of the Bosque project is core language design. As a result there is _no_ support for packaging, deployment, lifecycle management, etc.
-
-**Note: If you are running examples from the "Learn Bosque Programming" book please use the [LearnBosqueProgramming](https://github.com/microsoft/BosqueLanguage/tree/LearnBosqueProgramming) branch which is sync'd with the version of code used in the book.**
-
-### Requirements
-
-In order to build the language the following are needed:
+In order to install/build the project the following are needed:
 
 - 64 bit Operating System
 - The LTS version of [node.js](https://nodejs.org/en/download/) ( According to your OS )
 - Typescript (install with: `npm i typescript -g`)
 - Git and [git-lfs](https://git-lfs.github.com/) setup
 - A C++ compiler -- by default `clang` on Linux/Mac and `cl.exe` on Windows
+
+**Note: If you are running examples from the "Learn Bosque Programming" book please use the [LearnBosqueProgramming](https://github.com/microsoft/BosqueLanguage/tree/LearnBosqueProgramming) branch which is sync'd with the version of code used in the book.**
 
 ### Build & Test
 

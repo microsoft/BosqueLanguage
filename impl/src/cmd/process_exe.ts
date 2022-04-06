@@ -10,7 +10,7 @@ import * as readline from "readline";
 import chalk from "chalk";
 const fsextra = require("fs-extra");
 
-import { help, extractEntryPointKnownFile, isStdInArgs, extractFiles, extractArgs, loadUserSrc, tryLoadPackage, extractEntryPoint, extractConfig, extractOutput } from "./args_load";
+import { help, extractEntryPointKnownFile, isStdInArgs, extractFiles, extractArgs, loadUserSrc, tryLoadPackage, extractEntryPoint, extractConfig, extractOutput, extractEntryPointsAll } from "./args_load";
 import { ConfigBuild, ConfigRun, Package, parseURIPathGlob } from "./package_load";
 import { PackageConfig, SymbolicActionMode } from "../compiler/mir_assembly";
 import { workflowEmitICPPFile, workflowRunICPPFile } from "../tooling/icpp/transpiler/iccp_workflows";
@@ -528,14 +528,13 @@ function processBuildAction(args: string[]) {
             process.exit(1);
         }
 
-        const entrypoint = extractEntryPoint(args, workingdir, pckg.src.entrypoints);
-        if (entrypoint === undefined) {
+        const entrypoints = extractEntryPointsAll(workingdir, pckg.src.entrypoints);
+        if (entrypoints === undefined) {
             process.stderr.write(chalk.red("Could not parse 'entrypoint' option\n"));
 
             help("build");
             process.exit(1);
         }
-        const rrep = {filename: entrypoint.filename, names: [entrypoint.name], fkeys: [entrypoint.fkey]};
 
         const output = extractOutput(workingdir, args);
         if(output === undefined) {
@@ -567,7 +566,7 @@ function processBuildAction(args: string[]) {
         }
 
         //bosque build bytecode [package_path.json] [--config cname] [--output out]
-        workflowEmitICPPFile(path.join(output.path, cfg.name + ".json"), userpackage, true, cfg.buildlevel, false, {}, rrep);
+        workflowEmitICPPFile(path.join(output.path, cfg.name + ".json"), userpackage, true, cfg.buildlevel, false, {}, entrypoints);
     }
     else {
         process.stderr.write(chalk.red(`Unknown build target '${args[0]}'\n`));

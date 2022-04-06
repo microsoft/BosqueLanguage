@@ -1004,6 +1004,6 @@ std::string entityRegexDisplay_impl(const BSQType* btype, StorageLocationPtr dat
 std::string entityEnumDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
     auto val = SLPTR_LOAD_CONTENTS_AS(uint64_t, data);
-    return btype->name + "::" + static_cast<const BSQEnumType*>(btype)->enumnames[val];
+    return static_cast<const BSQEnumType*>(btype)->enumnames[val];
 }
 

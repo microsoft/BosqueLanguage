@@ -1,0 +1,25 @@
+{
+    "name": "tictactoe",
+    "version": "0.0.0.0",
+    "description": "A tic-tac-toe board",
+    "license": "MIT",
+    "configs": {
+        "test": [
+            {
+                "name": "Full",
+                "flavors": ["sym", "icpp" , "err" , "chk"]
+            }
+        ]
+    },
+    "src": {
+        "bsqsource": [
+            "./src/*"
+        ],
+        "entrypoints": [
+            "./tictactoe.bsqapi"
+        ],
+        "testfiles": [
+            "./tictactoe.bsqtest"
+        ]
+    }
+}

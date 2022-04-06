@@ -31,7 +31,7 @@ function help(cmd: CmdTag | undefined) {
     if(cmd === "build" || cmd === undefined) {
         process.stdout.write("Build Application:\n");
         process.stdout.write("bosque build node [package_path.json] [--config cname] [out]\n");
-        process.stdout.write("bosque build bytecode [package_path.json] [--entrypoint fname] [--config cname] [out]\n");
+        process.stdout.write("bosque build bytecode [package_path.json] [--config cname] [out]\n");
         process.stdout.write("bosque build sym chk|eval --smtlib [package_path.json] [--entrypoint fname] [--config cname] [out]\n\n");
     }
 
@@ -158,6 +158,64 @@ function extractEntryPointKnownFile(args: string[], workingdir: string, appfile:
         filename: path.resolve(workingdir, appfile),
         name: epname.slice(ccidx + 2),
         fkey: "__i__" + epname
+    }
+}
+
+function extractEntryPointsAll(workingdir: string, appuris: URIPathGlob[]): {filename: string, names: string[], fkeys: string[]} | undefined {
+    if(appuris.length !== 1) {
+        return undefined;
+    }
+
+    const appuri = appuris[0];
+    try {
+        if (appuri.scheme === "file") {
+            const fullpath = path.resolve(workingdir, appuri.path);
+
+            if (appuri.selection === undefined) {
+                const contents = cleanCommentsStringsFromFileContents(fs.readFileSync(fullpath).toString());
+
+                const namespacere = /namespace([ \t]+)(?<nsstr>(([A-Z][_a-zA-Z0-9]+)::)*([A-Z][_a-zA-Z0-9]+));/;
+                const entryre = /(entrypoint|chktest|errtest|__chktest)(\s+)function(\s+)(?<fname>([_a-z]|([_a-z][_a-zA-Z0-9]*[a-zA-Z0-9])))(\s*)\(/g;
+
+                const ns = namespacere.exec(contents);
+                if (ns === null || ns.groups === undefined || ns.groups.nsstr === undefined) {
+                    return undefined;
+                }
+                const nsstr = ns.groups.nsstr;
+
+                let names: string[] = [];
+                let mm: RegExpExecArray | null = null;
+                entryre.lastIndex = 0;
+                mm = entryre.exec(contents);
+                while (mm !== null) {
+                    if (mm.groups === undefined || mm.groups.fname === undefined) {
+                        return undefined;
+                    }
+
+                    if (mm[0].startsWith("entrypoint")) {
+                        names.push(mm.groups.fname);
+                    }
+
+                    entryre.lastIndex += mm[0].length;
+                    mm = entryre.exec(contents);
+                }
+
+                return {
+                    filename: fullpath,
+                    names: names,
+                    fkeys: names.map((fname) => "__i__" + nsstr + "::" + fname)
+                };
+            }
+            else {
+                return undefined;
+            }
+        }
+        else {
+            return undefined;
+        }
+    }
+    catch (ex) {
+        return undefined;
     }
 }
 
@@ -462,5 +520,5 @@ function loadUserSrc(workingdir: string, files: URIPathGlob[]): string[] | undef
 export {
     CmdTag,
     help,
-    tryLoadPackage, extractEntryPointKnownFile, extractEntryPoint, isStdInArgs, extractArgs, extractOutput, extractFiles, extractConfig, extractTestFlags, loadUserSrc
+    tryLoadPackage, extractEntryPointKnownFile, extractEntryPointsAll, extractEntryPoint, isStdInArgs, extractArgs, extractOutput, extractFiles, extractConfig, extractTestFlags, loadUserSrc
 };
