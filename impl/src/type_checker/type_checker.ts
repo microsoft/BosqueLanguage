@@ -215,6 +215,21 @@ class TypeChecker {
         return rr;
     }
 
+    private emitUnsafeInlineConvertIfNeeded<T extends MIRArgument>(sinfo: SourceInfo, src: T, srctype: ValueType, trgttype: ResolvedType): T | MIRRegisterArgument {
+        if(srctype.layout.isSameType(trgttype)) {
+            return src;
+        }
+
+        const mirsrclayouttype = this.m_emitter.registerResolvedTypeReference(srctype.layout);
+        const mirsrcflowtype = this.m_emitter.registerResolvedTypeReference(srctype.flowtype);
+        const mirintotype = this.m_emitter.registerResolvedTypeReference(trgttype);
+
+        const rr = this.m_emitter.generateTmpRegister();
+        this.m_emitter.emitConvert(sinfo, mirsrclayouttype, mirsrcflowtype, mirintotype, src, rr, undefined);
+
+        return rr;
+    }
+
     private emitInlineConvertToFlow<T extends MIRArgument>(sinfo: SourceInfo, src: T, srctype: ValueType): T | MIRRegisterArgument {
         return this.emitInlineConvertIfNeeded<T>(sinfo, src, srctype, srctype.flowtype);
     }
@@ -2813,7 +2828,7 @@ class TypeChecker {
             const argtype = this.checkExpression(env, exp.args.argList[0].value, tmp, undefined).getExpressionResult().valtype;
             const astype = this.resolveAndEnsureTypeOnly(exp.sinfo, exp.terms.targs[1], env.terms);
 
-            this.m_emitter.emitRegisterStore(exp.sinfo, this.emitInlineConvertIfNeeded(exp.sinfo, tmp, argtype, astype), trgt, this.m_emitter.registerResolvedTypeReference(astype), undefined);
+            this.m_emitter.emitRegisterStore(exp.sinfo, this.emitUnsafeInlineConvertIfNeeded(exp.sinfo, tmp, argtype, astype), trgt, this.m_emitter.registerResolvedTypeReference(astype), undefined);
             return [env.setUniformResultExpression(astype)];
         }
         else {
@@ -3846,7 +3861,9 @@ class TypeChecker {
                 }
             }
             else {
-                this.raiseErrorIf(op.sinfo, vinfo_multi === undefined, `Missing (or multiple possible) declarations of "${op.name}" method`);
+                this.raiseErrorIf(op.sinfo, vinfo_multi === undefined, 
+                    
+                    `Missing (or multiple possible) declarations of "${op.name}" method on receiver type "${texp.flowtype.typeID}"`);
 
                 let eev = env;
                 if (op.isBinder) {

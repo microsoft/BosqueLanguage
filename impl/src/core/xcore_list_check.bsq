@@ -157,7 +157,7 @@ internal entity ListOps provides Some {
 
     recursive function s_concatrec<T>(ll: ListRepr<List<T>>): ListRepr<T> {
         let count = ListOps::s_size<List<T>>(ll);
-        if(count == 1) {
+        if(count == 1n) {
             return ListOps::s_safe_get<List<T>>(ll, 0n);
         }
         else {
@@ -170,7 +170,7 @@ internal entity ListOps provides Some {
 
     function s_concat(ll: ListRepr<List<T>>): ListRepr<T> {
         let count = ListOps::s_size<List<T>>(ll);
-        if(count == 1) {
+        if(count == 1n) {
             return ListOps::s_safe_get<List<T>>(ll, start);
         }
         else { 
@@ -182,7 +182,7 @@ internal entity ListOps provides Some {
     }
 
     function s_slice_start<T>(l: ListRepr<T>, start: Nat): ListRepr<T> {
-        if(start == 0) {
+        if(start == 0n) {
             return l;
         }
 
@@ -223,7 +223,7 @@ internal entity ListOps provides Some {
     }
 
     function s_slice_end<T>(l: ListRepr<T>, end: Nat): ListRepr<T> {
-        if(end == 0) {
+        if(end == 0n) {
             return none;
         }
 
@@ -274,7 +274,7 @@ internal entity ListOps provides Some {
         }
         elif(l.is<Vector2<T>>()) {
             let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
-            if(i == 0) {
+            if(i == 0n) {
                 return ll.v0;
             }
             else {
@@ -283,10 +283,10 @@ internal entity ListOps provides Some {
         }
         elif(l.is<Vector3<T>>()) {
             let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
-            if(i == 0) {
+            if(i == 0n) {
                 return ll.v0;
             }
-            elif(i == 1) {
+            elif(i == 1n) {
                 return ll.v1;
             }
             else {
@@ -956,7 +956,8 @@ internal entity ListOps provides Some {
             }
         }
         else {
-            return l.set<T>[recursive](i, v);
+            let ll = s_safeAs<ListRepr<T>, RecList<T>>(l);
+            return ll.set[recursive](i, v);
         }
     }
 
@@ -986,7 +987,8 @@ internal entity ListOps provides Some {
             }
         }
         else {
-            return l.remove<T>[recursive](i);
+            let ll = s_safeAs<ListRepr<T>, RecList<T>>(l);
+            return ll.remove[recursive](i);
         }
     }
 
@@ -1140,10 +1142,10 @@ internal entity RecList<T> provides Some {
     recursive method count(): Nat {
         let tl = this.tail;
         if(tl === none) {
-            return 1;
+            return 1n;
         }
         else {
-            return 1 + tl.count[recursive]();
+            return 1n + tl.count[recursive]();
         }
     }
 
@@ -1152,7 +1154,7 @@ internal entity RecList<T> provides Some {
             return none;
         }
         else {
-            let ntl = RecList<T>::range[recursive](start + one, one, count - 1);
+            let ntl = RecList<T>::range[recursive](start + one, one, count - 1n);
             return RecList<T>{start, ntl};
         }
     }
@@ -1223,23 +1225,23 @@ internal entity RecList<T> provides Some {
         if(l == none) {
             return none;
         }
-        elif(idx == 0) {
+        elif(idx == 0n) {
             return none;
         }
         else {
-            return RecList<T>{l.head, RecList<T>::s_slice_end[recursive](l.tail, idx - 1)};
+            return RecList<T>{l.head, RecList<T>::s_slice_end[recursive](l.tail, idx - 1n)};
         }
     }
 
     recursive method safe_get(i: Nat): T {
-        if(i == 0) {
+        if(i == 0n) {
             return this.head;
         }
         else {
             let tl = this.tail;
             assert(tl !== none);
 
-            return tl.safe_get[recursive](i - 1);
+            return tl.safe_get[recursive](i - 1n);
         }
     }
 
@@ -1555,17 +1557,14 @@ internal entity RecList<T> provides Some {
         let tl = this.tail;
         let hh = this.head;
 
-        if(tl === none) {
-            return none;
+        if(i == 0n) {
+            return RecList<T>{v, tl};
         }
         else {
-            if(i == 0n) {
-                return RecList<T>{v, tl};
-            }
-            else {
-                let rl = tl.set[recursive](i - 1n, v);
-                return RecList<T>{hh, rl};
-            }
+            let tll = s_safeAs<RecList<T> | None, RecList<T>>(tl);
+
+            let rl = tll.set[recursive](i - 1n, v);
+            return RecList<T>{hh, rl};
         }
     }
 
@@ -1573,17 +1572,14 @@ internal entity RecList<T> provides Some {
         let tl = this.tail;
         let hh = this.head;
 
-        if(tl === none) {
-            return none;
+        if(i == 0n) {
+            return tl;
         }
         else {
-            if(i == 0n) {
-                return tl;
-            }
-            else {
-                let rl = tl.set[recursive](i - 1n, v);
-                return RecList<T>{hh, rl};
-            }
+            let tll = s_safeAs<RecList<T> | None, RecList<T>>(tl);
+
+            let rl = tll.set[recursive](i - 1n, v);
+            return RecList<T>{hh, rl};
         }
     }
 
