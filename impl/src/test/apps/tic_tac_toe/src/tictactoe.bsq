@@ -118,4 +118,9 @@ entity Board provides APIType {
             return none;
         }
     }
+
+    method hasWinner(): Bool {
+        let winner = this.checkAnyWinner();
+        return winner === PlayerMark::x || winner === PlayerMark::o;
+    }
 }
