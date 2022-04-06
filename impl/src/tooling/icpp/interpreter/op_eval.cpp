@@ -3291,18 +3291,26 @@ StorageLocationPtr ICPPParseJSON::extractValueForRecordProperty(const APIModule*
 {
     BSQTypeID recid = MarshalEnvironment::g_typenameToIdMap.find(itype->name)->second;
     const BSQType* rectype = BSQType::g_typetable[recid];
+    auto recinfo = dynamic_cast<const BSQRecordInfo*>(rectype);
 
     BSQRecordPropertyID pid = MarshalEnvironment::g_propertyToIdMap.find(itype->name)->second;
-    return rectype->indexStorageLocationOffset(value, dynamic_cast<const BSQRecordInfo*>(rectype)->propertyoffsets[pid]);
+    auto piter = std::find(recinfo->properties.cbegin(), recinfo->properties.cend(), pid);
+    auto pidx = std::distance(recinfo->properties.cbegin(), piter);
+
+    return rectype->indexStorageLocationOffset(value, recinfo->propertyoffsets[pidx]);
 }
 
 StorageLocationPtr ICPPParseJSON::extractValueForEntityField(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, std::pair<std::string, std::string> fnamefkey, Evaluator& ctx)
 {
     BSQTypeID ooid = MarshalEnvironment::g_typenameToIdMap.find(itype->name)->second;
     const BSQType* ootype = BSQType::g_typetable[ooid];
+    auto ooinfo = dynamic_cast<const BSQEntityInfo*>(ootype);
 
     BSQFieldID fid = MarshalEnvironment::g_fieldToIdMap.find(fnamefkey.second)->second;
-    return SLPTR_INDEX_DATAPTR(value, dynamic_cast<const BSQEntityInfo*>(ootype)->fieldoffsets[fid]);
+    auto fiter = std::find(ooinfo->fields.cbegin(), ooinfo->fields.cend(), fid);
+    auto fidx = std::distance(ooinfo->fields.cbegin(), fiter);
+
+    return SLPTR_INDEX_DATAPTR(value, ooinfo->fieldoffsets[fidx]);
 }
 
 void ICPPParseJSON::prepareExtractContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
