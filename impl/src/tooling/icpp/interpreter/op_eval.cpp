@@ -3310,7 +3310,7 @@ StorageLocationPtr ICPPParseJSON::extractValueForEntityField(const APIModule* ap
     auto fiter = std::find(ooinfo->fields.cbegin(), ooinfo->fields.cend(), fid);
     auto fidx = std::distance(ooinfo->fields.cbegin(), fiter);
 
-    return SLPTR_INDEX_DATAPTR(value, ooinfo->fieldoffsets[fidx]);
+    return ootype->indexStorageLocationOffset(value, ooinfo->fieldoffsets[fidx]);
 }
 
 void ICPPParseJSON::prepareExtractContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)

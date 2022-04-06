@@ -7,7 +7,7 @@
 
 ## The Bosque Project
 
-[TODO Revise -- center on MVP Wins]
+[TODO Revise -- center on MVP features]
 
 The Bosque Programming Language project is a ground up language & tooling co-design effort focused on is investigating the theoretical and the practical implications of:
 
