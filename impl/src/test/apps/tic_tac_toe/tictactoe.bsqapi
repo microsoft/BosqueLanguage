@@ -14,12 +14,12 @@ namespace Main;
 //const blocked_5: Board = Main::no_win_4.setCellMark(BoardPostion{0, 0}, PlayerMark::x);
 
 entrypoint function doit(): Bool {
-    let le = Board::createEmpty{};
-    _debug(le);
+    let bb = Board::createEmpty{};
+    let bp = BoardPostion{1, 1};
 
-    let ll = le.setCellMark(BoardPostion{1, 1}, PlayerMark::x);
-    _debug(ll);
-    
+    let nb = bb.setCellMark(bp, PlayerMark::x);
+    _debug(nb);
+
     return true;
     //return !Main::no_win_2.hasWinner();
 }

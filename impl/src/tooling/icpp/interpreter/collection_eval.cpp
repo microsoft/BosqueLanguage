@@ -568,7 +568,8 @@ void* s_set_ne_rec(const BSQListTypeFlavor& lflavor, BSQListSpineIterator& iter,
         auto pvalloc = pvsize <= 4 ? lflavor.pv4type : lflavor.pv8type;
         
         res = Allocator::GlobalAllocator.allocateSafe(pvalloc);
-        BSQPartialVectorType::setPVData(res, iter.lcurr, i, v, pvsize, pvalloc->entrysize);
+        xxx;
+        //BSQPartialVectorType::setPVData(res, iter.lcurr, i, v, pvsize, pvalloc->entrysize);
     }
     else
     {

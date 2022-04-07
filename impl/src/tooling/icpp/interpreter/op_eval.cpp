@@ -2198,7 +2198,8 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         auto ii = SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]);
         
         auto rr = BSQListOps::s_set_ne(lflavor, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), ii, params[2]);
-        LIST_STORE_RESULT_REPR(rr, resultsl);
+        xxxx;
+        LIST_STORE_RESULT_REPR(LIST_LOAD_DATA(params[0]), resultsl);
         break;
     }
     case BSQPrimitiveImplTag::s_list_remove_ne: {

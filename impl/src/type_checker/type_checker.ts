@@ -6867,7 +6867,7 @@ class TypeChecker {
                         fields.push(this.m_emitter.masm.fieldDecls.get(fkey) as MIRFieldDecl);
                     });
 
-                    const mirentity = new MIRObjectEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, validatekey, conskey.keyid, consfuncfields, fields);
+                    const mirentity = new MIRObjectEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, initinfo.invariantclauses.length !== 0, validatekey, conskey.keyid, consfuncfields, fields);
                     this.m_emitter.masm.entityDecls.set(tkey, mirentity);
                 }
             }
