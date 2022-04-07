@@ -556,7 +556,7 @@ void* BSQListOps::s_map_sync_ne(const BSQListTypeFlavor& lflavor1, const BSQList
 
 void* s_set_ne_rec(const BSQListTypeFlavor& lflavor, BSQListSpineIterator& iter, size_t alloc, BSQNat i, StorageLocationPtr v)
 {
-    auto ttype = LIST_LOAD_TYPE_INFO_REPR(iter.lcurr);
+    auto ttype = GET_TYPE_META_DATA_AS(BSQListReprType, iter.lcurr);
 
     void* res = nullptr;
     if(ttype->lkind != ListReprKind::TreeElement)
@@ -576,7 +576,7 @@ void* s_set_ne_rec(const BSQListTypeFlavor& lflavor, BSQListSpineIterator& iter,
 
         auto trepr = static_cast<BSQListTreeRepr*>(iter.lcurr);
         auto ll = trepr->l;
-        auto lltype = LIST_LOAD_TYPE_INFO_REPR(ll);
+        auto lltype = GET_TYPE_META_DATA_AS(BSQListReprType, ll);
         auto llcount = lltype->getCount(ll);
 
         if(i < llcount)
@@ -614,7 +614,7 @@ void* BSQListOps::s_set_ne(const BSQListTypeFlavor& lflavor, void* t, const BSQL
 
 void* s_remove_ne_rec(const BSQListTypeFlavor& lflavor, BSQListSpineIterator& iter, size_t alloc, BSQNat i)
 {
-    auto ttype = LIST_LOAD_TYPE_INFO_REPR(iter.lcurr);
+    auto ttype = GET_TYPE_META_DATA_AS(BSQListReprType, iter.lcurr);
 
     void* res = nullptr;
     if(ttype->lkind != ListReprKind::TreeElement)
@@ -634,7 +634,7 @@ void* s_remove_ne_rec(const BSQListTypeFlavor& lflavor, BSQListSpineIterator& it
 
         auto trepr = static_cast<BSQListTreeRepr*>(iter.lcurr);
         auto ll = trepr->l;
-        auto lltype = LIST_LOAD_TYPE_INFO_REPR(ll);
+        auto lltype = GET_TYPE_META_DATA_AS(BSQListReprType, ll);
         auto llcount = lltype->getCount(ll);
 
         if(i < llcount)
@@ -1225,7 +1225,7 @@ std::string entityListDisplay_impl(const BSQType* btype, StorageLocationPtr data
         {
             if(!first)
             {
-                res += ",";
+                res += ", ";
             }
             first = false;
 
