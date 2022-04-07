@@ -971,7 +971,7 @@ class SMTEmitter {
             const smttype = this.temitter.getSMTTypeFor(mirtype);
             const ops = this.temitter.getSMTConstructorName(mirtype);
             const consargs = ttup.entries.map((entry, i) => {
-                return { fname: this.temitter.generateTupleIndexGetFunction(ttup, i), ftype: this.temitter.getSMTTypeFor(entry) };
+                return { fname: this.temitter.generateTupleIndexGetFunction(ttup, i), ftype: this.temitter.getSMTTypeFor(entry, true) };
             });
 
             this.assembly.tupleDecls.push(new SMTTupleDecl(smttype.smttypename, ttag, { cname: ops.cons, cargs: consargs }, ops.box, ops.bfield));
@@ -992,7 +992,7 @@ class SMTEmitter {
             const smttype = this.temitter.getSMTTypeFor(mirtype);
             const ops = this.temitter.getSMTConstructorName(mirtype);
             const consargs = trec.entries.map((entry) => {
-                return { fname: this.temitter.generateRecordPropertyGetFunction(trec, entry.pname), ftype: this.temitter.getSMTTypeFor(entry.ptype) };
+                return { fname: this.temitter.generateRecordPropertyGetFunction(trec, entry.pname), ftype: this.temitter.getSMTTypeFor(entry.ptype, true) };
             });
 
             this.assembly.recordDecls.push(new SMTRecordDecl(smttype.smttypename, ttag, { cname: ops.cons, cargs: consargs }, ops.box, ops.bfield));
@@ -1004,7 +1004,7 @@ class SMTEmitter {
             const smttype = this.temitter.getSMTTypeFor(mirtype);
             const ops = this.temitter.getSMTConstructorName(mirtype);
             const consargs = ephl.entries.map((entry, i) => {
-                return { fname: this.temitter.generateEphemeralListGetFunction(ephl, i), ftype: this.temitter.getSMTTypeFor(entry) };
+                return { fname: this.temitter.generateEphemeralListGetFunction(ephl, i), ftype: this.temitter.getSMTTypeFor(entry, true) };
             });
 
             this.assembly.ephemeralDecls.push(new SMTEphemeralListDecl(smttype.smttypename, { cname: ops.cons, cargs: consargs }));

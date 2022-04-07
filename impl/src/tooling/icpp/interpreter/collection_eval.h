@@ -388,7 +388,7 @@ public:
     {
         if(ttype->lkind != ListReprKind::TreeElement)
         {
-            oftype->storeValue(dynamic_cast<const BSQPartialVectorType*>(ttype)->get(res, idx), res);
+            oftype->storeValue(res, dynamic_cast<const BSQPartialVectorType*>(ttype)->get(t, idx));
         }
         else
         {

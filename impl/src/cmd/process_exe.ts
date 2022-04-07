@@ -428,9 +428,9 @@ function processBuildAction(args: string[]) {
 
         let workingdir = process.cwd();
         let pckg: Package | undefined = undefined;
-        if(path.extname(args[1]) === ".json") {
-            workingdir = path.dirname(path.resolve(args[1]));
-            pckg = tryLoadPackage(path.resolve(args[1]));
+        if(path.extname(args[smtonly ? 3 : 2]) === ".json") {
+            workingdir = path.dirname(path.resolve(args[smtonly ? 3 : 2]));
+            pckg = tryLoadPackage(path.resolve(args[smtonly ? 3 : 2]));
         }
         else {
             const implicitpckg = path.resolve(workingdir, "package.json");

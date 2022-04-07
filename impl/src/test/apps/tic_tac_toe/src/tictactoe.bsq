@@ -60,18 +60,7 @@ entity Board provides APIType {
     }
 
     method getCellMark(c: BoardPostion): PlayerMark {
-        _debug(this.cells);
-        _debug(c.rowpos);
-
-        let row = this.cells.get(c.rowpos);
-        _debug(row);
-
-        let mark = row.get(c.colpos);
-        _debug(mark);
-
-        return mark;
-
-//        return this.cells.get(c.rowpos).get(c.colpos);
+        return this.cells.get(c.rowpos).get(c.colpos);
     }
 
     method setCellMark(c: BoardPostion, mark: PlayerMark): Board 
