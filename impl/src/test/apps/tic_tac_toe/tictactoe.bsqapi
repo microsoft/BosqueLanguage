@@ -5,6 +5,15 @@
 
 namespace Main;
 
+////
+//TEMP
+const empty_board: Board = Board::createEmpty{};
+
+entrypoint function doit(): Bool {
+    return !Main::empty_board.hasWinner();
+}
+////
+
 entrypoint function getInitialBoard(): Board {
     return Board::createEmpty{};
 }

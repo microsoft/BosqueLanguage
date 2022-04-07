@@ -37,7 +37,6 @@ class ICPPTypeEmitter {
     private typeDataMap: Map<MIRResolvedTypeKey, ICPPLayoutInfo> = new Map<MIRResolvedTypeKey, ICPPLayoutInfo>();
     private typeInlineMap: Map<MIRResolvedTypeKey, ICPPTypeInlineInfo> = new Map<MIRResolvedTypeKey, ICPPTypeInlineInfo>();
 
-
     constructor(assembly: MIRAssembly, topts: TranspilerOptions, namectr?: number, mangledTypeNameMap?: Map<string, string>, mangledFunctionNameMap?: Map<string, string>, mangledGlobalNameMap?: Map<string, string>) {
         this.assembly = assembly;
         this.topts = topts;

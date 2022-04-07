@@ -539,11 +539,11 @@ function parseConfig<T>(cf: any, tag: "run" | "build" | "test" | "apptest" | "fu
     let buildlevel: "debug" | "test" | "release" = "debug";
     let pc: any = undefined;
     if (tag === "run") {
-        buildlevel = "release";
+        buildlevel = "test";
         pc = parseConfigRun(cf);
     }
     else if (tag === "build") {
-        buildlevel = "release";
+        buildlevel = "test";
         pc = parseConfigBuild(cf);
     }
     else if (tag === "test") {
