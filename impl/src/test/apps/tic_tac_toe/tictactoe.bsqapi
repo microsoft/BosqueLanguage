@@ -7,21 +7,14 @@ namespace Main;
 
 ////
 //TEMP
-//const empty_board: Board = Board::createEmpty{};
-//const no_win_2: Board = Main::empty_board.setCellMark(BoardPostion{1, 1}, PlayerMark::x).setCellMark(BoardPostion{0, 2}, PlayerMark::o);
+const empty_board: Board = Board::createEmpty{};
+const no_win_2: Board = Main::empty_board.setCellMark(BoardPostion{1, 1}, PlayerMark::x).setCellMark(BoardPostion{0, 2}, PlayerMark::o);
 //const no_win_4: Board = Main::no_win_2.setCellMark(BoardPostion{1, 2}, PlayerMark::x).setCellMark(BoardPostion{0, 1}, PlayerMark::o);
 //const win_5: Board = Main::no_win_4.setCellMark(BoardPostion{1, 0}, PlayerMark::x);
 //const blocked_5: Board = Main::no_win_4.setCellMark(BoardPostion{0, 0}, PlayerMark::x);
 
-entrypoint function doit(): Bool {
-    let bb = Board::createEmpty{};
-    let bp = BoardPostion{1, 1};
-
-    let nb = bb.setCellMark(bp, PlayerMark::x);
-    _debug(nb);
-
-    return true;
-    //return !Main::no_win_2.hasWinner();
+entrypoint function doit(): Board {
+    return Main::no_win_2;
 }
 ////
 

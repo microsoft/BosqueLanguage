@@ -33,11 +33,11 @@ chktest function no_winner_4(): Bool {
 chktest function winner_5(): Bool {
     return Main::test_win_5.checkAnyWinner() === PlayerMark::x;
 }
-
+/*
 chktest function blocked_5(c: BoardPostion): Bool
     requires Main::test_blocked_5.isCellEmpty(c);
 {
     let nb = Main::test_blocked_5.setCellMark(c, PlayerMark::o);
     return !nb.hasWinner();
 }
-
+*/
