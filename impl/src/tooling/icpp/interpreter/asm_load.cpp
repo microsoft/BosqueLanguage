@@ -182,6 +182,7 @@ void initializeLiteral(size_t storageOffset, const BSQType* gtype, std::string& 
 void initializeConst(Evaluator& runner, size_t storageOffset, BSQInvokeID ikey, const BSQType* gtype)
 {
     auto ccall = dynamic_cast<const BSQInvokeBodyDecl*>(BSQInvokeDecl::g_invokes[ikey]);
+
     runner.invokeGlobalCons(ccall, Evaluator::g_constantbuffer + storageOffset, gtype, ccall->resultArg);
 }
 

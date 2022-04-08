@@ -14,7 +14,7 @@ const no_win_2: Board = Main::empty_board.setCellMark(BoardPostion{1, 1}, Player
 //const blocked_5: Board = Main::no_win_4.setCellMark(BoardPostion{0, 0}, PlayerMark::x);
 
 entrypoint function doit(): Board {
-    return Main::no_win_2;
+    return Main::no_win_2.setCellMark(BoardPostion{0, 0}, PlayerMark::x);
 }
 ////
 
