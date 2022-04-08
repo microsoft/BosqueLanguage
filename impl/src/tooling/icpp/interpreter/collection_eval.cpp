@@ -567,9 +567,9 @@ void* s_set_ne_rec(const BSQListTypeFlavor& lflavor, BSQListSpineIterator& iter,
         auto pvsize = BSQPartialVectorType::getPVCount(iter.lcurr);
         auto pvalloc = pvsize <= 4 ? lflavor.pv4type : lflavor.pv8type;
         
+        Allocator::GlobalAllocator.ensureSpace(nalloc);
         res = Allocator::GlobalAllocator.allocateSafe(pvalloc);
-        xxx;
-        //BSQPartialVectorType::setPVData(res, iter.lcurr, i, v, pvsize, pvalloc->entrysize);
+        BSQPartialVectorType::setPVData(res, iter.lcurr, i, v, pvsize, pvalloc->entrysize);
     }
     else
     {
@@ -621,11 +621,11 @@ void* s_remove_ne_rec(const BSQListTypeFlavor& lflavor, BSQListSpineIterator& it
     if(ttype->lkind != ListReprKind::TreeElement)
     {
         auto nalloc = alloc + lflavor.pv8type->allocinfo.heapsize + sizeof(GC_META_DATA_WORD);
-        Allocator::GlobalAllocator.ensureSpace(nalloc);
-
+        
         auto pvsize = BSQPartialVectorType::getPVCount(iter.lcurr);
         auto pvalloc = (pvsize - 1) <= 4 ? lflavor.pv4type : lflavor.pv8type;
         
+        Allocator::GlobalAllocator.ensureSpace(nalloc);
         res = Allocator::GlobalAllocator.allocateSafe(pvalloc);
         BSQPartialVectorType::removePVData(res, iter.lcurr, i, pvsize, pvalloc->entrysize);
     }

@@ -328,7 +328,7 @@ private:
     uint8_t *m_endPos;
 
     size_t m_allocsize;
-    uint8_t *m_block;
+    uint8_t* m_block;
 
 #ifdef ENABLE_MEM_STATS
     size_t totalbumpalloc;

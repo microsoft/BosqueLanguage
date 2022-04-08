@@ -66,14 +66,12 @@ entity Board provides APIType {
     method setCellMark(c: BoardPostion, mark: PlayerMark): Board 
         requires debug this.isCellEmpty(c);
     {
-        let ll = this.cells;
         let newrow = this.cells.get(c.rowpos).set(c.colpos, mark);
-        _debug(newrow);
-        _debug(ll);
-        _debug(this);
-
+        _debug(this.cells);
+        _debug(1n);
         let newcells = this.cells.set(c.rowpos, newrow);
         _debug(newcells);
+        _debug(2n);
 
         return this.{cells=newcells};
     }
