@@ -84,7 +84,7 @@ function processRunAction(args: string[]) {
         
                     process.stdout.write(`Evaluating...\n`);
         
-                    workflowRunICPPFile(jargs, userpackage, args[0] === "debug", "release", false, args[0] === "debug", {}, entrypoint, (result: string | undefined) => {
+                    workflowRunICPPFile(jargs, userpackage, args[0] === "debug", "test", false, args[0] === "debug", {}, entrypoint, (result: string | undefined) => {
                         if (result !== undefined) {
                             process.stdout.write(`${result}\n`);
                         }
@@ -103,7 +103,7 @@ function processRunAction(args: string[]) {
         }
         else {
             // bosque run|debug [package_path.json] [--entrypoint fname] [--config cname] --args "[...]"
-            workflowRunICPPFile(fargs, userpackage, args[0] === "debug", "release", false, args[0] === "debug", {}, entrypoint, (result: string | undefined) => {
+            workflowRunICPPFile(fargs, userpackage, args[0] === "debug", "test", false, args[0] === "debug", {}, entrypoint, (result: string | undefined) => {
                 if (result !== undefined) {
                     process.stdout.write(`${result}\n`);
                 }
@@ -428,9 +428,9 @@ function processBuildAction(args: string[]) {
 
         let workingdir = process.cwd();
         let pckg: Package | undefined = undefined;
-        if(path.extname(args[1]) === ".json") {
-            workingdir = path.dirname(path.resolve(args[1]));
-            pckg = tryLoadPackage(path.resolve(args[1]));
+        if(path.extname(args[smtonly ? 3 : 2]) === ".json") {
+            workingdir = path.dirname(path.resolve(args[smtonly ? 3 : 2]));
+            pckg = tryLoadPackage(path.resolve(args[smtonly ? 3 : 2]));
         }
         else {
             const implicitpckg = path.resolve(workingdir, "package.json");

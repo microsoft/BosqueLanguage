@@ -255,7 +255,7 @@ class SMTBodyEmitter {
     }
 
     private generateSingletonConstructorsList(argc: number, resulttype: MIRType): string {
-        const fullname = `$ListSingletonCons!${argc}!{resulttype.typeID}`;
+        const fullname = `$ListSingletonCons!${argc}!${resulttype.typeID}`;
         const shortname = `$ListSingletonCons_${argc}_${resulttype.typeID}`;
 
         this.typegen.internFunctionName(fullname, shortname);

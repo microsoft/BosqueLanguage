@@ -117,6 +117,10 @@ abstract class ICPPLayoutInfo {
             return false;
         }
     }
+
+    needsBoxableType(): boolean {
+        return this.layout === ICPPLayoutCategory.Inline && this.allocinfo.inlinedatasize > UNIVERSAL_CONTENT_SIZE;
+    }
 }
 
 class ICPPLayoutInfoFixed extends ICPPLayoutInfo {
@@ -522,7 +526,7 @@ class ICPPAssembly
                 allocinfo: icpptype.allocinfo.jemit(),
                 oftype: edecl.fromtype,
                 norefs: icpptype.canScalarStackAllocate(),
-                boxedtype: this.generateBoxedTypeName(icpptype.tkey)
+                boxedtype: icpptype.needsBoxableType() ? this.generateBoxedTypeName(icpptype.tkey) : null
             };
         }
     }
@@ -634,7 +638,7 @@ class ICPPAssembly
                 name: edcl.tkey,
                 vtable: vtbl || null,
                 norefs: icpplayout.canScalarStackAllocate(),
-                boxedtype: this.generateBoxedTypeName(edcl.tkey),
+                boxedtype: icpplayout.needsBoxableType() ? this.generateBoxedTypeName(edcl.tkey) : null,
                 fieldnames: icpplayout.fieldnames,
                 fieldtypes: icpplayout.fieldtypes,
                 fieldoffsets: icpplayout.fieldoffsets
@@ -694,7 +698,7 @@ class ICPPAssembly
                 name: cdcl.typeID,
                 vtable: vtbl || null,
                 norefs: icpplayout.canScalarStackAllocate(),
-                boxedtype: this.generateBoxedTypeName(cdcl.typeID),
+                boxedtype: icpplayout.needsBoxableType() ? this.generateBoxedTypeName(cdcl.typeID) : null,
                 maxIndex: icpplayout.maxIndex,
                 ttypes: icpplayout.ttypes,
                 idxoffsets: icpplayout.idxoffsets
@@ -725,7 +729,7 @@ class ICPPAssembly
                 name: cdcl.typeID,
                 vtable: vtbl || null,
                 norefs: icpplayout.canScalarStackAllocate(),
-                boxedtype: this.generateBoxedTypeName(cdcl.typeID),
+                boxedtype: icpplayout.needsBoxableType() ? this.generateBoxedTypeName(cdcl.typeID) : null,
                 propertynames: icpplayout.propertynames,
                 propertytypes: icpplayout.propertytypes,
                 propertyoffsets: icpplayout.propertyoffsets
@@ -740,7 +744,6 @@ class ICPPAssembly
             allocinfo: icpplayout.allocinfo.jemit(),
             name: cdcl.typeID,
             norefs: icpplayout.canScalarStackAllocate(),
-            boxedtype: this.generateBoxedTypeName(cdcl.typeID),
             etypes: icpplayout.etypes,
             idxoffsets: icpplayout.eoffsets
         };
@@ -874,7 +877,7 @@ class ICPPAssembly
         const boxedtypes = [...assembly.typeMap]
             .filter((td) => {
                 const icppinfo = (this.typedecls.find((dd) => dd.tkey === td[0]) as ICPPLayoutInfo);
-                return icppinfo.layout === ICPPLayoutCategory.Inline && icppinfo.allocinfo.inlinedatasize > UNIVERSAL_CONTENT_SIZE
+                return icppinfo.needsBoxableType();
             })
             .sort((a, b) => a[0].localeCompare(b[0])).map((td) => td[1])
             .map((ud) => {
@@ -973,7 +976,7 @@ class ICPPAssembly
 
             regexes: regexes,
 
-            constdecls: this.constdecls.sort((a, b) => a.gkey.localeCompare(b.gkey)).map((cd) => cd.jsonEmit())
+            constdecls: this.constdecls.map((cd) => cd.jsonEmit())
         };
     }
 }
