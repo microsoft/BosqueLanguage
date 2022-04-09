@@ -294,15 +294,20 @@ class SMTEmitter {
         let cvalidate: SMTExp = new SMTConst("true");
         let ccons: SMTExp = new SMTConst("[UNDEF]");
         if (optidx === -1) {
-            ccons = this.temitter.generateResultTypeConstructorSuccess(tt, new SMTCallGeneral(this.temitter.lookupFunctionName(tdecl.consfunc as MIRInvokeKey), ctors.map((arg) => arg.access)));
-
             if(tdecl.validatefunc !== undefined) {
                 if((this.callsafety.get(tdecl.validatefunc) as {safe: boolean, trgt: boolean}).safe) {
-                    cvalidate = new SMTCallGeneral(this.temitter.lookupFunctionName(tdecl.consfunc as MIRInvokeKey), ctors.map((arg) => arg.access));
+                    cvalidate = new SMTCallGeneral(this.temitter.lookupFunctionName(tdecl.validatefunc as MIRInvokeKey), ctors.map((arg) => arg.access));
                 }
                 else {
-                    cvalidate = SMTCallSimple.makeEq(new SMTCallGeneral(this.temitter.lookupFunctionName(tdecl.consfunc as MIRInvokeKey), ctors.map((arg) => arg.access)), this.temitter.generateResultTypeConstructorSuccess(this.temitter.getMIRType("Bool"), new SMTConst("true")));
+                    cvalidate = SMTCallSimple.makeEq(new SMTCallGeneral(this.temitter.lookupFunctionName(tdecl.validatefunc as MIRInvokeKey), ctors.map((arg) => arg.access)), this.temitter.generateResultTypeConstructorSuccess(this.temitter.getMIRType("Bool"), new SMTConst("true")));
                 }
+            }
+
+            if((this.callsafety.get(tdecl.consfunc) as {safe: boolean, trgt: boolean}).safe) {
+                ccons = this.temitter.generateResultTypeConstructorSuccess(tt, new SMTCallGeneral(this.temitter.lookupFunctionName(tdecl.consfunc as MIRInvokeKey), ctors.map((arg) => arg.access)));
+            }
+            else {
+                ccons = new SMTCallGeneral(this.temitter.lookupFunctionName(tdecl.consfunc as MIRInvokeKey), ctors.map((arg) => arg.access));
             }
         }
         else {
@@ -321,18 +326,18 @@ class SMTEmitter {
 
             if(tdecl.validatefunc !== undefined) {
                 if((this.callsafety.get(tdecl.validatefunc) as {safe: boolean, trgt: boolean}).safe) {
-                    cvalidate = new SMTCallGeneralWOptMask(this.temitter.lookupFunctionName(tdecl.consfunc as MIRInvokeKey), ctors.map((arg) => arg.access), mask);
+                    cvalidate = new SMTCallGeneralWOptMask(this.temitter.lookupFunctionName(tdecl.validatefunc as MIRInvokeKey), ctors.map((arg) => arg.access), mask);
                 }
                 else {
-                    cvalidate = SMTCallSimple.makeEq(new SMTCallGeneralWOptMask(this.temitter.lookupFunctionName(tdecl.consfunc as MIRInvokeKey), ctors.map((arg) => arg.access), mask), this.temitter.generateResultTypeConstructorSuccess(this.temitter.getMIRType("Bool"), new SMTConst("true")));
+                    cvalidate = SMTCallSimple.makeEq(new SMTCallGeneralWOptMask(this.temitter.lookupFunctionName(tdecl.validatefunc as MIRInvokeKey), ctors.map((arg) => arg.access), mask), this.temitter.generateResultTypeConstructorSuccess(this.temitter.getMIRType("Bool"), new SMTConst("true")));
                 }
             }
 
             if((this.callsafety.get(tdecl.consfunc) as {safe: boolean, trgt: boolean}).safe) {
-                ccons = this.temitter.generateResultTypeConstructorSuccess(tt, this.temitter.generateResultTypeConstructorSuccess(tt, new SMTCallGeneralWOptMask(this.temitter.lookupFunctionName(tdecl.consfunc as MIRInvokeKey), ctors.map((arg) => arg.access), mask)));
+                ccons = this.temitter.generateResultTypeConstructorSuccess(tt, new SMTCallGeneralWOptMask(this.temitter.lookupFunctionName(tdecl.consfunc as MIRInvokeKey), ctors.map((arg) => arg.access), mask));
             }
             else {
-                ccons = this.temitter.generateResultTypeConstructorSuccess(tt, new SMTCallGeneralWOptMask(this.temitter.lookupFunctionName(tdecl.consfunc as MIRInvokeKey), ctors.map((arg) => arg.access), mask));
+                ccons = new SMTCallGeneralWOptMask(this.temitter.lookupFunctionName(tdecl.consfunc as MIRInvokeKey), ctors.map((arg) => arg.access), mask);
             }
         }
         
