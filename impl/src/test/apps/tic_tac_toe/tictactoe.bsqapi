@@ -5,22 +5,6 @@
 
 namespace Main;
 
-////
-//TEMP
-const empty_board: Board = Board::createEmpty{};
-const no_win_2: Board = Main::empty_board.setCellMark(BoardPostion{1, 1}, PlayerMark::x).setCellMark(BoardPostion{0, 2}, PlayerMark::o);
-//const no_win_4: Board = Main::no_win_2.setCellMark(BoardPostion{1, 2}, PlayerMark::x).setCellMark(BoardPostion{0, 1}, PlayerMark::o);
-//const win_5: Board = Main::no_win_4.setCellMark(BoardPostion{1, 0}, PlayerMark::x);
-//const blocked_5: Board = Main::no_win_4.setCellMark(BoardPostion{0, 0}, PlayerMark::x);
-
-entrypoint function doit(c: BoardPostion): Bool
-    requires Main::no_win_2.isCellEmpty(c);
-{
-    let nb = Main::no_win_2.setCellMark(c, PlayerMark::x);
-    return !nb.hasWinner();
-}
-////
-
 entrypoint function getInitialBoard(): Board {
     return Board::createEmpty{};
 }
