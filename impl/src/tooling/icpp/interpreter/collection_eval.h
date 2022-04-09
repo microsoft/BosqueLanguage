@@ -317,7 +317,7 @@ public:
         }
         else
         {
-            auto lltype = LIST_LOAD_TYPE_INFO_REPR(static_cast<BSQListTreeRepr*>(iter.lcurr)->l);
+            auto lltype = GET_TYPE_META_DATA_AS(BSQListReprType, static_cast<BSQListTreeRepr*>(iter.lcurr)->l);
             auto llcount = lltype->getCount(static_cast<BSQListTreeRepr*>(iter.lcurr)->l);
 
             if(start < llcount)
@@ -332,7 +332,7 @@ public:
             }
             else
             {
-                auto rrtype = LIST_LOAD_TYPE_INFO_REPR(static_cast<BSQListTreeRepr*>(iter.lcurr)->r);
+                auto rrtype = GET_TYPE_META_DATA_AS(BSQListReprType, static_cast<BSQListTreeRepr*>(iter.lcurr)->r);
 
                 iter.moveRight();
                 res = BSQListOps::s_slice_start(lflavor, iter, rrtype, start - llcount, alloc);
@@ -359,10 +359,10 @@ public:
         }
         else
         {
-            auto lltype = LIST_LOAD_TYPE_INFO_REPR(static_cast<BSQListTreeRepr*>(iter.lcurr)->l);
+            auto lltype = GET_TYPE_META_DATA_AS(BSQListReprType, static_cast<BSQListTreeRepr*>(iter.lcurr)->l);
             auto llcount = lltype->getCount(static_cast<BSQListTreeRepr*>(iter.lcurr)->l);
 
-            auto rrtype = LIST_LOAD_TYPE_INFO_REPR(static_cast<BSQListTreeRepr*>(iter.lcurr)->r);
+            auto rrtype = GET_TYPE_META_DATA_AS(BSQListReprType, static_cast<BSQListTreeRepr*>(iter.lcurr)->r);
 
             if(end > llcount)
             {
@@ -388,13 +388,13 @@ public:
     {
         if(ttype->lkind != ListReprKind::TreeElement)
         {
-            oftype->storeValue(dynamic_cast<const BSQPartialVectorType*>(ttype)->get(res, idx), res);
+            oftype->storeValue(res, dynamic_cast<const BSQPartialVectorType*>(ttype)->get(t, idx));
         }
         else
         {
             auto trepr = static_cast<BSQListTreeRepr*>(t);
             auto ll = trepr->l;
-            auto lltype = LIST_LOAD_TYPE_INFO_REPR(ll);
+            auto lltype = GET_TYPE_META_DATA_AS(BSQListReprType, ll);
             auto llcount = lltype->getCount(ll);
 
             if(idx < llcount)
@@ -403,7 +403,7 @@ public:
             }
             else
             {
-                return BSQListOps::s_safe_get(trepr->r, LIST_LOAD_TYPE_INFO_REPR(trepr->r), idx - llcount, oftype, res);
+                return BSQListOps::s_safe_get(trepr->r, GET_TYPE_META_DATA_AS(BSQListReprType, trepr->r), idx - llcount, oftype, res);
             }
         }
     }

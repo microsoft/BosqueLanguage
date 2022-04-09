@@ -394,7 +394,7 @@ function extractConfig<T>(args: string[], pckg: Package, workingdir: string, cmd
                 name: "_run_",
                 macros: [],
                 globalmacros: [],
-                buildlevel: "release",
+                buildlevel: "test",
                 params: rcfg as T
             };
         }
@@ -404,7 +404,7 @@ function extractConfig<T>(args: string[], pckg: Package, workingdir: string, cmd
                 name: "_build_",
                 macros: [],
                 globalmacros: [],
-                buildlevel: "release",
+                buildlevel: "test",
                 params: rcfg as T
             };
         }

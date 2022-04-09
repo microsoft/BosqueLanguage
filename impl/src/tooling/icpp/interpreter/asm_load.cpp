@@ -124,11 +124,11 @@ void initializeLiteral(size_t storageOffset, const BSQType* gtype, std::string& 
         break;
     }
     case BSQ_TYPE_ID_FLOAT: {
-        dynamic_cast<const  BSQRegisterType<BSQFloat>*>(BSQWellKnownType::g_typeFloat)->storeValueDirect(sl, std::stod(lval.substr(0, lval.size() - 1)));
+        dynamic_cast<const BSQRegisterType<BSQFloat>*>(BSQWellKnownType::g_typeFloat)->storeValueDirect(sl, std::stod(lval.substr(0, lval.size() - 1)));
         break;
     }
     case BSQ_TYPE_ID_DECIMAL: {
-        dynamic_cast<const  BSQRegisterType<BSQDecimal>*>(BSQWellKnownType::g_typeDecimal)->storeValueDirect(sl, std::stod(lval.substr(0, lval.size() - 1)));
+        dynamic_cast<const BSQRegisterType<BSQDecimal>*>(BSQWellKnownType::g_typeDecimal)->storeValueDirect(sl, std::stod(lval.substr(0, lval.size() - 1)));
         break;
     }
     case BSQ_TYPE_ID_RATIONAL: {
@@ -182,6 +182,7 @@ void initializeLiteral(size_t storageOffset, const BSQType* gtype, std::string& 
 void initializeConst(Evaluator& runner, size_t storageOffset, BSQInvokeID ikey, const BSQType* gtype)
 {
     auto ccall = dynamic_cast<const BSQInvokeBodyDecl*>(BSQInvokeDecl::g_invokes[ikey]);
+
     runner.invokeGlobalCons(ccall, Evaluator::g_constantbuffer + storageOffset, gtype, ccall->resultArg);
 }
 

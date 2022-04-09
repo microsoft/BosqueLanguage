@@ -67,6 +67,11 @@ function computeCalleesInBlocks(blocks: Map<string, MIRBasicBlock>, invokeNode: 
                     break;
                 }
             }
+
+            op.getUsedGlobals().forEach((gg) => {
+                const constv = assembly.constantDecls.get(gg.gkey) as MIRConstantDecl;
+                invokeNode.callees.add(constv.ivalue)
+            });
         }
     });
 }
@@ -117,6 +122,12 @@ function constructCallGraphInfo(entryPoints: MIRInvokeKey[], assembly: MIRAssemb
 
     let roots: CallGNode[] = [];
     let tordered: CallGNode[] = [];
+
+    assembly.constantDecls.forEach((cdecl: MIRConstantDecl) => {
+        roots.push(invokes.get(cdecl.ivalue) as CallGNode);
+        topoVisit(invokes.get(cdecl.ivalue) as CallGNode, [], tordered, invokes);
+    });
+
     entryPoints.forEach((ivk) => {
         roots.push(invokes.get(ivk) as CallGNode);
         topoVisit(invokes.get(ivk) as CallGNode, [], tordered, invokes);
@@ -151,11 +162,6 @@ function constructCallGraphInfo(entryPoints: MIRInvokeKey[], assembly: MIRAssemb
                 ;
             }
         }
-    });
-
-    assembly.constantDecls.forEach((cdecl: MIRConstantDecl) => {
-        roots.push(invokes.get(cdecl.ivalue) as CallGNode);
-        topoVisit(invokes.get(cdecl.ivalue) as CallGNode, [], tordered, invokes);
     });
 
     tordered = tordered.reverse();

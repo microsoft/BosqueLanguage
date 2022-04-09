@@ -67,9 +67,7 @@ entity Board provides APIType {
         requires debug this.isCellEmpty(c);
     {
         let newrow = this.cells.get(c.rowpos).set(c.colpos, mark);
-        let newcells = this.cells.set(c.rowpos, newrow);
-
-        return this.{cells=newcells};
+        return this.{cells=$cells.set(c.rowpos, newrow)};
     }
 
     private method check3(c1: BoardPostion, c2: BoardPostion, c3: BoardPostion, player: PlayerMark): Bool {

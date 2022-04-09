@@ -2862,20 +2862,13 @@ class TypeChecker {
 
                 const rargs = this.checkArgumentsSignature(exp.sinfo, env, exp.name, fsig, eargs);
 
-                if (fdecl.invoke.body !== undefined && fdecl.invoke.body.body === "special_inject") {
-                    this.m_emitter.emitInject(exp.sinfo, this.m_emitter.registerResolvedTypeReference(fsig.params[0].type as ResolvedType), this.m_emitter.registerResolvedTypeReference(fsig.resultType), rargs.args[0], trgt);
+                this.checkRecursion(exp.sinfo, fsig, rargs.pcodes, exp.rec);
 
-                    return [env.setUniformResultExpression(fsig.resultType)];
-                }
-                else {
-                    this.checkRecursion(exp.sinfo, fsig, rargs.pcodes, exp.rec);
+                const ckey = this.m_emitter.registerFunctionCall(exp.ns, exp.name, fdecl, callbinds, rargs.pcodes, rargs.cinfo);
+                const refinfo = this.generateRefInfoForCallEmit(fsig as ResolvedFunctionType, rargs.refs);
+                this.m_emitter.emitInvokeFixedFunction(exp.sinfo, ckey, rargs.args, rargs.fflag, refinfo, trgt);
 
-                    const ckey = this.m_emitter.registerFunctionCall(exp.ns, exp.name, fdecl, callbinds, rargs.pcodes, rargs.cinfo);
-                    const refinfo = this.generateRefInfoForCallEmit(fsig as ResolvedFunctionType, rargs.refs);
-                    this.m_emitter.emitInvokeFixedFunction(exp.sinfo, ckey, rargs.args, rargs.fflag, refinfo, trgt);
-
-                    return this.updateEnvForOutParams(env.setUniformResultExpression(fsig.resultType), rargs.refs);
-                }
+                return this.updateEnvForOutParams(env.setUniformResultExpression(fsig.resultType), rargs.refs);
             }
         }
     }
@@ -3012,12 +3005,20 @@ class TypeChecker {
                 const rargs = this.checkArgumentsSignature(exp.sinfo, env, exp.name, fsig, eargs);
                 this.checkRecursion(exp.sinfo, fsig, rargs.pcodes, exp.rec);
 
-                const ootype = this.m_emitter.registerResolvedTypeReference(this.resolveOOTypeFromDecls(fdecl.contiainingType, fdecl.binds));
-                const ckey = this.m_emitter.registerStaticCall(this.resolveOOTypeFromDecls(fdecl.contiainingType, fdecl.binds), [ootype, fdecl.contiainingType, fdecl.binds], fdecl.decl, exp.name, callbinds, rargs.pcodes, rargs.cinfo);
-                const refinfo = this.generateRefInfoForCallEmit(fsig as ResolvedFunctionType, rargs.refs);
-                this.m_emitter.emitInvokeFixedFunction(exp.sinfo, ckey, rargs.args, rargs.fflag, refinfo, trgt);
 
-                return this.updateEnvForOutParams(env.setUniformResultExpression(fsig.resultType), rargs.refs);
+                if (fdecl.decl.invoke.body !== undefined && fdecl.decl.invoke.body.body === "special_inject") {
+                    this.m_emitter.emitInject(exp.sinfo, this.m_emitter.registerResolvedTypeReference(fsig.params[0].type as ResolvedType), this.m_emitter.registerResolvedTypeReference(fsig.resultType), rargs.args[0], trgt);
+
+                    return [env.setUniformResultExpression(fsig.resultType)];
+                }
+                else {
+                    const ootype = this.m_emitter.registerResolvedTypeReference(this.resolveOOTypeFromDecls(fdecl.contiainingType, fdecl.binds));
+                    const ckey = this.m_emitter.registerStaticCall(this.resolveOOTypeFromDecls(fdecl.contiainingType, fdecl.binds), [ootype, fdecl.contiainingType, fdecl.binds], fdecl.decl, exp.name, callbinds, rargs.pcodes, rargs.cinfo);
+                    const refinfo = this.generateRefInfoForCallEmit(fsig as ResolvedFunctionType, rargs.refs);
+                    this.m_emitter.emitInvokeFixedFunction(exp.sinfo, ckey, rargs.args, rargs.fflag, refinfo, trgt);
+
+                    return this.updateEnvForOutParams(env.setUniformResultExpression(fsig.resultType), rargs.refs);
+                }
             }
         }
     }
@@ -6866,7 +6867,7 @@ class TypeChecker {
                         fields.push(this.m_emitter.masm.fieldDecls.get(fkey) as MIRFieldDecl);
                     });
 
-                    const mirentity = new MIRObjectEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, validatekey, conskey.keyid, consfuncfields, fields);
+                    const mirentity = new MIRObjectEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, initinfo.invariantclauses.length !== 0, validatekey, conskey.keyid, consfuncfields, fields);
                     this.m_emitter.masm.entityDecls.set(tkey, mirentity);
                 }
             }

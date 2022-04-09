@@ -41,3 +41,10 @@ chktest function blocked_5(c: BoardPostion): Bool
     return !nb.hasWinner();
 }
 
+//Expected to fail
+chktest function failing_test(c: BoardPostion): Bool {
+    let nb = Main::test_no_win_4.setCellMark(c, PlayerMark::x);
+
+    return !nb.hasWinner();
+}
+

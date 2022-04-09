@@ -37,7 +37,6 @@ class ICPPTypeEmitter {
     private typeDataMap: Map<MIRResolvedTypeKey, ICPPLayoutInfo> = new Map<MIRResolvedTypeKey, ICPPLayoutInfo>();
     private typeInlineMap: Map<MIRResolvedTypeKey, ICPPTypeInlineInfo> = new Map<MIRResolvedTypeKey, ICPPTypeInlineInfo>();
 
-
     constructor(assembly: MIRAssembly, topts: TranspilerOptions, namectr?: number, mangledTypeNameMap?: Map<string, string>, mangledFunctionNameMap?: Map<string, string>, mangledGlobalNameMap?: Map<string, string>) {
         this.assembly = assembly;
         this.topts = topts;
@@ -459,18 +458,24 @@ class ICPPTypeEmitter {
         let idxoffsets: number[] = [];
         let endoffest = 0;
 
+        let hsize = 0;
+        let hmask = "";
+
         const icppentries = tt.entries.map((entry) => this.getICPPTypeInfoInlineLayout(entry));
         for (let i = 0; i < icppentries.length; ++i) {
             idxtypes.push(tt.entries[i].typeID);
             idxoffsets.push(endoffest);
             endoffest += icppentries[i].size;
+
+            hsize += icppentries[i].size;
+            hmask += icppentries[i].mask;
         }
 
         if (inlineinfo.layout === ICPPLayoutCategory.Inline) { 
             return ICPPTupleLayoutInfo.createByValueTuple(tt.typeID, inlineinfo.size, inlineinfo.mask, idxtypes, idxoffsets);
         }
         else {
-            return ICPPTupleLayoutInfo.createByRefTuple(tt.typeID, inlineinfo.size, inlineinfo.mask, idxtypes, idxoffsets);
+            return ICPPTupleLayoutInfo.createByRefTuple(tt.typeID, hsize, hmask, idxtypes, idxoffsets);
         }
     }
 
@@ -482,19 +487,25 @@ class ICPPTypeEmitter {
         let propertyoffsets: number[] = [];
         let endoffest = 0;
 
+        let hsize = 0;
+        let hmask = "";
+
         const icppentries = tt.entries.map((entry) => this.getICPPTypeInfoInlineLayout(entry.ptype));
         for(let i = 0; i < icppentries.length; ++i) {
             propertynames.push(tt.entries[i].pname);
             propertytypes.push(tt.entries[i].ptype.typeID);
             propertyoffsets.push(endoffest);
             endoffest += icppentries[i].size;
+
+            hsize += icppentries[i].size;
+            hmask += icppentries[i].mask;
         }
     
         if (inlineinfo.layout === ICPPLayoutCategory.Inline) { 
             return ICPPRecordLayoutInfo.createByValueRecord(tt.typeID, inlineinfo.size, inlineinfo.mask, propertynames, propertytypes, propertyoffsets);
         }
         else {
-            return ICPPRecordLayoutInfo.createByRefRecord(tt.typeID, inlineinfo.size, inlineinfo.mask, propertynames, propertytypes, propertyoffsets);
+            return ICPPRecordLayoutInfo.createByRefRecord(tt.typeID, hsize, hmask, propertynames, propertytypes, propertyoffsets);
         }
     }
 
@@ -672,6 +683,9 @@ class ICPPTypeEmitter {
             let fieldoffsets: number[] = [];
             let endoffest = 0;
             
+            let hsize = 0;
+            let hmask = "";
+
             const ett = this.assembly.entityDecls.get(tt.getUniqueCallTargetType().typeID) as MIRObjectEntityTypeDecl;
             for(let i = 0; i < ett.fields.length; ++i) {
                 const sizeinfo = this.getICPPTypeInfoInlineLayout(this.getMIRType(ett.fields[i].declaredType));
@@ -680,13 +694,16 @@ class ICPPTypeEmitter {
                 fieldtypes.push(ett.fields[i].declaredType);
                 fieldoffsets.push(endoffest);
                 endoffest += sizeinfo.size;
+
+                hsize += sizeinfo.size;
+                hmask += sizeinfo.mask;
             }
 
             if(inlineinfo.layout === ICPPLayoutCategory.Inline) {
                 return ICPPEntityLayoutInfo.createByValueEntity(tt.typeID, inlineinfo.size, inlineinfo.mask, fieldnames, fieldtypes, fieldoffsets);
             }
             else {
-                return ICPPEntityLayoutInfo.createByRefEntity(tt.typeID, inlineinfo.size, inlineinfo.mask, fieldnames, fieldtypes, fieldoffsets);
+                return ICPPEntityLayoutInfo.createByRefEntity(tt.typeID, hsize, hmask, fieldnames, fieldtypes, fieldoffsets);
             }
         }
     }

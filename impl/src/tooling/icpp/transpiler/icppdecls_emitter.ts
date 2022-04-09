@@ -182,7 +182,14 @@ class ICPPEmitter {
             this.icppasm.cmask += this.bemitter.constlayout[i].storage.allocinfo.inlinedmask;
         }
 
-        this.assembly.constantDecls.forEach((cdecl) => {
+        [...this.assembly.constantDecls].map((cd) => cd[1])
+        .sort((cda, cdb) => {
+            const idxa = rcg.findIndex((cgn) => cgn.invoke === cda.ivalue);
+            const idxb = rcg.findIndex((cgn) => cgn.invoke === cdb.ivalue);
+
+            return idxa - idxb;
+        })
+        .forEach((cdecl) => {
             const decltype = this.temitter.getICPPLayoutInfo(this.temitter.getMIRType(cdecl.declaredType));
             const offset = this.bemitter.constMap.get(cdecl.gkey) as number;
 
