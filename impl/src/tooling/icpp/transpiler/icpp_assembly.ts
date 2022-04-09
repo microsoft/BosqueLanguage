@@ -976,7 +976,7 @@ class ICPPAssembly
 
             regexes: regexes,
 
-            constdecls: this.constdecls.sort((a, b) => a.gkey.localeCompare(b.gkey)).map((cd) => cd.jsonEmit())
+            constdecls: this.constdecls.map((cd) => cd.jsonEmit())
         };
     }
 }

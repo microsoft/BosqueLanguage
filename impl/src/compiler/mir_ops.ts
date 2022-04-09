@@ -1903,6 +1903,7 @@ class MIRInvokeFixedFunction extends MIROp {
     }
 
     getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper(this.sguard !== undefined ? [...this.sguard.getUsedVars(), ...this.args] : [...this.args]); }
+    getUsedGlobals(): MIRGlobalVariable[] { return globalsOnlyHelper(this.sguard !== undefined ? [...this.sguard.getUsedGlobals(), ...this.args] : [...this.args]); }
     getModVars(): MIRRegisterArgument[] { return [this.trgt]; }
 
     stringify(): string {
@@ -1944,6 +1945,7 @@ class MIRInvokeVirtualFunction extends MIROp {
     }
 
     getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper([...this.args]); }
+    getUsedGlobals(): MIRGlobalVariable[] { return globalsOnlyHelper([...this.args]); }
     getModVars(): MIRRegisterArgument[] { return [this.trgt]; }
 
     stringify(): string {
@@ -1976,7 +1978,8 @@ class MIRInvokeVirtualOperator extends MIROp {
         this.args = args;
     }
 
-    getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper([...this.args.map((arg) => arg.arg)]); }
+    getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper(this.args.map((arg) => arg.arg)); }
+    getUsedGlobals(): MIRGlobalVariable[] { return globalsOnlyHelper(this.args.map((arg) => arg.arg)); }
     getModVars(): MIRRegisterArgument[] { return [this.trgt]; }
 
     stringify(): string {
@@ -2012,6 +2015,7 @@ class MIRConstructorTuple extends MIROp {
     }
 
     getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper([...this.args]); }
+    getUsedGlobals(): MIRGlobalVariable[] { return globalsOnlyHelper([...this.args]); }
     getModVars(): MIRRegisterArgument[] { return [this.trgt]; }
 
     stringify(): string {
@@ -2043,6 +2047,7 @@ class MIRConstructorTupleFromEphemeralList extends MIROp {
     }
 
     getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper([this.arg]); }
+    getUsedGlobals(): MIRGlobalVariable[] { return globalsOnlyHelper([this.arg]); }
     getModVars(): MIRRegisterArgument[] { return [this.trgt]; }
 
     stringify(): string {
@@ -2072,6 +2077,7 @@ class MIRConstructorRecord extends MIROp {
     }
 
     getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper(this.args.map((tv) => tv[1])); }
+    getUsedGlobals(): MIRGlobalVariable[] { return globalsOnlyHelper(this.args.map((tv) => tv[1])); }
     getModVars(): MIRRegisterArgument[] { return [this.trgt]; }
 
     stringify(): string {
@@ -2106,6 +2112,7 @@ class MIRConstructorRecordFromEphemeralList extends MIROp {
     }
 
     getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper([this.arg]); }
+    getUsedGlobals(): MIRGlobalVariable[] { return globalsOnlyHelper([this.arg]); }
     getModVars(): MIRRegisterArgument[] { return [this.trgt]; }
 
     stringify(): string {
@@ -2137,6 +2144,7 @@ class MIRStructuredAppendTuple extends MIROp {
     }
 
     getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper(this.args); }
+    getUsedGlobals(): MIRGlobalVariable[] { return globalsOnlyHelper(this.args); }
     getModVars(): MIRRegisterArgument[] { return [this.trgt]; }
 
     stringify(): string {
@@ -2168,6 +2176,7 @@ class MIRStructuredJoinRecord extends MIROp {
     }
 
     getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper(this.args); }
+    getUsedGlobals(): MIRGlobalVariable[] { return globalsOnlyHelper(this.args); }
     getModVars(): MIRRegisterArgument[] { return [this.trgt]; }
 
     stringify(): string {
@@ -2196,7 +2205,8 @@ class MIRConstructorEphemeralList extends MIROp {
         this.args = args;
     }
 
-    getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper([...this.args]); }
+    getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper(this.args); }
+    getUsedGlobals(): MIRGlobalVariable[] { return globalsOnlyHelper(this.args); }
     getModVars(): MIRRegisterArgument[] { return [this.trgt]; }
 
     stringify(): string {
@@ -2225,7 +2235,8 @@ class MIRConstructorEntityDirect extends MIROp {
         this.args = args;
     }
 
-    getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper([...this.args]); }
+    getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper(this.args); }
+    getUsedGlobals(): MIRGlobalVariable[] { return globalsOnlyHelper(this.args); }
     getModVars(): MIRRegisterArgument[] { return [this.trgt]; }
 
     stringify(): string {
@@ -2259,6 +2270,7 @@ class MIREphemeralListExtend extends MIROp {
     }
 
     getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper([this.arg, ...this.ext]); }
+    getUsedGlobals(): MIRGlobalVariable[] { return globalsOnlyHelper([this.arg, ...this.ext]); }
     getModVars(): MIRRegisterArgument[] { return [this.trgt]; }
 
     stringify(): string {
@@ -2286,6 +2298,7 @@ class MIRConstructorPrimaryCollectionEmpty extends MIROp {
     }
 
     getUsedVars(): MIRRegisterArgument[] { return []; }
+    getUsedGlobals(): MIRGlobalVariable[] { return []; }
     getModVars(): MIRRegisterArgument[] { return [this.trgt]; }
 
     stringify(): string {
@@ -2314,7 +2327,8 @@ class MIRConstructorPrimaryCollectionSingletons extends MIROp {
         this.args = args;
     }
 
-    getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper([...this.args.map((arg) => arg[1])]); }
+    getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper(this.args.map((arg) => arg[1])); }
+    getUsedGlobals(): MIRGlobalVariable[] { return globalsOnlyHelper(this.args.map((arg) => arg[1])); }
     getModVars(): MIRRegisterArgument[] { return [this.trgt]; }
 
     stringify(): string {
@@ -2343,7 +2357,8 @@ class MIRConstructorPrimaryCollectionCopies extends MIROp {
         this.args = args;
     }
 
-    getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper([...this.args.map((arg) => arg[1])]); }
+    getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper(this.args.map((arg) => arg[1])); }
+    getUsedGlobals(): MIRGlobalVariable[] { return globalsOnlyHelper(this.args.map((arg) => arg[1])); }
     getModVars(): MIRRegisterArgument[] { return [this.trgt]; }
 
     canRaise(implicitAssumesEnabled: boolean): boolean {
@@ -2378,6 +2393,7 @@ class MIRConstructorPrimaryCollectionMixed extends MIROp {
     }
 
     getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper(this.args.map((tv) => tv[2])); }
+    getUsedGlobals(): MIRGlobalVariable[] { return globalsOnlyHelper(this.args.map((tv) => tv[2])); }
     getModVars(): MIRRegisterArgument[] { return [this.trgt]; }
 
     stringify(): string {
@@ -2426,6 +2442,7 @@ class MIRBinKeyEq extends MIROp {
     }
 
     getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper(this.sguard !== undefined ? [this.lhs, this.rhs, ...this.sguard.getUsedVars()] : [this.lhs, this.rhs]); }
+    getUsedGlobals(): MIRGlobalVariable[] { return globalsOnlyHelper(this.sguard !== undefined ? [this.lhs, this.rhs, ...this.sguard.getUsedGlobals()] : [this.lhs, this.rhs]); }
     getModVars(): MIRRegisterArgument[] { return [this.trgt]; }
 
     stringify(): string {
@@ -2468,6 +2485,7 @@ class MIRBinKeyLess extends MIROp {
     }
 
     getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper([this.lhs, this.rhs]); }
+    getUsedGlobals(): MIRGlobalVariable[] { return globalsOnlyHelper([this.lhs, this.rhs]); }
     getModVars(): MIRRegisterArgument[] { return [this.trgt]; }
 
     stringify(): string {
@@ -2495,6 +2513,7 @@ class MIRPrefixNotOp extends MIROp {
     }
 
     getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper([this.arg]); }
+    getUsedGlobals(): MIRGlobalVariable[] { return globalsOnlyHelper([this.arg]); }
     getModVars(): MIRRegisterArgument[] { return [this.trgt]; }
 
     stringify(): string {
@@ -2524,6 +2543,7 @@ class MIRLogicAction extends MIROp {
     }
 
     getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper(this.args); }
+    getUsedGlobals(): MIRGlobalVariable[] { return globalsOnlyHelper(this.args); }
     getModVars(): MIRRegisterArgument[] { return [this.trgt]; }
 
     stringify(): string {
@@ -2559,6 +2579,7 @@ class MIRIsTypeOf extends MIROp {
     }
 
     getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper(this.sguard !== undefined ? [this.arg, ...this.sguard.getUsedVars()] : [this.arg]); }
+    getUsedGlobals(): MIRGlobalVariable[] { return globalsOnlyHelper(this.sguard !== undefined ? [this.arg, ...this.sguard.getUsedGlobals()] : [this.arg]); }
     getModVars(): MIRRegisterArgument[] { return [this.trgt]; }
 
     stringify(): string {
@@ -2591,6 +2612,7 @@ class MIRRegisterAssign extends MIROp {
     }
 
     getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper(this.sguard !== undefined ? [this.src, ...this.sguard.getUsedVars()] : [this.src]); }
+    getUsedGlobals(): MIRGlobalVariable[] { return globalsOnlyHelper(this.sguard !== undefined ? [this.src, ...this.sguard.getUsedGlobals()] : [this.src]); }
     getModVars(): MIRRegisterArgument[] { return [this.trgt]; }
 
     stringify(): string {
@@ -2616,6 +2638,7 @@ class MIRJump extends MIROp {
     }
 
     getUsedVars(): MIRRegisterArgument[] { return []; }
+    getUsedGlobals(): MIRGlobalVariable[] { return []; }
     getModVars(): MIRRegisterArgument[] { return []; }
 
     stringify(): string {
@@ -2645,6 +2668,7 @@ class MIRJumpCond extends MIROp {
     }
 
     getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper([this.arg]); }
+    getUsedGlobals(): MIRGlobalVariable[] { return globalsOnlyHelper([this.arg]); }
     getModVars(): MIRRegisterArgument[] { return []; }
 
     stringify(): string {
@@ -2675,6 +2699,7 @@ class MIRJumpNone extends MIROp {
     }
 
     getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper([this.arg]); }
+    getUsedGlobals(): MIRGlobalVariable[] { return globalsOnlyHelper([this.arg]); }
     getModVars(): MIRRegisterArgument[] { return []; }
 
     stringify(): string {
@@ -2704,6 +2729,7 @@ class MIRReturnAssign extends MIROp {
     }
 
     getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper([this.src]); }
+    getUsedGlobals(): MIRGlobalVariable[] { return globalsOnlyHelper([this.src]); }
     getModVars(): MIRRegisterArgument[] { return [this.name]; }
 
     stringify(): string {
@@ -2733,6 +2759,7 @@ class MIRReturnAssignOfCons extends MIROp {
     }
 
     getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper(this.args); }
+    getUsedGlobals(): MIRGlobalVariable[] { return globalsOnlyHelper(this.args); }
     getModVars(): MIRRegisterArgument[] { return [this.name]; }
 
     stringify(): string {
@@ -2760,6 +2787,7 @@ class MIRVarLifetimeStart extends MIROp {
     }
 
     getUsedVars(): MIRRegisterArgument[] { return []; }
+    getUsedGlobals(): MIRGlobalVariable[] { return []; }
     getModVars(): MIRRegisterArgument[] { return []; }
 
     stringify(): string {
@@ -2785,6 +2813,7 @@ class MIRVarLifetimeEnd extends MIROp {
     }
 
     getUsedVars(): MIRRegisterArgument[] { return []; }
+    getUsedGlobals(): MIRGlobalVariable[] { return []; }
     getModVars(): MIRRegisterArgument[] { return []; }
 
     stringify(): string {
@@ -2819,6 +2848,7 @@ class MIRPhi extends MIROp {
 
         return phis;
     }
+    getUsedGlobals(): MIRGlobalVariable[] { return []; }
     getModVars(): MIRRegisterArgument[] { return [this.trgt]; }
 
     stringify(): string {
