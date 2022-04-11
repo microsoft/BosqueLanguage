@@ -5,6 +5,15 @@
 
 namespace Main;
 
+///////////////
+//DEBUG
+
+entrypoint function doit(ll: List<Int|None>): Bool {
+    return !ll.containsNone();
+}
+
+///////////////
+
 entrypoint function getInitialBoard(): Board {
     return Board::createEmpty{};
 }
