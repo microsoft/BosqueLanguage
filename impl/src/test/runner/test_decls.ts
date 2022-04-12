@@ -74,9 +74,11 @@ class SymTest {
     readonly params: MIRFunctionParameter[];
     readonly resultType: MIRType;
 
-    readonly trgterror: { file: string, line: number, pos: number } | undefined;
+    readonly smtfile: string;
+    readonly jsonfile: any;
+    readonly trgterror: { file: string, line: number, pos: number, msg: string } | undefined;
 
-    constructor(resultKind: TestResultKind, filename: string, namespace: string, fname: string, invkey: string, params: MIRFunctionParameter[], resultType: MIRType, trgterror: { file: string, line: number, pos: number } | undefined) {
+    constructor(resultKind: TestResultKind, filename: string, namespace: string, fname: string, invkey: string, params: MIRFunctionParameter[], resultType: MIRType, smtfile: string, jsonfile: any, trgterror: { file: string, line: number, pos: number, msg: string } | undefined) {
         this.resultKind = resultKind;
         this.filename = filename;
         this.namespace = namespace;
@@ -84,6 +86,9 @@ class SymTest {
         this.invkey = invkey;
         this.params = params;
         this.resultType = resultType;
+
+        this.smtfile = smtfile;
+        this.jsonfile = jsonfile;
         this.trgterror = trgterror;
     }
 }
