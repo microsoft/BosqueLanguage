@@ -11,6 +11,10 @@ import { ICPPBodyEmitter } from "./iccpbody_emitter";
 import { constructCallGraphInfo } from "../../../compiler/mir_callg";
 import { SourceInfo } from "../../../ast/parser";
 
+function NOT_IMPLEMENTED(msg: string) {
+    throw new Error(`Not Implemented: ${msg}`);
+}
+
 enum ICPPParseTag {
     BuiltinTag = 0x0,
     ValidatorTag,
@@ -166,6 +170,24 @@ class ICPPEmitter {
             });
         });
 
+        this.bemitter.requiredUpdateVirtualTuple.forEach((rvut) => {
+            NOT_IMPLEMENTED("requiredUpdateVirtualTuple");
+        });
+        
+        this.bemitter.requiredUpdateVirtualRecord.forEach((rvur) => {
+            NOT_IMPLEMENTED("requiredUpdateVirtualTuple");
+        });
+
+        this.bemitter.requiredUpdateVirtualEntity.forEach((rvue) => {
+            NOT_IMPLEMENTED("requiredUpdateVirtualTuple");
+        });
+
+        this.bemitter.requiredUpdateEntityWithCheck.forEach((rvue) => {
+            const oper = this.bemitter.generateUpdateEntityFieldDirect(rvue, new SourceInfo(-1, -1, -1, -1));
+            this.icppasm.invdecls.push(oper);
+            this.icppasm.invokenames.add(oper.ikey);
+        });
+
         this.bemitter.requiredSingletonConstructorsList.forEach((scl) => {
             this.icppasm.invdecls.push(this.bemitter.generateSingletonConstructorList(scl));
             this.icppasm.invokenames.add(scl.inv);
@@ -175,6 +197,15 @@ class ICPPEmitter {
             this.icppasm.invdecls.push(this.bemitter.generateSingletonConstructorMap(scm));
             this.icppasm.invokenames.add(scm.inv);
         });
+
+        this.bemitter.requiredTupleAppend.forEach((rvta) => {
+            NOT_IMPLEMENTED("requiredUpdateVirtualTuple");
+        });
+
+        this.bemitter.requiredRecordMerge.forEach((rvrm) => {
+            NOT_IMPLEMENTED("requiredUpdateVirtualTuple");
+        });
+
 
         this.icppasm.cbuffsize = this.bemitter.constsize;
         this.icppasm.cmask = "11111";
