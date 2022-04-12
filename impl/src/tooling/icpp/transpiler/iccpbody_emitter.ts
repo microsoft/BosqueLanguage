@@ -46,19 +46,15 @@ class ICPPBodyEmitter {
     requiredProjectVirtualRecordProperty: { inv: string, argflowtype: MIRType, properties: string[], resulttype: MIRType }[] = [];
     requiredProjectVirtualEntityField: { inv: string, argflowtype: MIRType, fields: MIRFieldDecl[], resulttype: MIRType }[] = [];
 
-    //
-    //TODO: need to implement (and integrate) the code that generates these functions
-    //
     requiredUpdateVirtualTuple: { inv: string, argflowtype: MIRType, updates: [number, MIRResolvedTypeKey][], resulttype: MIRType }[] = [];
     requiredUpdateVirtualRecord: { inv: string, argflowtype: MIRType, updates: [string, MIRResolvedTypeKey][], resulttype: MIRType }[] = [];
     requiredUpdateVirtualEntity: { inv: string, argflowtype: MIRType, updates: [MIRFieldKey, MIRResolvedTypeKey][], resulttype: MIRType }[] = [];
 
+    requiredUpdateEntityWithCheck: { inv: string, arglayouttype: MIRType, argflowtype: MIRType, updates: [MIRFieldKey, MIRResolvedTypeKey][], resulttype: MIRType }[] = [];
+
     requiredSingletonConstructorsList: { inv: string, argc: number, resulttype: MIRType }[] = [];
     requiredSingletonConstructorsMap: { inv: string, argc: number, resulttype: MIRType }[] = [];
 
-    //
-    //TODO: need to implement (and integrate) the code that generates these functions
-    //
     requiredTupleAppend: { inv: string, args: {layout: MIRType, flow: MIRType}[], resulttype: MIRType }[] = [];
     requiredRecordMerge: { inv: string, args: {layout: MIRType, flow: MIRType}[], resulttype: MIRType }[] = [];
 
@@ -264,10 +260,11 @@ class ICPPBodyEmitter {
 
         const icpptuple = this.typegen.getICPPLayoutInfo(tupletype) as ICPPTupleLayoutInfo;
         const params = [new ICPPFunctionParameter("arg", tupletype.typeID)];
-        const parg = icpptuple.canScalarStackAllocate() ? ICPPOpEmitter.genScalarArgument(0) : ICPPOpEmitter.genMixedArgument(0);
-        const paraminfo = [{kind: (icpptuple.canScalarStackAllocate() ? ArgumentTag.ScalarVal : ArgumentTag.MixedVal), poffset: 0}];
-
+        
         this.initializeBodyGen("[GENERATED]", geninfo.resulttype);
+        let paraminfo: ParameterInfo[] = [];
+        paraminfo.push(this.getStackInfoForArgumentVar("arg", icpptuple));
+        const parg = icpptuple.canScalarStackAllocate() ? ICPPOpEmitter.genScalarArgument(0) : ICPPOpEmitter.genMixedArgument(0);
 
         let ops: ICPPOp[] = [];
         let pargs: Argument[] = [];
@@ -300,10 +297,11 @@ class ICPPBodyEmitter {
 
         const icpprecord = this.typegen.getICPPLayoutInfo(recordtype) as ICPPRecordLayoutInfo;
         const params = [new ICPPFunctionParameter("arg", recordtype.typeID)];
-        const parg = icpprecord.canScalarStackAllocate() ? ICPPOpEmitter.genScalarArgument(0) : ICPPOpEmitter.genMixedArgument(0);
-        const paraminfo = [{kind: (icpprecord.canScalarStackAllocate() ? ArgumentTag.ScalarVal : ArgumentTag.MixedVal), poffset: 0}];
 
         this.initializeBodyGen("[GENERATED]", geninfo.resulttype);
+        let paraminfo: ParameterInfo[] = [];
+        paraminfo.push(this.getStackInfoForArgumentVar("arg", icpprecord));
+        const parg = icpprecord.canScalarStackAllocate() ? ICPPOpEmitter.genScalarArgument(0) : ICPPOpEmitter.genMixedArgument(0);
 
         let ops: ICPPOp[] = [];
         let pargs: Argument[] = [];
@@ -338,10 +336,11 @@ class ICPPBodyEmitter {
 
         const icppentity = this.typegen.getICPPLayoutInfo(entitytype) as ICPPEntityLayoutInfo;
         const params = [new ICPPFunctionParameter("arg", entitytype.typeID)];
-        const parg = icppentity.canScalarStackAllocate() ? ICPPOpEmitter.genScalarArgument(0) : ICPPOpEmitter.genMixedArgument(0);
-        const paraminfo = [{kind: (icppentity.canScalarStackAllocate() ? ArgumentTag.ScalarVal : ArgumentTag.MixedVal), poffset: 0}];
 
         this.initializeBodyGen("[GENERATED]", geninfo.resulttype);
+        let paraminfo: ParameterInfo[] = [];
+        paraminfo.push(this.getStackInfoForArgumentVar("arg", icppentity));
+        const parg = icppentity.canScalarStackAllocate() ? ICPPOpEmitter.genScalarArgument(0) : ICPPOpEmitter.genMixedArgument(0);
         
         let ops: ICPPOp[] = [];
         let pargs: Argument[] = [];
@@ -369,6 +368,52 @@ class ICPPBodyEmitter {
         ops.push(ICPPOpEmitter.genJumpOp(sinfo, 1, "exit")); //dummy final jump block
         
         return new ICPPInvokeBodyDecl(name, name, "[GENERATED]", sinfo, sinfo, false, params, paraminfo, geninfo.resulttype.typeID, this.getStackInfoForArgVar("$$return"), this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), 0, ops, 0, false);
+    }
+
+    generateUpdateEntityFieldDirect(geninfo: { inv: string, arglayouttype: MIRType, argflowtype: MIRType, updates: [MIRFieldKey, MIRResolvedTypeKey][], resulttype: MIRType }, sinfo: SourceInfo): ICPPInvokeDecl {
+        const etype = geninfo.argflowtype;
+        const edecl = this.typegen.assembly.entityDecls.get(etype.typeID) as MIRObjectEntityTypeDecl;
+
+        const icppentity = this.typegen.getICPPLayoutInfo(etype) as ICPPEntityLayoutInfo;
+        const params = [new ICPPFunctionParameter("arg", etype.typeID), ...geninfo.updates.map((upd) => new ICPPFunctionParameter(`arg_${upd[0]}`, upd[1]))];
+
+        this.initializeBodyGen("[GENERATED]", geninfo.resulttype);
+        let paraminfo: ParameterInfo[] = [];
+        paraminfo.push(this.getStackInfoForArgumentVar("arg", icppentity));
+        const parg = icppentity.canScalarStackAllocate() ? ICPPOpEmitter.genScalarArgument(0) : ICPPOpEmitter.genMixedArgument(0);
+        
+        for(let i = 0; i < geninfo.updates.length; ++i) {
+            const upd = geninfo.updates[i];
+
+            const utype = this.typegen.getICPPLayoutInfo(this.typegen.getMIRType(upd[1]));
+            paraminfo.push(this.getStackInfoForArgumentVar(`arg_${upd[0]}`, utype));
+        }
+
+        let ops: ICPPOp[] = [];
+        let pargs: Argument[] = [];
+        edecl.consfuncfields.forEach((cff) => {
+            const f = this.typegen.assembly.fieldDecls.get(cff.cfkey) as MIRFieldDecl;
+            const updidx = geninfo.updates.findIndex((upd) => upd[0] === f.fkey);
+
+            if (updidx !== -1) {
+                pargs.push(this.getStackInfoForArgVar(`arg_${f.fkey}`))
+            }
+            else {
+                const mirftype = this.typegen.getMIRType(f.declaredType);
+                const icppftype = this.typegen.getICPPLayoutInfo(mirftype);
+                const icppfidx = icppentity.fieldnames.indexOf(f.fkey);
+
+                const [ltrgt, larg] = this.generateScratchVarInfo(icppftype);
+                ops.push(ICPPOpEmitter.genLoadEntityFieldDirectOp(sinfo, ltrgt, f.declaredType, parg, icppentity.tkey, icppentity.fieldoffsets[icppfidx], f.fkey));
+                pargs.push(larg);
+            }
+        });
+
+        const rt = this.getStackInfoForTargetVar("$$return", this.typegen.getICPPLayoutInfo(this.typegen.getMIRType(geninfo.resulttype.typeID)));
+        ops.push(ICPPOpEmitter.genInvokeFixedFunctionOp(sinfo, rt, geninfo.resulttype.typeID, edecl.consfunc, pargs, -1, ICPPOpEmitter.genNoStatmentGuard()));
+        ops.push(ICPPOpEmitter.genJumpOp(sinfo, 1, "exit")); //dummy final jump block
+        
+        return new ICPPInvokeBodyDecl(geninfo.inv, geninfo.inv, "[GENERATED]", sinfo, sinfo, false, params, paraminfo, geninfo.resulttype.typeID, this.getStackInfoForArgVar("$$return"), this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), 0, ops, 0, false);
     }
 
     generateSingletonConstructorList(geninfo: { inv: string, argc: number, resulttype: MIRType }): ICPPInvokeDecl {
@@ -1000,12 +1045,13 @@ class ICPPBodyEmitter {
             }
             else {
                 const icall = this.generateUpdateEntityWithInvariantName(this.typegen.getMIRType(op.argflowtype), op.updates.map((upd) => [upd[0], upd[2]]), resulttype);
-                if (this.requiredUpdateVirtualEntity.findIndex((vv) => vv.inv === icall) === -1) {
-                    const geninfo = { inv: icall, argflowtype: this.typegen.getMIRType(op.argflowtype), updates: op.updates.map((upd) => [upd[0], upd[2]] as [MIRFieldKey, MIRResolvedTypeKey]), resulttype: resulttype };
-                    this.requiredUpdateVirtualEntity.push(geninfo);
+                if (this.requiredUpdateEntityWithCheck.findIndex((vv) => vv.inv === icall) === -1) {
+                    const geninfo = { inv: icall, arglayouttype: this.typegen.getMIRType(op.arglayouttype), argflowtype: this.typegen.getMIRType(op.argflowtype), updates: op.updates.map((upd) => [upd[0], upd[2]] as [MIRFieldKey, MIRResolvedTypeKey]), resulttype: resulttype };
+                    this.requiredUpdateEntityWithCheck.push(geninfo);
                 }
 
-                return ICPPOpEmitter.genInvokeVirtualFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.argflowtype), resulttype.typeID, icall, op.arglayouttype, [this.argToICPPLocation(op.arg)], -1);
+                const aargs = [this.argToICPPLocation(op.arg), ...op.updates.map((upd) => this.argToICPPLocation(upd[1]))];
+                return ICPPOpEmitter.genInvokeFixedFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.argflowtype), resulttype.typeID, icall, aargs, -1, ICPPOpEmitter.genNoStatmentGuard());
             }
         }
     }

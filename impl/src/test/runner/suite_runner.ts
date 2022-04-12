@@ -210,7 +210,7 @@ function runtestsSMT(buildlevel: BuildLevel, istestbuild: boolean, usercode: Pac
         });
 
         const noerrorpos = {file: "[INGORE]", line: -1, pos: -1};
-        const validtests = runnableentries.map((ekey) => {
+        runnableentries.forEach((ekey) => {
             const idcl = masm.invokeDecls.get(ekey[1]) as MIRInvokeDecl;
             
             if(idcl.attributes.includes("__chktest")) {
@@ -218,13 +218,14 @@ function runtestsSMT(buildlevel: BuildLevel, istestbuild: boolean, usercode: Pac
                 if(smtasm === undefined) {
                     cbdone("Failed to generate SMT assembly");
                 }
-                
-                const smtpayload = generateCheckerPayload(masm, smtasm as string, SMT_TIMEOUT, ekey[1]);
-                return [{
-                    testfile: filteredentry[i].filename,
-                    test: new SymTestInternalChkShouldFail(filteredentry[i].filename, filteredentry[i].namespace, ekey[0], ekey[1], idcl.params, masm.typeMap.get(idcl.resultType) as MIRType),
-                    cpayload: smtpayload
-                }];
+                else {
+                    const smtpayload = generateCheckerPayload(masm, smtasm as string, SMT_TIMEOUT, ekey[1]);
+                    testsuites.push({
+                        testfile: filteredentry[i].filename,
+                        test: new SymTestInternalChkShouldFail(filteredentry[i].filename, filteredentry[i].namespace, ekey[0], ekey[1], idcl.params, masm.typeMap.get(idcl.resultType) as MIRType),
+                        cpayload: smtpayload
+                    });
+                }
             }
             else {
                 if(idcl.attributes.includes("chktest")) {
@@ -232,36 +233,34 @@ function runtestsSMT(buildlevel: BuildLevel, istestbuild: boolean, usercode: Pac
                     if(smtasm === undefined) {
                         cbdone("Failed to generate SMT assembly");
                     }
-                
+                    else {
                     const smtpayload = generateCheckerPayload(masm, smtasm as string, SMT_TIMEOUT, ekey[1]);
-                    return [{
-                        testfile: filteredentry[i].filename,
-                        test: new SymTest(TestResultKind.ok, filteredentry[i].filename, filteredentry[i].namespace, ekey[0], ekey[1], idcl.params, masm.typeMap.get(idcl.resultType) as MIRType, undefined),
-                        cpayload: smtpayload
-                    }];
+                        testsuites.push({
+                            testfile: filteredentry[i].filename,
+                            test: new SymTest(TestResultKind.ok, filteredentry[i].filename, filteredentry[i].namespace, ekey[0], ekey[1], idcl.params, masm.typeMap.get(idcl.resultType) as MIRType, smtasm, smtpayload, undefined),
+                            cpayload: smtpayload
+                        });
+                    }
                 }
                 else {
                     const errors = SMTEmitter.generateSMTAssemblyAllErrors(masm, istestbuild, SMT_VOPTS_ERR, ekey[1]);
 
-                    return errors.map((errpos) => {
+                    errors.forEach((errpos) => {
                         const smtasm = generateSMTPayload(masm, istestbuild, SMT_VOPTS_ERR, errpos, ekey[1]);
                         if(smtasm === undefined) {
                             cbdone("Failed to generate SMT assembly");
                         }
-
-                        const smtpayload = generateCheckerPayload(masm, smtasm as string, SMT_TIMEOUT, ekey[1]);
-                        return {
-                            testfile: filteredentry[i].filename,
-                            test: new SymTest(TestResultKind.errors, filteredentry[i].filename, filteredentry[i].namespace, ekey[0], ekey[1], idcl.params, masm.typeMap.get(idcl.resultType) as MIRType, errpos),
-                            cpayload: smtpayload
-                        };
+                        else {
+                            const smtpayload = generateCheckerPayload(masm, smtasm as string, SMT_TIMEOUT, ekey[1]);
+                            testsuites.push({
+                                testfile: filteredentry[i].filename,
+                                test: new SymTest(TestResultKind.errors, filteredentry[i].filename, filteredentry[i].namespace, ekey[0], ekey[1], idcl.params, masm.typeMap.get(idcl.resultType) as MIRType, smtasm, smtpayload, errpos),
+                                cpayload: smtpayload
+                            });
+                        }
                     });
                 }
             }
-        });
-
-        validtests.forEach((tt) => {
-            testsuites.push(...tt);
         });
     }
 
@@ -454,7 +453,22 @@ function runtests(packageloads: {macros: string[], files: string[]}[], globalmac
                 rstr = chalk.magenta("error");
             }
 
-            process.stdout.write(`Symbolic test ${test.namespace}::${test.fname} completed with ${rstr} in ${smtime}ms (${end.getTime() - start.getTime()}ms elapsed)\n`);
+            if(test instanceof SymTestInternalChkShouldFail) {
+                process.stdout.write(`Symbolic test ${test.namespace}::${test.fname} completed with ${rstr} in ${smtime}ms (${end.getTime() - start.getTime()}ms elapsed)\n`);
+            }
+            else {
+                if(test.trgterror === undefined) {
+                    process.stdout.write(`Symbolic test ${test.namespace}::${test.fname} completed with ${rstr} in ${smtime}ms (${end.getTime() - start.getTime()}ms elapsed)\n`);       
+                }
+                else {
+                    process.stdout.write(`Symbolic test completed with ${rstr} in ${smtime}ms (${end.getTime() - start.getTime()}ms elapsed)\n`);
+                    process.stdout.write(`    Checking ${test.trgterror.msg} in ${Path.basename(test.trgterror.file)}@${test.trgterror.line} from ${test.namespace}::${test.fname} entrypoint\n`)
+                
+                    if((result === "fail" || result === "passlimit") && (test.trgterror.file.endsWith("tictactoe.bsq") || test.trgterror.file.endsWith("list.bsq") )) {
+                        FS.writeFileSync(`C:\\Users\\marron\\Desktop\\doit\\doit_${test.trgterror.line}.smt2`, test.smtfile);
+                    }
+                }
+            }
         }
     };
     const cbdone_smt = (err: string | null) => {

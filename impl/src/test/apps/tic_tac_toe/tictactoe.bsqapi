@@ -5,23 +5,40 @@
 
 namespace Main;
 
+///////////////
+//DEBUG
+
+//entrypoint function doit(ll: List<Int|None>): Bool {
+//    return !ll.containsNone();
+//}
+
+const empty_board: Board = Board::createEmpty{};
+const no_win_2: Board = Main::empty_board.setCellMark(BoardPostion{1, 1}, PlayerMark::x).setCellMark(BoardPostion{0, 2}, PlayerMark::o);
+
+entrypoint function doit(b: Board): Bool {
+    return b.isCellEmpty(BoardPostion{1, 1});
+}
+
+///////////////
+
 entrypoint function getInitialBoard(): Board {
     return Board::createEmpty{};
 }
 
-entrypoint function hasWinner(b: Board): Bool {
-    let winner = b.checkAnyWinner();
-    return winner === PlayerMark::x || winner === PlayerMark::o;
-}
+//entrypoint function hasWinner(b: Board): Bool {
+//    let winner = b.checkAnyWinner();
+//    return winner === PlayerMark::x || winner === PlayerMark::o;
+//}
 
-entrypoint function getWinner(b: Board): PlayerMark? {
-    return b.checkAnyWinner();
-}
+//entrypoint function getWinner(b: Board): PlayerMark? {
+//    return b.checkAnyWinner();
+//}
 
-entrypoint function isMoveLegal(b: Board, cell: BoardPostion): Bool {
-    return b.isCellEmpty(cell);
-}
+//entrypoint function isMoveLegal(b: Board, cell: BoardPostion): Bool {
+//    return b.isCellEmpty(cell);
+//}
 
+/*
 entrypoint function makeExplicitMove(b: Board, cell: BoardPostion, mark: PlayerMark): Result<[Board, Bool], String> {
     if(!b.isCellEmpty(cell)) {
         return err("Location is Occupied");
@@ -33,3 +50,11 @@ entrypoint function makeExplicitMove(b: Board, cell: BoardPostion, mark: PlayerM
         return ok([bb, winner === PlayerMark::x || winner === PlayerMark::o]);
     }
 }
+
+entrypoint function makeExplicitMove_oops(b: Board, cell: BoardPostion, mark: PlayerMark): [Board, Bool] {
+    let bb = b.setCellMark(cell, mark);
+    let winner = b.checkAnyWinner();
+
+    return [bb, winner === PlayerMark::x || winner === PlayerMark::o];
+}
+*/

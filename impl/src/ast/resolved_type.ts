@@ -180,7 +180,7 @@ class ResolvedType {
         }
         else {
             const atoms = types.sort((a, b) => a.typeID.localeCompare(b.typeID));
-            const name = atoms.map((arg) => arg.typeID).join("|");
+            const name = atoms.map((arg) => arg.typeID).join(" | ");
 
             return new ResolvedType(name, atoms);
         }
