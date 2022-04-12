@@ -42,7 +42,7 @@ entity Board provides APIType {
     //Board is a map from cells to marks (or not in map if cell is unoccupied)
     field cells: Cells;
 
-    invariant debug $cells.size() == 3n && $cells.allOf(pred(row) => row.size() == 3n);
+    invariant test $cells.size() == 3n && $cells.allOf(pred(row) => row.size() == 3n);
 
     factory function createEmpty(): { cells: Cells } {
         return 
@@ -64,7 +64,7 @@ entity Board provides APIType {
     }
 
     method setCellMark(c: BoardPostion, mark: PlayerMark): Board 
-        requires debug this.isCellEmpty(c);
+        requires this.isCellEmpty(c);
     {
         let newrow = this.cells.get(c.rowpos).set(c.colpos, mark);
         return this.{cells=$cells.set(c.rowpos, newrow)};

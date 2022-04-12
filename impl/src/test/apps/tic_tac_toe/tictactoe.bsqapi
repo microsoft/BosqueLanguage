@@ -8,8 +8,15 @@ namespace Main;
 ///////////////
 //DEBUG
 
-entrypoint function doit(ll: List<Int|None>): Bool {
-    return !ll.containsNone();
+//entrypoint function doit(ll: List<Int|None>): Bool {
+//    return !ll.containsNone();
+//}
+
+const empty_board: Board = Board::createEmpty{};
+const no_win_2: Board = Main::empty_board.setCellMark(BoardPostion{1, 1}, PlayerMark::x).setCellMark(BoardPostion{0, 2}, PlayerMark::o);
+
+entrypoint function doit(): Bool {
+    return !Main::no_win_2.hasWinner();
 }
 
 ///////////////
@@ -41,4 +48,11 @@ entrypoint function makeExplicitMove(b: Board, cell: BoardPostion, mark: PlayerM
 
         return ok([bb, winner === PlayerMark::x || winner === PlayerMark::o]);
     }
+}
+
+entrypoint function makeExplicitMove_oops(b: Board, cell: BoardPostion, mark: PlayerMark): [Board, Bool] {
+    let bb = b.setCellMark(cell, mark);
+    let winner = b.checkAnyWinner();
+
+    return [bb, winner === PlayerMark::x || winner === PlayerMark::o];
 }
