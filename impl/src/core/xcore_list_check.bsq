@@ -7,6 +7,8 @@
 namespace Core;
 
 #if CHECK_LIBS
+internal function s_blockingfailure<T>(): T = s_blockingfailure; 
+
 internal entity ListOps provides Some {
     function s_empty<T>(l: ListRepr<T>): Bool {
         return l === none;
@@ -1089,55 +1091,14 @@ internal entity ListOps provides Some {
     }
 }
 
-internal entity RecList<T> provides Some {
-    field head: T;
-    field tail: RecList<T>?;
+//FIXES
+s_ensure_list
+s_ensure_repr
 
-    function s_ensure_list(l: Vector1<T> | Vector2<T> | Vector3<T> | RecList<T>): RecList<T> {
-        if(l.is<RecList<T>>()) {
-            return l;
-        }
-        else {
-            if(l.is<Vector1<T>>()) {
-                return RecList<T>{l.v0, none};
-            }
-            elif(l.is<Vector2<T>>()) {
-                return RecList<T>{l.v0, RecList<T>{l.v1, none}};
-            }
-            else {
-                return RecList<T>{l.v0, RecList<T>{l.v1,  RecList<T>{l.v2, none}}};
-            }
-        }
-    }
+internal entity LargeList<T> provides Some {
+    field head: Vector3<T>;
+    field tail: Vector1<T> | Vector2<T> | Vector3<T>;
 
-    function s_ensure_repr(l: RecList<T>?): ListRepr<T> {
-        if(l === none) {
-            return none;
-        }
-        else {
-            let hh1 = l.head;
-            let tl1 = l.tail;
-            if(tl1 === none) {
-                return Vector1<T>{hh1};
-            }
-            else {
-                let hh2 = tl1.head;
-                let tl2 = tl1.tail;
-
-                if(tl2 === none) {
-                    return Vector2<T>{hh1, hh2};
-                }
-                else {
-                    if(tl2.tail === none) {
-                        return Vector3<T>{hh1, hh2, tl2.head};
-                    }
-                    else {
-                        return l;
-                    }
-                }
-            }
-        }
-    }
 
     recursive method count(): Nat {
         let tl = this.tail;
@@ -1149,7 +1110,8 @@ internal entity RecList<T> provides Some {
         }
     }
 
-    recursive function {when T unique Int | Nat} range(start: T, one: T, count: Nat): RecList<T>? {
+    recursive function {when T unique Int | Nat} range(start: T, one: T, count: Nat): LargeList<T> {
+        xxxx;
         if(count == 0) {
             return none;
         }
@@ -1638,6 +1600,6 @@ internal entity RecList<T> provides Some {
     }
 }
 
-internal typedef ListRepr<T> = None | Vector1<T> | Vector2<T> | Vector3<T> | RecList<T>;
+internal typedef ListRepr<T> = None | Vector1<T> | Vector2<T> | Vector3<T> | LargeList<T>;
 
 #endif
