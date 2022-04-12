@@ -454,7 +454,13 @@ function runtests(packageloads: {macros: string[], files: string[]}[], globalmac
                 rstr = chalk.magenta("error");
             }
 
-            process.stdout.write(`Symbolic test ${test.namespace}::${test.fname} completed with ${rstr} in ${smtime}ms (${end.getTime() - start.getTime()}ms elapsed)\n`);
+            if(test instanceof SymTestInternalChkShouldFail) {
+                process.stdout.write(`Symbolic test ${test.namespace}::${test.fname} completed with ${rstr} in ${smtime}ms (${end.getTime() - start.getTime()}ms elapsed)\n`);
+            }
+            else {
+                const tname = test.trgterror !== undefined ? `${test.namespace}::${test.fname} from ${test.trgterror.file}@${test.trgterror.line}` : `${test.namespace}::${test.fname}`;
+                process.stdout.write(`Symbolic test ${tname} completed with ${rstr} in ${smtime}ms (${end.getTime() - start.getTime()}ms elapsed)\n`);
+            }
         }
     };
     const cbdone_smt = (err: string | null) => {
