@@ -462,11 +462,7 @@ function runtests(packageloads: {macros: string[], files: string[]}[], globalmac
                 }
                 else {
                     process.stdout.write(`Symbolic test completed with ${rstr} in ${smtime}ms (${end.getTime() - start.getTime()}ms elapsed)\n`);
-                    process.stdout.write(`    Checking ${test.trgterror.msg} in ${Path.basename(test.trgterror.file)}@${test.trgterror.line} from ${test.namespace}::${test.fname} entrypoint\n`)
-                
-                    if((result === "fail" || result === "passlimit") && (test.trgterror.file.endsWith("tictactoe.bsq") || test.trgterror.file.endsWith("list.bsq") )) {
-                        FS.writeFileSync(`C:\\Users\\marron\\Desktop\\doit\\doit_${test.trgterror.line}.smt2`, test.smtfile);
-                    }
+                    process.stdout.write(`    Checking ${test.trgterror.msg} in ${Path.basename(test.trgterror.file)}@${test.trgterror.line} from ${test.namespace}::${test.fname} entrypoint\n`);
                 }
             }
         }
