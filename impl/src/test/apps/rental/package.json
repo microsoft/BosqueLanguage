@@ -1,17 +1,17 @@
 {
-    "name": "tictactoe",
+    "name": "surfboard-rental",
     "version": "0.0.0.0",
-    "description": "A tic-tac-toe board",
+    "description": "A surfboard rental sample",
     "license": "MIT",
     "src": {
         "bsqsource": [
             "./src/*"
         ],
         "entrypoints": [
-            "./tictactoe.bsqapi"
+            "./rental.bsqapi"
         ],
         "testfiles": [
-            "./tictactoe.bsqtest"
+            "./rental.bsqtest"
         ]
     }
 }

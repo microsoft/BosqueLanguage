@@ -2095,6 +2095,10 @@ class SMTBodyEmitter {
         }
     }
 
+    processGenerateResultUnderflowCheck(sinfo: SourceInfo, arg0: SMTExp, arg1: SMTExp , oftype: MIRType, val: SMTExp): SMTExp {
+        return new SMTIf(new SMTCallSimple("<", [arg0, arg1]), this.generateErrorCreate(sinfo, oftype, "Unsigned Underflow"), this.typegen.generateResultTypeConstructorSuccess(oftype, val));
+    }
+
     processGenerateResultWithZeroArgCheck(sinfo: SourceInfo, zero: SMTConst, not0arg: SMTExp, oftype: MIRType, val: SMTExp): SMTExp {
         const chkzero = SMTCallSimple.makeEq(zero, not0arg);
         return new SMTIf(chkzero, this.generateErrorCreate(sinfo, oftype, "Div by 0"), this.typegen.generateResultTypeConstructorSuccess(oftype, val));
@@ -2212,7 +2216,8 @@ class SMTBodyEmitter {
             }
             case "__i__Core::-=infix=(Nat, Nat)": {
                 rtype = this.typegen.getMIRType("Nat");
-                smte = new SMTCallSimple("-", args);
+                smte = this.processGenerateResultUnderflowCheck(sinfo, args[0], args[1], rtype, new SMTCallSimple("-", args));
+                erropt = true;
                 break;
             }
             case "__i__Core::-=infix=(BigInt, BigInt)": {
@@ -2222,7 +2227,8 @@ class SMTBodyEmitter {
             }
             case "__i__Core::-=infix=(BigNat, BigNat)": {
                 rtype = this.typegen.getMIRType("BigNat");
-                smte = new SMTCallSimple("-", args);
+                smte = this.processGenerateResultUnderflowCheck(sinfo, args[0], args[1], rtype, new SMTCallSimple("-", args));
+                erropt = true;
                 break
             }
             case "__i__Core::-=infix=(Rational, Rational)": {

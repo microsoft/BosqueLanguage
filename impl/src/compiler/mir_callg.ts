@@ -146,9 +146,16 @@ function constructCallGraphInfo(entryPoints: MIRInvokeKey[], assembly: MIRAssemb
                 roots.push(invokes.get(ee.consfunc as MIRInvokeKey) as CallGNode);
                 topoVisit(invokes.get(ee.consfunc as MIRInvokeKey) as CallGNode, [], tordered, invokes);
             }
-            else if (ee instanceof MIRConstructableEntityTypeDecl && ee.validatefunc !== undefined) {
-                roots.push(invokes.get(ee.validatefunc) as CallGNode);
-                topoVisit(invokes.get(ee.validatefunc) as CallGNode, [], tordered, invokes);
+            else if (ee instanceof MIRConstructableEntityTypeDecl) {
+                if(ee.validatefunc !== undefined) {
+                    roots.push(invokes.get(ee.validatefunc) as CallGNode);
+                    topoVisit(invokes.get(ee.validatefunc) as CallGNode, [], tordered, invokes);
+                }
+
+                if(ee.usingcons !== undefined) {
+                    roots.push(invokes.get(ee.usingcons) as CallGNode);
+                    topoVisit(invokes.get(ee.usingcons) as CallGNode, [], tordered, invokes);
+                }
             }
             else if (ee instanceof MIRDataStringInternalEntityTypeDecl) {
                 roots.push(invokes.get(ee.accepts) as CallGNode);

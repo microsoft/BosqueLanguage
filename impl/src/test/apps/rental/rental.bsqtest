@@ -1,0 +1,20 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+namespace Main;
+
+chktest function windRangeLow(speed: MPH): Bool {
+    return speed < 20_MPH ==> (categorizeWinds(speed) === WindCategory::calm || categorizeWinds(speed) === WindCategory::high);
+}
+
+chktest function decideStorm(windCategory: WindCategory, inventory: Nat, reservations: Nat, returns: Nat, requestedQuantity: Nat): Bool {
+    let res = decide(windCategory, ForecastDetail::thunderstorms, inventory, reservations, returns, requestedQuantity, true);
+    return res.isErr();
+}
+
+chktest function decideCheck1(windCategory: WindCategory, forecastDetail: ForecastDetail, inventory: Nat, reservations: Nat, returns: Nat, requestedQuantity: Nat): Bool {
+    let res = decide(windCategory, forecastDetail, inventory, reservations, returns, requestedQuantity, true);
+    return res.isOk() ==> res.result() <= inventory + returns;
+}
