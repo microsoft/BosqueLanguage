@@ -489,7 +489,13 @@ class SMTBodyEmitter {
             bbody = this.typegen.coerce(new SMTCallSimple(this.typegen.getSMTConstructorName(v3type).cons, [new SMTVar("arg0"), new SMTVar("arg1"), new SMTVar("arg2")]), v3type, this.typegen.getMIRType(ldecl.oftype));
         }
         else {
-            const lrecl = this.assembly.typeMap.get(`RecList<${etype.typeID}>`) as MIRType;
+            bbody =  NOT_IMPLEMENTED("Collection Constructor for lists larger than 3");
+            //
+            //TODO: Need to implement some nice LargeList action and also have a check on the constants info...
+            //
+
+            /*
+            const lrecl = this.assembly.typeMap.get(`LargeList<${etype.typeID}>`) as MIRType;
             const tftype = this.assembly.typeMap.get((this.assembly.entityDecls.get(lrecl.typeID) as MIRObjectEntityTypeDecl).fields[1].declaredType) as MIRType;
 
             bbody = this.typegen.coerce(new SMTConst("bsq_none"), this.typegen.getMIRType("None"), tftype);
@@ -498,6 +504,7 @@ class SMTBodyEmitter {
             }
 
             bbody = this.typegen.coerce(bbody, lrecl, geninfo.resulttype);
+            */
         }
 
         return SMTFunction.create(this.typegen.lookupFunctionName(geninfo.inv), args, this.typegen.getSMTTypeFor(geninfo.resulttype), bbody);
@@ -2708,6 +2715,9 @@ class SMTBodyEmitter {
             }
             case "bytebuffer_getcompression": {
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTCallSimple("BByteBuffer@compress", [new SMTVar(args[0].vname)]));
+            }
+            case "s_blockingfailure": {
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
             }
             default: {
                 assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
