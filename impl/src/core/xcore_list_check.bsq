@@ -8,6 +8,8 @@ namespace Core;
 
 #if CHECK_LIBS
 internal entity ListOps provides Some {
+    internal function s_blockingfailure<T>(): T = s_blockingfailure; 
+
     function s_empty<T>(l: ListRepr<T>): Bool {
         return l === none;
     }
@@ -26,7 +28,7 @@ internal entity ListOps provides Some {
             return 3n;
         }
         else {
-            return l.count[recursive]();
+            return l.count();
         }
     }
 
@@ -45,7 +47,7 @@ internal entity ListOps provides Some {
                 return Vector3<T>{start, start + one, end};
             }
             else {
-                return RecList<T>::range[recursive](start, one, count);
+                return LargeList<T>::range(start, one, count);
             }
         }
     }
@@ -64,7 +66,7 @@ internal entity ListOps provides Some {
             return Vector3<T>{v, v, v};
         }
         else {
-            return RecList<T>::fill[recursive](count, v);
+            return LargeList<T>::fill(count, v);
         }
     }
 
@@ -85,7 +87,7 @@ internal entity ListOps provides Some {
             return Vector3<T>{[0, ll.v0], [1, ll.v1], [2, ll.v2]};
         }
         else {
-            return l.zip_index[recursive]();
+            return l.zip_index();
         }
     }
 
@@ -112,10 +114,10 @@ internal entity ListOps provides Some {
             return Vector3<[T, U]>{[l1.v0, l2.v0], [l1.v1, l2.v1], [l1.v2, l2.v2]};
         }
         else {
-            let ll1 = s_safeAs<ListRepr<T>, RecList<T>>(l1);
-            let ll2 = s_safeAs<ListRepr<U>, RecList<U>>(l2);
+            let ll1 = s_safeAs<ListRepr<T>, LargeList<T>>(l1);
+            let ll2 = s_safeAs<ListRepr<U>, LargeList<U>>(l2);
 
-            return ll1.zip<U>[recursive](ll2);
+            return ll1.zip<U>(ll2);
         }
     }
 
@@ -148,36 +150,25 @@ internal entity ListOps provides Some {
             return Vector3<T>{ll.v0, ll.v1, rr.v0};
         }
         else {
-            let ll = RecList<T>::s_ensure_list(l);
-            let rr = RecList<T>::s_ensure_list(r);
-
-            return RecList<T>::s_append[recursive](ll, rr); 
-        }
-    }
-
-    recursive function s_concatrec<T>(ll: ListRepr<List<T>>): ListRepr<T> {
-        let count = ListOps::s_size<List<T>>(ll);
-        if(count == 1n) {
-            return ListOps::s_safe_get<List<T>>(ll, 0n);
-        }
-        else {
-            let lr = ListOps::s_slice_front<List<T>>(ll, 1n);
-            let ltail = List<T>::s_concat(lr);
-
-            return ListOps::s_append<T>(ListOps::s_safe_get<List<T>>(ll, 0n), ltail);
+            return LargeList<T>::s_append(ll, rr); 
         }
     }
 
     function s_concat(ll: ListRepr<List<T>>): ListRepr<T> {
-        let count = ListOps::s_size<List<T>>(ll);
-        if(count == 1n) {
-            return ListOps::s_safe_get<List<T>>(ll, start);
+        if(ll === none) {
+            return none;
         }
-        else { 
-            let lr = ListOps::s_slice_front<List<T>>(ll, 1n);
-            let ltail = ListOps::s_concatrec<T>(lr);
-
-            return ListOps::s_append<T>(ListOps::s_safe_get<List<T>>(ll, 0n), ltail);
+        elif(ll.is<Vector1<T>>()) {
+            return ll.v0.value();
+        }
+        elif(ll.is<Vector2<T>>()) {
+            return ListOps::s_append<T>(ll.v0.value(), ll.v1.value());
+        }
+        elif(ll.is<Vector3<T>>()) {
+            return ListOps::s_append<T>(ListOps::s_append<T>(ll.v0.value(), ll.v1.value()), ll.v2.value());
+        }
+        else {
+            return ListOps::s_reduce<List<T>, ListRepr<T>>(ll, none, fn(rl: ListRepr<T>, v: List<T>): ListRepr<T> => ListOps::s_append<T>(rl, v.value));
         }
     }
 
@@ -216,8 +207,7 @@ internal entity ListOps provides Some {
                 return none;
             }
             else {
-                let lle = RecList<T>::s_slice_start[recursive](l, start);
-                return RecList<T>::s_ensure_repr(lle);
+                return LargeList<T>::s_slice_start(l, start);
             }
         }
     }
@@ -259,8 +249,7 @@ internal entity ListOps provides Some {
                 return l;
             }
             else {
-                let lle = RecList<T>::s_slice_end[recursive](l, end);
-                return RecList<T>::s_ensure_repr(lle);
+                return LargeList<T>::s_slice_end(l, end);
             }
         }
     }
@@ -294,7 +283,7 @@ internal entity ListOps provides Some {
             }
         }
         else {
-            return l.safe_get[recursive](i);
+            return l.safe_get(i);
         }
     }
 
@@ -315,7 +304,7 @@ internal entity ListOps provides Some {
             return \/(p[recursive?](ll.v0), p[recursive?](ll.v1), p[recursive?](ll.v2));
         }
         else {
-            return l.has_pred[recursive](p);
+            return l.has_pred[recursive?](p);
         }
     }
 
@@ -336,7 +325,7 @@ internal entity ListOps provides Some {
             return \/(p[recursive?](ll.v0, 0n), p[recursive?](ll.v1, 1n), p[recursive?](ll.v2, 2n));
         }
         else {
-            return l.has_pred_idx[recursive](0n, p);
+            return l.has_pred_idx[recursive?](p);
         }
     }
 
@@ -381,7 +370,7 @@ internal entity ListOps provides Some {
             }
         }
         else {
-            return l.find_pred[recursive](p);
+            return l.find_pred[recursive?](p);
         }
     }
 
@@ -426,7 +415,7 @@ internal entity ListOps provides Some {
             }
         }
         else {
-            return l.find_pred_idx[recursive](0n, p);
+            return l.find_pred_idx[recursive?](p);
         }
     }
 
@@ -471,7 +460,7 @@ internal entity ListOps provides Some {
             }
         }
         else {
-            return l.find_last_pred[recursive?](0n, p);
+            return l.find_last_pred[recursive?](p);
         }
     }
 
@@ -516,7 +505,7 @@ internal entity ListOps provides Some {
             }
         }
         else {
-            return l.find_last_pred_idx[recursive?](0n, p);
+            return l.find_last_pred_idx[recursive?](p);
         }
     }
 
@@ -594,8 +583,7 @@ internal entity ListOps provides Some {
             }
         }
         else {
-            let lle = l.filter_pred[recursive](p);
-            return RecList<T>::s_ensure_repr(lle);
+            return l.filter_pred[recursive?](p);
         }
     }
 
@@ -673,8 +661,7 @@ internal entity ListOps provides Some {
             }
         }
         else {
-            let lle = l.filter_pred_idx[recursive](0n, p);
-            return RecList<T>::s_ensure_repr(lle);
+            return l.filter_pred_idx[recursive](p);
         }
     }
 
@@ -695,7 +682,7 @@ internal entity ListOps provides Some {
             return Vector3<U>{f[recursive?](ll.v0), f[recursive?](ll.v1), f[recursive?](ll.v2)};
         }
         else {
-            return l.map[recursive](f);
+            return l.map[recursive?](f);
         }
     }
 
@@ -716,7 +703,7 @@ internal entity ListOps provides Some {
             return Vector3<U>{f[recursive?](ll.v0, 0n), f[recursive?](ll.v1, 1n), f[recursive?](ll.v2, 2n)};
         }
         else {
-            return l.map_idx[recursive](0n, f);
+            return l.map_idx[recursive?](f);
         }
     }
 
@@ -752,7 +739,7 @@ internal entity ListOps provides Some {
             }
         }
         else {
-            return l.min_arg[recursive](f);
+            return l.min_arg[recursive?](f);
         }
     }
 
@@ -788,7 +775,7 @@ internal entity ListOps provides Some {
             }
         }
         else {
-            return l.max_arg[recursive](f);
+            return l.max_arg[recursive?](f);
         }
     }
 
@@ -809,7 +796,7 @@ internal entity ListOps provides Some {
             return ll.v0 + ll.v1 + ll.v2;
         }
         else {
-            return l.sum[recursive]();
+            return l.sum();
         }
     }
 
@@ -861,7 +848,7 @@ internal entity ListOps provides Some {
             }
         }
         else {
-            return l.sort[recursive](eq);
+            return l.sort[recursive?](eq);
         }
     }
 
@@ -905,8 +892,7 @@ internal entity ListOps provides Some {
             }
         }
         else {
-            let lle = l.unique_from_sorted[recursive](eq);
-            return RecList<T>::s_ensure_repr(lle);
+            return l.unique_from_sorted[recursive?](eq);
         }
     }
     
@@ -956,8 +942,8 @@ internal entity ListOps provides Some {
             }
         }
         else {
-            let ll = s_safeAs<ListRepr<T>, RecList<T>>(l);
-            return ll.set[recursive](i, v);
+            let ll = s_safeAs<ListRepr<T>, LargeList<T>>(l);
+            return ll.set(i, v);
         }
     }
 
@@ -987,8 +973,8 @@ internal entity ListOps provides Some {
             }
         }
         else {
-            let ll = s_safeAs<ListRepr<T>, RecList<T>>(l);
-            return ll.remove[recursive](i);
+            let ll = s_safeAs<ListRepr<T>, LargeList<T>>(l);
+            return ll.remove(i);
         }
     }
 
@@ -1009,7 +995,7 @@ internal entity ListOps provides Some {
             return op[recursive?](op[recursive?](op[recursive?](init, ll.v0), ll.v1), ll.v2);
         }
         else {
-            return l.reduce<U>[recursive](init, op);
+            return l.reduce<U>[recursive?](init, op);
         }
     }
 
@@ -1030,7 +1016,7 @@ internal entity ListOps provides Some {
             return op[recursive?](op[recursive?](op[recursive?](init, ll.v0, 0n), ll.v1, 1n), ll.v2, 2n);
         }
         else {
-            return l.reduce_idx<U>[recursive?](init, 0n, op);
+            return l.reduce_idx<U>[recursive?](init, op);
         }
     }
 
@@ -1057,7 +1043,7 @@ internal entity ListOps provides Some {
             return (|e2, Vector2<U>{v0, v1, v2}|);
         }
         else {
-            return l.transduce<E, U>[recursive](env, op);
+            return l.transduce<E, U>[recursive?](env, op);
         }
     }
 
@@ -1081,563 +1067,157 @@ internal entity ListOps provides Some {
             let e0, v0 = op[recursive?](env, ll.v0, 0n);
             let e1, v1 = op[recursive?](e0, ll.v1, 1n);
             let e2, v2 = op[recursive?](e1, ll.v2, 2n);
-            return e2, Vector2<U>{v0, v1, v2};
+            return (|e2, Vector2<U>{v0, v1, v2}|);
         }
         else {
-            return l.transduce_idx<E, U>[recursive](env, 0n, op);
+            return l.transduce_idx<E, U>[recursive?](env, op);
         }
     }
 }
 
-internal entity RecList<T> provides Some {
-    field head: T;
-    field tail: RecList<T>?;
+internal entity LargeList<T> provides Some {
+    //TODO: what repr do we want here
+    //  field v1: Vector3<T>;
+    //  field v2: Vector1<T> | Vector2<T> | Vector3<T>;
+    //Or something else
 
-    function s_ensure_list(l: Vector1<T> | Vector2<T> | Vector3<T> | RecList<T>): RecList<T> {
-        if(l.is<RecList<T>>()) {
-            return l;
-        }
-        else {
-            if(l.is<Vector1<T>>()) {
-                return RecList<T>{l.v0, none};
-            }
-            elif(l.is<Vector2<T>>()) {
-                return RecList<T>{l.v0, RecList<T>{l.v1, none}};
-            }
-            else {
-                return RecList<T>{l.v0, RecList<T>{l.v1,  RecList<T>{l.v2, none}}};
-            }
-        }
+    method count(): Nat {
+        return ListOps::s_blockingfailure<Nat>();
     }
 
-    function s_ensure_repr(l: RecList<T>?): ListRepr<T> {
-        if(l === none) {
-            return none;
-        }
-        else {
-            let hh1 = l.head;
-            let tl1 = l.tail;
-            if(tl1 === none) {
-                return Vector1<T>{hh1};
-            }
-            else {
-                let hh2 = tl1.head;
-                let tl2 = tl1.tail;
-
-                if(tl2 === none) {
-                    return Vector2<T>{hh1, hh2};
-                }
-                else {
-                    if(tl2.tail === none) {
-                        return Vector3<T>{hh1, hh2, tl2.head};
-                    }
-                    else {
-                        return l;
-                    }
-                }
-            }
-        }
+    function {when T unique Int | Nat} range(start: T, one: T, count: Nat): LargeList<T> {
+        return ListOps::s_blockingfailure<LargeList<T>>();
     }
 
-    recursive method count(): Nat {
-        let tl = this.tail;
-        if(tl === none) {
-            return 1n;
-        }
-        else {
-            return 1n + tl.count[recursive]();
-        }
+    function fill(count: Nat, v: T): LargeList<T> {
+        return ListOps::s_blockingfailure<LargeList<T>>();
     }
 
-    recursive function {when T unique Int | Nat} range(start: T, one: T, count: Nat): RecList<T>? {
-        if(count == 0) {
-            return none;
-        }
-        else {
-            let ntl = RecList<T>::range[recursive](start + one, one, count - 1n);
-            return RecList<T>{start, ntl};
-        }
+    method zip_index(idx: Nat): LargeList<[Nat, T]> {
+        return ListOps::s_blockingfailure<LargeList<[Nat, T]>>();
     }
 
-    recursive function fill(count: Nat, v: T): RecList<T>? {
-        if(count == 0) {
-            return none;
-        }
-        else {
-            let ntl = RecList<T>::fill[recursive](count - 1n, v);
-            return RecList<T>{v, ntl};
-        }
+    method zip<U>(ol: LargeList<U>): LargeList<[T, U]> {
+        return ListOps::s_blockingfailure<LargeList<[T, U]>>();
     }
 
-    recursive method zip_index(idx: Nat): RecList<[Nat, T]> {
-        let tl = this.tail;
-        let hh = this.head;
-
-        let nh = [idx, hh];
-        if(tl === none) {
-            return RecList<[Nat, T]>{nh, none};
-        }
-        else {
-            let ntl = tl.zip_index[recursive](idx + 1n);
-            return RecList<[Nat, T]>{nh, ntl};
-        }
+    function s_append(l: ListRepr<T>, r: ListRepr<T>): LargeList<T> {
+        return ListOps::s_blockingfailure<LargeList<T>>();
     }
 
-    recursive method zip<U>(ol: RecList<U>): RecList<[T, U]> {
-        let tt = this.tail;
-        let th = this.head;
-
-        let ot = ol.tail;
-        let oh = ol.head;
-
-        let nh = [th, oh];
-        if(\/(tt === none, ot === none)) {
-            return RecList<[T, U]>{nh, none};
-        }
-        else {
-            let ntl = tt.zip<U>[recursive](ot);
-            return RecList<[T, U]>{nh, ntl};
-        }
+    function s_slice_start(l: LargeList<T>, idx: Nat): ListRepr<T> {
+        return ListOps::s_blockingfailure<ListRepr<T>>();
     }
 
-    recursive function s_append(l: RecList<T>?, r: RecList<T>): RecList<T> {
-        if(l == none) {
-            return r;
-        }
-        else {
-            return RecList<T>{l.head, RecList<T>::s_append[recursive](l.tail, r)};
-        }
+    function s_slice_end(l: LargeList<T>, idx: Nat): ListRepr<T> {
+        return ListOps::s_blockingfailure<ListRepr<T>>();
     }
 
-    recursive function s_slice_start(l: RecList<T>?, idx: Nat): RecList<T>? {
-        if(l == none) {
-            return none;
-        }
-        elif(idx == 0) {
-            return l;
-        }
-        else {
-            return RecList<T>::s_slice_start[recursive](l.tail, idx - 1);
-        }
+    method safe_get(i: Nat): T {
+        return ListOps::s_blockingfailure<T>();
     }
 
-    recursive function s_slice_end(l: RecList<T>?, idx: Nat): RecList<T>? {
-        if(l == none) {
-            return none;
-        }
-        elif(idx == 0n) {
-            return none;
-        }
-        else {
-            return RecList<T>{l.head, RecList<T>::s_slice_end[recursive](l.tail, idx - 1n)};
-        }
+    recursive? method has_pred(p: recursive? pred(_: T) -> Bool): Bool {
+        return ListOps::s_blockingfailure<Bool>();
     }
 
-    recursive method safe_get(i: Nat): T {
-        if(i == 0n) {
-            return this.head;
-        }
-        else {
-            let tl = this.tail;
-            assert(tl !== none);
-
-            return tl.safe_get[recursive](i - 1n);
-        }
+    recursive? method has_pred_idx(p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
+        return ListOps::s_blockingfailure<Bool>();
     }
 
-    recursive method has_pred(p: recursive? pred(_: T) -> Bool): Bool {
-        if(p[recursive?](this.head)) {
-            return true;
-        }
-        else {
-            let tl = this.tail;
-            if(tl === none) {
-                return false;
-            }
-            else {
-                return tl.has_pred[recursive](p);
-            }
-        }
+    recursive? method find_pred(p: recursive? pred(_: T) -> Bool): Nat? {
+        return ListOps::s_blockingfailure<Bool>();
     }
 
-    recursive method has_pred_idx(idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
-        if(p[recursive?](this.head, idx)) {
-            return true;
-        }
-        else {
-            let tl = this.tail;
-            if(tl === none) {
-                return false;
-            }
-            else {
-                return tl.has_pred_idx[recursive](idx + 1n, p);
-            }
-        }
+    recursive? method find_pred_idx(p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
+        return ListOps::s_blockingfailure<Nat?>();
     }
 
-    recursive method find_pred(idx: Nat, p: recursive? pred(_: T) -> Bool): Nat? {
-        if(p[recursive?](this.head)) {
-            return idx;
-        }
-        else {
-            let tl = this.tail;
-            if(tl === none) {
-                return none;
-            }
-            else {
-                return tl.find_pred[recursive](idx + 1n, p);
-            }
-        }
+    recursive? method find_last_pred(p: recursive? pred(_: T) -> Bool): Nat? {
+        return ListOps::s_blockingfailure<Nat?>();
     }
 
-    recursive method find_pred_idx(idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
-        if(p[recursive?](this.head, idx)) {
-            return idx;
-        }
-        else {
-            let tl = this.tail;
-            if(tl === none) {
-                return none;
-            }
-            else {
-                return tl.find_pred_idx[recursive](idx + 1n, p);
-            }
-        }
+    recursive? method find_last_pred_idx(p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
+        return ListOps::s_blockingfailure<Nat>();
     }
 
-    recursive method find_last_pred(idx: Nat, p: recursive? pred(_: T) -> Bool): Nat? {
-        let tl = this.tail;
-
-        if(tl === none) {
-            if(p[recursive?](this.head)) {
-                return idx;
-            }
-            else {
-                return none;
-            }
-        }
-        else {
-            let tres = tl.find_last_pred_idx[recursive](idx + 1n, p);
-
-            if(tres !== none) {
-                return tres;
-            }
-            else {
-                if(p[recursive?](this.head)) {
-                    return idx;
-                }
-                else {
-                    return none;
-                }
-            }
-        }
+    recursive? method filter_pred(p: recursive? pred(_: T) -> Bool): ListRepr<T> {
+        return ListOps::s_blockingfailure<ListRepr<T>>();
     }
 
-    recursive method find_last_pred_idx(idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
-        let tl = this.tail;
-
-        if(tl === none) {
-            if(p[recursive?](this.head, idx)) {
-                return idx;
-            }
-            else {
-                return none;
-            }
-        }
-        else {
-            let tres = tl.find_last_pred_idx[recursive](idx + 1n, p);
-
-            if(tres !== none) {
-                return tres;
-            }
-            else {
-                if(p[recursive?](this.head, idx)) {
-                    return idx;
-                }
-                else {
-                    return none;
-                }
-            }
-        }
+    recursive? method filter_pred_idx(p: recursive? pred(_: T, _: Nat) -> Bool): ListRepr<T> {
+        return ListOps::s_blockingfailure<ListRepr<T>>();
     }
 
-    recursive method filter_pred(p: recursive? pred(_: T) -> Bool): RecList<T>? {
-        let tl = this.tail;
-        let hh = this.head;
-
-        let ph = p[recursive?](hh);
-        if(tl === none) {
-            if(ph) {
-                return RecList<T>{hh, none};
-            }
-            else {
-                return none;
-            }
-        }
-        else {
-            let ntl = tl.filter_pred[recursive](p);
-            if(ph) {
-                return RecList<T>{hh, ntl};
-            }
-            else {
-                return ntl;
-            }
-        }
+    recursive? method map<U>(f: recursive? fn(_: T) -> U): LargeList<U> {
+        return ListOps::s_blockingfailure<LargeList<U>>();
     }
 
-    recursive method filter_pred_idx(idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): RecList<T>? {
-        let tl = this.tail;
-        let hh = this.head;
-
-        let ph = p[recursive?](hh, idx);
-        if(tl === none) {
-            if(ph) {
-                return RecList<T>{hh, none};
-            }
-            else {
-                return none;
-            }
-        }
-        else {
-            let ntl = tl.filter_pred_idx[recursive](idx + 1n, p);
-            if(ph) {
-                return RecList<T>{hh, ntl};
-            }
-            else {
-                return ntl;
-            }
-        }
+    recursive? method map_idx<U>(idx: Nat, f: recursive? fn(_: T, _: Nat) -> U): LargeList<U> {
+        return ListOps::s_blockingfailure<LargeList<U>>();
     }
 
-    recursive method map<U>(f: recursive? fn(_: T) -> U): RecList<U> {
-        let tl = this.tail;
-        let hh = this.head;
+    recursive? method min_arg<U unique Orderable>(idx: Nat, f: recursive? fn(v: T) -> U): Nat, U {
+        let ri = ListOps::s_blockingfailure<Nat>();
+        let ru = ListOps::s_blockingfailure<U>();
 
-        let nh = f[recursive?](hh);
-        if(tl === none) {
-            return RecList<U>{nh, none};
-        }
-        else {
-            let ntl = tl.map<U>[recursive](f);
-            return RecList<U>{nh, ntl};
-        }
+        return ri, ru;
     }
 
-    recursive method map_idx<U>(idx: Nat, f: recursive? fn(_: T, _: Nat) -> U): RecList<U> {
-        let tl = this.tail;
-        let hh = this.head;
+    recursive? method max_arg<U unique Orderable>(idx: Nat, f: recursive? fn(v: T) -> U): Nat, U {
+        let ri = ListOps::s_blockingfailure<Nat>();
+        let ru = ListOps::s_blockingfailure<U>();
 
-        let nh = f[recursive?](hh, idx);
-        if(tl === none) {
-            return RecList<U>{nh, none};
-        }
-        else {
-            let ntl = tl.map<U>[recursive](idx + 1n, f);
-            return RecList<U>{nh, ntl};
-        }
+        return ri, ru;
     }
 
-    recursive method min_arg<U unique Orderable>(idx: Nat, f: recursive? fn(v: T) -> U): Nat, U {
-        let tl = this.tail;
-        let hh = this.head;
-        let hu = f[recursive?](hh);
-
-        if(tl === none) {
-            return idx, hu;
-        }
-        else {
-            let ntl, ntu = tl.min_arg<U>[recursive](idx + 1n, f);
-            if(ntu < hu) {
-                return ntl, ntu;
-            }
-            else {
-                return idx, hu;
-            }
-        }
+    method {when T unique Algebraic} sum(): T {
+        return ListOps::s_blockingfailure<T>();
     }
 
-    recursive method max_arg<U unique Orderable>(idx: Nat, f: recursive? fn(v: T) -> U): Nat, U {
-        let tl = this.tail;
-        let hh = this.head;
-        let hu = f[recursive?](hh);
-
-        if(tl === none) {
-            return idx, hu;
-        }
-        else {
-            let ntl, ntu = tl.min_arg<U>[recursive](idx + 1n, f);
-            if(ntu > hu) {
-                return ntl, ntu;
-            }
-            else {
-                return idx, hu;
-            }
-        }
+    recursive? method sort(cmp: recursive? pred(_: T, _: T) -> Bool): LargeList<T> {
+        return ListOps::s_blockingfailure<LargeList<T>>();
     }
 
-    recursive method {when T unique Algebraic} sum(): T {
-        let tl = this.tail;
-        let hh = this.head;
-
-        if(tl === none) {
-            return hh;
-        }
-        else {
-            return hh + tl.sum[recursive]();
-        }
-    }
-
-    recursive method sort(cmp: recursive? pred(_: T, _: T) -> Bool): RecList<T> {
-        let tl = this.tail;
-        let hh = this.head;
-
-        if(tl === none) {
-            return this;
-        }
-        else {
-            let ntl = tl.sort[recursive](cmp);
-            return ntl.sort_insert[recursive](hh, cmp);
-        }
-    }
-
-    recursive method sort_insert(v: T, cmp: recursive? pred(_: T, _: T) -> Bool): RecList<T> {
-        let tl = this.tail;
-        let hh = this.head;
-
-        if(!cmp[recursive?](hh, v)) {
-            return RecList<T>{v, this};
-        }
-        else {
-            if(tl === none) {
-                return RecList<T>{hh, RecList<T>{v, none}};
-            }
-            else {
-                let ntl = tl.sort_insert[recursive](v, cmp);
-                return RecList<T>{hh, ntl};
-            }
-        }
-    }
-
-    recursive method unique_from_sorted(prev: T, eq: recursive? pred(_: T, _: T) -> Bool): RecList<T>? {
-        let tl = this.tail;
-        let hh = this.head;
-
-        if(eq[recursive?](prev, hh)) {
-            if(tl === none) {
-                return none;
-            }
-            else {
-                return tl.unique_from_sorted[recursive](prev, eq);
-            }
-        }
-        else {
-            if(tl === none) {
-                return RecList<T>{hh, none};
-            }
-            else {
-                let tll = tl.unique_from_sorted[recursive](hh, eq);
-                return RecList<T>{hh, tll};
-            }
-        }
+    recursive? method unique_from_sorted(prev: T, eq: recursive? pred(_: T, _: T) -> Bool): ListRepr<T> {
+        return ListOps::s_blockingfailure<ListRepr<T>>();
     }
     
-    recursive method reverse(rl: RecList<T>): RecList<T> {
-        let tl = this.tail;
-        let hh = this.head;
-
-        if(tl === none) {
-            return RecList<T>{hh, rl};
-        }
-        else {
-            return tl.reverse[recursive](RecList<T>{hh, rl});
-        }
+    method reverse(rl: LargeList<T>): LargeList<T> {
+        return ListOps::s_blockingfailure<LargeList<T>>();
     }
 
-    recursive method set(i: Nat, v: T): RecList<T> {
-        let tl = this.tail;
-        let hh = this.head;
-
-        if(i == 0n) {
-            return RecList<T>{v, tl};
-        }
-        else {
-            let tll = s_safeAs<RecList<T> | None, RecList<T>>(tl);
-
-            let rl = tll.set[recursive](i - 1n, v);
-            return RecList<T>{hh, rl};
-        }
+    method set(i: Nat, v: T): LargeList<T> {
+        return ListOps::s_blockingfailure<LargeList<T>>();
     }
 
-    recursive method remove(i: Nat): RecList<T> {
-        let tl = this.tail;
-        let hh = this.head;
-
-        if(i == 0n) {
-            return tl;
-        }
-        else {
-            let tll = s_safeAs<RecList<T> | None, RecList<T>>(tl);
-
-            let rl = tll.set[recursive](i - 1n, v);
-            return RecList<T>{hh, rl};
-        }
+    method remove(i: Nat): ListRepr<T> {
+        return ListOps::s_blockingfailure<ListRepr<T>>();
     }
 
-    recursive method reduce<U>(uu: U, op: recursive? fn(_: U, _: T) -> U): U {
-        let tl = this.tail;
-        let hh = this.head;
-
-        let nu = op[recursive?](uu, hh);
-        if(tl === none) {
-            return nu;
-        }
-        else {
-            return tl.reduce<U>[recursive](nu, op);
-        }
+    recursive? method reduce<U>(uu: U, op: recursive? fn(_: U, _: T) -> U): U {
+        return ListOps::s_blockingfailure<U>();
     }
 
-    recursive function reduce_idx<U>(init: U, idx: Nat, op: recursive? fn(_: U, _: T, _: Nat) -> U): U {
-        let tl = this.tail;
-        let hh = this.head;
-
-        let nu = op[recursive?](uu, hh, idx);
-        if(tl === none) {
-            return nu;
-        }
-        else {
-            return tl.reduce_idx<U>[recursive](nu, idx + 1n, op);
-        }
+    recursive? function reduce_idx<U>(init: U, op: recursive? fn(_: U, _: T, _: Nat) -> U): U {
+        return ListOps::s_blockingfailure<U>();
     }
 
-    recursive function transduce<E, U>(env: E, op: recursive? fn(_: E, _: T) -> (|E, U|)): (|E, RecList<U>|) {
-        let tl = this.tail;
-        let hh = this.head;
+    recursive? function transduce<E, U>(env: E, op: recursive? fn(_: E, _: T) -> (|E, U|)): (|E, LargeList<U>|) {
+        let re = ListOps::s_blockingfailure<E>();
+        let rlu = ListOps::s_blockingfailure<LargeList<U>>();
 
-        let nenv, nu = op[recursive?](env, hh);
-        if(tl === none) {
-            return (|nenv, RecList<U>{nu, none}|);
-        }
-        else {
-            let tlenv, tll = tl.transduce<U>[recursive](nenv, op);
-            return (|tlenv, RecList<U>{nu, tll}|);
-        }
+        return (|re, rlu|);
     }
 
-    recursive function s_transduce_idx<E, U>(env: E, idx: Nat, op: recursive? fn(_: E, _: T, _: Nat) -> (|E, U|)): (|E, RecList<U>|) {
-        let tl = this.tail;
-        let hh = this.head;
+    recursive? function s_transduce_idx<E, U>(env: E, op: recursive? fn(_: E, _: T, _: Nat) -> (|E, U|)): (|E, LargeList<U>|) {
+        let re = ListOps::s_blockingfailure<E>();
+        let rlu = ListOps::s_blockingfailure<LargeList<U>>();
 
-        let nenv, nu = op[recursive?](env, hh, idx);
-        if(tl === none) {
-            return (|nenv, RecList<U>{nu, none}|);
-        }
-        else {
-            let tlenv, tll = tl.transduce_idx<U>[recursive](nenv, idx + 1n, op);
-            return (|tlenv, RecList<U>{nu, tll}|);
-        }
+        return (|re, rlu|);
     }
 }
 
-internal typedef ListRepr<T> = None | Vector1<T> | Vector2<T> | Vector3<T> | RecList<T>;
+internal typedef ListRepr<T> = None | Vector1<T> | Vector2<T> | Vector3<T> | LargeList<T>;
 
 #endif
