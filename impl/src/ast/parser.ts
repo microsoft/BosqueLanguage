@@ -4164,8 +4164,8 @@ class Parser {
                 else if(ename === "Vector3") {
                     attributes.push("__vector3_type");
                 }
-                else if(ename === "RecList") {
-                    attributes.push("__reclist_type");
+                else if(ename === "LargeList") {
+                    attributes.push("__largelist_type");
                 }
                 else if(ename === "RecMap") {
                     attributes.push("__recmap_type");
