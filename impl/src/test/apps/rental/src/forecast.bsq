@@ -1,4 +1,9 @@
-namespace NSMain;
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+namespace Main;
 
 enum WindDirection {
     north,
@@ -10,8 +15,8 @@ enum WindDirection {
 typedecl MPH = Nat;
 typedecl Fahrenheit = Int;
 
-typedecl Percentage = Float & {
-    invariant 0.0f <= $value && $value <= 100.0f;
+typedecl Percentage = Nat & {
+    invariant $value <= 100n;
 }
 
 enum ForecastDetail {
@@ -31,6 +36,3 @@ entity Forecast provides APIType {
     invariant $temp.low <= $temp.high;
     invariant $windSpeed.min <= $windSpeed.max; 
 }
-
-
-
