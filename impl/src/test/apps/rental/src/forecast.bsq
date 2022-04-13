@@ -12,14 +12,15 @@ enum WindDirection {
     west
 }
 
-typedecl MPH = Nat;
-typedecl Fahrenheit = Int;
+orderable algebraic typedecl MPH = Nat;
+orderable algebraic typedecl Fahrenheit = Int;
 
-typedecl Percentage = Nat & {
+orderable algebraic typedecl Percentage = Nat & {
     invariant $value <= 100n;
 }
 
 enum ForecastDetail {
+    sun,
     showers,
     thunderstorms,
     snow,

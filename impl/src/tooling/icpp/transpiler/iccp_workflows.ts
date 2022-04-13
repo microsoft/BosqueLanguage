@@ -100,7 +100,7 @@ function runICPPFile(icppjson: {code: object, args: any[], main: string}, debug:
         const cmd = `${exepath} ${debug ? "--debug " : ""}--stream`;
 
         const proc = exec(cmd, (err, stdout) => {
-           cb(err === null ? stdout.toString().trim() : undefined);
+           cb(stdout.toString().trim());
         });
 
         proc.stdin.setDefaultEncoding('utf-8');

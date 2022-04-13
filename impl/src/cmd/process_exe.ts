@@ -208,12 +208,7 @@ function processRunAction(args: string[]) {
         else {
             // bosque run|debug [package_path.json] [--entrypoint fname] [--config cname] --args "[...]"
             workflowRunICPPFile(fargs, userpackage, args[0] === "debug", cfg.buildlevel, false, args[0] === "debug", {}, entrypoint, (result: string | undefined) => {
-                if (result !== undefined) {
-                    process.stdout.write(`${result}\n`);
-                }
-                else {
-                    process.stdout.write(`failure\n`);
-                }
+                process.stdout.write(`${result}\n`);
 
                 process.exit(0);
             });

@@ -6,10 +6,15 @@
 namespace Main;
 
 chktest function windRangeLow(speed: MPH): Bool {
-    speed < 20_MPH ==> (categorizeWinds(speed) === WindCategory::calm || categorizeWinds(speed) === WindCategory::high);
+    return speed < 20_MPH ==> (categorizeWinds(speed) === WindCategory::calm || categorizeWinds(speed) === WindCategory::high);
 }
 
 chktest function decideStorm(windCategory: WindCategory, inventory: Nat, reservations: Nat, returns: Nat, requestedQuantity: Nat): Bool {
     let res = decide(windCategory, ForecastDetail::thunderstorms, inventory, reservations, returns, requestedQuantity, true);
     return res.isErr();
+}
+
+chktest function decideCheck1(windCategory: WindCategory, forecastDetail: ForecastDetail, inventory: Nat, reservations: Nat, returns: Nat, requestedQuantity: Nat): Bool {
+    let res = decide(windCategory, forecastDetail, inventory, reservations, returns, requestedQuantity, true);
+    return res.isOk() ==> res.result() <= inventory + returns;
 }

@@ -5,7 +5,7 @@
 
 namespace Main;
 
-function main(forecast: Forecast, inventory: Nat, reservations: Nat, reservationQuantity: Nat, canceledQuantity: Nat, returns: Nat, requestedQuantity: Nat, allowPartials: Bool): Result<Nat, Reason> 
+entrypoint function main(forecast: Forecast, inventory: Nat, reservations: Nat, reservationQuantity: Nat, canceledQuantity: Nat, returns: Nat, requestedQuantity: Nat, allowPartials: Bool): Result<Nat, Reason> 
     ensures $return.isOk() ==> $return.result() <= inventory + returns;
     ensures !allowPartials && $return.isOk() ==> $return.result() == requestedQuantity;  
 {
@@ -16,3 +16,4 @@ function main(forecast: Forecast, inventory: Nat, reservations: Nat, reservation
 
     return decision;
 }
+
