@@ -1191,8 +1191,8 @@ internal entity LargeList<T> provides Some {
         return ListOps::s_blockingfailure<LargeList<T>>();
     }
 
-    method remove(i: Nat): LargeList<T> {
-        return ListOps::s_blockingfailure<LargeList<T>>();
+    method remove(i: Nat): ListRepr<T> {
+        return ListOps::s_blockingfailure<ListRepr<T>>();
     }
 
     recursive? method reduce<U>(uu: U, op: recursive? fn(_: U, _: T) -> U): U {
