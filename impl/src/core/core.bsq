@@ -110,8 +110,8 @@ __internal __typedeclable entity Int provides Some, Algebraic, Orderable, KeyTyp
     const zero: Int = 0i;
     const one: Int = 1i;
 
-    method toNat(): Nat { return NumericOps::s_intToNat(this); }
-    method toBigNat(): BigNat { return NumericOps::s_bigIntToBigNat(NumericOps::s_intToBigInt(this)); }
+    method toNat(): Nat { assert(this >= 0i); return NumericOps::s_intToNat(this); }
+    method toBigNat(): BigNat { assert(this >= 0i); return NumericOps::s_bigIntToBigNat(NumericOps::s_intToBigInt(this)); }
     method toBigInt(): BigInt { return NumericOps::s_intToBigInt(this); }
     method toFloat(): Float { return NumericOps::s_bigIntToFloat(NumericOps::s_intToBigInt(this)); }
     method toDecimal(): Decimal { return NumericOps::s_bigIntToDecimal(NumericOps::s_intToBigInt(this)); }
@@ -147,7 +147,7 @@ __safe __primitive inline prefix operator +(a: Nat): Nat = default;
 __safe __primitive inline infix operator *(a: Nat, b: Nat): Nat = default;
 __primitive inline infix operator /(a: Nat, b: Nat): Nat = default;
 __safe __primitive inline infix operator +(a: Nat, b: Nat): Nat = default;
-__safe __primitive inline infix operator -(a: Nat, b: Nat): Nat = default;
+__primitive inline infix operator -(a: Nat, b: Nat): Nat = default;
 __safe __primitive inline infix operator ==(a: Nat, b: Nat): Bool = default;
 __safe __primitive inline infix operator !=(a: Nat, b: Nat): Bool = default;
 __safe __primitive inline infix operator <(a: Nat, b: Nat): Bool = default;
@@ -161,8 +161,8 @@ __internal __typedeclable entity BigInt provides Some, Algebraic, Orderable, Key
     const zero: BigInt = 0I;
     const one: BigInt = 1I;
 
-    method toNat(): Nat { return NumericOps::s_bigNatToNat(NumericOps::s_bigIntToBigNat(this)); }
-    method toBigNat(): BigNat { return NumericOps::s_bigIntToBigNat(this); }
+    method toNat(): Nat { assert(this >= 0I); return NumericOps::s_bigNatToNat(NumericOps::s_bigIntToBigNat(this)); }
+    method toBigNat(): BigNat { assert(this >= 0I); return NumericOps::s_bigIntToBigNat(this); }
     method toInt(): Int { return NumericOps::s_bigIntToInt(this); }
     method toFloat(): Float { return NumericOps::s_bigIntToFloat(this); }
     method toDecimal(): Decimal { return NumericOps::s_bigIntToDecimal(this); }
@@ -198,7 +198,7 @@ __safe __primitive inline prefix operator +(a: BigNat): BigNat = default;
 __safe __primitive inline infix operator *(a: BigNat, b: BigNat): BigNat = default;
 __primitive inline infix operator /(a: BigNat, b: BigNat): BigNat = default;
 __safe __primitive inline infix operator +(a: BigNat, b: BigNat): BigNat = default;
-__safe __primitive inline infix operator -(a: BigNat, b: BigNat): BigNat = default;
+__primitive inline infix operator -(a: BigNat, b: BigNat): BigNat = default;
 __safe __primitive inline infix operator ==(a: BigNat, b: BigNat): Bool = default;
 __safe __primitive inline infix operator !=(a: BigNat, b: BigNat): Bool = default;
 __safe __primitive inline infix operator <(a: BigNat, b: BigNat): Bool = default;
@@ -212,8 +212,8 @@ __internal __typedeclable entity Rational provides Some, Algebraic, Orderable, A
     const zero: Rational = 0/1R;
     const one: Rational = 1/1R;
 
-    method toNat(): Nat { return NumericOps::s_bigNatToNat(NumericOps::s_bigIntToBigNat(NumericOps::s_rationalToBigInt(this))); }
-    method toBigNat(): BigNat { return NumericOps::s_bigIntToBigNat(NumericOps::s_rationalToBigInt(this)); }
+    method toNat(): Nat { assert(this >= Rational::zero); return NumericOps::s_bigNatToNat(NumericOps::s_bigIntToBigNat(NumericOps::s_rationalToBigInt(this))); }
+    method toBigNat(): BigNat { assert(this >= Rational::zero); return NumericOps::s_bigIntToBigNat(NumericOps::s_rationalToBigInt(this)); }
     method toInt(): Int { return NumericOps::s_bigIntToInt(NumericOps::s_rationalToBigInt(this)); }
     method toBigInt(): BigInt { return NumericOps::s_rationalToBigInt(this); }
     method toFloat(): Float { return NumericOps::s_rationalToFloat(this); }
@@ -241,16 +241,16 @@ __internal __typedeclable entity Float provides Some, Algebraic, Orderable, APIT
     const pi: Float = 3.1415926535897931f;
     const e: Float = 2.7182818284590451f;
 
-    method toNat(): Nat { return NumericOps::s_bigNatToNat(NumericOps::s_bigIntToBigNat(NumericOps::s_floatToBigInt(this))); }
-    method toBigNat(): BigNat { return NumericOps::s_bigIntToBigNat(NumericOps::s_floatToBigInt(this)); }
+    method toNat(): Nat { assert(this >= Float::zero); return NumericOps::s_bigNatToNat(NumericOps::s_bigIntToBigNat(NumericOps::s_floatToBigInt(this))); }
+    method toBigNat(): BigNat { assert(this >= Float::zero); return NumericOps::s_bigIntToBigNat(NumericOps::s_floatToBigInt(this)); }
     method toInt(): Int { return NumericOps::s_bigIntToInt(NumericOps::s_floatToBigInt(this)); }
     method toBigInt(): BigInt { return NumericOps::s_floatToBigInt(this); }
     method toDecimal(): Decimal { return NumericOps::s_floatToDecimal(this); }
     method toRational(): Rational { return NumericOps::s_floatToRational(this); }
 
-    method floor(): BigInt { return NumericOps::s_floatFloor(this); }
-    method ceiling(): BigInt { return NumericOps::s_floatCeil(this); }
-    method truncate(): BigInt { return NumericOps::s_floatTruncate(this); }
+    method floor(): Float { return NumericOps::s_floatFloor(this); }
+    method ceiling(): Float { return NumericOps::s_floatCeil(this); }
+    method truncate(): Float { return NumericOps::s_floatTruncate(this); }
 
     method pow(x: Float): Float {
         return NumericOps::s_floatPower(this, x);
@@ -286,16 +286,16 @@ __internal __typedeclable entity Decimal provides Some, Algebraic, Orderable, AP
     const pi: Decimal = 3.1415926535897931d;
     const e: Decimal = 2.7182818284590451d;
 
-    method toNat(): Nat { return NumericOps::s_bigNatToNat(NumericOps::s_bigIntToBigNat(NumericOps::s_decimalToBigInt(this))); }
-    method toBigNat(): BigNat { return NumericOps::s_bigIntToBigNat(NumericOps::s_decimalToBigInt(this)); }
+    method toNat(): Nat { assert(this >= Decimal::zero); return NumericOps::s_bigNatToNat(NumericOps::s_bigIntToBigNat(NumericOps::s_decimalToBigInt(this))); }
+    method toBigNat(): BigNat { assert(this >= Decimal::zero); return NumericOps::s_bigIntToBigNat(NumericOps::s_decimalToBigInt(this)); }
     method toInt(): Int { return NumericOps::s_bigIntToInt(NumericOps::s_decimalToBigInt(this)); }
     method toBigInt(): BigInt { return NumericOps::s_decimalToBigInt(this); }
     method toFloat(): Float { return NumericOps::s_decimalToFloat(this); }
     method toRational(): Rational { return NumericOps::s_decimalToRational(this); }
 
-    method floor(): BigInt { return NumericOps::s_decimalFloor(this); }
-    method ceiling(): BigInt { return NumericOps::s_decimalCeil(this); }
-    method truncate(): BigInt { return NumericOps::s_decimalTruncate(this); }
+    method floor(): Decimal { return NumericOps::s_decimalFloor(this); }
+    method ceiling(): Decimal { return NumericOps::s_decimalCeil(this); }
+    method truncate(): Decimal { return NumericOps::s_decimalTruncate(this); }
 
     method pow(x: Decimal): Decimal {
         return NumericOps::s_decimalPower(this, x);

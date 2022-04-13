@@ -1,0 +1,39 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+namespace Main;
+
+enum WindDirection {
+    north,
+    south,
+    east,
+    west
+}
+
+orderable algebraic typedecl MPH = Nat;
+orderable algebraic typedecl Fahrenheit = Int;
+
+orderable algebraic typedecl Percentage = Nat & {
+    invariant $value <= 100n;
+}
+
+enum ForecastDetail {
+    sun,
+    showers,
+    thunderstorms,
+    snow,
+    fog
+}
+
+entity Forecast provides APIType {
+    field temp: {low: Fahrenheit, high: Fahrenheit};
+    field windSpeed: {min: MPH, max: MPH};
+    field windDirection: WindDirection;
+    field shortForecast: ForecastDetail;
+    field forecastPercentage: Percentage;
+
+    invariant $temp.low <= $temp.high;
+    invariant $windSpeed.min <= $windSpeed.max; 
+}

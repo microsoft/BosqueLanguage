@@ -1,0 +1,28 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+namespace Main;
+
+enum WindCategory {
+    calm,
+    windy,
+    high,
+    dangerous
+}
+
+function categorizeWinds(windSpeed: MPH): WindCategory {
+    if(windSpeed < 10_MPH) {
+        return WindCategory::calm;
+    }
+    elif(windSpeed < 20_MPH) {
+        return WindCategory::high;
+    }
+    elif(windSpeed < 30_MPH) {
+        return WindCategory::windy;
+    }
+    else {
+        return WindCategory::dangerous;
+    }
+}

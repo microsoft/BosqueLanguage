@@ -1,0 +1,19 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+namespace Main;
+
+entrypoint function main(forecast: Forecast, inventory: Nat, reservations: Nat, reservationQuantity: Nat, canceledQuantity: Nat, returns: Nat, requestedQuantity: Nat, allowPartials: Bool): Result<Nat, Reason> 
+    ensures $return.isOk() ==> $return.result() <= inventory + returns;
+    ensures !allowPartials && $return.isOk() ==> $return.result() == requestedQuantity;  
+{
+    let windcat = categorizeWinds(forecast.windSpeed.max);
+    let projectedReservations = probableReservations(reservationQuantity, canceledQuantity, reservations);
+
+    let decision = decide(windcat, forecast.shortForecast, inventory, projectedReservations, returns, requestedQuantity, allowPartials);
+
+    return decision;
+}
+
