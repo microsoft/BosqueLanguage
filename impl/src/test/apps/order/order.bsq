@@ -2,9 +2,9 @@ namespace NSMain;
 
 typedef ID = String;
 
-typedecl Quantity = Nat;
+algebraic orderable typedecl Quantity = Nat;
 
-typedecl Price = Decimal;
+algebraic orderable typedecl Price = Decimal;
 
 typedecl OrderPrice provides APIType 
 of
@@ -57,18 +57,18 @@ typedef Response = BuyResponse | SellResponse;
 function validateRequest(request: BuyRequest): List<Violations> {
     let priceCheck = 
         match(request.requestPrice) {|
-            Market      => List<Violations>@{}
-            | Limit@{p} => if(p < 0#Price) 
-                                List<Violations>@{ InvalidPrice@{p} }
+            Market     => List<Violations>{}
+            | Limit{p} => if(p < 0_Price) 
+                                List<Violations>{ InvalidPrice{p} }
                             else 
-                                List<Violations>@{}
+                                List<Violations>{}
     |};
         
     let quantityCheck = 
-            if(request.quantity <= 0#Quantity) 
-                List<Violations>@{ InvalidQuantity@{request.quantity} } 
+            if(request.quantity <= 0_Quantity) 
+                List<Violations>{ InvalidQuantity{request.quantity} } 
             else 
-                List<Violations>@{}
+                List<Violations>{}
     ;
     
     return priceCheck.append(quantityCheck);
@@ -76,24 +76,24 @@ function validateRequest(request: BuyRequest): List<Violations> {
 
 function lockinPrice(requestPrice: OrderPrice, marketPrice: Price): Price {
     match(requestPrice) {
-        Market => return marketPrice;
-        | Limit@{p} => return p;
+        Market     => return marketPrice;
+        | Limit{p} => return p;
     }
 }
 
 function acceptability(request: BuyRequest, marketPrice: Price, availableInventory: Quantity): List<RejectReason> {
     let availabilityCheck = 
             if(availableInventory < request.quantity) 
-                List<RejectReason>@{RejectReason::insufficientInventory}
+                List<RejectReason>{RejectReason::insufficientInventory}
             else
-                List<RejectReason>@{}
+                List<RejectReason>{}
     ;
 
     let priceCheck = 
             if(lockinPrice(request.requestPrice, marketPrice) < marketPrice * 0.9d)
-                List<RejectReason>@{RejectReason::disagreeablePrice}
+                List<RejectReason>{RejectReason::disagreeablePrice}
             else
-                List<RejectReason>@{}
+                List<RejectReason>{}
     ;
     
     return availabilityCheck.append(priceCheck);
@@ -105,27 +105,27 @@ function processBuy(request: BuyRequest, marketPrice: Price, availableInventory:
     let lockPrice = lockinPrice(request.requestPrice, marketPrice);
 
     if (!violations.empty()) { 
-        return BuyInvalid@{request.id, violations};
+        return BuyInvalid{request.id, violations};
     }
     elif(!rejections.empty()) { 
-        return BuyRejected@{request.id, rejections};
+        return BuyRejected{request.id, rejections};
     }
     else {
-        return BuyAccepted@{request.id, request.product, lockPrice, request.quantity};
+        return BuyAccepted{request.id, request.product, lockPrice, request.quantity};
     }
 }
 
 function processSell(request: SellRequest, marketPrice: Price): SellResponse {
     let lockPrice = lockinPrice(request.requestPrice, marketPrice);
 
-    return SellAccepted@{request.id, lockPrice};
+    return SellAccepted{request.id, lockPrice};
 }
 
 function availability(startOfDayPosition: Quantity, buys: List<BuyResponse>): Quantity {
     let sumOfBuys = buys
         .map(fn(response) => match(response) {|
             BuyAccepted => response.quantity
-            | _         => 0#Quantity
+            | _         => 0_Quantity
         |})
         .sum()
     ;
@@ -135,7 +135,7 @@ function availability(startOfDayPosition: Quantity, buys: List<BuyResponse>): Qu
 
 
 function main(request: Request, marketPrice: Price, startOfDayPosition: Quantity): Response {
-    var responses = List<BuyResponse>@{};
+    var responses = List<BuyResponse>{};
 
     if(request.is<BuyRequest>()) {
         let availableInventory = availability(startOfDayPosition, responses);

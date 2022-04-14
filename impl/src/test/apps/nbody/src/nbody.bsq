@@ -8,7 +8,7 @@
 //Expected output is: -0.16907302171469984
 //
 
-namespace NSMain;
+namespace Main;
 
 entity Position {
    field x: Float;
@@ -31,67 +31,67 @@ entity Body {
    field pos: Position;
    field vel: Velocity;
 
-   const jupiter: Body = Body@{
+   const jupiter: Body = Body{
       "jupiter",
       0.000954791938424326609f * Body::solar_mass,
-      Position@{
+      Position{
          4.84143144246472090f,
          -1.16032004402742839f,
          -0.103622044471123109f
       },
-      Velocity@ {
+      Velocity{
          0.00166007664274403694f * Body::days_per_year,
          0.00769901118419740425f * Body::days_per_year,
          -0.0000690460016972063023f * Body::days_per_year
       }
    };
 
-   const saturn: Body = Body@{
+   const saturn: Body = Body{
       "saturn",
       -0.0000690460016972063023f * Body::days_per_year,
-      Position@{
+      Position{
          8.34336671824457987f,
          4.12479856412430479f,
          -0.403523417114321381f
       },
-      Velocity@{
+      Velocity{
          -0.00276742510726862411f * Body::days_per_year,
          0.00499852801234917238f * Body::days_per_year,
          0.0000230417297573763929f * Body::days_per_year
       }
    };
 
-   const uranus: Body = Body@{
+   const uranus: Body = Body{
       "uranus",
       0.0000436624404335156298f * Body::solar_mass,
-      Position@{
+      Position{
          12.8943695621391310f,
          -15.1111514016986312f,
          -0.223307578892655734f
       },
-      Velocity@{
+      Velocity{
          0.00296460137564761618f * Body::days_per_year,
          0.00237847173959480950f * Body::days_per_year,
          -0.0000296589568540237556f * Body::days_per_year
       }
    };
 
-   const neptune: Body = Body@{
+   const neptune: Body = Body{
       "neptune",
       0.0000515138902046611451f * Body::solar_mass,
-      Position@{
+      Position{
          15.3796971148509165f,
          -25.9193146099879641f,
          0.179258772950371181f
       },
-      Velocity@{
+      Velocity{
          0.00268067772490389322f * Body::days_per_year,
          0.00162824170038242295f * Body::days_per_year,
          -0.0000951592254519715870f * Body::days_per_year
       }
    };
 
-   const sun: Body = Body@{
+   const sun: Body = Body{
       "sun",
       Body::solar_mass,
       Position@{
@@ -107,7 +107,7 @@ entity Body {
    };
 
    method offsetMomentum(px: Float, py: Float, pz: Float): Body {
-      return this.{ vel=Velocity@{-px / Body::solar_mass, -py / Body::solar_mass, -pz / Body::solar_mass} };
+      return this.{ vel=Velocity{-px / Body::solar_mass, -py / Body::solar_mass, -pz / Body::solar_mass} };
    }
 
    method kineticEnergy(): Float {
@@ -126,7 +126,7 @@ entity Body {
 entity NBodySystem {
    field bodies: List<Body>;
    
-   const energypairs: List<[Nat, Nat]> = List<[Nat, Nat]>@{
+   const energypairs: List<[Nat, Nat]> = List<[Nat, Nat]>{
       [0n, 1n], [0n, 2n], [0n, 3n], [0n, 4n],
       [1n, 2n], [1n, 3n], [1n, 4n],
       [2n, 3n], [2n, 4n],
@@ -134,7 +134,7 @@ entity NBodySystem {
    };
 
    factory function create(): { bodies: List<Body> } {
-      let planets = List<Body>@{
+      let planets = List<Body>{
          Body::jupiter,
          Body::saturn,
          Body::uranus,
@@ -145,7 +145,7 @@ entity NBodySystem {
       let py = planets.map<Float>(fn(p: Body): Float => p.vel.vy * p.mass).sum();
       let pz = planets.map<Float>(fn(p: Body): Float => p.vel.vz * p.mass).sum();
 
-      let allbodies = List<Body>@{
+      let allbodies = List<Body>{
          Body::sun.offsetMomentum(px, py, pz),
          Body::jupiter,
          Body::saturn,
@@ -201,25 +201,16 @@ entity NBodySystem {
          let nvx = utuple.1;
          let nvy = utuple.2;
          let nvz = utuple.3;
-         let nvel = Velocity@{nvx, nvy, nvz};
+         let nvel = Velocity{nvx, nvy, nvz};
 
          let nx = b.pos.x + (nvx * dt);
          let ny = b.pos.y + (nvy * dt);
          let nz = b.pos.z + (nvz * dt);
-         let npos = Position@{nx, ny, nz};
+         let npos = Position{nx, ny, nz};
 
          return b.{pos=npos, vel=nvel};
       });
 
-      return NBodySystem@{ bodies };
+      return NBodySystem{ bodies };
    }
-}
-
-function main(): Float {
-   var system = NBodySystem@create();
-   let step = 0.01f;
-
-   system = system.advance(step);
-
-   return system.energy();
 }
