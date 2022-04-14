@@ -1,0 +1,17 @@
+{
+    "name": "nbody",
+    "version": "0.0.0.0",
+    "description": "NBody shootout benchmark",
+    "license": "MIT",
+    "src": {
+        "bsqsource": [
+            "./src/*"
+        ],
+        "entrypoints": [
+            "./nbody.bsqapi"
+        ],
+        "testfiles": [
+            "./nbody.bsqtest"
+        ]
+    }
+}
