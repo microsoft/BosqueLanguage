@@ -21,5 +21,20 @@ internal entity Vector3<T> provides Some {
     field v1: T;
     field v2: T;
 }
+
+internal entity Vector4<T> provides Some {
+    field v0: T;
+    field v1: T;
+    field v2: T;
+    field v3: T;
+}
+
+internal entity Vector5<T> provides Some {
+    field v0: T;
+    field v1: T;
+    field v2: T;
+    field v3: T;
+    field v4: T;
+}
 #endif
 
