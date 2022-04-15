@@ -2154,7 +2154,14 @@ internal entity ListOps provides Some {
             let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
             return op[recursive?](op[recursive?](op[recursive?](init, ll.v0), ll.v1), ll.v2);
         }
-xxxx;
+        elif(l.is<Vector4<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector4<T>>(l);
+            return op[recursive?](op[recursive?](op[recursive?](op[recursive?](init, ll.v0), ll.v1), ll.v2), ll.v3);
+        }
+        elif(l.is<Vector5<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector5<T>>(l);
+            return op[recursive?](op[recursive?](op[recursive?](op[recursive?](op[recursive?](init, ll.v0), ll.v1), ll.v2), ll.v3), ll.v4);
+        }
         else {
             return l.reduce<U>[recursive?](init, op);
         }
@@ -2175,6 +2182,14 @@ xxxx;
         elif(l.is<Vector3<T>>()) {
             let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
             return op[recursive?](op[recursive?](op[recursive?](init, ll.v0, 0n), ll.v1, 1n), ll.v2, 2n);
+        }
+        elif(l.is<Vector4<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector4<T>>(l);
+            return op[recursive?](op[recursive?](op[recursive?](op[recursive?](init, ll.v0, 0n), ll.v1, 1n), ll.v2, 2n), ll.v3, 3n);
+        }
+        elif(l.is<Vector5<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector5<T>>(l);
+            return op[recursive?](op[recursive?](op[recursive?](op[recursive?](op[recursive?](init, ll.v0, 0n), ll.v1, 1n), ll.v2, 2n), ll.v3, 3n), ll.v4, 4n);
         }
         else {
             return l.reduce_idx<U>[recursive?](init, op);
@@ -2201,7 +2216,24 @@ xxxx;
             let e0, v0 = op[recursive?](env, ll.v0);
             let e1, v1 = op[recursive?](e0, ll.v1);
             let e2, v2 = op[recursive?](e1, ll.v2);
-            return (|e2, Vector2<U>{v0, v1, v2}|);
+            return (|e2, Vector3<U>{v0, v1, v2}|);
+        }
+        elif(l.is<Vector4<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector4<T>>(l);
+            let e0, v0 = op[recursive?](env, ll.v0);
+            let e1, v1 = op[recursive?](e0, ll.v1);
+            let e2, v2 = op[recursive?](e1, ll.v2);
+            let e3, v3 = op[recursive?](e2, ll.v3);
+            return (|e3, Vector4<U>{v0, v1, v2, v3}|);
+        }
+        elif(l.is<Vector5<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector5<T>>(l);
+            let e0, v0 = op[recursive?](env, ll.v0);
+            let e1, v1 = op[recursive?](e0, ll.v1);
+            let e2, v2 = op[recursive?](e1, ll.v2);
+            let e3, v3 = op[recursive?](e2, ll.v3);
+            let e4, v4 = op[recursive?](e3, ll.v4);
+            return (|e4, Vector5<U>{v0, v1, v2, v3, v4}|);
         }
         else {
             return l.transduce<E, U>[recursive?](env, op);
@@ -2228,7 +2260,24 @@ xxxx;
             let e0, v0 = op[recursive?](env, ll.v0, 0n);
             let e1, v1 = op[recursive?](e0, ll.v1, 1n);
             let e2, v2 = op[recursive?](e1, ll.v2, 2n);
-            return (|e2, Vector2<U>{v0, v1, v2}|);
+            return (|e2, Vector3<U>{v0, v1, v2}|);
+        }
+        elif(l.is<Vector4<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector4<T>>(l);
+            let e0, v0 = op[recursive?](env, ll.v0, 0n);
+            let e1, v1 = op[recursive?](e0, ll.v1, 1n);
+            let e2, v2 = op[recursive?](e1, ll.v2, 2n);
+            let e3, v3 = op[recursive?](e2, ll.v3, 3n);
+            return (|e3, Vector4<U>{v0, v1, v2, v3}|);
+        }
+        elif(l.is<Vector5<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector4<T>>(l);
+            let e0, v0 = op[recursive?](env, ll.v0, 0n);
+            let e1, v1 = op[recursive?](e0, ll.v1, 1n);
+            let e2, v2 = op[recursive?](e1, ll.v2, 2n);
+            let e3, v3 = op[recursive?](e2, ll.v3, 3n);
+            let e4, v4 = op[recursive?](e3, ll.v4, 4n);
+            return (|e3, Vector5<U>{v0, v1, v2, v3, v4}|);
         }
         else {
             return l.transduce_idx<E, U>[recursive?](env, op);

@@ -324,7 +324,19 @@ function outputResultsAndExit(verbose: Verbosity, totaltime: number, totalicpp: 
         if(errorsmt.length !== 0) {
             process.stdout.write(chalk.bold(`Suite had ${errorsmt.length}`) + " " + chalk.magenta("symbolic test errors") + "\n");
 
-            const rstr = errorsmt.map((tt) => `${tt.test.namespace}::${tt.test.fname} -- "${tt.info}"`).join("\n  ");
+            const rstr = errorsmt.map((tt) => {
+                let infostr = tt.info;
+                try {
+                    infostr = JSON.parse(tt.info);
+                }
+                catch (ex) {
+                    ;
+                }
+
+                const tname = chalk.bold(`${tt.test.namespace}::${tt.test.fname}`);
+                return `---- ${tname} ----\n"${infostr}"`;
+            }).join("\n");
+
             process.stdout.write("  " + rstr + "\n\n");
         }
     }
