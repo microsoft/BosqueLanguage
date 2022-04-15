@@ -22,14 +22,6 @@ internal entity ListOps provides Some {
         return (|Vector2<T>{l.v0, l.v1}, Vector3<T>{l.v2, l.v3, l.v4}|);
     }
 
-    function s_append_vector_2_2(l: Vector2<T>, r: Vector2<T>): Vector4<T> {
-        return Vector4<T>{l.v0, l.v1, l.v2, l.v3};
-    }
-
-    function s_append_vector_2_3(l: Vector2<T>, r: Vector3<T>): Vector5<T> {
-        return Vector5<T>{l.v0, l.v1, l.v2, l.v3};
-    }
-
     function s_append_vector_safe_helper<T>(l: ListVector<T> | None, r: ListVector<T> | None): ListVector<T> | None {
         if(/\(l === none, r === none)) {
             return none;
@@ -158,7 +150,6 @@ internal entity ListOps provides Some {
             return l;
         }
     }
-
     function s_slice_start_vector_helper_2<T>(l: Vector2<T>, start: Nat): ListVector<T> | None {
         if(start == 2n) {
             return none;
@@ -170,7 +161,6 @@ internal entity ListOps provides Some {
             return l;
         }
     }
-
     function s_slice_start_vector_helper_3<T>(l: Vector3<T>, start: Nat): ListVector<T> | None {
         if(start == 3n) {
             return none;
@@ -185,7 +175,6 @@ internal entity ListOps provides Some {
             return l;
         }
     }
-
     function s_slice_start_vector_helper_4<T>(l: Vector4<T>, start: Nat): ListVector<T> | None {
         if(start == 4n) {
             return none;
@@ -203,7 +192,6 @@ internal entity ListOps provides Some {
             return l;
         }
     }
-
     function s_slice_start_vector_helper_5<T>(l: Vector5<T>, start: Nat): ListVector<T> | None {
         if(start == 5n) {
             return none;
@@ -233,7 +221,6 @@ internal entity ListOps provides Some {
             return none;
         }
     }
-
     function s_slice_end_vector_helper_2<T>(l: Vector2<T>, end: Nat): ListVector<T> | None {
         if(end == 2n) {
             return l;
@@ -245,7 +232,6 @@ internal entity ListOps provides Some {
             return none;
         }
     }
-
     function s_slice_end_vector_helper_3<T>(l: Vector3<T>, end: Nat): ListVector<T> | None {
         if(end == 3n) {
             return l;
@@ -260,7 +246,6 @@ internal entity ListOps provides Some {
             return none;
         }
     }
-
     function s_slice_end_vector_helper_4<T>(l: Vector4<T>, end: Nat): ListVector<T> | None {
         if(end == 4n) {
             return l;
@@ -278,7 +263,6 @@ internal entity ListOps provides Some {
             return none;
         }
     }
-
     function s_slice_end_vector_helper_5<T>(l: Vector5<T>, end: Nat): ListVector<T> | None {
         if(end == 5n) {
             return l;
@@ -336,50 +320,58 @@ internal entity ListOps provides Some {
         }
     }
 
-    function s_slice_vector_helper<T>(l: ListVector<T>, start: Nat, end: Nat): ListVector<T> | None {
-        if(start == end) {
-            return none;
+    function s_pop_front_vector<T>(l: ListVector<T>): (|T, ListVector<T>|) {
+        if(l.is<Vector1<T>>()) {
+            return (|l.v0, none|);
+        }
+        elif(l.is<Vector2<T>>()) {
+            return (|l.v0, Vector1<T>{l.v1}|);
+        }
+        elif(l.is<Vector3<T>>()) {
+            return (|l.v0, Vector2<T>{l.v1, l.v2}|);
+        }
+        elif(l.is<Vector4<T>>()) {
+            return (|l.v0, Vector3<T>{l.v1, l.v2, l.v3}|);
         }
         else {
-            if(start == 0) {
-                return ListOps::s_slice_end_vector_helper<T>(l, end);
-            }
-            else {
-                return ListOps::s_slice_end_vector_helper<T>(ListOps::s_slice_start_vector_helper<T>(l, start), end - start);
-            }
+            return (|l.v0, Vector4<T>{l.v1, l.v2, l.v3, l.v4}|);
         }
     }
 
-    function s_pop_back_vector_1<T>(l: Vector1<T>): T {
-        return l.v0;
-    }
-    function s_pop_back_vector_2<T>(l: Vector2<T>): (|T, Vector1<T>|) {
-        return (|l.v1, Vector1<T>{l.v0}|);
-    }
-    function s_pop_back_vector_3<T>(l: Vector3<T>): (|T, Vector2<T>|) {
-        return (|l.v2, Vector2<T>{l.v0, l.v1}|);
-    }
-    function s_pop_back_vector_4<T>(l: Vector4<T>): (|T, Vector3<T>|) {
-        return (|l.v3, Vector3<T>{l.v0, l.v1, l.v2}|);
-    }
-    function s_pop_back_vector_5<T>(l: Vector5<T>): (|T, Vector4<T>|) {
-        return (|l.v4, Vector4<T>{l.v0, l.v1, l.v2, l.v3}|);
+    function s_get_back_vector_helper<T>(l: ListVector<T>): T {
+        if(l.is<Vector1<T>>()) {
+            return l.v0;
+        }
+        elif(l.is<Vector2<T>>()) {
+            return l.v1;
+        }
+        elif(l.is<Vector3<T>>()) {
+            return l.v2;
+        }
+        elif(l.is<Vector4<T>>()) {
+            return l.v3;
+        }
+        else {
+            return l.v4;
+        }
     }
 
-    function s_pop_front_vector_1<T>(l: Vector1<T>): T {
-        return l.v0;
-    }
-    function s_pop_front_vector_2<T>(l: Vector2<T>): (|T, Vector1<T>|) {
-        return (|l.v0, Vector1<T>{l.v1}|);
-    }
-    function s_pop_front_vector_3<T>(l: Vector3<T>): (|T, Vector2<T>|) {
-        return (|l.v0, Vector2<T>{l.v1, l.v2}|);
-    }
-    function s_pop_front_vector_4<T>(l: Vector4<T>): (|T, Vector3<T>|) {
-        return (|l.v0, Vector3<T>{l.v1, l.v2, l.v3}|);
-    }
-    function s_pop_front_vector_5<T>(l: Vector5<T>): (|T, Vector4<T>|) {
-        return (|l.v0, Vector4<T>{l.v1, l.v2, l.v3, l.v4}|);
+    function s_get_front_vector_helper<T>(l: ListVector<T>): T {
+        if(l.is<Vector1<T>>()) {
+            return l.v0;
+        }
+        elif(l.is<Vector2<T>>()) {
+            return l.v0;
+        }
+        elif(l.is<Vector3<T>>()) {
+            return l.v0;
+        }
+        elif(l.is<Vector4<T>>()) {
+            return l.v0;
+        }
+        else {
+            return l.v0;
+        }
     }
 
     function s_push_back_vector_helper<T>(l: ListVector<T> | None, v: T): ListVector<T> {
@@ -392,7 +384,7 @@ internal entity ListOps provides Some {
         }
         elif(l.is<Vector2<T>>()) {
             let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
-           return Vector3<T>{ll.v0, ll.v1, v};
+            return Vector3<T>{ll.v0, ll.v1, v};
         }
         elif(l.is<Vector3<T>>()) {
             let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
@@ -447,16 +439,14 @@ internal entity ListOps provides Some {
     function s_safe_get_vector_1<T>(l: Vector1<T>, i: Nat): T {
         return l.v0;
     }
-
     function s_safe_get_vector_2<T>(l: Vector2<T>, i: Nat): T {
         if(i == 0n) {
-             return l.v0;
+            return l.v0;
         }
         else {
             return l.v1;
         }
     }
-
     function s_safe_get_vector_3<T>(l: Vector3<T>, i: Nat): T {
         if(i == 0n) {
             return l.v0;
@@ -468,7 +458,6 @@ internal entity ListOps provides Some {
             return l.v2;
         }
     }
-
     function s_safe_get_vector_4<T>(l: Vector4<T>, i: Nat): T {
         if(i == 0n) {
             return l.v0;
@@ -483,7 +472,6 @@ internal entity ListOps provides Some {
             return l.v3;
         }
     }
-
     function s_safe_get_vector_5<T>(l: Vector5<T>, i: Nat): T {
         if(i == 0n) {
             return l.v0;
@@ -501,7 +489,6 @@ internal entity ListOps provides Some {
             return l.v4;
         }
     }
-
     function s_safe_get_vector_helper<T>(l: ListVector<T>, i: Nat): T {
         if(l.is<Vector1<T>>()) {
            return ListOps::s_safe_get_vector_1<T>(l, i);
@@ -517,6 +504,142 @@ internal entity ListOps provides Some {
         }
         else {
             return ListOps::s_safe_get_vector_5<T>(l, i);
+        }
+    }
+
+    function s_safe_set_vector_1<T>(l: Vector1<T>, i: Nat, v: T): Vector1<T> {
+        return Vector1<T>{v};
+    }
+    function s_safe_set_vector_2<T>(l: Vector2<T>, i: Nat, v: T): Vector2<T> {
+        if(i == 0n) {
+            return Vector2<T>{v, l.v1};
+        }
+        else {
+            return Vector2<T>{l.v0, v};
+        }
+    }
+    function s_safe_set_vector_3<T>(l: Vector3<T>, i: Nat, v: T): Vector3<T> {
+        if(i == 0n) {
+            return Vector3<T>{v, l.v1, l.v2};
+        }
+        elif(i == 1n) {
+            return Vector3<T>{l.v0, v, l.v2};
+        }
+        else {
+            return Vector3<T>{l.v0, l.v1, v};
+        }
+    }
+    function s_safe_set_vector_4<T>(l: Vector4<T>, i: Nat, v: T): Vector4<T> {
+        if(i == 0n) {
+            return Vector4<T>{v, l.v1, l.v2, l.v3};
+        }
+        elif(i == 1n) {
+            return Vector4<T>{l.v0, v, l.v2, l.v3};
+        }
+        elif(i == 2n) {
+            return Vector4<T>{l.v0, l.v1, v, l.v3};
+        }
+        else {
+            return Vector4<T>{l.v0, l.v1, l.v2, v};
+        }
+    }
+    function s_safe_set_vector_5<T>(l: Vector5<T>, i: Nat, v: T): Vector5<T> {
+        if(i == 0n) {
+            return Vector5<T>{v, l.v1, l.v2, l.v3, l.v4};
+        }
+        elif(i == 1n) {
+            return Vector5<T>{l.v0, v, l.v2, l.v3, l.v4};
+        }
+        elif(i == 2n) {
+            return Vector5<T>{l.v0, l.v1, v, l.v3, l.v4};
+        }
+        elif(i == 3n) {
+            return Vector5<T>{l.v0, l.v1, l.v2, v, l.v4};
+        }
+        else {
+            return Vector5<T>{l.v0, l.v1, l.v2, l.v3, v};
+        }
+    }
+    function s_safe_set_vector_helper<T>(l: ListVector<T>, i: Nat, v: T): ListVector<T> {
+        if(l.is<Vector1<T>>()) {
+           return ListOps::s_safe_set_vector_1<T>(l, i, v);
+        }
+        elif(l.is<Vector2<T>>()) {
+            return ListOps::s_safe_set_vector_2<T>(l, i, v);
+        }
+        elif(l.is<Vector3<T>>()) {
+            return ListOps::s_safe_set_vector_3<T>(l, i, v);
+        }
+        elif(l.is<Vector4<T>>()) {
+            return ListOps::s_safe_set_vector_4<T>(l, i, v);
+        }
+        else {
+            return ListOps::s_safe_set_vector_5<T>(l, i, v);
+        }
+    }
+
+    function s_safe_remove_vector_2<T>(l: Vector2<T>, i: Nat): Vector1<T> {
+        if(i == 0n) {
+            return Vector1<T>{l.v1};
+        }
+        else {
+            return Vector1<T>{l.v0};
+        }
+    }
+    function s_safe_remove_vector_3<T>(l: Vector3<T>, i: Nat): Vector2<T> {
+        if(i == 0n) {
+            return Vector2<T>{l.v1, l.v2};
+        }
+        elif(i == 1n) {
+            return Vector2<T>{l.v0, l.v2};
+        }
+        else {
+            return Vector2<T>{l.v0, l.v1};
+        }
+    }
+    function s_safe_remove_vector_4<T>(l: Vector4<T>, i: Nat): Vector3<T> {
+        if(i == 0n) {
+            return Vector3<T>{l.v1, l.v2, l.v3};
+        }
+        elif(i == 1n) {
+            return Vector3<T>{l.v0, l.v2, l.v3};
+        }
+        elif(i == 2n) {
+            return Vector3<T>{l.v0, l.v1, l.v3};
+        }
+        else {
+            return Vector3<T>{l.v0, l.v1, l.v2};
+        }
+    }
+    function s_safe_remove_vector_5<T>(l: Vector5<T>, i: Nat): Vector4<T> {
+        if(i == 0n) {
+            return Vector4<T>{l.v1, l.v2, l.v3, l.v4};
+        }
+        elif(i == 1n) {
+            return Vector4<T>{l.v0, l.v2, l.v3, l.v4};
+        }
+        elif(i == 2n) {
+            return Vector4<T>{l.v0, l.v1, l.v3, l.v4};
+        }
+        elif(i == 3n) {
+            return Vector4<T>{l.v0, l.v1, l.v2, l.v4};
+        }
+        else {
+            return Vector4<T>{l.v0, l.v1, l.v2, l.v3};
+        }
+    }
+    function s_safe_remove_vector_helper<T>(l: Vector2<T> | Vector3<T> | Vector4<T> | Vector5<T>, i: Nat): ListVector<T> {
+        if(l.is<Vector2<T>>()) {
+            return ListOps::s_safe_remove_vector_2<T>(l, i);
+        }
+        elif(l.is<Vector3<T>>()) {
+            return ListOps::s_safe_remove_vector_3<T>(l, i);
+        }
+        elif(l.is<Vector4<T>>()) {
+            return ListOps::s_safe_remove_vector_4<T>(l, i);
+        }
+        else {
+            return ListOps::s_safe_remove_vector_5<T>(l, i);
         }
     }
 
@@ -1844,7 +1967,7 @@ internal entity ListOps provides Some {
         let llv = ListOps::s_sort_vector_2<T>[recursive?(ll, cmp);
         let rlv = ListOps::s_sort_vector_2<T>[recursive?(rl, cmp);
 
-        return ListOps::s_insert_vector_3<T>[recursive?](ListOps::s_insert_vector_2<T>[recursive?](rlv, llv.1), llv.0)
+        return ListOps::s_insert_vector_3<T>[recursive?](ListOps::s_insert_vector_2<T>[recursive?](rlv, llv.1), llv.0);
     }
     recursive? function s_sort_vector_5<T>(l: Vector5<T>, cmp: recursive? pred(_: T, _: T) -> Bool): Vector5<T> {
         let ll, rl = ListOps::s_split_vector_5<T>(l);
@@ -1852,12 +1975,15 @@ internal entity ListOps provides Some {
         let llv = ListOps::s_sort_vector_2<T>[recursive?(ll, cmp);
         let rlv = ListOps::s_sort_vector_3<T>[recursive?(rl, cmp);
 
-        return ListOps::s_insert_vector_4<T>[recursive?](ListOps::s_insert_vector_3<T>[recursive?](rlv, llv.1), llv.0)
+        return ListOps::s_insert_vector_4<T>[recursive?](ListOps::s_insert_vector_3<T>[recursive?](rlv, llv.1), llv.0);
     }
 
     recursive? function s_sort<T>(l: ListRepr<T>, cmp: recursive? pred(_: T, _: T) -> Bool): ListRepr<T> {
         if(l === none) {
             return none;
+        }
+        elif(l.is<Vector1<T>>()) {
+            return l;
         }
         elif(l.is<Vector2<T>>()) {
             return ListOps::s_sort_vector_2<T>[recursive?](l, cmp);
@@ -1876,65 +2002,66 @@ internal entity ListOps provides Some {
         }
     }
 
-xxxx;
-
-    recursive? function s_unique_from_sorted_2<T>(l: Vector2<T>, eq: recursive? pred(_: T, _: T) -> Bool): ListVector<T> {
-        if(!cmp[recursive?](l.v1, l.v0)) {
+    recursive? function s_unique_from_sorted_2<T>(l: Vector2<T>, eq: recursive? pred(_: T, _: T) -> Bool): Vector1<T> | Vector2<T> {
+        if(eq[recursive?](l.v0, l.v1)) {
+            return Vector1<T>{l.v0};
+        }
+        else {
             return l;
         }
-        else {
-            return List<T>{ll.v1, ll.v0};
-        }
     }
-    recursive? function s_unique_from_sorted_3<T>(l: Vector3<T>, eq: recursive? pred(_: T, _: T) -> Bool): ListVector<T> {
-        let l10 = cmp[recursive?](l.v1, l.v0);
-        let l20 = cmp[recursive?](l.v2, l.v0);
-        let l21 = cmp[recursive?](l.v2, l.v1);
+    recursive? function s_unique_from_sorted_3<T>(l: Vector3<T>, eq: recursive? pred(_: T, _: T) -> Bool): Vector1<T> | Vector2<T> | Vector3<T> {
+        let eq01 = eq[recursive?](l.v0, l.v1);
+        let eq02 = eq[recursive?](l.v0, l.v2);
+        let eq12 = eq[recursive?](l.v1, l.v2);
+            
 
-        if(/\(l20, l21)) {
-            if(l10) {
-                return Vector3<T>{ll.v2, ll.v1, ll.v0};
-            }
-            else {
-                return Vector3<T>{ll.v2, ll.v0, ll.v1};
-            }
+        if(/\(eq01, eq02)) {
+            return Vector1<T>{ll.v0};
         }
-        elif(/\(l10, !l21)) {
-            if(l20) {
-                return Vector3<T>{ll.v1, ll.v2, ll.v0};
-            }
-            else {
-                return Vector3<T>{ll.v1, ll.v0, ll.v2};
-            }
+        elif(eq01) {
+            return Vector2<T>{ll.v0, ll.v2};
+        }
+        elif(eq02) {
+            return Vector2<T>{ll.v0, ll.v1};
+        }
+        elif(eq12) {
+            return Vector2<T>{ll.v0, ll.v1};
         }
         else {
-            if(l21) {
-                return Vector3<T>{ll.v0, ll.v2, ll.v1};
-            }
-            else {
-                return Vector3<T>{ll.v0, ll.v1, ll.v2};
-            }
+            return l;
         }
     }
     recursive? function s_unique_from_sorted_4<T>(l: Vector4<T>, eq: recursive? pred(_: T, _: T) -> Bool): ListVector<T> {
         let ll, rl = ListOps::s_split_vector_4<T>(l);
         
-        let llv = ListOps::s_sort_vector_2<T>[recursive?(ll, cmp);
-        let rlv = ListOps::s_sort_vector_2<T>[recursive?(rl, cmp);
+        let llv = ListOps::s_unique_from_sorted_2<T>[recursive?(ll, eq);
+        let rlv = ListOps::s_unique_from_sorted_2<T>[recursive?(rl, eq);
 
-        return ListOps::s_insert_vector_3<T>[recursive?](ListOps::s_insert_vector_2<T>[recursive?](rlv, llv.1), llv.0)
+        let rval, rrest = ListOps::s_pop_front_vector<T>(rlv);
+        if(!eq[recursive?](ListOps::s_get_back_vector_helper<T>(llv), rval)) {
+            return ListOps::s_append_vector_safe_helper<T>(llv, rlv);
+        }
+        else {
+            
+            return ListOps::s_append_vector_safe_helper<T>(llv, rrest);
+        }
     }
     recursive? function s_unique_from_sorted_5<T>(l: Vector5<T>, eq: recursive? pred(_: T, _: T) -> Bool): ListVector<T> {
-        let ll, rl = ListOps::s_split_vector_5<T>(l);
+        let ll, rl = ListOps::s_split_vector_4<T>(l);
         
-        let llv = ListOps::s_sort_vector_2<T>[recursive?(ll, cmp);
-        let rlv = ListOps::s_sort_vector_3<T>[recursive?(rl, cmp);
+        let llv = ListOps::s_unique_from_sorted_2<T>[recursive?(ll, eq);
+        let rlv = ListOps::s_unique_from_sorted_2<T>[recursive?(rl, eq);
 
-        return ListOps::s_insert_vector_4<T>[recursive?](ListOps::s_insert_vector_3<T>[recursive?](rlv, llv.1), llv.0)
+        let rval, rrest = ListOps::s_pop_front_vector<T>(rlv);
+        if(!eq[recursive?](ListOps::s_get_back_vector_helper<T>(llv), rval)) {
+            return ListOps::s_append_vector_safe_helper<T>(llv, rlv);
+        }
+        else {
+            
+            return ListOps::s_append_vector_safe_helper<T>(llv, rrest);
+        }
     }
-
-
-xxxx;
 
     recursive? function s_unique_from_sorted<T>(l: ListRepr<T>, eq: recursive? pred(_: T, _: T) -> Bool): ListRepr<T> {
         if(l === none) {
@@ -1944,36 +2071,16 @@ xxxx;
             return l;
         }
         elif(l.is<Vector2<T>>()) {
-            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
-            if(eq[recursive?](ll.v0, ll.v1)) {
-                return Vector1<T>{ll.v0};
-            }
-            else {
-                return l;
-            }
+            return ListOps::s_unique_from_sorted_2<T>[recursive?](l, eq);
         }
         elif(l.is<Vector3<T>>()) {
-            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
-            let eq01 = eq[recursive?](ll.v0, ll.v1);
-            let eq02 = eq[recursive?](ll.v0, ll.v2);
-            let eq12 = eq[recursive?](ll.v1, ll.v2);
-            
-
-            if(/\(eq01, eq02)) {
-                return Vector1<T>{ll.v0};
-            }
-            elif(eq01) {
-                return Vector2<T>{ll.v0, ll.v2};
-            }
-            elif(eq02) {
-                return Vector2<T>{ll.v0, ll.v1};
-            }
-            elif(eq12) {
-                return Vector2<T>{ll.v0, ll.v1};
-            }
-            else {
-                return l;
-            }
+            return ListOps::s_unique_from_sorted_3<T>[recursive?](l, eq);
+        }
+        elif(l.is<Vector4<T>>()) {
+            return ListOps::s_unique_from_sorted_4<T>[recursive?](l, eq);
+        }
+        elif(l.is<Vector5<T>>()) {
+            return ListOps::s_unique_from_sorted_5<T>[recursive?](l, eq);
         }
         else {
             return l.unique_from_sorted[recursive?](eq);
@@ -1995,70 +2102,39 @@ xxxx;
             let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
             return Vector3<T>{ll.v2, ll.v1, ll.v0};
         }
+         elif(l.is<Vector4<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector4<T>>(l);
+            return Vector4<T>{ll.v3, ll.v2, ll.v1, ll.v0};
+        }
+         elif(l.is<Vector5<T>>()) {
+            let ll = s_safeAs<ListRepr<T>, Vector5<T>>(l);
+            return Vector5<T>{ll.v4, ll.v3, ll.v2, ll.v1, ll.v0};
+        }
         else {
             return l.reverse[recursive]();
         }
     }
 
-    function s_set<T>(l: ListRepr<T>, i: Nat, v: T): ListRepr<T> {
-        if(l.is<Vector1<T>>()) {
-            return Vector1<T>{v};
-        }
-        elif(l.is<Vector2<T>>()) {
-            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
-            if(i == 0n) {
-                return Vector2<T>{v, ll.v1};
-            }
-            else {
-                return Vector2<T>{ll.v0, v};
-            }
-        }
-        elif(l.is<Vector3<T>>()) {
-            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
-            if(i == 0n) {
-                return Vector3<T>{v, ll.v1, ll.v2};
-            }
-            elif(i == 1n) {
-                return Vector3<T>{ll.v0, v, ll.v2};
-            }
-            else {
-                return Vector3<T>{ll.v0, ll.v1, v};
-            }
+    function s_set<T>(l: LargeList<T> | ListVector<T>, i: Nat, v: T): ListRepr<T> {
+        if(l.is<LargeList<T>>()) {
+            return l.set(i, v);
         }
         else {
-            let ll = s_safeAs<ListRepr<T>, LargeList<T>>(l);
-            return ll.set(i, v);
+            return ListOps::s_safe_set_vector_helper<T>(l, i, v);
         }
     }
 
-    function s_remove<T>(l: ListRepr<T>, i: Nat): ListRepr<T> {
-        if(l.is<Vector1<T>>()) {
-            return none;
-        }
-        elif(l.is<Vector2<T>>()) {
-            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
-            if(i == 0n) {
-                return Vector1<T>{ll.v1};
-            }
-            else {
-                return Vector1<T>{ll.v0};
-            }
-        }
-        elif(l.is<Vector3<T>>()) {
-            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
-            if(i == 0n) {
-                return Vector2<T>{ll.v1, ll.v2};
-            }
-            elif(i == 1n) {
-                return Vector2<T>{ll.v0, ll.v2};
-            }
-            else {
-                return Vector2<T>{ll.v0, ll.v1};
-            }
+    function s_remove<T>(l: LargeList<T> | ListVector<T>, i: Nat): ListRepr<T> {
+        if(l.is<LargeList<T>>()) {
+            return l.remove(i);
         }
         else {
-            let ll = s_safeAs<ListRepr<T>, LargeList<T>>(l);
-            return ll.remove(i);
+            if(l.is<Vector1<T>>()) {
+                return none;
+            }
+            else {
+                return ListOps::s_safe_remove_vector_helper<T>(l, i);
+            }
         }
     }
 
@@ -2078,6 +2154,7 @@ xxxx;
             let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
             return op[recursive?](op[recursive?](op[recursive?](init, ll.v0), ll.v1), ll.v2);
         }
+xxxx;
         else {
             return l.reduce<U>[recursive?](init, op);
         }
