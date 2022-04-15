@@ -37,7 +37,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     function concat(...ll: List<List<T>>): List<T> {
-        if(ListOps::s_empty<T>(this.value())) {
+        if(ListOps::s_empty<T>(ll.value())) {
             return List<T>{};
         }
         else {
