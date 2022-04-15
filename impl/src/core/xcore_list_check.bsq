@@ -1650,7 +1650,7 @@ internal entity ListOps provides Some {
         elif(l.is<Vector4<T>>()) {
             return ListOps::s_min_arg_vector_4<T>[recursive?](l, 0n, f).0;
         }
-        elif(l.is<Vector4<T>>()) {
+        elif(l.is<Vector5<T>>()) {
             return ListOps::s_min_arg_vector_5<T>[recursive?](l, 0n, f).0;
         }
         else {
@@ -1720,7 +1720,7 @@ internal entity ListOps provides Some {
         elif(l.is<Vector4<T>>()) {
             return ListOps::s_max_arg_vector_4<T>[recursive?](l, 0n, f).0;
         }
-        elif(l.is<Vector4<T>>()) {
+        elif(l.is<Vector5<T>>()) {
             return ListOps::s_max_arg_vector_5<T>[recursive?](l, 0n, f).0;
         }
         else {
@@ -1757,59 +1757,184 @@ internal entity ListOps provides Some {
         }
     }
 
+    recursive? function s_insert_vector_2<T>(l: Vector2<T>, v: T, cmp: recursive? pred(_: T, _: T) -> Bool): Vector3<T> {
+        if(!cmp[recursive?](l.v0, v)) {
+            return Vector3<T>{v, l.v0, l.v1};
+        }
+        elif(!cmp[recursive?](l.v1, v)) {
+            return Vector3<T>{l.v0, v, l.v1};
+        }
+        else {
+            return Vector3<T>{l.v0, l.v1, v};
+        }
+    }
+    recursive? function s_insert_vector_3<T>(l: Vector3<T>, v: T, cmp: recursive? pred(_: T, _: T) -> Bool): Vector4<T> {
+        if(!cmp[recursive?](l.v0, v)) {
+            return Vector4<T>{v, l.v0, l.v1, l.v2};
+        }
+        elif(!cmp[recursive?](l.v1, v)) {
+            return Vector4<T>{l.v0, v, l.v1, l.v2};
+        }
+        elif(!cmp[recursive?](l.v2, v)) {
+            return Vector4<T>{l.v0, l.v1, v, l.v2};
+        }
+        else {
+            return Vector4<T>{l.v0, l.v1, l.v2, v};
+        }
+    }
+    recursive? function s_insert_vector_4<T>(l: Vector4<T>, v: T, cmp: recursive? pred(_: T, _: T) -> Bool): Vector5<T> {
+        if(!cmp[recursive?](l.v0, v)) {
+            return Vector4<T>{v, l.v0, l.v1, l.v2, l.v3};
+        }
+        elif(!cmp[recursive?](l.v1, v)) {
+            return Vector4<T>{l.v0, v, l.v1, l.v2, l.v3};
+        }
+        elif(!cmp[recursive?](l.v2, v)) {
+            return Vector4<T>{l.v0, l.v1, v, l.v2, l.v3};
+        }
+        elif(!cmp[recursive?](l.v3, v)) {
+            return Vector4<T>{l.v0, l.v1, l.v2 v, l.v3};
+        }
+        else {
+            return Vector4<T>{l.v0, l.v1, l.v2, l.v3, v};
+        }
+    }
 
-xxxx;
+    recursive? function s_sort_vector_2<T>(l: Vector2<T>, cmp: recursive? pred(_: T, _: T) -> Bool): Vector2<T> {
+        if(!cmp[recursive?](l.v1, l.v0)) {
+            return l;
+        }
+        else {
+            return List<T>{ll.v1, ll.v0};
+        }
+    }
+    recursive? function s_sort_vector_3<T>(l: Vector3<T>, cmp: recursive? pred(_: T, _: T) -> Bool): Vector3<T> {
+        let l10 = cmp[recursive?](l.v1, l.v0);
+        let l20 = cmp[recursive?](l.v2, l.v0);
+        let l21 = cmp[recursive?](l.v2, l.v1);
+
+        if(/\(l20, l21)) {
+            if(l10) {
+                return Vector3<T>{ll.v2, ll.v1, ll.v0};
+            }
+            else {
+                return Vector3<T>{ll.v2, ll.v0, ll.v1};
+            }
+        }
+        elif(/\(l10, !l21)) {
+            if(l20) {
+                return Vector3<T>{ll.v1, ll.v2, ll.v0};
+            }
+            else {
+                return Vector3<T>{ll.v1, ll.v0, ll.v2};
+            }
+        }
+        else {
+            if(l21) {
+                return Vector3<T>{ll.v0, ll.v2, ll.v1};
+            }
+            else {
+                return Vector3<T>{ll.v0, ll.v1, ll.v2};
+            }
+        }
+    }
+    recursive? function s_sort_vector_4<T>(l: Vector4<T>, cmp: recursive? pred(_: T, _: T) -> Bool): Vector4<T> {
+        let ll, rl = ListOps::s_split_vector_4<T>(l);
+        
+        let llv = ListOps::s_sort_vector_2<T>[recursive?(ll, cmp);
+        let rlv = ListOps::s_sort_vector_2<T>[recursive?(rl, cmp);
+
+        return ListOps::s_insert_vector_3<T>[recursive?](ListOps::s_insert_vector_2<T>[recursive?](rlv, llv.1), llv.0)
+    }
+    recursive? function s_sort_vector_5<T>(l: Vector5<T>, cmp: recursive? pred(_: T, _: T) -> Bool): Vector5<T> {
+        let ll, rl = ListOps::s_split_vector_5<T>(l);
+        
+        let llv = ListOps::s_sort_vector_2<T>[recursive?(ll, cmp);
+        let rlv = ListOps::s_sort_vector_3<T>[recursive?(rl, cmp);
+
+        return ListOps::s_insert_vector_4<T>[recursive?](ListOps::s_insert_vector_3<T>[recursive?](rlv, llv.1), llv.0)
+    }
+
     recursive? function s_sort<T>(l: ListRepr<T>, cmp: recursive? pred(_: T, _: T) -> Bool): ListRepr<T> {
         if(l === none) {
             return none;
         }
-        elif(l.is<Vector1<T>>()) {
-            return l;
-        }
         elif(l.is<Vector2<T>>()) {
-            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
-            if(!cmp[recursive?](ll.v1, ll.v0)) {
-                return l;
-            }
-            else {
-                return List<T>{ll.v1, ll.v0};
-            }
+            return ListOps::s_sort_vector_2<T>[recursive?](l, cmp);
         }
         elif(l.is<Vector3<T>>()) {
-            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
-            let l10 = cmp[recursive?](ll.v1, ll.v0);
-            let l20 = cmp[recursive?](ll.v2, ll.v0);
-            let l21 = cmp[recursive?](ll.v2, ll.v1);
+            return ListOps::s_sort_vector_3<T>[recursive?](l, cmp);
+        }
+        elif(l.is<Vector4<T>>()) {
+            return ListOps::s_sort_vector_4<T>[recursive?](l, cmp);
+        }
+        elif(l.is<Vector5<T>>()) {
+            return ListOps::s_sort_vector_5<T>[recursive?](l, cmp);
+        }
+        else {
+            return l.sort[recursive?](cmp);
+        }
+    }
 
-            if(/\(l20, l21)) {
-                if(l10) {
-                    return Vector3<T>{ll.v2, ll.v1, ll.v0};
-                }
-                else {
-                    return Vector3<T>{ll.v2, ll.v0, ll.v1};
-                }
-            }
-            elif(/\(l10, !l21)) {
-                if(l20) {
-                    return Vector3<T>{ll.v1, ll.v2, ll.v0};
-                }
-                else {
-                    return Vector3<T>{ll.v1, ll.v0, ll.v2};
-                }
+xxxx;
+
+    recursive? function s_unique_from_sorted_2<T>(l: Vector2<T>, eq: recursive? pred(_: T, _: T) -> Bool): ListVector<T> {
+        if(!cmp[recursive?](l.v1, l.v0)) {
+            return l;
+        }
+        else {
+            return List<T>{ll.v1, ll.v0};
+        }
+    }
+    recursive? function s_unique_from_sorted_3<T>(l: Vector3<T>, eq: recursive? pred(_: T, _: T) -> Bool): ListVector<T> {
+        let l10 = cmp[recursive?](l.v1, l.v0);
+        let l20 = cmp[recursive?](l.v2, l.v0);
+        let l21 = cmp[recursive?](l.v2, l.v1);
+
+        if(/\(l20, l21)) {
+            if(l10) {
+                return Vector3<T>{ll.v2, ll.v1, ll.v0};
             }
             else {
-                if(l21) {
-                    return Vector3<T>{ll.v0, ll.v2, ll.v1};
-                }
-                else {
-                    return Vector3<T>{ll.v0, ll.v1, ll.v2};
-                }
+                return Vector3<T>{ll.v2, ll.v0, ll.v1};
+            }
+        }
+        elif(/\(l10, !l21)) {
+            if(l20) {
+                return Vector3<T>{ll.v1, ll.v2, ll.v0};
+            }
+            else {
+                return Vector3<T>{ll.v1, ll.v0, ll.v2};
             }
         }
         else {
-            return l.sort[recursive?](eq);
+            if(l21) {
+                return Vector3<T>{ll.v0, ll.v2, ll.v1};
+            }
+            else {
+                return Vector3<T>{ll.v0, ll.v1, ll.v2};
+            }
         }
     }
+    recursive? function s_unique_from_sorted_4<T>(l: Vector4<T>, eq: recursive? pred(_: T, _: T) -> Bool): ListVector<T> {
+        let ll, rl = ListOps::s_split_vector_4<T>(l);
+        
+        let llv = ListOps::s_sort_vector_2<T>[recursive?(ll, cmp);
+        let rlv = ListOps::s_sort_vector_2<T>[recursive?(rl, cmp);
+
+        return ListOps::s_insert_vector_3<T>[recursive?](ListOps::s_insert_vector_2<T>[recursive?](rlv, llv.1), llv.0)
+    }
+    recursive? function s_unique_from_sorted_5<T>(l: Vector5<T>, eq: recursive? pred(_: T, _: T) -> Bool): ListVector<T> {
+        let ll, rl = ListOps::s_split_vector_5<T>(l);
+        
+        let llv = ListOps::s_sort_vector_2<T>[recursive?(ll, cmp);
+        let rlv = ListOps::s_sort_vector_3<T>[recursive?(rl, cmp);
+
+        return ListOps::s_insert_vector_4<T>[recursive?](ListOps::s_insert_vector_3<T>[recursive?](rlv, llv.1), llv.0)
+    }
+
+
+xxxx;
 
     recursive? function s_unique_from_sorted<T>(l: ListRepr<T>, eq: recursive? pred(_: T, _: T) -> Bool): ListRepr<T> {
         if(l === none) {
