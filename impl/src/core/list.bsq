@@ -100,7 +100,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return nothing;
         }
         else {
-            return something(ListOps::s_safe_back<T>(this.value());
+            return something(ListOps::s_safe_back<T>(this.value()));
         }
     }
 
