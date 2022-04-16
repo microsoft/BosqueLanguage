@@ -488,6 +488,14 @@ class SMTBodyEmitter {
             const v3type = this.assembly.typeMap.get(`Vector3<${etype.typeID}>`) as MIRType;
             bbody = this.typegen.coerce(new SMTCallSimple(this.typegen.getSMTConstructorName(v3type).cons, [new SMTVar("arg0"), new SMTVar("arg1"), new SMTVar("arg2")]), v3type, this.typegen.getMIRType(ldecl.oftype));
         }
+        else if(geninfo.argc === 4) {
+            const v4type = this.assembly.typeMap.get(`Vector4<${etype.typeID}>`) as MIRType;
+            bbody = this.typegen.coerce(new SMTCallSimple(this.typegen.getSMTConstructorName(v3type).cons, [new SMTVar("arg0"), new SMTVar("arg1"), new SMTVar("arg2"), new SMTVar("arg3")]), v4type, this.typegen.getMIRType(ldecl.oftype));
+        }
+        else if(geninfo.argc === 5) {
+            const v5type = this.assembly.typeMap.get(`Vector5<${etype.typeID}>`) as MIRType;
+            bbody = this.typegen.coerce(new SMTCallSimple(this.typegen.getSMTConstructorName(v3type).cons, [new SMTVar("arg0"), new SMTVar("arg1"), new SMTVar("arg2"), new SMTVar("arg3"), new SMTVar("arg4")]), v5type, this.typegen.getMIRType(ldecl.oftype));
+        }
         else {
             bbody =  NOT_IMPLEMENTED("Collection Constructor for lists larger than 3");
             //
@@ -782,6 +790,7 @@ class SMTBodyEmitter {
             return new SMTConst(flow.typeID === ofentity.typeID ? "true" : "false");
         }
         else {
+            xxxx;
             const accessTypeTag = this.typegen.getSMTTypeFor(layout).isGeneralTermType() ? new SMTCallSimple("GetTypeTag@BTerm", [this.argToSMT(arg)]) : new SMTCallSimple("GetTypeTag@BKey", [this.argToSMT(arg)]);
             return SMTCallSimple.makeEq(accessTypeTag, new SMTConst(`TypeTag_${this.typegen.lookupTypeName(ofentity.typeID)}`));
         }

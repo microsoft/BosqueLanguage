@@ -2201,7 +2201,33 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         LIST_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
+    case BSQPrimitiveImplTag::s_list_push_back_ne: {
+        BSQListOps::xxx(LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), invk->binds.find("T")->second, resultsl);
+        break;
+    }
+    case BSQPrimitiveImplTag::s_list_push_front_ne: {
+        BSQListOps::xxx(LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), invk->binds.find("T")->second, resultsl);
+        break;
+    }
     case BSQPrimitiveImplTag::s_list_remove_ne: {
+        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
+        auto ii = SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]);
+        
+        auto rr = BSQListOps::s_remove_ne(lflavor, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), ii);
+        LIST_STORE_RESULT_REPR(rr, resultsl);
+        break;
+    }
+    case BSQPrimitiveImplTag::s_list_pop_back_ne: {
+        xxxx;
+        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
+        auto ii = SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]);
+        
+        auto rr = BSQListOps::s_remove_ne(lflavor, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), ii);
+        LIST_STORE_RESULT_REPR(rr, resultsl);
+        break;
+    }
+    case BSQPrimitiveImplTag::s_list_pop_front_ne: {
+        xxxx;
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
         auto ii = SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]);
         
@@ -2291,6 +2317,14 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
     }
     case BSQPrimitiveImplTag::s_list_safe_get: {
         BSQListOps::s_safe_get(LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]), invk->binds.find("T")->second, resultsl);
+        break;
+    }
+    case BSQPrimitiveImplTag::s_list_safe_back: {
+        BSQListOps::s_safe_back(LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), invk->binds.find("T")->second, resultsl);
+        break;
+    }
+    case BSQPrimitiveImplTag::s_list_safe_front: {
+        BSQListOps::s_safe_front(LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), invk->binds.find("T")->second, resultsl);
         break;
     }
     case BSQPrimitiveImplTag::s_list_find_pred_ne: {

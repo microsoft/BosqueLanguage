@@ -338,6 +338,24 @@ internal entity ListOps provides Some {
         }
     }
 
+    function s_pop_back_vector<T>(l: ListVector<T>): (|T, ListVector<T>|) {
+        if(l.is<Vector1<T>>()) {
+            return (|l.v0, none|);
+        }
+        elif(l.is<Vector2<T>>()) {
+            return (|l.v1, Vector1<T>{l.v0}|);
+        }
+        elif(l.is<Vector3<T>>()) {
+            return (|l.v2, Vector2<T>{l.v0, l.v1}|);
+        }
+        elif(l.is<Vector4<T>>()) {
+            return (|l.v3, Vector3<T>{l.v0, l.v1, l.v2}|);
+        }
+        else {
+            return (|l.v4, Vector4<T>{l.v0, l.v1, l.v2, l.v3}|);
+        }
+    }
+
     function s_get_back_vector_helper<T>(l: ListVector<T>): T {
         if(l.is<Vector1<T>>()) {
             return l.v0;
@@ -888,6 +906,26 @@ internal entity ListOps provides Some {
         else {
             let ll = s_safeAs<ListRepr<T>, ListVector<T>>(l);
             return ListOps::s_safe_get_vector_helper<T>(ll, i);
+        }
+    }
+
+    function s_safe_back<T>(l: ListRepr<T>): T {
+        if(l.is<LargeList<T>>()) {
+            return l.safe_back();
+        }
+        else {
+            let ll = s_safeAs<ListRepr<T>, ListVector<T>>(l);
+            return ListOps::s_get_back_vector_helper<T>(ll);
+        }
+    }
+
+    function s_safe_front<T>(l: ListRepr<T>): T {
+        if(l.is<LargeList<T>>()) {
+            return l.safe_front();
+        }
+        else {
+            let ll = s_safeAs<ListRepr<T>, ListVector<T>>(l);
+            return ListOps::s_get_front_vector_helper<T>(ll);
         }
     }
 
@@ -2115,16 +2153,43 @@ internal entity ListOps provides Some {
         }
     }
 
-    function s_set<T>(l: LargeList<T> | ListVector<T>, i: Nat, v: T): ListRepr<T> {
+    function s_set<T>(l: ListRepr<T>, i: Nat, v: T): ListRepr<T> {
         if(l.is<LargeList<T>>()) {
             return l.set(i, v);
         }
         else {
-            return ListOps::s_safe_set_vector_helper<T>(l, i, v);
+            let ll = s_safeAs<ListRepr<T>, ListVector<T>>(l);
+            return ListOps::s_safe_set_vector_helper<T>(ll, i, v);
         }
     }
 
-    function s_remove<T>(l: LargeList<T> | ListVector<T>, i: Nat): ListRepr<T> {
+    function s_push_back<T>(l: ListRepr<T>, v: T): ListRepr<T> {
+        if(l === none) {
+            return Vector1<T>{v};
+        }
+        elif(l.is<LargeList<T>>()) {
+            return l.push_back(v);
+        }
+        else {
+            let ll = s_safeAs<ListRepr<T>, ListVector<T>>(l);
+            return ListOps::s_push_back_helper<T>(ll, v);
+        }
+    }
+
+    function s_push_front<T>(l: ListRepr<T>, v: T): ListRepr<T> {
+        if(l === none) {
+            return Vector1<T>{v};
+        }
+        elif(l.is<LargeList<T>>()) {
+            return l.push_front(v);
+        }
+        else {
+            let ll = s_safeAs<ListRepr<T>, ListVector<T>>(l);
+            return ListOps::s_push_front_helper<T>(ll, v);
+        }
+    }
+
+    function s_remove<T>(l: ListRepr<T>, i: Nat): ListRepr<T> {
         if(l.is<LargeList<T>>()) {
             return l.remove(i);
         }
@@ -2133,7 +2198,38 @@ internal entity ListOps provides Some {
                 return none;
             }
             else {
-                return ListOps::s_safe_remove_vector_helper<T>(l, i);
+                let ll = s_safeAs<ListRepr<T>, ListVector<T>>(l);
+                return ListOps::s_safe_remove_vector_helper<T>(ll, i);
+            }
+        }
+    }
+
+    function s_safe_pop_back<T>(l: ListRepr<T>): ListRepr<T> {
+        if(l.is<LargeList<T>>()) {
+            return l.pop_back(i);
+        }
+        else {
+            if(l.is<Vector1<T>>()) {
+                return none;
+            }
+            else {
+                let ll = s_safeAs<ListRepr<T>, ListVector<T>>(l);
+                return ListOps::s_pop_back_vector<T>(ll).1;
+            }
+        }
+    }
+
+    function s_safe_pop_front<T>(l: ListRepr<T>): ListRepr<T> {
+        if(l.is<LargeList<T>>()) {
+            return l.pop_front(i);
+        }
+        else {
+            if(l.is<Vector1<T>>()) {
+                return none;
+            }
+            else {
+                let ll = s_safeAs<ListRepr<T>, ListVector<T>>(l);
+                return ListOps::s_pop_front_vector<T>(ll).1;
             }
         }
     }
@@ -2327,6 +2423,14 @@ internal entity LargeList<T> provides Some {
         return ListOps::s_blockingfailure<T>();
     }
 
+    method safe_back(): T {
+        return ListOps::s_blockingfailure<T>();
+    }
+
+    method safe_front(): T {
+        return ListOps::s_blockingfailure<T>();
+    }
+
     recursive? method has_pred(p: recursive? pred(_: T) -> Bool): Bool {
         return ListOps::s_blockingfailure<Bool>();
     }
@@ -2401,7 +2505,23 @@ internal entity LargeList<T> provides Some {
         return ListOps::s_blockingfailure<LargeList<T>>();
     }
 
+    method push_back(v: T): LargeList<T> {
+        return ListOps::s_blockingfailure<LargeList<T>>();
+    }
+
+    method push_front(v: T): LargeList<T> {
+        return ListOps::s_blockingfailure<LargeList<T>>();
+    }
+
     method remove(i: Nat): ListRepr<T> {
+        return ListOps::s_blockingfailure<ListRepr<T>>();
+    }
+
+    method pop_front(): ListRepr<T> {
+        return ListOps::s_blockingfailure<ListRepr<T>>();
+    }
+
+    method pop_back(): ListRepr<T> {
         return ListOps::s_blockingfailure<ListRepr<T>>();
     }
 

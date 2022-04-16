@@ -4164,6 +4164,12 @@ class Parser {
                 else if(ename === "Vector3") {
                     attributes.push("__vector3_type");
                 }
+                else if(ename === "Vector4") {
+                    attributes.push("__vector4_type");
+                }
+                else if(ename === "Vector5") {
+                    attributes.push("__vector5_type");
+                }
                 else if(ename === "LargeList") {
                     attributes.push("__largelist_type");
                 }
