@@ -37,30 +37,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     function concat(...ll: List<List<T>>): List<T> {
-        if(ListOps::s_empty<T>(this.value())) {
-            return List<T>{};
-        }
-        else {
-            let count = ListOps::s_size<List<T>>(ll.value());
-            if(count == 1) {
-                return ListOps::s_safe_get<List<T>>(ll.value(), 0n);
-            }
-            elif(count == 2) {
-                return List<T>::s_into(ListOps::s_append<T>(ListOps::s_safe_get<List<T>>(ll.value(), 0n), ListOps::s_safe_get<List<T>>(ll.value(), 1n)));
-            }
-            elif(count == 3) {
-                let la = ListOps::s_append<T>(ListOps::s_safe_get<List<T>>(ll.value(), 0n), ListOps::s_safe_get<List<T>>(ll.value(), 1n));
-                return List<T>::s_into(ListOps::s_append<T>(la, ListOps::s_safe_get<List<T>>(ll.value(), 2n)));
-            }
-            elif(count == 4) {
-                let la = ListOps::s_append<T>(ListOps::s_safe_get<List<T>>(ll.value(), 0n), ListOps::s_safe_get<List<T>>(ll.value(), 1n));
-                let ra = ListOps::s_append<T>(ListOps::s_safe_get<List<T>>(ll.value(), 2n), ListOps::s_safe_get<List<T>>(ll.value(), 3n));
-                return List<T>::s_into(ListOps::s_append<T>(la, ra));
-            }
-            else {
-                return List<T>::s_into(ListOps::s_concat<T>(ll.value()));
-            }
-        }
+        return List<T>::s_into(ListOps::s_concat<T>(ll.value()));
     }
 
     method size(): Nat {
@@ -73,7 +50,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
 
     method front(): T {
         assert !ListOps::s_empty(this.value());
-        return ListOps::s_safe_get<T>(this.value(), 0n);
+        return ListOps::s_safe_front<T>(this.value());
     }
 
     method frontOrNone(): T? {
@@ -81,7 +58,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return none;
         }
         else {
-            return ListOps::s_safe_get<T>(this.value(), 0n);
+            return ListOps::s_safe_front<T>(this.value());
         }
     }
 
@@ -90,13 +67,13 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return nothing;
         }
         else {
-            return something(ListOps::s_safe_get<T>(this.value(), 0n));
+            return something(ListOps::s_safe_front<T>(this.value()));
         }
     }
 
     method frontTry(out? res: T): Bool {
         if(!ListOps::s_empty(this.value())) {
-            res = ListOps::s_safe_get<T>(this.value(), 0n);
+            res = ListOps::s_safe_front<T>(this.value());
             return true;
         }
         else {
@@ -106,7 +83,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
 
     method back(): T {
         assert !ListOps::s_empty(this.value());
-        return ListOps::s_safe_get<T>(this.value(), ListOps::s_size<T>(this.value()) - 1n);
+        return ListOps::s_safe_back<T>(this.value());
     }
 
     method backOrNone(): T? {
@@ -114,7 +91,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return none;
         }
         else {
-            return ListOps::s_safe_get<T>(this.value(), ListOps::s_size<T>(this.value()) - 1n);
+            return ListOps::s_safe_back<T>(this.value());
         }
     }
 
@@ -123,13 +100,13 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return nothing;
         }
         else {
-            return something(ListOps::s_safe_get<T>(this.value(), ListOps::s_size<T>(this.value()) - 1n));
+            return something(ListOps::s_safe_back<T>(this.value()));
         }
     }
 
     method backTry(out? res: T): Bool {
         if(!ListOps::s_empty(this.value())) {
-            res = ListOps::s_safe_get<T>(this.value(), ListOps::s_size<T>(this.value()) - 1n);
+            res = ListOps::s_safe_back<T>(this.value());
             return true;
         }
         else {
@@ -1119,23 +1096,23 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     method pushBack(v: T): List<T> {
-        return List<T>::s_into(ListOps::s_append<T>(this.value(), List<T>{v}));
+        return List<T>::s_into(ListOps::s_push_back<T>(this.value(), v));
     }
 
     method pushFront(v: T): List<T> {
-        return List<T>::s_into(ListOps::s_append<T>(List<T>{v}.value(), this.value()));
+        return List<T>::s_into(ListOps::s_push_front<T>(this.value(), v));
     }
 
     method popBack(): List<T> {
         assert !ListOps::s_empty(this.value());
 
-        return List<T>::s_into(ListOps::s_slice_end<T>(this.value(), ListOps::s_size<T>(this.value()) - 1n));
+        return List<T>::s_into(ListOps::s_safe_pop_back<T>(this.value()));
     }
 
     method popFront(): List<T> {
         assert !ListOps::s_empty(this.value());
 
-        return List<T>::s_into(ListOps::s_slice_front<T>(this.value(), 1n));
+        return List<T>::s_into(ListOps::s_safe_pop_front<T>(this.value()));
     }
 
     method set(i: Nat, v: T): List<T> {

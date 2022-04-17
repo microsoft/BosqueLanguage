@@ -126,11 +126,11 @@ entity Body {
 entity NBodySystem {
    field bodies: List<Body>;
    
-   const energypairs: List<[Nat, Nat]> = List<[Nat, Nat]>{
-      [0n, 1n], [0n, 2n], [0n, 3n], [0n, 4n],
-      [1n, 2n], [1n, 3n], [1n, 4n],
-      [2n, 3n], [2n, 4n],
-      [3n, 4n]
+   const energypairs: List<List<[Nat, Nat]>> = List<List<[Nat, Nat]>>{
+      List<[Nat, Nat]>{[0n, 1n], [0n, 2n], [0n, 3n], [0n, 4n]},
+      List<[Nat, Nat]>[1n, 2n], [1n, 3n], [1n, 4n]},
+      List<[Nat, Nat]>[2n, 3n], [2n, 4n]},
+      List<[Nat, Nat]>[3n, 4n]}
    };
 
    factory function create(): { bodies: List<Body> } {
@@ -156,16 +156,20 @@ entity NBodySystem {
       return { bodies=allbodies };
    }
 
-   method energy(): Float {
-      let keneticEnergies = this.bodies.map(fn(b: Body): Float => b.kineticEnergy());
-
-      let potentialEnergies = NBodySystem::energypairs
-         .map(fn(bp: [Nat, Nat]): Float => {
+   method potentialEnergyCompute(pePair: List<[Nat, Nat]>): Float {
+      let potentialEnergies = pePair.map(fn(bp: [Nat, Nat]): Float => {
             let b0 = this.bodies.get(bp.0);
             let b1 = this.bodies.get(bp.1);
 
             return (b0.mass * b1.mass) / Body::distance(b0, b1);
          });
+
+      return potentialEnergies.sum();
+   }
+
+   method energy(): Float {
+      let keneticEnergies = this.bodies.map(fn(b: Body): Float => b.kineticEnergy());
+      let potentialEnergies = NBodySystem::energypairs.map(fn(pep: List<[Nat, Nat]>): Float => this.potentialEnergyCompute(pep));
 
       return keneticEnergies.sum() - potentialEnergies.sum();
    }

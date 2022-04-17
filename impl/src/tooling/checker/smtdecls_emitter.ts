@@ -364,19 +364,19 @@ class SMTEmitter {
         const clen = new SMTCallSimple("ContainerSize@UFCons_API", [new SMTVar("path")]);
 
         const vv1 = this.temitter.assembly.typeMap.get(`Vector1<${tdecl.getTypeT().typeID}>`) as MIRType;
-        const ehavoc1 = this.temitter.generateHavocConstructorCall(lentrytype, new SMTVar("path"), new SMTConst("1"));
+        const ehavoc1 = this.temitter.generateHavocConstructorCall_PassThrough(lentrytype, new SMTVar("path"));
         const ccvar1 = this.bemitter.generateTempName();
         const chkfun1 = this.temitter.generateResultIsErrorTest(lentrytype, new SMTVar(ccvar1));
         const access1 = this.temitter.generateResultGetSuccess(lentrytype, new SMTVar(ccvar1));
 
         const vv2 = this.temitter.assembly.typeMap.get(`Vector2<${tdecl.getTypeT().typeID}>`) as MIRType;
-        const ehavoc2 = this.temitter.generateHavocConstructorCall(lentrytype, new SMTVar("path"), new SMTConst("2"));
+        const ehavoc2 = this.temitter.generateHavocConstructorCall_PassThrough(lentrytype, new SMTVar("path"));
         const ccvar2 = this.bemitter.generateTempName();
         const chkfun2 = this.temitter.generateResultIsErrorTest(lentrytype, new SMTVar(ccvar2));
         const access2 = this.temitter.generateResultGetSuccess(lentrytype, new SMTVar(ccvar2));
 
         const vv3 = this.temitter.assembly.typeMap.get(`Vector3<${tdecl.getTypeT().typeID}>`) as MIRType;
-        const ehavoc3 = this.temitter.generateHavocConstructorCall(lentrytype, new SMTVar("path"), new SMTConst("3"));
+        const ehavoc3 = this.temitter.generateHavocConstructorCall_PassThrough(lentrytype, new SMTVar("path"));
         const ccvar3 = this.bemitter.generateTempName();
         const chkfun3 = this.temitter.generateResultIsErrorTest(lentrytype, new SMTVar(ccvar3));
         const access3 = this.temitter.generateResultGetSuccess(lentrytype, new SMTVar(ccvar3));
@@ -447,21 +447,21 @@ class SMTEmitter {
         const clen = new SMTCallSimple("ContainerSize@UFCons_API", [new SMTVar("path")]);
 
         const vv1 = this.temitter.assembly.typeMap.get(`Vector1<${tdecl.oftype}>`) as MIRType;
-        const ehavoc1 = this.temitter.generateHavocConstructorCall(lentrytype, new SMTVar("path"), new SMTConst("1"));
+        const ehavoc1 = this.temitter.generateHavocConstructorCall_PassThrough(lentrytype, new SMTVar("path"));
         const ccvar1 = this.bemitter.generateTempName();
         const chkfun1 = this.temitter.generateResultIsErrorTest(lentrytype, new SMTVar(ccvar1));
         const access1 = this.temitter.generateResultGetSuccess(lentrytype, new SMTVar(ccvar1));
         const accesskey1 = new SMTCallSimple(this.temitter.generateTupleIndexGetFunction(lentrytype.options[0] as MIRTupleType, 0), [this.temitter.generateResultGetSuccess(lentrytype, new SMTVar(ccvar1))]);
 
         const vv2 = this.temitter.assembly.typeMap.get(`Vector2<${tdecl.oftype}>`) as MIRType;
-        const ehavoc2 = this.temitter.generateHavocConstructorCall(this.temitter.getMIRType(tdecl.oftype), new SMTVar("path"), new SMTConst("2"));
+        const ehavoc2 = this.temitter.generateHavocConstructorCall_PassThrough(this.temitter.getMIRType(tdecl.oftype), new SMTVar("path"));
         const ccvar2 = this.bemitter.generateTempName();
         const chkfun2 = this.temitter.generateResultIsErrorTest(lentrytype, new SMTVar(ccvar2));
         const access2 = this.temitter.generateResultGetSuccess(lentrytype, new SMTVar(ccvar2));
         const accesskey2 = new SMTCallSimple(this.temitter.generateTupleIndexGetFunction(lentrytype.options[0] as MIRTupleType, 0), [this.temitter.generateResultGetSuccess(lentrytype, new SMTVar(ccvar2))]);
 
         const vv3 = this.temitter.assembly.typeMap.get(`Vector3<${tdecl.oftype}>`) as MIRType;
-        const ehavoc3 = this.temitter.generateHavocConstructorCall(this.temitter.getMIRType(tdecl.oftype), new SMTVar("path"), new SMTConst("3"));
+        const ehavoc3 = this.temitter.generateHavocConstructorCall_PassThrough(this.temitter.getMIRType(tdecl.oftype), new SMTVar("path"));
         const ccvar3 = this.bemitter.generateTempName();
         const chkfun3 = this.temitter.generateResultIsErrorTest(lentrytype, new SMTVar(ccvar3));
         const access3 = this.temitter.generateResultGetSuccess(lentrytype, new SMTVar(ccvar3));

@@ -2201,9 +2201,39 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         LIST_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
+    case BSQPrimitiveImplTag::s_list_push_back_ne: {
+        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
+        
+        auto rr = BSQListOps::s_push_back_ne(lflavor, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), params[2]);
+        LIST_STORE_RESULT_REPR(rr, resultsl);
+        break;
+    }
+    case BSQPrimitiveImplTag::s_list_push_front_ne: {
+        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
+        
+        auto rr = BSQListOps::s_push_front_ne(lflavor, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), params[2]);
+        LIST_STORE_RESULT_REPR(rr, resultsl);
+        break;
+    }
     case BSQPrimitiveImplTag::s_list_remove_ne: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
         auto ii = SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]);
+        
+        auto rr = BSQListOps::s_remove_ne(lflavor, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), ii);
+        LIST_STORE_RESULT_REPR(rr, resultsl);
+        break;
+    }
+    case BSQPrimitiveImplTag::s_list_pop_back_ne: {
+        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
+        auto ii = LIST_LOAD_TYPE_INFO_REPR(params[0])->getCount(LIST_LOAD_DATA(params[0])) - 1;
+        
+        auto rr = BSQListOps::s_remove_ne(lflavor, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), ii);
+        LIST_STORE_RESULT_REPR(rr, resultsl);
+        break;
+    }
+    case BSQPrimitiveImplTag::s_list_pop_front_ne: {
+        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
+        BSQNat ii = 0;
         
         auto rr = BSQListOps::s_remove_ne(lflavor, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), ii);
         LIST_STORE_RESULT_REPR(rr, resultsl);
@@ -2291,6 +2321,16 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
     }
     case BSQPrimitiveImplTag::s_list_safe_get: {
         BSQListOps::s_safe_get(LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]), invk->binds.find("T")->second, resultsl);
+        break;
+    }
+    case BSQPrimitiveImplTag::s_list_safe_back: {
+        auto ii = LIST_LOAD_TYPE_INFO_REPR(params[0])->getCount(LIST_LOAD_DATA(params[0])) - 1;
+        BSQListOps::s_safe_get(LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), ii, invk->binds.find("T")->second, resultsl);
+        break;
+    }
+    case BSQPrimitiveImplTag::s_list_safe_front: {
+        BSQNat ii = 0;
+        BSQListOps::s_safe_get(LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), ii, invk->binds.find("T")->second, resultsl);
         break;
     }
     case BSQPrimitiveImplTag::s_list_find_pred_ne: {
