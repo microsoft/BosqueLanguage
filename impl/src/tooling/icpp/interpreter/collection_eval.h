@@ -414,6 +414,8 @@ public:
     }
 
     static void* s_set_ne(const BSQListTypeFlavor& lflavor, void* t, const BSQListReprType* ttype, BSQNat i, StorageLocationPtr v);
+    static void* s_push_back_ne(const BSQListTypeFlavor& lflavor, void* t, const BSQListReprType* ttype, StorageLocationPtr v);
+    static void* s_push_front_ne(const BSQListTypeFlavor& lflavor, void* t, const BSQListReprType* ttype, StorageLocationPtr v);
     static void* s_remove_ne(const BSQListTypeFlavor& lflavor, void* t, const BSQListReprType* ttype, BSQNat i);
 
     static void s_range_ne(const BSQType* oftype, StorageLocationPtr start, StorageLocationPtr end, StorageLocationPtr count, StorageLocationPtr res);
