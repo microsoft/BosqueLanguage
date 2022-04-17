@@ -933,7 +933,7 @@ internal entity ListOps provides Some {
         return p[recursive?](l.v0);
     }
     recursive? function s_has_pred_vector_2<T>(l: Vector2<T>, p: recursive? pred(_: T) -> Bool): Bool {
-        if((p[recursive?](l.v0)) {
+        if(p[recursive?](l.v0)) {
             return true;
         }
         elif(p[recursive?](l.v1)) {
@@ -944,7 +944,7 @@ internal entity ListOps provides Some {
         }
     }
     recursive? function s_has_pred_vector_3<T>(l: Vector3<T>, p: recursive? pred(_: T) -> Bool): Bool {
-        if((p[recursive?](l.v0)) {
+        if(p[recursive?](l.v0)) {
             return true;
         }
         elif(p[recursive?](l.v1)) {
@@ -958,7 +958,7 @@ internal entity ListOps provides Some {
         }
     }
     recursive? function s_has_pred_vector_4<T>(l: Vector4<T>, p: recursive? pred(_: T) -> Bool): Bool {
-        if((p[recursive?](l.v0)) {
+        if(p[recursive?](l.v0)) {
             return true;
         }
         elif(p[recursive?](l.v1)) {
@@ -975,7 +975,7 @@ internal entity ListOps provides Some {
         }
     }
     recursive? function s_has_pred_vector_5<T>(l: Vector5<T>, p: recursive? pred(_: T) -> Bool): Bool {
-        if((p[recursive?](l.v0)) {
+        if(p[recursive?](l.v0)) {
             return true;
         }
         elif(p[recursive?](l.v1)) {
@@ -1023,7 +1023,7 @@ internal entity ListOps provides Some {
         return p[recursive?](l.v0, 0n);
     }
     recursive? function s_has_pred_idx_vector_2<T>(l: Vector2<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
-        if((p[recursive?](l.v0, 0n)) {
+        if(p[recursive?](l.v0, 0n)) {
             return true;
         }
         elif(p[recursive?](l.v1, 1n)) {
@@ -1034,7 +1034,7 @@ internal entity ListOps provides Some {
         }
     }
     recursive? function s_has_pred_idx_vector_3<T>(l: Vector3<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
-        if((p[recursive?](l.v0, 0n)) {
+        if(p[recursive?](l.v0, 0n)) {
             return true;
         }
         elif(p[recursive?](l.v1, 1n)) {
@@ -1048,7 +1048,7 @@ internal entity ListOps provides Some {
         }
     }
     recursive? function s_has_pred_idx_vector_4<T>(l: Vector4<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
-        if((p[recursive?](l.v0, 0n)) {
+        if(p[recursive?](l.v0, 0n)) {
             return true;
         }
         elif(p[recursive?](l.v1, 1n)) {
@@ -1065,7 +1065,7 @@ internal entity ListOps provides Some {
         }
     }
     recursive? function s_has_pred_idx_vector_5<T>(l: Vector5<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
-        if((p[recursive?](l.v0, 0n)) {
+        if(p[recursive?](l.v0, 0n)) {
             return true;
         }
         elif(p[recursive?](l.v1, 1n)) {
@@ -1118,7 +1118,7 @@ internal entity ListOps provides Some {
         }
     }
     recursive? function s_find_pred_vector_2<T>(l: Vector2<T>, p: recursive? pred(_: T) -> Bool): Nat? {
-        if((p[recursive?](l.v0)) {
+        if(p[recursive?](l.v0)) {
             return 0n;
         }
         elif(p[recursive?](l.v1)) {
@@ -1129,7 +1129,7 @@ internal entity ListOps provides Some {
         }
     }
     recursive? function s_find_pred_vector_3<T>(l: Vector3<T>, p: recursive? pred(_: T) -> Bool): Nat? {
-        if((p[recursive?](l.v0)) {
+        if(p[recursive?](l.v0)) {
             return 0n;
         }
         elif(p[recursive?](l.v1)) {
@@ -1143,7 +1143,7 @@ internal entity ListOps provides Some {
         }
     }
     recursive? function s_find_pred_vector_4<T>(l: Vector4<T>, p: recursive? pred(_: T) -> Bool): Nat? {
-        if((p[recursive?](l.v0)) {
+        if(p[recursive?](l.v0)) {
             return 0n;
         }
         elif(p[recursive?](l.v1)) {
@@ -1160,7 +1160,7 @@ internal entity ListOps provides Some {
         }
     }
     recursive? function s_find_pred_vector_5<T>(l: Vector5<T>, p: recursive? pred(_: T) -> Bool): Nat? {
-        if((p[recursive?](l.v0)) {
+        if(p[recursive?](l.v0)) {
             return 0n;
         }
         elif(p[recursive?](l.v1)) {
@@ -1213,7 +1213,7 @@ internal entity ListOps provides Some {
         }
     }
     recursive? function s_find_pred_idx_vector_2<T>(l: Vector2<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
-        if((p[recursive?](l.v0, 0n)) {
+        if(p[recursive?](l.v0, 0n)) {
             return 0n;
         }
         elif(p[recursive?](l.v1, 1n)) {
@@ -1224,7 +1224,7 @@ internal entity ListOps provides Some {
         }
     }
     recursive? function s_find_pred_idx_vector_3<T>(l: Vector3<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
-        if((p[recursive?](l.v0, 0n)) {
+        if(p[recursive?](l.v0, 0n)) {
             return 0n;
         }
         elif(p[recursive?](l.v1, 1n)) {
@@ -1238,7 +1238,7 @@ internal entity ListOps provides Some {
         }
     }
     recursive? function s_find_pred_idx_vector_4<T>(l: Vector4<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
-        if((p[recursive?](l.v0, 0n)) {
+        if(p[recursive?](l.v0, 0n)) {
             return 0n;
         }
         elif(p[recursive?](l.v1, 1n)) {
@@ -1255,7 +1255,7 @@ internal entity ListOps provides Some {
         }
     }
     recursive? function s_find_pred_idx_vector_5<T>(l: Vector5<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
-        if((p[recursive?](l.v0, 0n)) {
+        if(p[recursive?](l.v0, 0n)) {
             return 0n;
         }
         elif(p[recursive?](l.v1, 1n)) {
@@ -1308,7 +1308,7 @@ internal entity ListOps provides Some {
         }
     }
     recursive? function s_find_last_pred_vector_2<T>(l: Vector2<T>, p: recursive? pred(_: T) -> Bool): Nat? {
-        if((p[recursive?](l.v1)) {
+        if(p[recursive?](l.v1)) {
             return 1n;
         }
         elif(p[recursive?](l.v0)) {
@@ -1319,7 +1319,7 @@ internal entity ListOps provides Some {
         }
     }
     recursive? function s_find_last_pred_vector_3<T>(l: Vector3<T>, p: recursive? pred(_: T) -> Bool): Nat? {
-        if((p[recursive?](l.v2)) {
+        if(p[recursive?](l.v2)) {
             return 2n;
         }
         elif(p[recursive?](l.v1)) {
@@ -1333,7 +1333,7 @@ internal entity ListOps provides Some {
         }
     }
     recursive? function s_find_last_pred_vector_4<T>(l: Vector4<T>, p: recursive? pred(_: T) -> Bool): Nat? {
-        if((p[recursive?](l.v3)) {
+        if(p[recursive?](l.v3)) {
             return 3n;
         }
         elif(p[recursive?](l.v2)) {
@@ -1350,7 +1350,7 @@ internal entity ListOps provides Some {
         }
     }
     recursive? function s_find_last_pred_vector_5<T>(l: Vector5<T>, p: recursive? pred(_: T) -> Bool): Nat? {
-        if((p[recursive?](l.v4)) {
+        if(p[recursive?](l.v4)) {
             return 4n;
         }
         elif(p[recursive?](l.v3)) {
@@ -1403,7 +1403,7 @@ internal entity ListOps provides Some {
         }
     }
     recursive? function s_find_last_pred_idx_vector_2<T>(l: Vector2<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
-        if((p[recursive?](l.v1, 1n)) {
+        if(p[recursive?](l.v1, 1n)) {
             return 1n;
         }
         elif(p[recursive?](l.v0, 0n)) {
@@ -1414,7 +1414,7 @@ internal entity ListOps provides Some {
         }
     }
     recursive? function s_find_last_pred_idx_vector_3<T>(l: Vector3<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
-        if((p[recursive?](l.v2, 2n)) {
+        if(p[recursive?](l.v2, 2n)) {
             return 2n;
         }
         elif(p[recursive?](l.v1, 1n)) {
@@ -1428,7 +1428,7 @@ internal entity ListOps provides Some {
         }
     }
     recursive? function s_find_last_pred_idx_vector_4<T>(l: Vector4<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
-        if((p[recursive?](l.v3, 3n)) {
+        if(p[recursive?](l.v3, 3n)) {
             return 3n;
         }
         elif(p[recursive?](l.v2, 2n)) {
@@ -1445,7 +1445,7 @@ internal entity ListOps provides Some {
         }
     }
     recursive? function s_find_last_pred_idx_vector_5<T>(l: Vector5<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
-        if((p[recursive?](l.v4, 4n)) {
+        if(p[recursive?](l.v4, 4n)) {
             return 4n;
         }
         elif(p[recursive?](l.v3, 3n)) {
@@ -1598,7 +1598,7 @@ internal entity ListOps provides Some {
             return none;
         }
     }
-    recursive? function s_filter_pred_idx_vector_2<T>(l: Vector2<T>, idx: Nat p: recursive? pred(_: T, _: Nat) -> Bool): ListVector<T> | None {
+    recursive? function s_filter_pred_idx_vector_2<T>(l: Vector2<T>, idx: Nat, p: recursive? pred(_: T, _: Nat) -> Bool): ListVector<T> | None {
         let v0 = l.v0;
         let p0 = p[recursive?](v0, idx);
         let v1 = l.v1;
@@ -1774,8 +1774,8 @@ internal entity ListOps provides Some {
     recursive? function s_min_arg_vector_4<T, U unique Orderable>(l: Vector4<T>, idx: Nat, f: recursive? fn(v: T) -> U): (|Nat, U|) {
         let ll, rl = ListOps::s_split_vector_4<T>(l);
         
-        let llmin, llv = ListOps::s_min_arg_vector_2<T>[recursive?(ll, 0n, f);
-        let rlmin, rlv = ListOps::s_min_arg_vector_2<T>[recursive?(rl, 2n, f);
+        let llmin, llv = ListOps::s_min_arg_vector_2<T>[recursive?](ll, 0n, f);
+        let rlmin, rlv = ListOps::s_min_arg_vector_2<T>[recursive?](rl, 2n, f);
 
         if(f[recursive?](rlv) < f[recursive?](llv)) {
             return (|rlmin, rlv|);
@@ -1787,8 +1787,8 @@ internal entity ListOps provides Some {
     recursive? function s_min_arg_vector_5<T, U unique Orderable>(l: ListRepr<T>, idx: Nat,f: recursive? fn(v: T) -> U): (|Nat, U|) {
         let ll, rl = ListOps::s_split_vector_5<T>(l);
         
-        let llmin, llv = ListOps::s_min_arg_vector_2<T>[recursive?(ll, 0n, f);
-        let rlmin, rlv = ListOps::s_min_arg_vector_3<T>[recursive?(rl, 3n, f);
+        let llmin, llv = ListOps::s_min_arg_vector_2<T>[recursive?](ll, 0n, f);
+        let rlmin, rlv = ListOps::s_min_arg_vector_3<T>[recursive?](rl, 3n, f);
 
         if(f[recursive?](rlv) < f[recursive?](llv)) {
             return (|rlmin, rlv|);
@@ -1844,8 +1844,8 @@ internal entity ListOps provides Some {
     recursive? function s_max_arg_vector_4<T, U unique Orderable>(l: Vector4<T>, idx: Nat, f: recursive? fn(v: T) -> U): (|Nat, U|) {
         let ll, rl = ListOps::s_split_vector_4<T>(l);
         
-        let llmax, llv = ListOps::s_min_arg_vector_2<T>[recursive?(ll, 0n, f);
-        let rlmax, rlv = ListOps::s_min_arg_vector_2<T>[recursive?(rl, 2n, f);
+        let llmax, llv = ListOps::s_max_arg_vector_2<T>[recursive?](ll, 0n, f);
+        let rlmax, rlv = ListOps::s_max_arg_vector_2<T>[recursive?](rl, 2n, f);
 
         if(f[recursive?](rlv) > f[recursive?](llv)) {
             return (|rlmax, rlv|);
@@ -1854,11 +1854,11 @@ internal entity ListOps provides Some {
             return (|llma, llmax|);
         }
     }
-    recursive? function s_min_arg_vector_5<T, U unique Orderable>(l: ListRepr<T>, idx: Nat,f: recursive? fn(v: T) -> U): (|Nat, U|) {
+    recursive? function s_max_arg_vector_5<T, U unique Orderable>(l: ListRepr<T>, idx: Nat,f: recursive? fn(v: T) -> U): (|Nat, U|) {
         let ll, rl = ListOps::s_split_vector_5<T>(l);
         
-        let llmax, llv = ListOps::s_max_arg_vector_2<T>[recursive?(ll, 0n, f);
-        let rlmax, rlv = ListOps::s_max_arg_vector_3<T>[recursive?(rl, 3n, f);
+        let llmax, llv = ListOps::s_max_arg_vector_2<T>[recursive?](ll, 0n, f);
+        let rlmax, rlv = ListOps::s_max_arg_vector_3<T>[recursive?](rl, 3n, f);
 
         if(f[recursive?](rlv) > f[recursive?](llv)) {
             return (|rlmax, rlv|);
@@ -1954,7 +1954,7 @@ internal entity ListOps provides Some {
             return Vector4<T>{l.v0, l.v1, v, l.v2, l.v3};
         }
         elif(!cmp[recursive?](l.v3, v)) {
-            return Vector4<T>{l.v0, l.v1, l.v2 v, l.v3};
+            return Vector4<T>{l.v0, l.v1, l.v2, v, l.v3};
         }
         else {
             return Vector4<T>{l.v0, l.v1, l.v2, l.v3, v};
@@ -2002,16 +2002,16 @@ internal entity ListOps provides Some {
     recursive? function s_sort_vector_4<T>(l: Vector4<T>, cmp: recursive? pred(_: T, _: T) -> Bool): Vector4<T> {
         let ll, rl = ListOps::s_split_vector_4<T>(l);
         
-        let llv = ListOps::s_sort_vector_2<T>[recursive?(ll, cmp);
-        let rlv = ListOps::s_sort_vector_2<T>[recursive?(rl, cmp);
+        let llv = ListOps::s_sort_vector_2<T>[recursive?](ll, cmp);
+        let rlv = ListOps::s_sort_vector_2<T>[recursive?](rl, cmp);
 
         return ListOps::s_insert_vector_3<T>[recursive?](ListOps::s_insert_vector_2<T>[recursive?](rlv, llv.1), llv.0);
     }
     recursive? function s_sort_vector_5<T>(l: Vector5<T>, cmp: recursive? pred(_: T, _: T) -> Bool): Vector5<T> {
         let ll, rl = ListOps::s_split_vector_5<T>(l);
         
-        let llv = ListOps::s_sort_vector_2<T>[recursive?(ll, cmp);
-        let rlv = ListOps::s_sort_vector_3<T>[recursive?(rl, cmp);
+        let llv = ListOps::s_sort_vector_2<T>[recursive?](ll, cmp);
+        let rlv = ListOps::s_sort_vector_3<T>[recursive?](rl, cmp);
 
         return ListOps::s_insert_vector_4<T>[recursive?](ListOps::s_insert_vector_3<T>[recursive?](rlv, llv.1), llv.0);
     }
@@ -2073,8 +2073,8 @@ internal entity ListOps provides Some {
     recursive? function s_unique_from_sorted_4<T>(l: Vector4<T>, eq: recursive? pred(_: T, _: T) -> Bool): ListVector<T> {
         let ll, rl = ListOps::s_split_vector_4<T>(l);
         
-        let llv = ListOps::s_unique_from_sorted_2<T>[recursive?(ll, eq);
-        let rlv = ListOps::s_unique_from_sorted_2<T>[recursive?(rl, eq);
+        let llv = ListOps::s_unique_from_sorted_2<T>[recursive?](ll, eq);
+        let rlv = ListOps::s_unique_from_sorted_2<T>[recursive?](rl, eq);
 
         let rval, rrest = ListOps::s_pop_front_vector<T>(rlv);
         if(!eq[recursive?](ListOps::s_get_back_vector_helper<T>(llv), rval)) {
@@ -2088,8 +2088,8 @@ internal entity ListOps provides Some {
     recursive? function s_unique_from_sorted_5<T>(l: Vector5<T>, eq: recursive? pred(_: T, _: T) -> Bool): ListVector<T> {
         let ll, rl = ListOps::s_split_vector_4<T>(l);
         
-        let llv = ListOps::s_unique_from_sorted_2<T>[recursive?(ll, eq);
-        let rlv = ListOps::s_unique_from_sorted_2<T>[recursive?(rl, eq);
+        let llv = ListOps::s_unique_from_sorted_2<T>[recursive?](ll, eq);
+        let rlv = ListOps::s_unique_from_sorted_2<T>[recursive?](rl, eq);
 
         let rval, rrest = ListOps::s_pop_front_vector<T>(rlv);
         if(!eq[recursive?](ListOps::s_get_back_vector_helper<T>(llv), rval)) {

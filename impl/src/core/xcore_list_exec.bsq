@@ -338,7 +338,7 @@ internal entity ListOps provides Some {
         return ListOps::s_set_ne<T>(l, i, v);
     }
 
-    function s_push_back<T>(l: ListRepr<T> v: T): ListRepr<T> {
+    function s_push_back<T>(l: ListRepr<T>, v: T): ListRepr<T> {
         return ListOps::s_push_back_ne<T>(l, v);
     }
 

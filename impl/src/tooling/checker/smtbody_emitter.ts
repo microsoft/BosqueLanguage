@@ -794,14 +794,14 @@ class SMTBodyEmitter {
 
             let consaccess: SMTExp = new SMTConst("[UNDEF]");
             if(smtlayout.isGeneralTermType()) {
+                const boxcons = this.typegen.getSMTConstructorName(ofentity).box;
                 consaccess = new SMTCallSimple("BTerm_termvalue", [this.argToSMT(arg)]);
+                return new SMTCallSimple(`(_ is ${boxcons})`, [consaccess]);
             }
             else {
-                consaccess = new SMTCallSimple("BKey_value", [new SMTCallSimple("BTerm_keyvalue", [this.argToSMT(arg)])]);
+                const accessTypeTag = new SMTCallSimple("GetTypeTag@BKey", [this.argToSMT(arg)]);
+                return SMTCallSimple.makeEq(accessTypeTag, new SMTConst(`TypeTag_${this.typegen.lookupTypeName(ofentity.typeID)}`));
             }
-
-            const boxcons = this.typegen.getSMTConstructorName(ofentity).box;
-            return new SMTCallSimple(`(_ is ${boxcons})`, [consaccess]);
         }
     }
 
@@ -837,8 +837,9 @@ class SMTBodyEmitter {
             return new SMTConst(this.assembly.subtypeOf(flow, oftuple) ? "true" : "false");
         }
         else {
-            const accessTypeTag = this.typegen.getSMTTypeFor(layout).isGeneralTermType() ? new SMTCallSimple("GetTypeTag@BTerm", [this.argToSMT(arg)]) : new SMTCallSimple("GetTypeTag@BKey", [this.argToSMT(arg)]);
-            return SMTCallSimple.makeEq(accessTypeTag, new SMTConst(`TypeTag_${this.typegen.lookupTypeName(oftuple.typeID)}`));
+            const boxcons = this.typegen.getSMTConstructorName(oftuple).box;
+            const consaccess = new SMTCallSimple("BTerm_termvalue", [this.argToSMT(arg)]);
+            return new SMTCallSimple(`(_ is ${boxcons})`, [consaccess]);
         }
     }
 
@@ -851,8 +852,9 @@ class SMTBodyEmitter {
             return new SMTConst(this.assembly.subtypeOf(flow, ofrecord) ? "true" : "false");
         }
         else {
-            const accessTypeTag = this.typegen.getSMTTypeFor(layout).isGeneralTermType() ? new SMTCallSimple("GetTypeTag@BTerm", [this.argToSMT(arg)]) : new SMTCallSimple("GetTypeTag@BKey", [this.argToSMT(arg)]);
-            return SMTCallSimple.makeEq(accessTypeTag, new SMTConst(`TypeTag_${this.typegen.lookupTypeName(ofrecord.typeID)}`));
+            const boxcons = this.typegen.getSMTConstructorName(ofrecord).box;
+            const consaccess = new SMTCallSimple("BTerm_termvalue", [this.argToSMT(arg)]);
+            return new SMTCallSimple(`(_ is ${boxcons})`, [consaccess]);
         }
     }
 

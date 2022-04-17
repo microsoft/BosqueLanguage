@@ -317,28 +317,29 @@ class SMTTypeEmitter {
 
                 if (entity instanceof MIRStringOfInternalEntityTypeDecl) {
                     oftypetag = this.getSMTTypeFor(this.getMIRType("String")).smttypetag;
+                    objval = objval = new SMTCallSimple("bsqkey_string@box", [exp]);
                 }
                 else if (entity instanceof MIRDataStringInternalEntityTypeDecl) {
                     oftypetag = this.getSMTTypeFor(this.getMIRType("String")).smttypetag;
-                }
-                else if (entity instanceof MIRDataBufferInternalEntityTypeDecl) {
-                    oftypetag = this.getSMTTypeFor(this.getMIRType("String")).smttypetag;
+                    objval = objval = new SMTCallSimple("bsqkey_string@box", [exp]);
                 }
                 else if (entity instanceof MIRConstructableInternalEntityTypeDecl) {
                     oftypetag = this.getSMTTypeFor(this.getMIRType(entity.fromtype)).smttypetag;
+                    objval = new SMTCallSimple(this.getSMTConstructorName(this.getMIRType(entity.fromtype)).box, [exp]);
                 }
                 else if (entity instanceof MIREnumEntityTypeDecl) {
                     oftypetag = this.getSMTTypeFor(this.getMIRType("Nat")).smttypetag;
+                    objval = new SMTCallSimple("bsqkey_nat@box", [exp]);
                 }
                 else if (entity instanceof MIRConstructableEntityTypeDecl) {
                     oftypetag = this.getSMTTypeFor(this.getMIRType(entity.fromtype)).smttypetag;
+                    objval = new SMTCallSimple(this.getSMTConstructorName(this.getMIRType(entity.fromtype)).box, [exp]);
                 }
                 else {
                     assert(this.isUniqueEntityType(from));
                     oftypetag = smtfrom.smttypetag;
+                    objval = new SMTCallSimple(this.getSMTConstructorName(from).box, [exp]);
                 }
-
-                objval = new SMTCallSimple(this.getSMTConstructorName(from).box, [exp]);
             }
 
             return new SMTCallSimple("BKey@box", [new SMTConst(smtfrom.smttypetag), new SMTConst(oftypetag), objval as SMTExp]);
@@ -389,7 +390,7 @@ class SMTTypeEmitter {
                 }
                 else {
                     assert(this.isUniqueEntityType(from));
-
+    
                     objval = new SMTCallSimple(this.getSMTConstructorName(from).box, [exp]);
                 }
 
