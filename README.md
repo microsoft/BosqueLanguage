@@ -5,7 +5,7 @@
 [![Build Health](https://img.shields.io/github/workflow/status/microsoft/BosqueLanguage/nodeci)](https://github.com/microsoft/BosqueLanguage/actions) 
 
 
-## The Bosque Project
+# The Bosque Project
 
 The Bosque Programming Language project is a ground up language & tooling co-design effort focused on is investigating the theoretical and the practical implications of:
 
@@ -24,7 +24,7 @@ The _Bosque API Types_ provide a way to specify an application interface in a cl
 The _Bosque Package Manager_ (see the `bosque` command section) provides a centralized way to organize, test, and build an application – either as a standalone command or to integrate into other applications via JSON APIs. This manager is designed to take advantage of the checking capabilities of Bosque and will enable developers to (1) test against imported code using auto-generated mocks and (2) check that package updates do not (intentionally or maliciously) change the package behavior, introduce new data outputs, or expose sensitive data to unintended outputs!
 
 
-## Documentation
+# Documentation
 
 Small samples of code and unique Bosque tooling are below in the [Code Snippets](#Code-Snippets) and [Tooling](#Tooling) sections. A rundown of notable and/or unique features in the Bosque language is provided in the [language overview section 0](docs/language/overview.md#0-Highlight-Features).
 
@@ -241,7 +241,7 @@ isFreezing(5_Celsius)  //false
 isFreezing(-5_Celsius) //true
 
 ```
-
+<!-- 
 ## API Types
 
 Bosque is designed to integrate easily into existing codebases and the fundamentally polyglot world of service based cloud applications. To support this Bosque uses the concept of *API Types*. These are a set of Bosque types that can be:
@@ -251,11 +251,80 @@ Bosque is designed to integrate easily into existing codebases and the fundament
 
 Most primitive types are valid APITypes including the exptected `None`, `Bool`, `Nat`, `Int`, `String`, `DateTime`, `UUID`, etc. The structured type `StringOf<T>` is also an APIType and both `DataString<T>` and `DataBuffer<T>` are also valid APITypes when the underlying type is as well. Lifting is applied to `typedecl` declared types, Tuples, Records, `List<T>`, `Map<K, V>`, `Option<T>`, and `Result<T, E>`. Arbitrary `entity` and `concept` types can also be declared as APITypes by having them `provide` the concept `APIType` and when all fields are publicly visible APITypes. 
 
-A function can be exported from the application in a `.bsqapi` file (see info on the `bosque` command) using the `entrypoint` annotation and ensuring that it consumes and returns APITypes. These functions can be run from the command line using the `bosque run` command and providing the arguments as a JSON list or the code can be compiled for integration into other applications with JSON as the foreign-function interface.
+A function can be exported from the application in a `.bsqapi` file (see info on the `bosque` command) using the `entrypoint` annotation and ensuring that it consumes and returns APITypes. These functions can be run from the command line using the `bosque run` command and providing the arguments as a JSON list or the code can be compiled for integration into other applications with JSON as the foreign-function interface. -->
 
-## The `bosque` Command 
+# The `bosque` Command 
 
-The `bosque` command is the primary tools for buidling, testing, and managing bosque packages and applications. 
+The `bosque` command is the primary tools for buidling, testing, and managing bosque packages and applications. The bosque command can be run on sets of files _or_, preferably, used in conjunction with Bosque packages which are defined with a `package.json` format.
+
+## Calculator Example
+
+To illustrate how packages and the `bosque` command work we have a simple calculator app in the `impl/src/test/apps/readme_calc/` directory (along with more interesting tic-tac-toe and rental apps). 
+
+This directory contains a `package.json` file which defines the package. As expected it has required name/version/description/license fields. The next part of the package definition, the `src` entry, is a list of source files (or globs) that make up the core logic of the application. Finally, we define two sets of files (or globs) that define the `entrypoints` of the application that will be exposed to consumers and a set of `testfiles` that can be used for unit-testing and property-based symbolic checking.
+
+### Calculator Source Code, Entrypoints, and Test Definitions
+
+The source code file, `calc_impl.bsq`, for the calculator has two simple function implementation (`sign` and `abs`):
+
+```
+namespace Main;
+
+function abs_impl(arg: BigInt): BigInt {
+    var res = arg;
+
+    if(arg < 0I) {
+        res = -arg;
+    }
+   
+    return res;
+}
+
+function sign_impl(arg: BigInt): BigInt {
+    return arg > 0I ? 1I : -1I;
+}
+```
+
+These functions are used, along with some direct implementations, to create the external API surface of the package. The calculator exports several functions including `div` which uses a `Result` to handle the case of division by zero and uses the pre/post features of the Bosque language (`ensures`) to document the behavior of the `abs` and `sign` methods for the clients of this package.
+
+```
+namespace Main;
+
+//More entrypoint functions ...
+
+entrypoint function div(arg1: BigInt, arg2: BigInt): Result<BigInt> {
+    if(arg2 == 0I) {
+        return err();
+    }
+    else {
+        return ok(arg1 / arg2);
+    }
+}
+
+entrypoint function abs(arg: BigInt): BigInt 
+    ensures $return == arg || $return == -arg;
+    ensures $return >= 0I;
+{
+    return abs_impl(arg);
+}
+
+entrypoint function sign(arg: BigInt): BigInt 
+    ensures $return == 1I || $return == -1I;
+{
+    return sign_impl(arg);
+}
+```
+
+### The `run` Action
+
+The `run` action in the `bosque` command provides a simple interface for invoking the entrypoints from a command line using JSON values. The syntax `run [package.json] [--entrypoint Namespace::function]` will load the code/api specified in the package (default `./package.json`) and find/run the specified function (default `Main::main`). The arguments can be provided on the command line, `--args [...]`, or via stdin. The image blow shows how to execute the `div` and `sign` APIs. 
+
+[TODO: gif calling these methods from the run command]
+
+### The `test` Action
+The 
+
+### The `apptest` Action
 
 [TODO: Need to update]
 
@@ -304,7 +373,7 @@ Which will report that errors are possible and generate a set of inputs that wil
 
 However, if we uncomment the requires clause, which asserts that the `arg2` parameter is only `none` if the op is `CalcOp::negate`, when we run the `bsqcheck` tool it will be able to successfully _prove_ that no runtime errors can ever occur.
 
-## Installing the Bosque Language (Development)
+# Installing the Bosque Language (Development)
 
 In order to install/build the project the following are needed:
 

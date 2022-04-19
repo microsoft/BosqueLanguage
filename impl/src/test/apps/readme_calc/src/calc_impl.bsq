@@ -16,6 +16,5 @@ function abs_impl(arg: BigInt): BigInt {
 }
 
 function sign_impl(arg: BigInt): BigInt {
-    return arg < 0I ? -1I : 1I;
-    //return arg;
+    return arg > 0I ? 1I : -1I;
 }
