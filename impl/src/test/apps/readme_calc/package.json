@@ -3,14 +3,6 @@
     "version": "0.0.0.0",
     "description": "A simple calculator",
     "license": "MIT",
-    "configs": {
-        "test": [
-            {
-                "name": "Full",
-                "flavors": ["sym", "icpp" , "err" , "chk"]
-            }
-        ]
-    },
     "src": {
         "bsqsource": [
             "./src/*"
