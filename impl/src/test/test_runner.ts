@@ -160,7 +160,7 @@ class TestRunner {
         try {
             return execSync(`node ${runnerapp} -t ${testsrc}`).toString().trim();
         }
-        catch (ex) {
+        catch (ex: any) {
             return ex.message + "\n" + ex.output[1].toString() + "\n" + ex.output[2].toString();
         }
     }
@@ -175,7 +175,7 @@ class TestRunner {
             const res = execSync(`${cppexe} ${test.args.join(" ")}`).toString().trim();
             return res;
         }
-        catch (ex) {
+        catch (ex: any) {
             return ex.message + "\n" + ex.output[1].toString() + "\n" + ex.output[2].toString();
         }
     }
@@ -189,7 +189,7 @@ class TestRunner {
             const res = execSync(`${z3path} -smt2 scratch.smt2`).toString().trim();
             return res;
         }
-        catch (ex) {
+        catch (ex: any) {
             return ex.message + "\n" + ex.output[1].toString() + "\n" + ex.output[2].toString();
         }
     }
@@ -212,7 +212,7 @@ class TestRunner {
                 return mres.substring(mres.indexOf(" "), mres.length - 2).trim();
             }
         }
-        catch (ex) {
+        catch (ex: any) {
             return ex.message + "\n" + ex.output[1].toString() + "\n" + ex.output[2].toString();
         }
     }
