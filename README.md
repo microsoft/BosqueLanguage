@@ -255,7 +255,7 @@ A function can be exported from the application in a `.bsqapi` file (see info on
 
 # The `bosque` Command 
 
-The `bosque` command is the primary tools for buidling, testing, and managing bosque packages and applications. The bosque command can be run on sets of files _or_, preferably, used in conjunction with Bosque packages which are defined with a `package.json` format.
+The `bosque` command is the primary tools for building, testing, and managing bosque packages and applications. The bosque command can be run on sets of files _or_, preferably, used in conjunction with Bosque packages which are defined with a `package.json` format.
 
 ## Calculator Example
 
@@ -285,7 +285,7 @@ function sign_impl(arg: BigInt): BigInt {
 }
 ```
 
-These functions are used, along with some direct implementations, to create the external API surface of the package. The calculator exports several functions including `div` which uses a `Result` to handle the case of division by zero and uses the pre/post features of the Bosque language (`ensures`) to document the behavior of the `abs` and `sign` methods for the clients of this package.
+These functions are used, along with some direct implementations, to create the external API surface of the package (defined in the `entrypoints` files with a `.bsqapi` extension). The calculator exports several functions including `div` which uses a `Result` to handle the case of division by zero and uses the pre/post features of the Bosque language (`ensures`) to document the behavior of the `abs` and `sign` methods for the clients of this package.
 
 ```
 namespace Main;
@@ -315,63 +315,57 @@ entrypoint function sign(arg: BigInt): BigInt
 }
 ```
 
-### The `run` Action
+### **The `run` Action**
 
 The `run` action in the `bosque` command provides a simple interface for invoking the entrypoints from a command line using JSON values. The syntax `run [package.json] [--entrypoint Namespace::function]` will load the code/api specified in the package (default `./package.json`) and find/run the specified function (default `Main::main`). The arguments can be provided on the command line, `--args [...]`, or via stdin. The image blow shows how to execute the `div` and `sign` APIs. 
 
-[TODO: gif calling these methods from the run command]
+![](resources/images/readme/CalcRun.gif)
 
-### The `test` Action
-The 
+### **The `test` Action**
 
-### The `apptest` Action
+The `test` action handles running unit-tests and property-tests defined in the `testfiles` (with a `.bsqtest` extension). All functions that are declared as `chktest` functions will be run. Functions with 0 arguments are physically executed while functions with arguments are treated as parametric property tests and checked with the SMT solver for _small_ inputs that may violate the desired property (i.e. the test returns false).
 
-[TODO: Need to update]
-
-A unique feature of the Bosque systems is the `bsqcheck` tool. This tool combines verification and bug triggering input generation tools in a unique configuration. For each possible failure in the program it first attempts to prove that a given failure is impossible under all inputs or generate a debuggable input that will trigger the error. If it cannot do either of these, which can happen due to the computational cost of theorem proving, then it will try to prove that, under a variety of simplifying assumptions, that the error cannot occur. 
-
-Thus, the tool will output one of the following results for each possible program failure:
-- (1a) Proof that the error is infeasible in all possible executions
-- (1b) Feasibility witness input that reaches target error state
-- (2a) Proof that the error is infeasible on a simplified set of executions
-- (2b) No witness input found before search time exhausted
-
-
-The **symtest** tool implements the symbolic testing algorithm and works as follows. Given the application shown below:
 ```
-namespace NSMain;
+namespace Main;
 
-enum CalcOp {
-    negate,
-    add,
-    sub
+chktest function abs_neg(): Bool {
+    return abs_impl(-3I) == 3I;
 }
 
-function main(op: CalcOp, arg1: BigInt, arg2: BigInt?): BigInt 
-    //requires op !== CalcOp::negate ==> arg2 !== none;
+chktest function sign_pos(): Bool {
+    return sign_impl(5I) > 0I;
+}
+
+chktest function sign_neg(): Bool {
+    return sign_impl(-4I) < 0I;
+}
+
+chktest function sign_neg_is_minus1(x: BigInt): Bool 
+    requires x < 0I;
 {
-    switch (op) {
-        CalcOp::negate => return -arg1;
-        | CalcOp::add => return arg1 + arg2.as<BigInt>();
-        | CalcOp::sub => return arg1 - arg2.as<BigInt>();
-    }
+    return sign_impl(x) == -1I;
+}
+
+chktest function sign_pos_is_1(x: BigInt): Bool 
+    requires x >= 0I;
+{
+    return sign_impl(x) == 1I;
 }
 ```
 
-Assuming this code is in a file called `calc.bsq` then we can run the following command to check for errors:
-```
-> node bin/runtimes/bsqcheck.js --check calc.bsq
-```
-Which will report that errors are possible and generate a set of inputs that will trigger each error. In this case both the `CalcOp::add` and `CalcOp::sub` cases may fail on the type cast if the `arg2` argument is `none`. The output for the add case is:
-```
-[
-    "NSMain::CalcOp::add",
-    0,
-    null
-]
-```
+![](resources/images/readme/CalcTest.gif)
 
-However, if we uncomment the requires clause, which asserts that the `arg2` parameter is only `none` if the op is `CalcOp::negate`, when we run the `bsqcheck` tool it will be able to successfully _prove_ that no runtime errors can ever occur.
+Running the `test` action as shown results in 3 tests being identified as unit-tests and physically executed with 2 tests being identified as parametric property tests and checked symbolically. In this app all 3 of the unit-tests pass and the symbolic checker is able to prove that one of the property tests is satisfied for all (small) inputs. However, the other property test does have a violating input, namely when `x` is `0` when the function `sign_impl` evaluates to `-1` but the expected property is that the sign should be `1`. 
+
+### **The `apptest` Action**
+
+The `apptest` action takes the power of the symbolic checker that Bosque provides and applies it to possible runtime errors, assertion failures, pre/post conditions, and invariants that may be triggered by a client calling an API provided in the package `entrypoints`. Running the `apptest` command takes each entrypoint function and checks all possible errors reachable to either (1) find a small repro input that triggers the error or (2) prove that no such small input exists.
+
+![](resources/images/readme/CalcAppTest.gif)
+
+This results in 2 checks of postconditions, for `sign` and `abs`, and one check for a possible div-by-zero in the `div` entrypoint. In all three cases the checker is able to prove that there is no input that can trigger any of these errors or violate any of the post-conditions!
+
+The other apps have more interesting code, tests, and errors to experiment with as well.
 
 # Installing the Bosque Language (Development)
 
