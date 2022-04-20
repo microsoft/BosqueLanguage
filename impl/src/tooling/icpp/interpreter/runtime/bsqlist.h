@@ -95,7 +95,7 @@ public:
     {
         auto intoloc = ((uint8_t*)pvinto) + sizeof(uint64_t);
         auto fromloc = ((uint8_t*)pvfrom) + sizeof(uint64_t);
-        auto bytecount = sizeof(uint64_t) + (count * entrysize);
+        auto bytecount = (count * entrysize);
 
         BSQPartialVectorType::setPVCount(pvinto, count);
         GC_MEM_COPY(intoloc, fromloc, bytecount);

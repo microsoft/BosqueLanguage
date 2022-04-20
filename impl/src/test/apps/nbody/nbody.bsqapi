@@ -9,9 +9,7 @@ entrypoint function main(): Float {
     var system = NBodySystem::create{};
     let step = 0.01f;
 
-    _debug(system);
-
-    system = system.advance(step);
+    //system = system.advance(step);
 
     return system.energy();
 }
