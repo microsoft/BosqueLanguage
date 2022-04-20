@@ -24,7 +24,7 @@
 #define BI_LAMBDA_CALL_SETUP_TEMP_AND_RES_VECTOR(TTYPE, TEMPSL, RTYPE, RESSL, PARAMS, PC, LPARAMS) uint8_t* TEMPSL = (uint8_t*)BSQ_STACK_SPACE_ALLOC(TTYPE->allocinfo.inlinedatasize + RTYPE->allocinfo.heapsize); \
         uint8_t* RESSL = TEMPSL + TTYPE->allocinfo.inlinedatasize; \
         GC_MEM_ZERO(TEMPSL, TTYPE->allocinfo.inlinedatasize + RTYPE->allocinfo.heapsize); \
-        std::string msk = std::string(TTYPE->allocinfo.inlinedmask) + std::string(RTYPE->allocinfo.heapmask); \
+        std::string msk = std::string(TTYPE->allocinfo.inlinedmask) + std::string(RTYPE->allocinfo.heapmask != nullptr ? RTYPE->allocinfo.heapmask : ""); \
         GCStack::pushFrame((void**)TEMPSL, msk.c_str()); \
         std::vector<StorageLocationPtr> LPARAMS = {TEMPSL}; \
         std::transform(PC->cargpos.cbegin(), PC->cargpos.cend(), std::back_inserter(LPARAMS), [&PARAMS](uint32_t pos) { \
@@ -34,7 +34,7 @@
 #define BI_LAMBDA_CALL_SETUP_TEMP_AND_RES_VECTOR_IDX(TTYPE, TEMPSL, RTYPE, RESSL, PARAMS, PC, LPARAMS, IDXSL) uint8_t* TEMPSL = (uint8_t*)BSQ_STACK_SPACE_ALLOC(TTYPE->allocinfo.inlinedatasize + RTYPE->allocinfo.heapsize); \
         uint8_t* RESSL = TEMPSL + TTYPE->allocinfo.inlinedatasize; \
         GC_MEM_ZERO(TEMPSL, TTYPE->allocinfo.inlinedatasize + RTYPE->allocinfo.heapsize); \
-        std::string msk = std::string(TTYPE->allocinfo.inlinedmask) + std::string(RTYPE->allocinfo.heapmask); \
+        std::string msk = std::string(TTYPE->allocinfo.inlinedmask) + std::string(RTYPE->allocinfo.heapmask != nullptr ? RTYPE->allocinfo.heapmask : ""); \
         GCStack::pushFrame((void**)TEMPSL, msk.c_str()); \
         std::vector<StorageLocationPtr> LPARAMS = {TEMPSL, IDXSL}; \
         std::transform(PC->cargpos.cbegin(), PC->cargpos.cend(), std::back_inserter(LPARAMS), [&PARAMS](uint32_t pos) { \
@@ -73,7 +73,7 @@
         uint8_t* OUTSL = ENVSL + ENVTYPE->allocinfo.inlinedatasize; \
         uint8_t* RSL = OUTSL + TYPEOUT->allocinfo.inlinedatasize; \
         GC_MEM_ZERO(TEMPSL, TTYPE->allocinfo.inlinedatasize + ENVTYPE->allocinfo.inlinedatasize + RLTYPE->allocinfo.heapsize); \
-        std::string msk = std::string(TTYPE->allocinfo.inlinedmask) + std::string(ENVTYPE->allocinfo.inlinedmask) + std::string(TYPEOUT->allocinfo.inlinedmask) + std::string(RLTYPE->allocinfo.heapmask); \
+        std::string msk = std::string(TTYPE->allocinfo.inlinedmask) + std::string(ENVTYPE->allocinfo.inlinedmask) + std::string(TYPEOUT->allocinfo.inlinedmask) + std::string(RLTYPE->allocinfo.inlinedmask); \
         GCStack::pushFrame((void**)TEMPSL, msk.c_str()); \
         std::vector<StorageLocationPtr> LPARAMS = {ENVSL, TEMPSL}; \
         std::transform(PC->cargpos.cbegin(), PC->cargpos.cend(), std::back_inserter(LPARAMS), [&PARAMS](uint32_t pos) { \
@@ -85,7 +85,7 @@
         uint8_t* OUTSL = ENVSL + ENVTYPE->allocinfo.inlinedatasize; \
         uint8_t* RSL = OUTSL + TYPEOUT->allocinfo.inlinedatasize; \
         GC_MEM_ZERO(TEMPSL, TTYPE->allocinfo.inlinedatasize + ENVTYPE->allocinfo.inlinedatasize + RLTYPE->allocinfo.heapsize); \
-        std::string msk = std::string(TTYPE->allocinfo.inlinedmask) + std::string(ENVTYPE->allocinfo.inlinedmask) + std::string(TYPEOUT->allocinfo.inlinedmask) + std::string(RLTYPE->allocinfo.heapmask); \
+        std::string msk = std::string(TTYPE->allocinfo.inlinedmask) + std::string(ENVTYPE->allocinfo.inlinedmask) + std::string(TYPEOUT->allocinfo.inlinedmask) + std::string(RLTYPE->allocinfo.heapmask != nullptr ? RLTYPE->allocinfo.heapmask : ""); \
         GCStack::pushFrame((void**)TEMPSL, msk.c_str()); \
         std::vector<StorageLocationPtr> LPARAMS = {ENVSL, TEMPSL, POS}; \
         std::transform(PC->cargpos.cbegin(), PC->cargpos.cend(), std::back_inserter(LPARAMS), [&PARAMS](uint32_t pos) { \
@@ -458,7 +458,7 @@ void* BSQListOps::s_map_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee,
             }
 
             void* pvinto = (void*)Allocator::GlobalAllocator.allocateDynamic((vcount <= 4) ? resflavor.pv4type : resflavor.pv8type);
-            BSQPartialVectorType::directCopyPVData(pvinto, resl, resflavor.entrytype->allocinfo.inlinedatasize);
+            BSQPartialVectorType::directSetPVData(pvinto, resl, vcount, resflavor.entrytype->allocinfo.inlinedatasize);
 
             lflavor.entrytype->clearValue(esl);
             BI_LAMBDA_CALL_SETUP_CLEAR_TEMP_PV(resflavor.pv8type, resl);
@@ -495,7 +495,7 @@ void* BSQListOps::s_map_idx_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk
             }
 
             void* pvinto = (void*)Allocator::GlobalAllocator.allocateDynamic((vcount <= 4) ? resflavor.pv4type : resflavor.pv8type);
-            BSQPartialVectorType::directCopyPVData(pvinto, resl, resflavor.entrytype->allocinfo.inlinedatasize);
+            BSQPartialVectorType::directSetPVData(pvinto, resl, vcount, resflavor.entrytype->allocinfo.inlinedatasize);
 
             lflavor.entrytype->clearValue(esl);
             BI_LAMBDA_CALL_SETUP_CLEAR_TEMP_PV(resflavor.pv8type, resl);
@@ -863,7 +863,7 @@ void BSQListOps::s_transduce_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThun
             }
 
             void* pvinto = (void*)Allocator::GlobalAllocator.allocateDynamic((vcount <= 4) ? uflavor.pv4type : uflavor.pv8type);
-            BSQPartialVectorType::directCopyPVData(pvinto, rsl, uflavor.entrytype->allocinfo.inlinedatasize);
+            BSQPartialVectorType::directSetPVData(pvinto, rsl, vcount, uflavor.entrytype->allocinfo.inlinedatasize);
 
             lflavor.entrytype->clearValue(esl);
             pcrtype->clearValue(outsl);
@@ -911,7 +911,7 @@ void BSQListOps::s_transduce_idx_ne(const BSQListTypeFlavor& lflavor, LambdaEval
             }
 
             void* pvinto = (void*)Allocator::GlobalAllocator.allocateDynamic((vcount <= 4) ? uflavor.pv4type : uflavor.pv8type);
-            BSQPartialVectorType::directCopyPVData(pvinto, rsl, uflavor.entrytype->allocinfo.inlinedatasize);
+            BSQPartialVectorType::directSetPVData(pvinto, rsl, vcount, uflavor.entrytype->allocinfo.inlinedatasize);
 
             lflavor.entrytype->clearValue(esl);
             pcrtype->clearValue(outsl);

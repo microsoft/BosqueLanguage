@@ -15,7 +15,7 @@ errtest function createEnergy_NoErr(): Float {
     return system.energy();
 }
 
-chktest function createEnergy_SymNot0(b: Bool): Float {
+chktest function createEnergy_SymNot0(b: Bool): Bool {
     let system = NBodySystem::create{};
-    return system.energy();
+    return system.energy() != 0.0f;
 }

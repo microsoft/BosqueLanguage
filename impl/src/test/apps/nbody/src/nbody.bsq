@@ -141,9 +141,20 @@ entity NBodySystem {
          Body::neptune
       };
 
-      let px = planets.map<Float>(fn(p: Body): Float => p.vel.vx * p.mass).sum();
+      _debug(planets);
+      let px = planets.map<Float>(fn(p: Body): Float => {
+         _debug(p);
+        return p.vel.vx * p.mass;
+      }).sum();
+      _debug(px);
+
+      _debug(planets);
       let py = planets.map<Float>(fn(p: Body): Float => p.vel.vy * p.mass).sum();
+      _debug(py);
+
+      _debug(planets);
       let pz = planets.map<Float>(fn(p: Body): Float => p.vel.vz * p.mass).sum();
+      _debug(pz);
 
       let allbodies = List<Body>{
          Body::sun.offsetMomentum(px, py, pz),

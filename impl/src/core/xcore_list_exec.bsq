@@ -379,7 +379,7 @@ internal entity ListOps provides Some {
         }
     }
 
-    recursive? function s_reduce<T, U>(init: U, op: recursive? fn(_: U, _: T) -> U): U {
+    recursive? function s_reduce<T, U>(l: ListRepr<T>, init: U, op: recursive? fn(_: U, _: T) -> U): U {
         if(l === none) {
             return init;
         }
@@ -389,7 +389,7 @@ internal entity ListOps provides Some {
         }
     }
 
-    recursive? function s_reduce_idx<T, U>(init: U, op: recursive? fn(_: U, _: T, _: Nat) -> U): U {
+    recursive? function s_reduce_idx<T, U>(l: ListRepr<T>, init: U, op: recursive? fn(_: U, _: T, _: Nat) -> U): U {
         if(l === none) {
             return init;
         }
