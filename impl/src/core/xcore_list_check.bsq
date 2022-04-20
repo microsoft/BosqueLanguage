@@ -1716,7 +1716,7 @@ internal entity ListOps provides Some {
             return Vector5<U>{f[recursive?](ll.v0), f[recursive?](ll.v1), f[recursive?](ll.v2), f[recursive?](ll.v3), f[recursive?](ll.v4)};
         }
         else {
-            return l.map[recursive?](f);
+            return l.map<U>[recursive?](f);
         }
     }
 
@@ -1745,7 +1745,7 @@ internal entity ListOps provides Some {
             return Vector5<U>{f[recursive?](ll.v0, 0n), f[recursive?](ll.v1, 1n), f[recursive?](ll.v2, 2n), f[recursive?](ll.v3, 3n), f[recursive?](ll.v4, 4n)};
         }
         else {
-            return l.map_idx[recursive?](f);
+            return l.map_idx<U>[recursive?](f);
         }
     }
 

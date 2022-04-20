@@ -5,8 +5,8 @@
 
 namespace Main;
 
-entrypoint function doit(): Float {
-    var system = NBodySystemcreate();
+entrypoint function main(): Float {
+    var system = NBodySystem::create{};
     let step = 0.01f;
 
     system = system.advance(step);

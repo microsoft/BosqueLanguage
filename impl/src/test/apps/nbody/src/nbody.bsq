@@ -94,12 +94,12 @@ entity Body {
    const sun: Body = Body{
       "sun",
       Body::solar_mass,
-      Position@{
+      Position{
          0.0f,
          0.0f,
          0.0f
       },
-      Velocity@{
+      Velocity{
          0.0f,
          0.0f,
          0.0f
@@ -128,9 +128,9 @@ entity NBodySystem {
    
    const energypairs: List<List<[Nat, Nat]>> = List<List<[Nat, Nat]>>{
       List<[Nat, Nat]>{[0n, 1n], [0n, 2n], [0n, 3n], [0n, 4n]},
-      List<[Nat, Nat]>[1n, 2n], [1n, 3n], [1n, 4n]},
-      List<[Nat, Nat]>[2n, 3n], [2n, 4n]},
-      List<[Nat, Nat]>[3n, 4n]}
+      List<[Nat, Nat]>{[1n, 2n], [1n, 3n], [1n, 4n]},
+      List<[Nat, Nat]>{[2n, 3n], [2n, 4n]},
+      List<[Nat, Nat]>{[3n, 4n]}
    };
 
    factory function create(): { bodies: List<Body> } {
