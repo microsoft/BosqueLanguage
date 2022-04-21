@@ -9,13 +9,3 @@ chktest function createEnergy_Not0(): Bool {
     let system = NBodySystem::create{};
     return system.energy() != 0.0f;
 }
-
-errtest function createEnergy_NoErr(): Float {
-    let system = NBodySystem::create{};
-    return system.energy();
-}
-
-chktest function createEnergy_SymNot0(b: Bool): Bool {
-    let system = NBodySystem::create{};
-    return system.energy() != 0.0f;
-}

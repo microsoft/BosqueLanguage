@@ -5,14 +5,26 @@
 
 namespace Main;
 
-entrypoint function main(): Float {
+entrypoint function main(ii: Int): Float {
     var system = NBodySystem::create{};
     let step = 0.01f;
 
-    //system = system.advance(step);
+    system = system.advance(step);
+    system = system.advance(step);
+    system = system.advance(step);
+
+    return system.energy();
+}
+
+
+entrypoint function doit(ii: Int): Bool {
+    var system = NBodySystem::create{};
+    let step = 0.01f;
+
+    system = system.advance(step);
     //system = system.advance(step);
     //system = system.advance(step);
 
-    return system.energy();
+    return system.energy() != 0.0f;
 }
 
