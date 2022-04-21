@@ -651,7 +651,6 @@ class SMTBodyEmitter {
         const rtype = this.typegen.getSMTTypeFor(geninfo.resulttype);
         let ops = tentities.map((tt) => {
             const mtt = this.typegen.getMIRType(tt.tkey);
-            const consfunc = (this.assembly.entityDecls.get(tt.tkey) as MIRObjectEntityTypeDecl).consfunc;
             const consfields = (this.assembly.entityDecls.get(tt.tkey) as MIRObjectEntityTypeDecl).consfuncfields.map((ccf) => this.assembly.fieldDecls.get(ccf.cfkey) as MIRFieldDecl);
 
             const test = new SMTCallSimple(this.registerRequiredTypeCheck(geninfo.argflowtype, mtt), [new SMTVar("arg")]);
@@ -669,17 +668,19 @@ class SMTBodyEmitter {
                 }
             }
             
-            const ccall = new SMTCallGeneral(this.typegen.lookupFunctionName(consfunc as MIRInvokeKey), cargs);
-
             let action: SMTExp = new SMTConst("[NOT SET]"); 
             if (this.isSafeConstructorInvoke(mtt) && geninfo.allsafe) {
+                const ccall = new SMTCallSimple(this.typegen.getSMTConstructorName(mtt).cons, cargs);
                 action = this.typegen.coerce(ccall, mtt, geninfo.resulttype);
             }
             else {
                 if(this.isSafeConstructorInvoke(mtt)) {
+                    const ccall = new SMTCallSimple(this.typegen.getSMTConstructorName(mtt).cons, cargs);
                     action = this.typegen.generateResultTypeConstructorSuccess(geninfo.resulttype, this.typegen.coerce(ccall, mtt, geninfo.resulttype));
                 }
                 else {
+                    const consfunc = (this.assembly.entityDecls.get(tt.tkey) as MIRObjectEntityTypeDecl).consfunc;
+                    const ccall = new SMTCallGeneral(this.typegen.lookupFunctionName(consfunc as MIRInvokeKey), cargs);
                     if(mtt.typeID === geninfo.resulttype.typeID) {
                         action = ccall;
                     }
@@ -985,7 +986,7 @@ class SMTBodyEmitter {
                 return new SMTConst("BRational@one");
             }
             else {
-                return new SMTCallSimple("FloatValue@const", [new SMTConst(cval.value)]);
+                return new SMTCallSimple("FloatValue@const", [new SMTConst(`"${cval.value}"`)]);
             }
         }
         else if (cval instanceof MIRConstantFloat) {
@@ -996,7 +997,8 @@ class SMTBodyEmitter {
                 return new SMTConst("BFloat@one");
             }
             else {
-                return new SMTCallSimple("FloatValue@const", [new SMTConst(cval.value.slice(0, cval.value.length - 1))]);
+                const fval = Number.parseFloat(cval.value.slice(0, cval.value.length - 1));
+                return new SMTCallSimple("FloatValue@const", [new SMTConst(`"${fval}"`)]);
             }
         }
         else if (cval instanceof MIRConstantDecimal) {
@@ -1007,7 +1009,8 @@ class SMTBodyEmitter {
                 return new SMTConst("BDecimal@one");
             }
             else {
-                return new SMTCallSimple("FloatValue@const", [new SMTConst(cval.value.slice(0, cval.value.length - 1))]);
+                const dval = Number.parseFloat(cval.value.slice(0, cval.value.length - 1));
+                return new SMTCallSimple("FloatValue@const", [new SMTConst(`"${dval}"`)]);
             }
         }
         else if (cval instanceof MIRConstantString) {
@@ -1522,11 +1525,12 @@ class SMTBodyEmitter {
                 }
             }
 
-            const ccall = new SMTCallGeneral(this.typegen.lookupFunctionName(consfunc as MIRInvokeKey), cargs);
             if (this.isSafeConstructorInvoke(argflowtype)) {
+                const ccall = new SMTCallSimple(this.typegen.getSMTConstructorName(argflowtype).cons, cargs);
                 return new SMTLet(this.varToSMTName(op.trgt).vname, ccall, continuation);
             }
             else {
+                const ccall = new SMTCallGeneral(this.typegen.lookupFunctionName(consfunc as MIRInvokeKey), cargs);
                 return this.generateGeneralCallValueProcessing(this.currentRType, resulttype, ccall, op.trgt, continuation);
             }
         }
@@ -2728,7 +2732,7 @@ class SMTBodyEmitter {
             }
             case "float_power":
             case "decimal_power": {
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTCallSimple("FloatValue@Rounding", [new SMTVar(args[0].vname), new SMTVar(args[1].vname)]));
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTCallSimple("FloatValue@Power", [new SMTVar(args[0].vname), new SMTVar(args[1].vname)]));
             }
             case "string_empty": {
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, SMTCallSimple.makeEq(new SMTCallSimple("str.len", [new SMTVar(args[0].vname)]), new SMTConst("0")));

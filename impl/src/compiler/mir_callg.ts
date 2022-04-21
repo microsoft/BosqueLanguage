@@ -45,6 +45,7 @@ function computeCalleesInBlocks(blocks: Map<string, MIRBasicBlock>, invokeNode: 
                             }
                         }
                     });
+                    trgts.forEach((trgt) => invokeNode.callees.add(trgt));
                     break;
                 }
                 case MIROpTag.MIRInvokeVirtualOperator: {
@@ -57,9 +58,10 @@ function computeCalleesInBlocks(blocks: Map<string, MIRBasicBlock>, invokeNode: 
                     const trgts: MIRInvokeKey[] = [];
                     assembly.entityDecls.forEach((edcl) => {
                         if(assembly.subtypeOf(assembly.typeMap.get(edcl.tkey) as MIRType, rcvrtype)) {
-                            trgts.push(`${edcl.tkey}@@constructor`);
+                            trgts.push(`__i__${edcl.tkey}::@@constructor`);
                         }
                     });
+                    trgts.forEach((trgt) => invokeNode.callees.add(trgt));
                     break;
                 }
                 default: {
