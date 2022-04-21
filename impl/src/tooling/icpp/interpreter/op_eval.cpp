@@ -3223,14 +3223,20 @@ std::optional<std::string> ICPPParseJSON::extractBigIntImpl(const APIModule* api
 
 std::optional<std::string> ICPPParseJSON::extractFloatImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
 {
-    auto val = (double)SLPTR_LOAD_CONTENTS_AS(BSQFloat, value);
-    return std::make_optional(std::to_string(val));
+    char cbuff[32];
+    memset(cbuff, 0, sizeof(cbuff));
+    snprintf(cbuff, sizeof(cbuff), "%.9g", SLPTR_LOAD_CONTENTS_AS(BSQFloat, value));
+
+    return std::make_optional(std::string(cbuff));
 }
 
 std::optional<std::string> ICPPParseJSON::extractDecimalImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
 {
-    auto val = (double)SLPTR_LOAD_CONTENTS_AS(BSQDecimal, value);
-    return std::make_optional(std::to_string(val));
+    char cbuff[32];
+    memset(cbuff, 0, sizeof(cbuff));
+    snprintf(cbuff, sizeof(cbuff), "%.9g", SLPTR_LOAD_CONTENTS_AS(BSQDecimal, value));
+
+    return std::make_optional(std::string(cbuff));
 }
 
 std::optional<std::pair<std::string, uint64_t>> ICPPParseJSON::extractRationalImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
