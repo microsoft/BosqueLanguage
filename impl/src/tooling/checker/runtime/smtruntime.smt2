@@ -57,37 +57,19 @@
 (declare-fun HasProperty@ (TypeTag RecordPropertyTag) Bool)
 ;;RECORD_HAS_PROPERTY_DECLS;;
 
-(declare-sort FloatValue)
+(declare-const Real@zero Real)
+(assert (= Real@zero 0.0))
 
-(declare-fun FloatValue@neg (FloatValue) FloatValue)
-(declare-fun FloatValue@add (FloatValue FloatValue) FloatValue)
-(declare-fun FloatValue@sub (FloatValue FloatValue) FloatValue)
-(declare-fun FloatValue@mult (FloatValue FloatValue) FloatValue)
-(declare-fun FloatValue@div (FloatValue FloatValue) FloatValue)
-
-(declare-fun FloatValue@lt (FloatValue FloatValue) Bool)
-
-(declare-fun FloatValue@const (String) FloatValue)
-
-(declare-fun FloatValue@FromInt (Int) FloatValue)
-(declare-fun FloatValue@ToInt (FloatValue) Int)
-
-(declare-fun FloatValue@Rounding (FloatValue) FloatValue)
-(declare-fun FloatValue@Power (FloatValue FloatValue) FloatValue)
-
-(declare-const FloatValue@zero FloatValue)
-(assert (= FloatValue@zero (FloatValue@const "0.0")))
-
-(declare-const FloatValue@one FloatValue)
-(assert (= FloatValue@one (FloatValue@const "1.0")))
+(declare-const Real@one Real)
+(assert (= Real@one 1.0))
 
 (define-sort BInt () Int)
 (define-sort BNat () Int)
 (define-sort BBigInt () Int)
 (define-sort BBigNat () Int)
-(define-sort BFloat () FloatValue)
-(define-sort BDecimal () FloatValue)
-(define-sort BRational () FloatValue)
+(define-sort BFloat () Real)
+(define-sort BDecimal () Real)
+(define-sort BRational () Real)
 ;;BSTRING_TYPE_ALIAS;;
 (define-sort BTickTime () Int)
 (define-sort BLogicalTime () Int)
@@ -120,18 +102,14 @@
 (declare-const BBigNat@zero BBigNat) (assert (= BBigNat@zero 0))
 (declare-const BBigNat@one BBigNat) (assert (= BBigNat@one 1))
 
-(declare-const BFloat@zero BFloat) (assert (= BFloat@zero FloatValue@zero))
-(declare-const BFloat@one BFloat) (assert (= BFloat@one FloatValue@one))
-(declare-const BFloat@pi BFloat)
-(declare-const BFloat@e BFloat)
+(declare-const BFloat@zero BFloat) (assert (= BFloat@zero Real@zero))
+(declare-const BFloat@one BFloat) (assert (= BFloat@one Real@one))
 
-(declare-const BDecimal@zero BDecimal) (assert (= BDecimal@zero FloatValue@zero))
-(declare-const BDecimal@one BDecimal) (assert (= BDecimal@one FloatValue@one))
-(declare-const BDecimal@pi BDecimal)
-(declare-const BDecimal@e BDecimal)
+(declare-const BDecimal@zero BDecimal) (assert (= BDecimal@zero Real@zero))
+(declare-const BDecimal@one BDecimal) (assert (= BDecimal@one Real@one))
 
-(declare-const BRational@zero BRational) (assert (= BRational@zero FloatValue@zero))
-(declare-const BRational@one BRational) (assert (= BRational@one FloatValue@one))
+(declare-const BRational@zero BRational) (assert (= BRational@zero Real@zero))
+(declare-const BRational@one BRational) (assert (= BRational@one Real@one))
 
 (define-sort HavocSequence () (Seq Int))
 

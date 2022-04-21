@@ -986,7 +986,7 @@ class SMTBodyEmitter {
                 return new SMTConst("BRational@one");
             }
             else {
-                return new SMTCallSimple("FloatValue@const", [new SMTConst(`"${cval.value}"`)]);
+                return NOT_IMPLEMENTED("BRational mixed");
             }
         }
         else if (cval instanceof MIRConstantFloat) {
@@ -997,8 +997,8 @@ class SMTBodyEmitter {
                 return new SMTConst("BFloat@one");
             }
             else {
-                const fval = Number.parseFloat(cval.value.slice(0, cval.value.length - 1));
-                return new SMTCallSimple("FloatValue@const", [new SMTConst(`"${fval}"`)]);
+                const fval = cval.value.slice(0, cval.value.length - 1);
+                return new SMTConst(fval.includes(".") ? fval : (fval + ".0"));
             }
         }
         else if (cval instanceof MIRConstantDecimal) {
@@ -1009,8 +1009,8 @@ class SMTBodyEmitter {
                 return new SMTConst("BDecimal@one");
             }
             else {
-                const dval = Number.parseFloat(cval.value.slice(0, cval.value.length - 1));
-                return new SMTCallSimple("FloatValue@const", [new SMTConst(`"${dval}"`)]);
+                const dval = cval.value.slice(0, cval.value.length - 1);
+                return new SMTConst(dval.includes(".") ? dval : (dval + ".0"));
             }
         }
         else if (cval instanceof MIRConstantString) {
@@ -2183,17 +2183,17 @@ class SMTBodyEmitter {
             }
             case "__i__Core::-=prefix=(Rational)": {
                 rtype = this.typegen.getMIRType("Rational");
-                smte = new SMTCallSimple("FloatValue@neg", args);
+                smte = new SMTCallSimple("-", args);
                 break;
             }
             case "__i__Core::-=prefix=(Float)": {
                 rtype = this.typegen.getMIRType("Float");
-                smte = new SMTCallSimple("FloatValue@neg", args);
+                smte = new SMTCallSimple("-", args);
                 break;
             }
             case "__i__Core::-=prefix=(Decimal)": {
                 rtype = this.typegen.getMIRType("Decimal");
-                smte = new SMTCallSimple("FloatValue@neg", args);
+                smte = new SMTCallSimple("-", args);
                 break;
             }
             //op infix +
@@ -2219,17 +2219,17 @@ class SMTBodyEmitter {
             }
             case "__i__Core::+=infix=(Rational, Rational)": {
                 rtype = this.typegen.getMIRType("Rational");
-                smte = new SMTCallSimple("FloatValue@add", args);
+                smte = new SMTCallSimple("+", args);
                 break;
             }
             case "__i__Core::+=infix=(Float, Float)": {
                 rtype = this.typegen.getMIRType("Float");
-                smte = new SMTCallSimple("FloatValue@add", args);
+                smte = new SMTCallSimple("+", args);
                 break;
             }
             case "__i__Core::+=infix=(Decimal, Decimal)": {
                 rtype = this.typegen.getMIRType("Decmial");
-                smte = new SMTCallSimple("FloatValue@add", args);
+                smte = new SMTCallSimple("+", args);
                 break;
             }
             //op infix -
@@ -2257,17 +2257,17 @@ class SMTBodyEmitter {
             }
             case "__i__Core::-=infix=(Rational, Rational)": {
                 rtype = this.typegen.getMIRType("Rational");
-                smte = new SMTCallSimple("FloatValue@sub", args);
+                smte = new SMTCallSimple("-", args);
                 break;
             }
             case "__i__Core::-=infix=(Float, Float)": {
                 rtype = this.typegen.getMIRType("Float");
-                smte = new SMTCallSimple("FloatValue@sub", args);
+                smte = new SMTCallSimple("-", args);
                 break;
             }
             case "__i__Core::-=infix=(Decimal, Decimal)": {
                 rtype = this.typegen.getMIRType("Decmial");
-                smte = new SMTCallSimple("FloatValue@sub", args);
+                smte = new SMTCallSimple("-", args);
                 break;
             }
             //op infix *
@@ -2293,17 +2293,17 @@ class SMTBodyEmitter {
             }
             case "__i__Core::*=infix=(Rational, Rational)": {
                 rtype = this.typegen.getMIRType("Rational");
-                smte = new SMTCallSimple("FloatValue@mult", args);
+                smte = new SMTCallSimple("*", args);
                 break;
             }
             case "__i__Core::*=infix=(Float, Float)": {
                 rtype = this.typegen.getMIRType("Float");
-                smte = new SMTCallSimple("FloatValue@mult", args);
+                smte = new SMTCallSimple("*", args);
                 break;
             }
             case "__i__Core::*=infix=(Decimal, Decimal)": {
                 rtype = this.typegen.getMIRType("Decmial");
-                smte = new SMTCallSimple("FloatValue@mult", args);
+                smte = new SMTCallSimple("*", args);
                 break;
             }
             //op infix /
@@ -2333,19 +2333,19 @@ class SMTBodyEmitter {
             }
             case "__i__Core::/=infix=(Rational, Rational)": {
                 rtype = this.typegen.getMIRType("Rational");
-                smte = this.processGenerateResultWithZeroArgCheck(sinfo, new SMTConst("BRational@zero"), args[1], rtype, new SMTCallSimple("FloatValue@div", args));
+                smte = this.processGenerateResultWithZeroArgCheck(sinfo, new SMTConst("BRational@zero"), args[1], rtype, new SMTCallSimple("/", args));
                 erropt = true;
                 break;
             }
             case "__i__Core::/=infix=(Float, Float)": {
                 rtype = this.typegen.getMIRType("Float");
-                smte = this.processGenerateResultWithZeroArgCheck(sinfo, new SMTConst("BFloat@zero"), args[1], rtype, new SMTCallSimple("FloatValue@div", args));
+                smte = this.processGenerateResultWithZeroArgCheck(sinfo, new SMTConst("BFloat@zero"), args[1], rtype, new SMTCallSimple("/", args));
                 erropt = true;
                 break;
             }
             case "__i__Core::/=infix=(Decimal, Decimal)": {
                 rtype = this.typegen.getMIRType("Decimal");
-                smte = this.processGenerateResultWithZeroArgCheck(sinfo, new SMTConst("BDecimal@zero"), args[1], rtype, new SMTCallSimple("FloatValue@div", args));
+                smte = this.processGenerateResultWithZeroArgCheck(sinfo, new SMTConst("BDecimal@zero"), args[1], rtype, new SMTCallSimple("/", args));
                 erropt = true;
                 break;
             }
@@ -2389,15 +2389,15 @@ class SMTBodyEmitter {
                 break;
             }
             case "__i__Core::<=infix=(Rational, Rational)": {
-                smte = new SMTCallSimple("FloatValue@lt", args);
+                smte = new SMTCallSimple("<", args);
                 break;
             }
             case "__i__Core::<=infix=(Float, Float)": {
-                smte = new SMTCallSimple("FloatValue@lt", args);
+                smte = new SMTCallSimple("<", args);
                 break;
             }
             case "__i__Core::<=infix=(Decimal, Decimal)": {
-                smte = new SMTCallSimple("FloatValue@lt", args);
+                smte = new SMTCallSimple("<", args);
                 break;
             }
             //op infix >
@@ -2422,11 +2422,11 @@ class SMTBodyEmitter {
                 break;
             }
             case "__i__Core::>=infix=(Float, Float)": {
-                smte = new SMTCallSimple("FloatValue@lt", [args[1], args[0]]);
+                smte = new SMTCallSimple(">", [args[1], args[0]]);
                 break;
             }
             case "__i__Core::>=infix=(Decimal, Decimal)": {
-                smte = new SMTCallSimple("FloatValue@lt", [args[1], args[0]]);
+                smte = new SMTCallSimple(">", [args[1], args[0]]);
                 break;
             }
             //op infix <=
@@ -2447,15 +2447,15 @@ class SMTBodyEmitter {
                 break;
             }
             case "__i__Core::<==infix=(Rational, Rational)": {
-                smte = SMTCallSimple.makeAndOf(SMTCallSimple.makeEq(args[0], args[1]),  new SMTCallSimple("FloatValue@lt", args));
+                smte = new SMTCallSimple("<=", args);
                 break;
             }
             case "__i__Core::<==infix=(Float, Float)": {
-                smte = SMTCallSimple.makeAndOf(SMTCallSimple.makeEq(args[0], args[1]),  new SMTCallSimple("FloatValue@lt", args));
+                smte = new SMTCallSimple("<=", args);
                 break;
             }
             case "__i__Core::<==infix=(Decimal, Decimal)": {
-                smte = SMTCallSimple.makeAndOf(SMTCallSimple.makeEq(args[0], args[1]),  new SMTCallSimple("FloatValue@lt", args));
+                smte = new SMTCallSimple("<=", args);
                 break;
             }
             //op infix >=
@@ -2476,15 +2476,15 @@ class SMTBodyEmitter {
                 break;
             }
             case "__i__Core::>==infix=(Rational, Rational)":{
-                smte = SMTCallSimple.makeAndOf(SMTCallSimple.makeEq(args[0], args[1]),  new SMTCallSimple("FloatValue@lt", [args[1], args[0]]));
+                smte = new SMTCallSimple(">=", [args[1], args[0]]);
                 break;
             }
             case "__i__Core::>==infix=(Float, Float)":{
-                smte = SMTCallSimple.makeAndOf(SMTCallSimple.makeEq(args[0], args[1]),  new SMTCallSimple("FloatValue@lt", [args[1], args[0]]));
+                smte = new SMTCallSimple(">=", [args[1], args[0]]);
                 break;
             }
             case "__i__Core::>==infix=(Decimal, Decimal)":{
-                smte = SMTCallSimple.makeAndOf(SMTCallSimple.makeEq(args[0], args[1]),  new SMTCallSimple("FloatValue@lt", [args[1], args[0]]));
+                smte = new SMTCallSimple(">=", [args[1], args[0]]);
                 break;
             }
             default: {
@@ -2707,12 +2707,12 @@ class SMTBodyEmitter {
             case "number_biginttofloat":
             case "number_biginttodecimal":
             case "number_biginttorational": {
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTCallSimple("FloatValue@FromInt", [new SMTVar(args[0].vname)]));
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTCallSimple("to_real", [new SMTVar(args[0].vname)]));
             }
             case "number_floattobigint":
             case "number_decimaltobigint": 
             case "number_rationaltobigint": {
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTCallSimple("FloatValue@ToInt", [new SMTVar(args[0].vname)]));
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTCallSimple("to_int", [new SMTVar(args[0].vname)]));
             }
             case "number_floattodecimal":
             case "number_floattorational":
@@ -2723,16 +2723,38 @@ class SMTBodyEmitter {
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTVar(args[0].vname));
             }
             case "float_floor":
-            case "decimal_floor":
+            case "decimal_floor": {
+                const ceil = new SMTIf(
+                    new SMTCallSimple("<=", [new SMTVar("vvround"), new SMTVar(args[0].vname)]),
+                    new SMTCallSimple("to_int", [new SMTVar(args[0].vname)]),
+                    new SMTCallSimple("-", [new SMTCallSimple("to_int", [new SMTVar(args[0].vname)]), new SMTConst("1")])
+                );
+                const vvround = new SMTLet("vvround", new SMTCallSimple("to_real", [new SMTCallSimple("to_int", [new SMTVar(args[0].vname)])]), ceil);
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, vvround);
+            }
             case "float_ceil":
-            case "decimal_ceil":
+            case "decimal_ceil": {
+                const ceil = new SMTIf(
+                    new SMTCallSimple(">=", [new SMTVar("vvround"), new SMTVar(args[0].vname)]),
+                    new SMTCallSimple("to_int", [new SMTVar(args[0].vname)]),
+                    new SMTCallSimple("+", [new SMTCallSimple("to_int", [new SMTVar(args[0].vname)]), new SMTConst("1")])
+                );
+                const vvround = new SMTLet("vvround", new SMTCallSimple("to_real", [new SMTCallSimple("to_int", [new SMTVar(args[0].vname)])]), ceil);
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, vvround);
+            }
             case "float_truncate":
-            case "decimal_truncate": {
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTCallSimple("FloatValue@Rounding", [new SMTVar(args[0].vname)]));
+            case "decimal_truncate":  {
+                const truncate = new SMTIf(
+                    new SMTCallSimple(">=", [new SMTVar(args[0].vname), new SMTConst("0.0")]),
+                    new SMTCallSimple("to_int", [new SMTVar(args[0].vname)]),
+                    new SMTCallSimple("-", [new SMTCallSimple("to_int", [new SMTCallSimple("-", [new SMTVar(args[0].vname)])])])
+                );
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, truncate);
             }
             case "float_power":
             case "decimal_power": {
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTCallSimple("FloatValue@Power", [new SMTVar(args[0].vname), new SMTVar(args[1].vname)]));
+                const rr = this.typegen.generateResultTypeConstructorSuccess(mirrestype, new SMTCallSimple("^", [new SMTVar(args[0].vname), new SMTVar(args[0].vname)]));
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, rr);
             }
             case "string_empty": {
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, SMTCallSimple.makeEq(new SMTCallSimple("str.len", [new SMTVar(args[0].vname)]), new SMTConst("0")));
