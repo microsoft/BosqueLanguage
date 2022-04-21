@@ -1948,7 +1948,12 @@ class ICPPBodyEmitter {
         let pcodes: Map<string, ICPPPCode> = new Map<string, ICPPPCode>();
         idecl.pcodes.forEach((pc, pcname) => {
             const ctypes = pc.cargs.map((carg) => carg.ctype);
-            const cargs = pc.cargs.map((carg) => idecl.params.findIndex((pp) => pp.name == carg.cname));
+            const cargs = pc.cargs.map((carg) => {
+                const cargidx = idecl.params.findIndex((pp) => pp.name === carg.cname);
+                assert(cargidx != -1);
+
+                return cargidx;
+            });
 
             const icpppc = new ICPPPCode(pc.code, ctypes, cargs);
             pcodes.set(pcname, icpppc);

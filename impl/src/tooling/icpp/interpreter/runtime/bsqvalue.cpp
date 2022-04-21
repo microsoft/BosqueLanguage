@@ -392,12 +392,20 @@ int entityBigIntKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, Stor
 
 std::string entityFloatDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
-    return std::to_string(SLPTR_LOAD_CONTENTS_AS(BSQFloat, data)) + ((btype->name == "Float") ? "f" : ("_" + btype->name));
+    char cbuff[32];
+    memset(cbuff, 0, sizeof(cbuff));
+    snprintf(cbuff, sizeof(cbuff), "%.9g", SLPTR_LOAD_CONTENTS_AS(BSQFloat, data));
+
+    return std::string(cbuff) + ((btype->name == "Float") ? "f" : ("_" + btype->name));
 }
 
 std::string entityDecimalDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
-    return std::to_string(SLPTR_LOAD_CONTENTS_AS(BSQDecimal, data)) + ((btype->name == "Decmial") ? "d" : ("_" + btype->name));
+    char cbuff[32];
+    memset(cbuff, 0, sizeof(cbuff));
+    snprintf(cbuff, sizeof(cbuff), "%.9g", SLPTR_LOAD_CONTENTS_AS(BSQDecimal, data));
+
+    return std::string(cbuff) + ((btype->name == "Decmial") ? "d" : ("_" + btype->name));
 }
 
 std::string entityRationalDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)

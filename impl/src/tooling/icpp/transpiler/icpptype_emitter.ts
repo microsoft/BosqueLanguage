@@ -589,14 +589,14 @@ class ICPPTypeEmitter {
                     if(entity.name === "PartialVector4") {
                         const etype = entity.terms.get("T") as MIRType;
                         const elayout = this.getICPPTypeInfoInlineLayout(etype);
-                        const allocinfo = ICPPTypeSizeInfo.createByRefSizeInfo(entity.tkey, elayout.size * 4, (elayout.mask + elayout.mask + elayout.mask + elayout.mask));
+                        const allocinfo = ICPPTypeSizeInfo.createByRefSizeInfo(entity.tkey, ICPP_WORD_SIZE + elayout.size * 4, ("1" + elayout.mask + elayout.mask + elayout.mask + elayout.mask));
 
                         return new ICPPCollectionInternalsLayoutInfo(entity.tkey, allocinfo, [{name: "T", type: etype.typeID, size: elayout.size, offset: 0}]);
                     }
                     else if (entity.name === "PartialVector8") {
                         const etype = entity.terms.get("T") as MIRType;
                         const elayout = this.getICPPTypeInfoInlineLayout(etype);
-                        const allocinfo = ICPPTypeSizeInfo.createByRefSizeInfo(entity.tkey, elayout.size * 8, (elayout.mask + elayout.mask + elayout.mask + elayout.mask + elayout.mask + elayout.mask + elayout.mask + elayout.mask));
+                        const allocinfo = ICPPTypeSizeInfo.createByRefSizeInfo(entity.tkey, ICPP_WORD_SIZE + elayout.size * 8, ("1" + elayout.mask + elayout.mask + elayout.mask + elayout.mask + elayout.mask + elayout.mask + elayout.mask + elayout.mask));
 
                         return new ICPPCollectionInternalsLayoutInfo(entity.tkey, allocinfo, [{name: "T", type: etype.typeID, size: elayout.size, offset: 0}]);
                     }

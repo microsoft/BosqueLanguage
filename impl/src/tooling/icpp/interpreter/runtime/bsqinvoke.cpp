@@ -635,7 +635,7 @@ BSQInvokePrimitiveDecl* BSQInvokePrimitiveDecl::jsonLoad(json v)
         auto code = MarshalEnvironment::g_invokeToIdMap[pc["code"].get<std::string>()];
 
         std::vector<uint32_t> cargpos;
-        auto jcargs = pc["cargpos"];
+        auto jcargs = pc["cargs"];
         std::transform(jcargs.cbegin(), jcargs.cend(), std::back_inserter(cargpos), [](json carg) {
             return carg.get<uint32_t>(); 
         });

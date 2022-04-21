@@ -207,6 +207,7 @@ class MIREmitter {
             this.m_capturedNameIDMap.set(bodyid, this.m_capturedNameIDMap.size);
         }
 
+        //see also the uses in icpp body emit and (maybe later SMT)
         return `@@c_${this.m_capturedNameIDMap.get(bodyid)}_${name}`;
     }
 
