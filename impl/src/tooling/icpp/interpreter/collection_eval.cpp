@@ -450,7 +450,7 @@ void* BSQListOps::s_map_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee,
 
         rres = BSQListOps::list_tree_transform(lflavor, rnode, [&](BSQCollectionGCReprNode* reprnode, const BSQPartialVectorType* reprtype) {
             int16_t vcount = reprtype->getPVCount(reprnode->repr);
-        
+   
             for(int16_t i = 0; i < vcount; ++i)
             {
                 lflavor.entrytype->storeValue(esl, reprtype->get(reprnode->repr, i));
