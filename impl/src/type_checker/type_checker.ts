@@ -6957,7 +6957,7 @@ class TypeChecker {
         invoke.params.forEach((p) => {
             const pdecltype = this.m_assembly.normalizeTypeGeneral(p.type, binds);
             if (pdecltype instanceof ResolvedFunctionType) {
-                const pcarg = pcodes[fargs.size]
+                const pcarg = pcodes[fargs.size];
                 fargs.set(p.name, pcarg);
             }
             else {
@@ -7079,7 +7079,13 @@ class TypeChecker {
                 binds.forEach((v, k) => mbinds.set(k, this.m_emitter.registerResolvedTypeReference(v).typeID));
 
                 let mpc = new Map<string, MIRPCode>();
-                fargs.forEach((v, k) => mpc.set(k, { code: v.ikey, cargs: [...v.captured].map((cv) => { return {cname: cv[0], ctype: cv[1].typeID}; }) }));
+                fargs.forEach((v, k) => {
+                    const cargs = [...v.captured].map((cv) => { 
+                        const capturedname = this.m_emitter.generateCapturedVarName(cv[0], v.code.bodyID);
+                        return {cname: capturedname, ctype: cv[1].typeID}; 
+                    });
+                    mpc.set(k, { code: v.ikey, cargs: cargs })
+                });
 
                 return new MIRInvokePrimitiveDecl(encdecl, invoke.bodyID, ikey, shortname, invoke.attributes, recursive, invoke.startSourceLocation, invoke.endSourceLocation, invoke.srcFile, mbinds, params, resultType.typeID, (invoke.body as BodyImplementation).body as string, mpc);
             }

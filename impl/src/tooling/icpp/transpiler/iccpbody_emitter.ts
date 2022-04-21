@@ -1948,11 +1948,11 @@ class ICPPBodyEmitter {
         let pcodes: Map<string, ICPPPCode> = new Map<string, ICPPPCode>();
         idecl.pcodes.forEach((pc, pcname) => {
             const ctypes = pc.cargs.map((carg) => carg.ctype);
-            const inv = this.assembly.invokeDecls.get(pc.code) as MIRInvokeDecl;
-
             const cargs = pc.cargs.map((carg) => {
-                xxxx;
-                return idecl.params.findIndex((pp) => pp.name === capturedname);
+                const cargidx = idecl.params.findIndex((pp) => pp.name === carg.cname);
+                assert(cargidx != -1);
+
+                return cargidx;
             });
 
             const icpppc = new ICPPPCode(pc.code, ctypes, cargs);

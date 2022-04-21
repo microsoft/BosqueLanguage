@@ -157,12 +157,9 @@ entity NBodySystem {
    }
 
    method potentialEnergyCompute(pePair: List<[Nat, Nat]>): Float {
-      _debug(pePair);
+      _debug(this);
 
       let potentialEnergies = pePair.map(fn(bp: [Nat, Nat]): Float => {
-         _debug(bp);
-         _debug(bp.0);
-         _debug(bp.1);
             let b0 = this.bodies.get(bp.0);
             let b1 = this.bodies.get(bp.1);
 
@@ -176,7 +173,10 @@ entity NBodySystem {
 
    method energy(): Float {
       let keneticEnergies = this.bodies.map(fn(b: Body): Float => b.kineticEnergy());
-      let potentialEnergies = NBodySystem::energypairs.map(fn(pep: List<[Nat, Nat]>): Float => this.potentialEnergyCompute(pep));
+      let potentialEnergies = NBodySystem::energypairs.map(fn(pep: List<[Nat, Nat]>): Float => {
+         _debug(this);
+         return this.potentialEnergyCompute(pep);
+      });
 
       return keneticEnergies.sum() - potentialEnergies.sum();
    }
