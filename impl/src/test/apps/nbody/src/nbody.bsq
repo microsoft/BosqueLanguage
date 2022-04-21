@@ -48,7 +48,7 @@ entity Body {
 
    const saturn: Body = Body{
       "saturn",
-      -0.0000690460016972063023f * Body::days_per_year,
+      0.000285885980666130812f * Body::solar_mass,
       Position{
          8.34336671824457987f,
          4.12479856412430479f,

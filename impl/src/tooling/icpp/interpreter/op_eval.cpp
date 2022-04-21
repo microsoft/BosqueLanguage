@@ -2242,12 +2242,14 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
     case BSQPrimitiveImplTag::s_list_reduce_ne: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
 
+        invk->binds.find("T")->second->storeValue(resultsl, params[1]); //store the initial acc in the result
         BSQListOps::s_reduce_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), invk->pcodes.find("f")->second, params, resultsl);
         break;
     }
     case BSQPrimitiveImplTag::s_list_reduce_idx_ne: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
 
+        invk->binds.find("T")->second->storeValue(resultsl, params[1]); //store the initial acc in the result
         BSQListOps::s_reduce_idx_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), invk->pcodes.find("f")->second, params, resultsl);
         break;
     }
