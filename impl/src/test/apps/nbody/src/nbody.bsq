@@ -48,7 +48,7 @@ entity Body {
 
    const saturn: Body = Body{
       "saturn",
-      -0.0000690460016972063023f * Body::days_per_year,
+      0.000285885980666130812f * Body::solar_mass,
       Position{
          8.34336671824457987f,
          4.12479856412430479f,
@@ -94,12 +94,12 @@ entity Body {
    const sun: Body = Body{
       "sun",
       Body::solar_mass,
-      Position@{
+      Position{
          0.0f,
          0.0f,
          0.0f
       },
-      Velocity@{
+      Velocity{
          0.0f,
          0.0f,
          0.0f
@@ -128,9 +128,9 @@ entity NBodySystem {
    
    const energypairs: List<List<[Nat, Nat]>> = List<List<[Nat, Nat]>>{
       List<[Nat, Nat]>{[0n, 1n], [0n, 2n], [0n, 3n], [0n, 4n]},
-      List<[Nat, Nat]>[1n, 2n], [1n, 3n], [1n, 4n]},
-      List<[Nat, Nat]>[2n, 3n], [2n, 4n]},
-      List<[Nat, Nat]>[3n, 4n]}
+      List<[Nat, Nat]>{[1n, 2n], [1n, 3n], [1n, 4n]},
+      List<[Nat, Nat]>{[2n, 3n], [2n, 4n]},
+      List<[Nat, Nat]>{[3n, 4n]}
    };
 
    factory function create(): { bodies: List<Body> } {
@@ -169,7 +169,9 @@ entity NBodySystem {
 
    method energy(): Float {
       let keneticEnergies = this.bodies.map(fn(b: Body): Float => b.kineticEnergy());
-      let potentialEnergies = NBodySystem::energypairs.map(fn(pep: List<[Nat, Nat]>): Float => this.potentialEnergyCompute(pep));
+      let potentialEnergies = NBodySystem::energypairs.map(fn(pep: List<[Nat, Nat]>): Float => {
+         return this.potentialEnergyCompute(pep);
+      });
 
       return keneticEnergies.sum() - potentialEnergies.sum();
    }

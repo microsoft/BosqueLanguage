@@ -44,11 +44,11 @@ internal entity ListOps provides Some {
     recursive? function s_find_pred_last_ne<T>(l: ListRepr<T>, p: recursive? pred(_: T) -> Bool): Nat = s_list_find_pred_last_ne;
     recursive? function s_find_pred_last_idx_ne<T>(l: ListRepr<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Nat = s_list_find_pred_last_idx_ne;
 
-    recursive? function s_filter_pred_ne<T>(l: ListRepr<T>, p: recursive? pred(_: T) -> Bool): List<T> = s_list_filter_pred_ne;
-    recursive? function s_filter_pred_idx_ne<T>(l: ListRepr<T>, p: recursive? pred(_: T, _: Nat) -> Bool): List<T> = s_list_filter_pred_idx_ne;
+    recursive? function s_filter_pred_ne<T>(l: ListRepr<T>, p: recursive? pred(_: T) -> Bool): ListRepr<T> = s_list_filter_pred_ne;
+    recursive? function s_filter_pred_idx_ne<T>(l: ListRepr<T>, p: recursive? pred(_: T, _: Nat) -> Bool): ListRepr<T> = s_list_filter_pred_idx_ne;
 
-    recursive? function s_map_ne<T, U>(l: ListRepr<T>, f: recursive? fn(_: T) -> U): List<U> = s_list_map_ne;
-    recursive? function s_map_idx_ne<T, U>(l: ListRepr<T>, f: recursive? fn(_: T, _: Nat) -> U): List<U> = s_list_map_idx_ne;
+    recursive? function s_map_ne<T, U>(l: ListRepr<T>, f: recursive? fn(_: T) -> U): ListRepr<U> = s_list_map_ne;
+    recursive? function s_map_idx_ne<T, U>(l: ListRepr<T>, f: recursive? fn(_: T, _: Nat) -> U): ListRepr<U> = s_list_map_idx_ne;
     recursive? function s_map_sync_ne<T, U, V>(l1: ListRepr<T>, l2: ListRepr<U>, count: Nat, f: recursive? fn(_: T, _: U) -> V): ListRepr<V> = s_list_map_sync_ne;
 
     recursive? function s_sort_ne<T>(l: ListRepr<T>, cmp: recursive? pred(_: T, _: T) -> Bool): ListRepr<T> = s_list_sort_ne;
@@ -282,6 +282,8 @@ internal entity ListOps provides Some {
                 return acc;
             }
         });
+
+        return rr;
     }
 
     recursive? function s_max_arg<T, U unique Orderable>(l: ListRepr<T>, f: recursive? fn(v: T) -> U): Nat {
@@ -295,6 +297,8 @@ internal entity ListOps provides Some {
                 return acc;
             }
         });
+
+        return rr;
     }
 
     function s_sum<T unique Algebraic>(l: ListRepr<T>): T {
@@ -304,6 +308,8 @@ internal entity ListOps provides Some {
         else {
             let acc = ListOps::s_safe_get_ne<T>(l, 0);
             let rr = ListOps::s_reduce_ne<T, T>(l, acc, fn(acc: T, v: T): T => acc + v);
+
+            return rr;
         }
     }
 
@@ -373,7 +379,7 @@ internal entity ListOps provides Some {
         }
     }
 
-    recursive? function s_reduce<T, U>(init: U, op: recursive? fn(_: U, _: T) -> U): U {
+    recursive? function s_reduce<T, U>(l: ListRepr<T>, init: U, op: recursive? fn(_: U, _: T) -> U): U {
         if(l === none) {
             return init;
         }
@@ -383,7 +389,7 @@ internal entity ListOps provides Some {
         }
     }
 
-    recursive? function s_reduce_idx<T, U>(init: U, op: recursive? fn(_: U, _: T, _: Nat) -> U): U {
+    recursive? function s_reduce_idx<T, U>(l: ListRepr<T>, init: U, op: recursive? fn(_: U, _: T, _: Nat) -> U): U {
         if(l === none) {
             return init;
         }

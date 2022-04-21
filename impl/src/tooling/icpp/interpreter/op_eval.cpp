@@ -2242,12 +2242,14 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
     case BSQPrimitiveImplTag::s_list_reduce_ne: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
 
+        invk->binds.find("T")->second->storeValue(resultsl, params[1]); //store the initial acc in the result
         BSQListOps::s_reduce_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), invk->pcodes.find("f")->second, params, resultsl);
         break;
     }
     case BSQPrimitiveImplTag::s_list_reduce_idx_ne: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
 
+        invk->binds.find("T")->second->storeValue(resultsl, params[1]); //store the initial acc in the result
         BSQListOps::s_reduce_idx_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), invk->pcodes.find("f")->second, params, resultsl);
         break;
     }
@@ -3223,14 +3225,20 @@ std::optional<std::string> ICPPParseJSON::extractBigIntImpl(const APIModule* api
 
 std::optional<std::string> ICPPParseJSON::extractFloatImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
 {
-    auto val = (double)SLPTR_LOAD_CONTENTS_AS(BSQFloat, value);
-    return std::make_optional(std::to_string(val));
+    char cbuff[32];
+    memset(cbuff, 0, sizeof(cbuff));
+    snprintf(cbuff, sizeof(cbuff), "%.9g", SLPTR_LOAD_CONTENTS_AS(BSQFloat, value));
+
+    return std::make_optional(std::string(cbuff));
 }
 
 std::optional<std::string> ICPPParseJSON::extractDecimalImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
 {
-    auto val = (double)SLPTR_LOAD_CONTENTS_AS(BSQDecimal, value);
-    return std::make_optional(std::to_string(val));
+    char cbuff[32];
+    memset(cbuff, 0, sizeof(cbuff));
+    snprintf(cbuff, sizeof(cbuff), "%.9g", SLPTR_LOAD_CONTENTS_AS(BSQDecimal, value));
+
+    return std::make_optional(std::string(cbuff));
 }
 
 std::optional<std::pair<std::string, uint64_t>> ICPPParseJSON::extractRationalImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)

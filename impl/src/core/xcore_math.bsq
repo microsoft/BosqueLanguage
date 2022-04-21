@@ -48,6 +48,6 @@ internal entity NumericOps provides Some {
     //
     //TODO: there are some failure cases here we may want to include checks for (like x = 0, y = -2)
     //
-    function s_floatPower(x: Float, y: Float): Float = float_power;
-    function s_decimalPower(x: Decimal, y: Decimal): Decimal = decimal_power;
+    __assume_safe function s_floatPower(x: Float, y: Float): Float = float_power;
+    __assume_safe function s_decimalPower(x: Decimal, y: Decimal): Decimal = decimal_power;
 }

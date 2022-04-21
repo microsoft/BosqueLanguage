@@ -91,12 +91,13 @@ public:
         entrytype->storeValue(intoloc, val);
     }
 
-    inline static void directCopyPVData(void* pvinto, void* pvfrom, uint64_t entrysize)
+    inline static void directSetPVData(void* pvinto, void* pvfrom, size_t count, uint64_t entrysize)
     {
-        auto intoloc = ((uint8_t*)pvinto);
-        auto fromloc = ((uint8_t*)pvfrom);
-        auto bytecount = sizeof(uint64_t) + (*((uint64_t*)pvfrom) * entrysize);
+        auto intoloc = ((uint8_t*)pvinto) + sizeof(uint64_t);
+        auto fromloc = ((uint8_t*)pvfrom) + sizeof(uint64_t);
+        auto bytecount = (count * entrysize);
 
+        BSQPartialVectorType::setPVCount(pvinto, count);
         GC_MEM_COPY(intoloc, fromloc, bytecount);
     }
 
