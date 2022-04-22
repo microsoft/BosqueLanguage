@@ -2724,12 +2724,12 @@ class SMTBodyEmitter {
             }
             case "float_floor":
             case "decimal_floor": {
-                const ceil = new SMTIf(
+                const floor = new SMTIf(
                     new SMTCallSimple("<=", [new SMTVar("vvround"), new SMTVar(args[0].vname)]),
                     new SMTCallSimple("to_int", [new SMTVar(args[0].vname)]),
                     new SMTCallSimple("-", [new SMTCallSimple("to_int", [new SMTVar(args[0].vname)]), new SMTConst("1")])
                 );
-                const vvround = new SMTLet("vvround", new SMTCallSimple("to_real", [new SMTCallSimple("to_int", [new SMTVar(args[0].vname)])]), ceil);
+                const vvround = new SMTLet("vvround", new SMTCallSimple("to_real", [new SMTCallSimple("to_int", [new SMTVar(args[0].vname)])]), new SMTCallSimple("to_real", [floor]));
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, vvround);
             }
             case "float_ceil":
@@ -2739,7 +2739,7 @@ class SMTBodyEmitter {
                     new SMTCallSimple("to_int", [new SMTVar(args[0].vname)]),
                     new SMTCallSimple("+", [new SMTCallSimple("to_int", [new SMTVar(args[0].vname)]), new SMTConst("1")])
                 );
-                const vvround = new SMTLet("vvround", new SMTCallSimple("to_real", [new SMTCallSimple("to_int", [new SMTVar(args[0].vname)])]), ceil);
+                const vvround = new SMTLet("vvround", new SMTCallSimple("to_real", [new SMTCallSimple("to_int", [new SMTVar(args[0].vname)])]), new SMTCallSimple("to_real", [ceil]));
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, vvround);
             }
             case "float_truncate":
@@ -2753,7 +2753,7 @@ class SMTBodyEmitter {
             }
             case "float_power":
             case "decimal_power": {
-                const rr = this.typegen.generateResultTypeConstructorSuccess(mirrestype, new SMTCallSimple("^", [new SMTVar(args[0].vname), new SMTVar(args[0].vname)]));
+                const rr = new SMTCallSimple("^", [new SMTVar(args[0].vname), new SMTVar(args[0].vname)]);
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, rr);
             }
             case "string_empty": {
