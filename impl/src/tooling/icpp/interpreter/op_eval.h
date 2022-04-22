@@ -695,7 +695,7 @@ public:
 
     virtual void setMaskFlag(const APIModule* apimodule, StorageLocationPtr flagloc, size_t i, bool flag, Evaluator& ctx) override final;
 
-    virtual StorageLocationPtr parseUnionChoice(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t pick, Evaluator& ctx) override final;
+    virtual StorageLocationPtr parseUnionChoice(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t pick, const IType* picktype, Evaluator& ctx) override final;
 
     virtual std::optional<bool> extractBoolImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
     virtual std::optional<uint64_t> extractNatImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
@@ -722,6 +722,6 @@ public:
     virtual StorageLocationPtr extractValueForContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t i, Evaluator& ctx) override final;
     virtual void completeExtractContainer(const APIModule* apimodule, const IType* itype, Evaluator& ctx) override final;
 
-    virtual std::optional<size_t> extractUnionChoice(const APIModule* apimodule, const IType* itype, StorageLocationPtr intoloc, Evaluator& ctx) override final;
+    virtual std::optional<size_t> extractUnionChoice(const APIModule* apimodule, const IType* itype, const std::vector<const IType*>& opttypes, StorageLocationPtr intoloc, Evaluator& ctx) override final;
     virtual StorageLocationPtr extractUnionValue(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
 };

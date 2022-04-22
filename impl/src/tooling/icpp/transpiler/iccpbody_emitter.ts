@@ -1203,8 +1203,34 @@ class ICPPBodyEmitter {
         return ICPPOpEmitter.genEphemeralListExtendOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.resultType), op.resultType, this.argToICPPLocation(op.arg), op.argtype, ext);
     }
 
+    processConstructorPrimaryCollectionEmptyList_Helper(op: MIRConstructorPrimaryCollectionEmpty, ltype: MIRPrimitiveListEntityTypeDecl): ICPPOp {
+        const miroftype = this.typegen.getMIRType(ltype.oftype);
+        return this.typegen.coerce(op.sinfo, this.getSpecialLiteralValue("none"), this.typegen.getMIRType("None"), this.trgtToICPPTargetLocation(op.trgt, op.tkey), miroftype,  ICPPOpEmitter.genNoStatmentGuard());
+    }
+
+    processConstructorPrimaryCollectionEmptyMap_Helper(op: MIRConstructorPrimaryCollectionEmpty, ltype: MIRPrimitiveMapEntityTypeDecl): ICPPOp {
+        const miroftype = this.typegen.getMIRType(ltype.oftype);
+        return this.typegen.coerce(op.sinfo, this.getSpecialLiteralValue("none"), this.typegen.getMIRType("None"), this.trgtToICPPTargetLocation(op.trgt, op.tkey), miroftype,  ICPPOpEmitter.genNoStatmentGuard());
+    }
+
     processConstructorPrimaryCollectionEmpty(op: MIRConstructorPrimaryCollectionEmpty): ICPPOp {
-        return this.typegen.coerce(op.sinfo, this.getSpecialLiteralValue("none"), this.typegen.getMIRType("None"), this.trgtToICPPTargetLocation(op.trgt, op.tkey), this.typegen.getMIRType(op.tkey),  ICPPOpEmitter.genNoStatmentGuard());
+        const constype = this.assembly.entityDecls.get(op.tkey) as MIRPrimitiveCollectionEntityTypeDecl;
+        
+        if(constype instanceof MIRPrimitiveListEntityTypeDecl) {
+            return this.processConstructorPrimaryCollectionEmptyList_Helper(op, constype);
+        }
+        else if (constype instanceof MIRPrimitiveStackEntityTypeDecl) {
+            return NOT_IMPLEMENTED("MIRPrimitiveStackEntityTypeDecl@cons");
+        }
+        else if (constype instanceof MIRPrimitiveQueueEntityTypeDecl) {
+            return NOT_IMPLEMENTED("MIRPrimitiveQueueEntityTypeDecl@cons");
+        }
+        else if (constype instanceof MIRPrimitiveSetEntityTypeDecl) {
+            return NOT_IMPLEMENTED("MIRPrimitiveSetEntityTypeDecl@cons");
+        }
+        else {
+            return this.processConstructorPrimaryCollectionEmptyMap_Helper(op, constype as MIRPrimitiveMapEntityTypeDecl);
+        }
     }
 
     processConstructorPrimaryCollectionSingletonsList_Helper(op: MIRConstructorPrimaryCollectionSingletons, ltype: MIRPrimitiveListEntityTypeDecl, exps: Argument[]): ICPPOp {
@@ -1217,7 +1243,7 @@ class ICPPBodyEmitter {
         return ICPPOpEmitter.genInvokeFixedFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.tkey), op.tkey, icall, exps, -1, ICPPOpEmitter.genNoStatmentGuard());
     }
 
-    processConstructorPrimaryCollectionSingletonsMap_Helper(op: MIRConstructorPrimaryCollectionSingletons, ltype: MIRPrimitiveCollectionEntityTypeDecl, exps: Argument[]): ICPPOp {
+    processConstructorPrimaryCollectionSingletonsMap_Helper(op: MIRConstructorPrimaryCollectionSingletons, ltype: MIRPrimitiveMapEntityTypeDecl, exps: Argument[]): ICPPOp {
         const icall = this.generateSingletonConstructorsMap(exps.length, this.typegen.getMIRType(op.tkey));
         if(this.requiredSingletonConstructorsMap.findIndex((vv) => vv.inv === icall) === -1) {
             const geninfo = { inv: icall, argc: exps.length, resulttype: this.typegen.getMIRType(op.tkey) };
@@ -1244,7 +1270,7 @@ class ICPPBodyEmitter {
             return NOT_IMPLEMENTED("MIRPrimitiveSetEntityTypeDecl@cons");
         }
         else {
-            return this.processConstructorPrimaryCollectionSingletonsMap_Helper(op, constype, args);
+            return this.processConstructorPrimaryCollectionSingletonsMap_Helper(op, constype as MIRPrimitiveMapEntityTypeDecl, args);
         }
     }
 

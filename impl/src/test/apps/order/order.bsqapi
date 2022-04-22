@@ -1,0 +1,23 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+namespace Main;
+
+entrypoint function main(request: Request, marketPrice: Price, startOfDayPosition: Quantity, responses: List<BuyResponse>): Response {
+    if(request.is<BuyRequest>()) {
+        let availableInventory = availability(startOfDayPosition, responses);
+        return processBuy(request, marketPrice, availableInventory);
+    }
+    else {
+        return processSell(request, marketPrice);
+    }
+}
+
+entrypoint function doit(req: SellRequest): Bool {
+    let marketPrice = 10.0_Price;
+
+    let response = processSell(req, marketPrice);
+    return response.as<SellAccepted>().price >= 0.0_Price;
+}

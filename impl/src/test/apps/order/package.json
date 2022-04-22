@@ -1,0 +1,17 @@
+{
+    "name": "orer",
+    "version": "0.0.0.0",
+    "description": "Order program",
+    "license": "MIT",
+    "src": {
+        "bsqsource": [
+            "./src/*"
+        ],
+        "entrypoints": [
+            "./order.bsqapi"
+        ],
+        "testfiles": [
+            "./order.bsqtest"
+        ]
+    }
+}

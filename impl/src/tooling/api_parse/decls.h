@@ -10,6 +10,7 @@
 #include "bsqregex.h"
 
 class IType;
+class UnionType;
 class InvokeSignature;
 class APIModule;
 
@@ -73,6 +74,8 @@ public:
             return std::make_optional(ii->second);
         }
     }
+
+    std::vector<const IType*> getAllTypesInUnion(const UnionType* tt) const;
 
     static APIModule* jparse(json j);
 };
@@ -165,7 +168,7 @@ public:
 
     virtual void setMaskFlag(const APIModule* apimodule, ValueRepr flagloc, size_t i, bool flag, State& ctx) = 0;
 
-    virtual ValueRepr parseUnionChoice(const APIModule* apimodule, const IType* itype, ValueRepr value, size_t pick, State& ctx) = 0;
+    virtual ValueRepr parseUnionChoice(const APIModule* apimodule, const IType* itype, ValueRepr value, size_t pick, const IType* picktype, State& ctx) = 0;
 
     virtual std::optional<bool> extractBoolImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
     virtual std::optional<uint64_t> extractNatImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
@@ -192,7 +195,7 @@ public:
     virtual ValueRepr extractValueForContainer(const APIModule* apimodule, const IType* itype, ValueRepr value, size_t i, State& ctx) = 0;
     virtual void completeExtractContainer(const APIModule* apimodule, const IType* itype, State& ctx) = 0;
 
-    virtual std::optional<size_t> extractUnionChoice(const APIModule* apimodule, const IType* itype, ValueRepr intoloc, State& ctx) = 0;
+    virtual std::optional<size_t> extractUnionChoice(const APIModule* apimodule, const IType* itype, const std::vector<const IType*>& opttypes, ValueRepr intoloc, State& ctx) = 0;
     virtual ValueRepr extractUnionValue(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
 };
 
@@ -238,6 +241,11 @@ public:
     virtual ~IType() {;}
 
     static IType* jparse(json j);
+
+    virtual bool isUnion() const
+    {
+        return false;
+    }
 
     virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const = 0;
 
@@ -1717,6 +1725,11 @@ public:
         return new UnionType(name, opts);
     }
 
+    virtual bool isUnion() const
+    {
+        return true;
+    }
+
     virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
     {
         std::uniform_int_distribution<uint64_t> ngen(0, this->opts.size() - 1);
@@ -1731,6 +1744,8 @@ public:
     template <typename ValueRepr, typename State>
     bool parse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
     {
+        auto opttypes = apimodule->getAllTypesInUnion(this);
+
         if(j.is_object())
         {
             auto typetagref = j["__type_tag__"];
@@ -1745,15 +1760,16 @@ public:
                 return false;
             }
 
-            auto ofidxref = std::find(this->opts.cbegin(), this->opts.cend(), j[0].get<std::string>());
-            if(ofidxref == this->opts.cend())
+            auto ofidxref = std::find_if(opttypes.cbegin(), opttypes.cend(), [oftyperef](const IType* tt) {
+                return tt->name == oftyperef->second->name;
+            });
+            if(ofidxref == opttypes.cend())
             {
                 return false;
             }
 
-            auto ofidx = std::distance(this->opts.cbegin(), ofidxref);
-
-            auto vval = apimgr.parseUnionChoice(apimodule, oftyperef->second, value, ofidx, ctx);
+            auto ofidx = std::distance(opttypes.cbegin(), ofidxref);
+            auto vval = apimgr.parseUnionChoice(apimodule, oftyperef->second, value, ofidx, oftyperef->second, ctx);
             return oftyperef->second->tparse(apimgr, apimodule, j, vval, ctx);
         }
         else{
@@ -1768,15 +1784,17 @@ public:
                 return false;
             }
 
-            auto ofidxref = std::find(this->opts.cbegin(), this->opts.cend(), j[0].get<std::string>());
-            if(ofidxref == this->opts.cend())
+            auto ofidxref = std::find_if(opttypes.cbegin(), opttypes.cend(), [oftyperef](const IType* tt) {
+                return tt->name == oftyperef->second->name;
+            });
+            if(ofidxref == opttypes.cend())
             {
                 return false;
             }
 
-            auto ofidx = std::distance(this->opts.cbegin(), ofidxref);
+            auto ofidx = std::distance(opttypes.cbegin(), ofidxref);
 
-            auto vval = apimgr.parseUnionChoice(apimodule, oftyperef->second, value, ofidx, ctx);
+            auto vval = apimgr.parseUnionChoice(apimodule, oftyperef->second, value, ofidx, oftyperef->second, ctx);
             return oftyperef->second->tparse(apimgr, apimodule, j[1], vval, ctx);
         }
     } 
@@ -1784,13 +1802,15 @@ public:
     template <typename ValueRepr, typename State>
     std::optional<json> extract(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
     {
-        auto nval = apimgr.extractUnionChoice(apimodule, this, value, ctx);
+        auto opttypes = apimodule->getAllTypesInUnion(this);
+
+        auto nval = apimgr.extractUnionChoice(apimodule, this, opttypes, value, ctx);
         if(!nval.has_value())
         {
             return std::nullopt;
         }
 
-        auto choicetype = apimodule->typemap.find(this->opts[nval.value()])->second;
+        auto choicetype = opttypes[nval.value()];
         auto uvalue = apimgr.extractUnionValue(apimodule, this, value, ctx);
         auto cval = choicetype->textract(apimgr, apimodule, uvalue, ctx);
         if(!cval.has_value())
