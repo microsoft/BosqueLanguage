@@ -24,7 +24,7 @@ chktest function buy_reject_quantity(): Bool {
 }
 
 chktest function buy_reject_price(): Bool {
-    let request = BuyRequest{id="rq1", requestPrice=Limit{1.0_Price}, quantity=500_Quantity, product="apples"};
+    let request = BuyRequest{id="rq1", requestPrice=Limit{1.0_Price}, quantity=5_Quantity, product="apples"};
     let marketPrice = 10.0_Price;
     let availableInventory = 100_Quantity;
 
@@ -48,5 +48,5 @@ chktest function sell_bad_price_oops(req: SellRequest): Bool {
     let marketPrice = 10.0_Price;
 
     let response = processSell(req, marketPrice);
-    return response.as<SellAccepted>().price > 0.0_Price;
+    return response.as<SellAccepted>().price >= 0.0_Price;
 }

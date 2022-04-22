@@ -790,7 +790,7 @@ void Evaluator::evalAllTrueOp(const AllTrueOp* op)
         return !SLPTR_LOAD_CONTENTS_AS(BSQBool, this->evalArgument(arg));
     });
 
-    SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), fpos != op->args.cend());
+    SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), fpos == op->args.cend());
 }
     
 void Evaluator::evalSomeTrueOp(const SomeTrueOp* op)

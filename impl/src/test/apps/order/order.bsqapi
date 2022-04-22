@@ -15,12 +15,9 @@ entrypoint function main(request: Request, marketPrice: Price, startOfDayPositio
     }
 }
 
-entrypoint function doit(): Response {
-    let request = BuyRequest{id="rq1", requestPrice=Market{}, quantity=5_Quantity, product="apples"};
+entrypoint function doit(req: SellRequest): Bool {
     let marketPrice = 10.0_Price;
-    let availableInventory = 100_Quantity;
 
-    let response = processBuy(request, marketPrice, availableInventory);
-    return response;
+    let response = processSell(req, marketPrice);
+    return response.as<SellAccepted>().price >= 0.0_Price;
 }
-

@@ -669,7 +669,7 @@ std::vector<const IType*> APIModule::getAllTypesInUnion(const UnionType* tt) con
         return a->name < b->name;
     });
     auto unqend = std::unique(res.begin(), res.end(), [](const IType* a, const IType* b) {
-        return a->name < b->name;
+        return a->name == b->name;
     });
 
     res.erase(unqend, res.end());
