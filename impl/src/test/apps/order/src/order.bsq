@@ -55,7 +55,7 @@ entity Deal provides APIType {
 typedef Response = BuyResponse | SellResponse;
 
 function validateRequest(request: BuyRequest): List<Violations> {
-    let priceCheck = 
+   let priceCheck = 
         match(request.requestPrice) {|
             Market     => List<Violations>{}
             | Limit{p} => if(p < 0_Price) 
@@ -63,7 +63,7 @@ function validateRequest(request: BuyRequest): List<Violations> {
                             else 
                                 List<Violations>{}
     |};
-        
+       
     let quantityCheck = 
             if(request.quantity <= 0_Quantity) 
                 List<Violations>{ InvalidQuantity{request.quantity} } 

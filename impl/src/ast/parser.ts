@@ -447,7 +447,8 @@ class Lexer {
         return true;
     }
 
-    private static readonly _s_numberinoRe = /(0|[1-9][0-9]*)|(([0-9]+\.[0-9]+)([eE][-+]?[0-9]+)?)/y;
+    private static readonly _s_intNumberinoRe = /0|[1-9][0-9]*/y;
+    private static readonly _s_realNumberinoRe = /([0-9]+\.[0-9]+)([eE][-+]?[0-9]+)?/y;
 
     private static readonly _s_intRe = /(0|[1-9][0-9]*)i/y;
     private static readonly _s_natRe = /(0|[1-9][0-9]*)n/y;
@@ -509,10 +510,17 @@ class Lexer {
             return true;
         }
 
-        Lexer._s_numberinoRe.lastIndex = this.m_cpos;
-        const mnio = Lexer._s_numberinoRe.exec(this.m_input);
-        if (mnio !== null) {
-            this.recordLexTokenWData(this.m_cpos + mnio[0].length, TokenStrings.Numberino, mnio[0]);
+        Lexer._s_realNumberinoRe.lastIndex = this.m_cpos;
+        const rnio = Lexer._s_realNumberinoRe.exec(this.m_input);
+        if (rnio !== null) {
+            this.recordLexTokenWData(this.m_cpos + rnio[0].length, TokenStrings.Numberino, rnio[0]);
+            return true;
+        }
+
+        Lexer._s_intNumberinoRe.lastIndex = this.m_cpos;
+        const inio = Lexer._s_intNumberinoRe.exec(this.m_input);
+        if (inio !== null) {
+            this.recordLexTokenWData(this.m_cpos + inio[0].length, TokenStrings.Numberino, inio[0]);
             return true;
         }
 
