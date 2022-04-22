@@ -7,6 +7,7 @@
 
 static std::regex re_numberino_n("^[+]?(0|[1-9][0-9]*)$");
 static std::regex re_numberino_i("^[-+]?(0|[1-9][0-9]*)$");
+static std::regex re_numberino_f("^[-+]?([0-9]+\\.[0-9]+)([eE][-+]?[0-9]+)?$");
 
 std::optional<uint64_t> intBinSearchUnsigned(z3::solver& s, const z3::expr& e, uint64_t min, uint64_t max, const std::vector<uint64_t>& copts)
 {
@@ -135,6 +136,85 @@ std::optional<int64_t> intBinSearchSigned(z3::solver& s, const z3::expr& e, int6
 
     return std::make_optional(imin);
 }
+
+std::optional<double> realBinSearch(z3::solver& s, const z3::expr& e, const std::vector<double>& copts)
+{
+    for(size_t i = 0; i < copts.size(); ++i)
+    {
+        s.push();
+
+        z3::expr_vector chks(s.ctx());
+        std::string rrstr = std::to_string(copts[i]);
+        chks.push_back(e == s.ctx().real_val(rrstr.c_str()));
+        auto rr = s.check(chks);
+
+        s.pop();
+
+        if(rr == z3::check_result::sat)
+        {
+            return std::make_optional(copts[i]);
+        }
+    }
+
+    double epsilon = 0.000000001;
+    double rmin = std::numeric_limits<float>::lowest();
+    double rmax = std::numeric_limits<float>::max();
+    while(epsilon < (rmax - rmin))
+    {
+        double rmid = (rmax + rmin) / 2.0;
+        auto rmidstr = std::to_string(rmid);
+
+        if (rmid >= 0.0)
+        {
+            s.push();
+
+            z3::expr_vector chks(s.ctx());
+            chks.push_back(e < s.ctx().real_val(rmidstr.c_str()));
+            auto rr = s.check(chks);
+
+            s.pop();
+
+            if(rr == z3::check_result::sat)
+            {
+                rmax = rmid;
+            }
+            else if(rr == z3::check_result::unsat)
+            {
+                rmin = rmid + 1;
+            }
+            else
+            {
+                return std::nullopt;
+            }
+        }
+        else
+        {
+            s.push();
+
+            z3::expr_vector chks(s.ctx());
+            chks.push_back(e > s.ctx().real_val(rmidstr.c_str()));
+            auto rr = s.check(chks);
+
+            s.pop();
+
+            if(rr == z3::check_result::sat)
+            {
+                rmin = rmid;
+            }
+            else if(rr == z3::check_result::unsat)
+            {
+                rmax = rmid - 1;
+            }
+            else
+            {
+                return std::nullopt;
+            }
+        }
+    }
+
+    return std::make_optional(rmin);
+}
+
 
 std::optional<char> stringBinSearchCharASCII(z3::solver& s, const z3::expr& e, const std::string& str, size_t cidx)
 {
@@ -350,7 +430,34 @@ std::optional<std::string> expIntAsInt(z3::solver& s, const z3::expr& e)
 
 std::optional<std::string> expFloatAsFloat(z3::solver& s, const z3::expr& e)
 {
-   return std::make_optional("[FloatValue]");
+    auto bbval = s.get_model().eval(e, true);
+    auto strval = bbval.to_string();
+
+    std::cmatch match;
+    if(std::regex_match(strval, re_numberino_f))
+    {
+        return std::make_optional(strval);
+    }
+    else
+    {
+        auto ival = realBinSearch(s, e, {0.0, 1.0, 3.0, -1.0, -3.0});
+        if(!ival.has_value())
+        {
+            assert(false);
+            return std::nullopt;
+        }
+
+        auto istr = std::to_string(ival.value());
+        s.add(e == s.ctx().int_val(istr.c_str()));
+
+        auto refinechk = s.check();
+        if(refinechk != z3::check_result::sat)
+        {
+            return std::nullopt;
+        }
+
+        return std::make_optional(istr);
+    }
 }
 
 std::optional<int64_t> expIntAsIntSmall(z3::solver& s, const z3::expr& e)
@@ -429,14 +536,6 @@ z3::func_decl getArgContextConstructor(z3::context& c, const char* fname, const 
     return argconsf;
 }
 
-z3::func_decl getFloatValueConstConstructor(z3::context& c)
-{
-    auto floatsort = c.uninterpreted_sort("FloatValue");
-    auto argconsf = c.function("FloatValue@const", c.string_sort(), floatsort);
-
-    return argconsf;
-}
-
 bool SMTParseJSON::checkInvokeOk(const std::string& checkinvoke, z3::expr value, z3::solver& ctx)
 {
     ; //the call to the check is already set by the Havoc initializer
@@ -498,8 +597,7 @@ bool SMTParseJSON::parseBigIntImpl(const APIModule* apimodule, const IType* ityp
 bool SMTParseJSON::parseFloatImpl(const APIModule* apimodule, const IType* itype, std::string f, z3::expr value, z3::solver& ctx)
 {
     auto bef = getArgContextConstructor(ctx.ctx(), "BFloat@UFCons_API", ctx.ctx().uninterpreted_sort("FloatValue"));
-    auto fcc = getFloatValueConstConstructor(ctx.ctx());
-    ctx.add(bef(value) == fcc(ctx.ctx().string_val(f.c_str())));
+    ctx.add(bef(value) == ctx.ctx().real_val(f.c_str()));
 
     return true;
 }
@@ -507,8 +605,7 @@ bool SMTParseJSON::parseFloatImpl(const APIModule* apimodule, const IType* itype
 bool SMTParseJSON::parseDecimalImpl(const APIModule* apimodule, const IType* itype, std::string d, z3::expr value, z3::solver& ctx)
 {
     auto bef = getArgContextConstructor(ctx.ctx(), "BDecimal@UFCons_API", ctx.ctx().uninterpreted_sort("FloatValue"));
-    auto fcc = getFloatValueConstConstructor(ctx.ctx());
-    ctx.add(bef(value) == fcc(ctx.ctx().string_val(d.c_str())));
+    ctx.add(bef(value) == ctx.ctx().real_val(d.c_str()));
 
     return true;
 }
@@ -530,8 +627,7 @@ bool SMTParseJSON::parseRationalImpl(const APIModule* apimodule, const IType* it
     }
 
     auto bef = getArgContextConstructor(ctx.ctx(), "BRational@UFCons_API", ctx.ctx().uninterpreted_sort("FloatValue"));
-    auto fcc = getFloatValueConstConstructor(ctx.ctx());
-    ctx.add(bef(value) == fcc(ctx.ctx().string_val(rstr.c_str())));
+    ctx.add(bef(value) == ctx.ctx().real_val(rstr.c_str()));
 
     return true;
 }
@@ -770,31 +866,23 @@ std::optional<std::string> SMTParseJSON::extractBigIntImpl(const APIModule* apim
 
 std::optional<std::string> SMTParseJSON::extractFloatImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
 {
-    //
-    // TODO: may want to do some analysis on equality and order requirements with other floats here
-    //
-
-    auto bef = getArgContextConstructor(ctx.ctx(), "BFloat@UFCons_API", ctx.ctx().uninterpreted_sort("FloatValue"));
+    auto bef = getArgContextConstructor(ctx.ctx(), "BFloat@UFCons_API", ctx.ctx().real_sort());
     return expFloatAsFloat(ctx, bef(value));
 }
 
 std::optional<std::string> SMTParseJSON::extractDecimalImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
 {
-    //
-    // TODO: may want to do some analysis on equality and order requirements with other floats here
-    //
-
-    auto bef = getArgContextConstructor(ctx.ctx(), "BDecimal@UFCons_API", ctx.ctx().uninterpreted_sort("FloatValue"));
+    auto bef = getArgContextConstructor(ctx.ctx(), "BDecimal@UFCons_API", ctx.ctx().real_sort());
     return expFloatAsFloat(ctx, bef(value));
 }
 
 std::optional<std::pair<std::string, uint64_t>> SMTParseJSON::extractRationalImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
 {
     //
-    // TODO: may want to do some analysis on equality and order requirements with other floats here
+    // TODO: need to convert to rational here
     //
     
-    auto bef = getArgContextConstructor(ctx.ctx(), "BRational@UFCons_API", ctx.ctx().uninterpreted_sort("FloatValue"));
+    auto bef = getArgContextConstructor(ctx.ctx(), "BRational@UFCons_API", ctx.ctx().real_sort());
     return std::make_optional(std::make_pair("[RationalValue]", 1));
 }
 

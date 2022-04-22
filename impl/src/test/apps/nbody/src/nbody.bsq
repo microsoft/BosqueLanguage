@@ -107,7 +107,13 @@ entity Body {
    };
 
    method offsetMomentum(px: Float, py: Float, pz: Float): Body {
-      return this.{ vel=Velocity{-px / Body::solar_mass, -py / Body::solar_mass, -pz / Body::solar_mass} };
+      return this.{ 
+         vel=Velocity{
+            -px / Body::solar_mass, 
+            -py / Body::solar_mass, 
+            -pz / Body::solar_mass
+         }
+      };
    }
 
    method kineticEnergy(): Float {
