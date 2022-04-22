@@ -2422,11 +2422,11 @@ class SMTBodyEmitter {
                 break;
             }
             case "__i__Core::>=infix=(Float, Float)": {
-                smte = new SMTCallSimple(">", [args[1], args[0]]);
+                smte = new SMTCallSimple(">", args);
                 break;
             }
             case "__i__Core::>=infix=(Decimal, Decimal)": {
-                smte = new SMTCallSimple(">", [args[1], args[0]]);
+                smte = new SMTCallSimple(">", args);
                 break;
             }
             //op infix <=
@@ -2476,15 +2476,15 @@ class SMTBodyEmitter {
                 break;
             }
             case "__i__Core::>==infix=(Rational, Rational)":{
-                smte = new SMTCallSimple(">=", [args[1], args[0]]);
+                smte = new SMTCallSimple(">=", args);
                 break;
             }
             case "__i__Core::>==infix=(Float, Float)":{
-                smte = new SMTCallSimple(">=", [args[1], args[0]]);
+                smte = new SMTCallSimple(">=", args);
                 break;
             }
             case "__i__Core::>==infix=(Decimal, Decimal)":{
-                smte = new SMTCallSimple(">=", [args[1], args[0]]);
+                smte = new SMTCallSimple(">=", args);
                 break;
             }
             default: {
