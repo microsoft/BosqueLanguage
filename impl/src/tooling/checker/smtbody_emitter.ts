@@ -2120,7 +2120,7 @@ class SMTBodyEmitter {
     }
 
     processGenerateResultUnderflowCheck(sinfo: SourceInfo, arg0: SMTExp, arg1: SMTExp , oftype: MIRType, val: SMTExp): SMTExp {
-        return new SMTIf(new SMTCallSimple("<", [arg0, arg1]), this.generateErrorCreate(sinfo, oftype, "Unsigned Underflow"), this.typegen.generateResultTypeConstructorSuccess(oftype, val));
+        return new SMTIf(new SMTCallSimple("<", [arg1, arg0]), this.generateErrorCreate(sinfo, oftype, "Unsigned Underflow"), this.typegen.generateResultTypeConstructorSuccess(oftype, val));
     }
 
     processGenerateResultWithZeroArgCheck(sinfo: SourceInfo, zero: SMTConst, not0arg: SMTExp, oftype: MIRType, val: SMTExp): SMTExp {

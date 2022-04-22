@@ -447,7 +447,7 @@ class Lexer {
         return true;
     }
 
-    private static readonly _s_numberinoRe = /(0|[1-9][0-9]*)|([0-9]+\.[0-9]+)([eE][-+]?[0-9]+)?/y;
+    private static readonly _s_numberinoRe = /(0|[1-9][0-9]*)|(([0-9]+\.[0-9]+)([eE][-+]?[0-9]+)?)/y;
 
     private static readonly _s_intRe = /(0|[1-9][0-9]*)i/y;
     private static readonly _s_natRe = /(0|[1-9][0-9]*)n/y;

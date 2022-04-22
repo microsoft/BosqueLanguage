@@ -99,7 +99,7 @@ internal entity ListOps provides Some {
         }
     }
 
-    function s_append(l: ListRepr<T>, r: ListRepr<T>): ListRepr<T> {
+    function s_append<T>(l: ListRepr<T>, r: ListRepr<T>): ListRepr<T> {
         if(/\(l === none, r === none)) {
             return none;
         }
