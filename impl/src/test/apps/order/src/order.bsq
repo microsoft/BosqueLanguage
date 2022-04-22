@@ -1,4 +1,4 @@
-namespace NSMain;
+namespace Main;
 
 typedef ID = String;
 
@@ -55,7 +55,7 @@ entity Deal provides APIType {
 typedef Response = BuyResponse | SellResponse;
 
 function validateRequest(request: BuyRequest): List<Violations> {
-    let priceCheck = 
+   let priceCheck = 
         match(request.requestPrice) {|
             Market     => List<Violations>{}
             | Limit{p} => if(p < 0_Price) 
@@ -63,7 +63,7 @@ function validateRequest(request: BuyRequest): List<Violations> {
                             else 
                                 List<Violations>{}
     |};
-        
+       
     let quantityCheck = 
             if(request.quantity <= 0_Quantity) 
                 List<Violations>{ InvalidQuantity{request.quantity} } 
@@ -130,24 +130,5 @@ function availability(startOfDayPosition: Quantity, buys: List<BuyResponse>): Qu
         .sum()
     ;
 
-    return startOfDayPosition - sumOfBuys;
+    return (sumOfBuys < startOfDayPosition) ? 0_Quantity : (startOfDayPosition - sumOfBuys);
 }
-
-
-function main(request: Request, marketPrice: Price, startOfDayPosition: Quantity): Response {
-    var responses = List<BuyResponse>{};
-
-    if(request.is<BuyRequest>()) {
-        let availableInventory = availability(startOfDayPosition, responses);
-        return processBuy(request, marketPrice, availableInventory);
-    }
-    else {
-        return processSell(request, marketPrice);
-    }
-}
-
-/*
-function main(requests: List<Request>): Nat {
-    //process requests iteratively then count the number of accepted sales
-}
-*/

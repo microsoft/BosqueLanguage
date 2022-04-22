@@ -594,7 +594,7 @@ class ICPPAssembly
 
     private processListTreeEntityDecl(edecl: MIRPrimitiveInternalEntityTypeDecl, icpptype: ICPPCollectionInternalsLayoutInfo): object {
         return {
-            ptag: ICPPParseTag.PartialVector4Tag,
+            ptag: ICPPParseTag.ListTreeTag,
             tkey: edecl.tkey,
             name: edecl.tkey,
             etype: icpptype.xinfo[0].type,
@@ -603,7 +603,7 @@ class ICPPAssembly
 
     private processMapTreeEntityDecl(edecl: MIRPrimitiveInternalEntityTypeDecl, icpptype: ICPPCollectionInternalsLayoutInfo): object {
         return {
-            ptag: ICPPParseTag.PartialVector4Tag,
+            ptag: ICPPParseTag.MapTreeTag,
             tkey: edecl.tkey,
             name: edecl.tkey,
             heapsize: icpptype.allocinfo.heapsize,
@@ -827,10 +827,10 @@ class ICPPAssembly
             else if (edcl.attributes.includes("__partial_vector8_type")) {
                 return this.processPartialVector8EntityDecl(edcl as MIRPrimitiveInternalEntityTypeDecl, icpplayout as ICPPCollectionInternalsLayoutInfo);
             }
-            else if (edcl.attributes.includes("__map_type")) {
+            else if (edcl.attributes.includes("__list_tree_type")) {
                 return this.processListTreeEntityDecl(edcl as MIRPrimitiveInternalEntityTypeDecl, icpplayout as ICPPCollectionInternalsLayoutInfo);
             }
-            else if (edcl.attributes.includes("__map_type")) {
+            else if (edcl.attributes.includes("__map_tree_type")) {
                 return this.processMapTreeEntityDecl(edcl as MIRPrimitiveInternalEntityTypeDecl, icpplayout as ICPPCollectionInternalsLayoutInfo);
             }
             else if (edcl instanceof MIRObjectEntityTypeDecl) {

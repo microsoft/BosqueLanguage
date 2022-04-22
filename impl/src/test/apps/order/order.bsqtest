@@ -1,0 +1,52 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+namespace Main;
+
+chktest function buy_accept(): Bool {
+    let request = BuyRequest{id="rq1", requestPrice=Market{}, quantity=5_Quantity, product="apples"};
+    let marketPrice = 10.0_Price;
+    let availableInventory = 100_Quantity;
+
+    let response = processBuy(request, marketPrice, availableInventory);
+    return response.is<BuyAccepted>();
+}
+
+chktest function buy_reject_quantity(): Bool {
+    let request = BuyRequest{id="rq1", requestPrice=Market{}, quantity=500_Quantity, product="apples"};
+    let marketPrice = 10.0_Price;
+    let availableInventory = 100_Quantity;
+
+    let response = processBuy(request, marketPrice, availableInventory);
+    return response.is<BuyRejected>();
+}
+
+chktest function buy_reject_price(): Bool {
+    let request = BuyRequest{id="rq1", requestPrice=Limit{1.0_Price}, quantity=5_Quantity, product="apples"};
+    let marketPrice = 10.0_Price;
+    let availableInventory = 100_Quantity;
+
+    let response = processBuy(request, marketPrice, availableInventory);
+    return response.is<BuyRejected>();
+}
+
+chktest function buy_bad_price(lprice: Limit): Bool
+    requires lprice.price > 0.0_Price;
+    requires lprice.price < 10.0_Price * 0.9d;
+{
+    let request = BuyRequest{id="rq1", requestPrice=lprice, quantity=5_Quantity, product="apples"};
+    let marketPrice = 10.0_Price;
+    let availableInventory = 100_Quantity;
+
+    let response = processBuy(request, marketPrice, availableInventory);
+    return response.is<BuyRejected>();
+}
+
+chktest function sell_bad_price_oops(req: SellRequest): Bool {
+    let marketPrice = 10.0_Price;
+
+    let response = processSell(req, marketPrice);
+    return response.as<SellAccepted>().price >= 0.0_Price;
+}

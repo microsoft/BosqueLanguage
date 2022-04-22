@@ -601,9 +601,11 @@ class ICPPTypeEmitter {
                         return new ICPPCollectionInternalsLayoutInfo(entity.tkey, allocinfo, [{name: "T", type: etype.typeID, size: elayout.size, offset: 0}]);
                     }
                     else if (entity.name === "ListTree") {
+                        const etype = entity.terms.get("T") as MIRType;
+                        const elayout = this.getICPPTypeInfoInlineLayout(etype);
                         const allocinfo = ICPPTypeSizeInfo.createByRefSizeInfo(entity.tkey, ICPP_WORD_SIZE * 3, "221");
 
-                        return new ICPPCollectionInternalsLayoutInfo(entity.tkey, allocinfo, []);
+                        return new ICPPCollectionInternalsLayoutInfo(entity.tkey, allocinfo, [{name: "T", type: etype.typeID, size: elayout.size, offset: 0}]);
                     }
                     else if (entity.name === "MapTree") {
                         const ktype = entity.terms.get("K") as MIRType;

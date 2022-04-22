@@ -790,7 +790,7 @@ void Evaluator::evalAllTrueOp(const AllTrueOp* op)
         return !SLPTR_LOAD_CONTENTS_AS(BSQBool, this->evalArgument(arg));
     });
 
-    SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), fpos != op->args.cend());
+    SLPTR_STORE_CONTENTS_AS(BSQBool, this->evalTargetVar(op->trgt), fpos == op->args.cend());
 }
     
 void Evaluator::evalSomeTrueOp(const SomeTrueOp* op)
@@ -3175,11 +3175,8 @@ void ICPPParseJSON::setMaskFlag(const APIModule* apimodule, StorageLocationPtr f
     *(((BSQBool*)flagloc) + i) = (BSQBool)flag;
 }
 
-StorageLocationPtr ICPPParseJSON::parseUnionChoice(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t pick, Evaluator& ctx)
+StorageLocationPtr ICPPParseJSON::parseUnionChoice(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t pick, const IType* picktype, Evaluator& ctx)
 {
-    auto utype = dynamic_cast<const UnionType*>(itype);
-    auto oftype = utype->opts[pick];
-
     auto bsqutypeid = MarshalEnvironment::g_typenameToIdMap.find(itype->name)->second;
     auto bsqutype = dynamic_cast<const BSQUnionType*>(BSQType::g_typetable[bsqutypeid]);
     if(bsqutype->tkind == BSQTypeLayoutKind::UnionRef)
@@ -3188,7 +3185,7 @@ StorageLocationPtr ICPPParseJSON::parseUnionChoice(const APIModule* apimodule, c
     }
     else
     {
-        auto ttypeid = MarshalEnvironment::g_typenameToIdMap.find(oftype)->second;
+        auto ttypeid = MarshalEnvironment::g_typenameToIdMap.find(picktype->name)->second;
         auto ttype = BSQType::g_typetable[ttypeid];
 
         SLPTR_STORE_UNION_INLINE_TYPE(ttype, value);
@@ -3456,25 +3453,28 @@ void ICPPParseJSON::completeExtractContainer(const APIModule* apimodule, const I
     this->parsecontainerstack.pop_back();
 }
 
-std::optional<size_t> ICPPParseJSON::extractUnionChoice(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
+std::optional<size_t> ICPPParseJSON::extractUnionChoice(const APIModule* apimodule, const IType* itype, const std::vector<const IType*>& opttypes, StorageLocationPtr value, Evaluator& ctx)
 {
-    auto utype = dynamic_cast<const UnionType*>(itype);
-
     auto bsqutypeid = MarshalEnvironment::g_typenameToIdMap.find(itype->name)->second;
     auto bsqutype = dynamic_cast<const BSQUnionType*>(BSQType::g_typetable[bsqutypeid]);
 
-    std::string oname;
+    BSQTypeID uid;
     if(bsqutype->tkind == BSQTypeLayoutKind::UnionRef)
     {
-        oname = SLPTR_LOAD_HEAP_TYPE(value)->name;
+        uid = SLPTR_LOAD_HEAP_TYPE(value)->tid;
     }
     else
     {
-        oname = SLPTR_LOAD_UNION_INLINE_TYPE(value)->name;
+        uid = SLPTR_LOAD_UNION_INLINE_TYPE(value)->tid;
     }
 
-    auto ppos = std::find(utype->opts.cbegin(), utype->opts.cend(), oname);
-    return std::make_optional(std::distance(utype->opts.cbegin(), ppos));
+    auto ppos = std::find_if(opttypes.cbegin(), opttypes.cend(), [uid](const IType* ttopt) {
+        auto bsqoptid = MarshalEnvironment::g_typenameToIdMap.find(ttopt->name)->second;
+        return bsqoptid == uid;
+    });
+
+    auto tidx = std::distance(opttypes.cbegin(), ppos);
+    return std::make_optional(tidx);
 }
 
 StorageLocationPtr ICPPParseJSON::extractUnionValue(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)

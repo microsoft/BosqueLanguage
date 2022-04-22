@@ -1061,11 +1061,11 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     method append(l: List<T>): List<T> {
-        return List<T>::s_into(ListOps::s_append<T>(this.value(), l));
+        return List<T>::s_into(ListOps::s_append<T>(this.value(), l.value()));
     }
 
     method prepend(l: List<T>): List<T> {
-        return List<T>::s_into(ListOps::s_append<T>(l, this.value()));
+        return List<T>::s_into(ListOps::s_append<T>(l.value(), this.value()));
     }
 
     recursive? method partition<K grounded KeyType=?>(pf: recursive? fn(_: T) -> K): Map<K, List<T>> {

@@ -714,7 +714,7 @@ class TypeChecker {
                 fillednames.add(narg.name);
 
                 const paramIdx = sig.params.findIndex((p) => p.name === narg.name);
-                this.raiseErrorIf(narg.value.sinfo, paramIdx === -1 || eargs[paramIdx] !== undefined, "Named argument does not match parameter or is multiply defined");
+                this.raiseErrorIf(narg.value.sinfo, paramIdx === -1 || eargs[paramIdx] !== undefined, `Named argument "${narg.name}" does not match parameter or is multiply defined`);
                 const param = sig.params[paramIdx];
 
                 const treg = this.m_emitter.generateTmpRegister();
@@ -1334,7 +1334,7 @@ class TypeChecker {
                     fillednames.add(narg.name);
 
                     const fieldIdx = fieldinfo.findIndex((p) => p[0] === narg.name);
-                    this.raiseErrorIf(narg.value.sinfo, fieldIdx === -1 || eargs[fieldIdx] !== undefined, "Named argument does not match any field name or is multiply defined");
+                    this.raiseErrorIf(narg.value.sinfo, fieldIdx === -1 || eargs[fieldIdx] !== undefined, `Named argument "${narg.name}" does not match any field name or is multiply defined`);
                     const field = fieldinfo[fieldIdx];
                     const ftype = this.resolveAndEnsureTypeOnly(sinfo, field[1][1].declaredType, field[1][2]);
 
