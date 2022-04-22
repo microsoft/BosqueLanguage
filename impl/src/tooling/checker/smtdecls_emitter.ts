@@ -688,7 +688,10 @@ class SMTEmitter {
         }
 
         if (tt.options.length !== 1) {
-            this.generateAPITypeConstructorFunction_Union(tt, tt.options, havocfuncs, ufuncs);
+            const etypes = [...this.temitter.assembly.typeMap].filter((edi) => this.temitter.assembly.subtypeOf(edi[1], this.temitter.getMIRType(tt.typeID)));
+            const opts: MIRTypeOption[] = etypes.map((opt) => opt[1].options[0]).sort((a, b) => a.typeID.localeCompare(b.typeID));
+
+            this.generateAPITypeConstructorFunction_Union(tt, opts, havocfuncs, ufuncs);
         }
         else {
             if (this.temitter.isUniqueTupleType(tt)) {
@@ -749,7 +752,7 @@ class SMTEmitter {
             }
             else if (tt.options[0] instanceof MIRConceptType) {
                 const etypes = [...this.temitter.assembly.entityDecls].filter((edi) => this.temitter.assembly.subtypeOf(this.temitter.getMIRType(edi[1].tkey), this.temitter.getMIRType(tt.typeID)));
-                const opts: MIRTypeOption[] = etypes.map((opt) => this.temitter.getMIRType(opt[1].tkey).options[0]);
+                const opts: MIRTypeOption[] = etypes.map((opt) => this.temitter.getMIRType(opt[1].tkey).options[0]).sort((a, b) => a.typeID.localeCompare(b.typeID));
 
                 this.generateAPITypeConstructorFunction_Union(tt, opts, havocfuncs, ufuncs);
             }

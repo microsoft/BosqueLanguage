@@ -71,7 +71,7 @@ public:
 
     virtual void setMaskFlag(const APIModule* apimodule, z3::expr flagloc, size_t i, bool flag, z3::solver& ctx) override final;
 
-    virtual z3::expr parseUnionChoice(const APIModule* apimodule, const IType* itype, z3::expr value, size_t pick, z3::solver& ctx) override final;
+    virtual z3::expr parseUnionChoice(const APIModule* apimodule, const IType* itype, z3::expr value, size_t pick, const IType* picktype, z3::solver& ctx) override final;
 
     virtual std::optional<bool> extractBoolImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
     virtual std::optional<uint64_t> extractNatImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
@@ -98,6 +98,6 @@ public:
     virtual z3::expr extractValueForContainer(const APIModule* apimodule, const IType* itype, z3::expr value, size_t i, z3::solver& ctx) override final;
     virtual void completeExtractContainer(const APIModule* apimodule, const IType* itype, z3::solver& ctx) override final;
 
-    virtual std::optional<size_t> extractUnionChoice(const APIModule* apimodule, const IType* itype, z3::expr intoloc, z3::solver& ctx) override final;
+    virtual std::optional<size_t> extractUnionChoice(const APIModule* apimodule, const IType* itype, const std::vector<const IType*>& opttypes, z3::expr intoloc, z3::solver& ctx) override final;
     virtual z3::expr extractUnionValue(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
 };

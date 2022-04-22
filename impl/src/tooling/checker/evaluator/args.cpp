@@ -826,7 +826,7 @@ void SMTParseJSON::setMaskFlag(const APIModule* apimodule, z3::expr flagloc, siz
     return ctx.add(bef(extendContext(ctx.ctx(), extendContext(ctx.ctx(), flagloc, 1), i)) == ctx.ctx().bool_val(flag));
 }
 
-z3::expr SMTParseJSON::parseUnionChoice(const APIModule* apimodule, const IType* itype, z3::expr value, size_t pick, z3::solver& ctx)
+z3::expr SMTParseJSON::parseUnionChoice(const APIModule* apimodule, const IType* itype, z3::expr value, size_t pick, const IType* picktype, z3::solver& ctx)
 {
     auto bef = getArgContextConstructor(ctx.ctx(), "UnionChoice@UFCons_API", ctx.ctx().int_sort());
     ctx.add(bef(value) == ctx.ctx().int_val((uint64_t)pick));
@@ -1085,7 +1085,7 @@ void SMTParseJSON::completeExtractContainer(const APIModule* apimodule, const IT
     ;
 }
 
-std::optional<size_t> SMTParseJSON::extractUnionChoice(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
+std::optional<size_t> SMTParseJSON::extractUnionChoice(const APIModule* apimodule, const IType* itype, const std::vector<const IType*>& opttypes, z3::expr value, z3::solver& ctx)
 {
     auto bef = getArgContextConstructor(ctx.ctx(), "UnionChoice@UFCons_API", ctx.ctx().int_sort());
     return expIntAsUIntSmall(ctx, bef(value));
