@@ -15,9 +15,3 @@ entrypoint function main(request: Request, marketPrice: Price, startOfDayPositio
     }
 }
 
-entrypoint function doit(req: SellRequest): Bool {
-    let marketPrice = 10.0_Price;
-
-    let response = processSell(req, marketPrice);
-    return response.as<SellAccepted>().price >= 0.0_Price;
-}
