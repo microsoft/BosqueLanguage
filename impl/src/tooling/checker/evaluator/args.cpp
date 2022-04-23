@@ -8,6 +8,7 @@
 static std::regex re_numberino_n("^[+]?(0|[1-9][0-9]*)$");
 static std::regex re_numberino_i("^[-+]?(0|[1-9][0-9]*)$");
 static std::regex re_numberino_f("^[-+]?([0-9]+\\.[0-9]+)([eE][-+]?[0-9]+)?$");
+static std::regex re_numberino_negf("^[(]- ([0-9]+\\.[0-9]+)([eE][-+]?[0-9]+)?[)]$");
 
 std::optional<uint64_t> intBinSearchUnsigned(z3::solver& s, const z3::expr& e, uint64_t min, uint64_t max, const std::vector<uint64_t>& copts)
 {
@@ -211,6 +212,10 @@ std::optional<double> realBinSearch(z3::solver& s, const z3::expr& e, const std:
             }
         }
     }
+
+    printf("Search Find...\n");
+    printf("%d\n", rmin);
+    fflush(stdout);
 
     return std::make_optional(rmin);
 }
@@ -438,8 +443,15 @@ std::optional<std::string> expFloatAsFloat(z3::solver& s, const z3::expr& e)
     {
         return std::make_optional(strval);
     }
+    else if(std::regex_match(strval, re_numberino_negf))
+    {
+        return std::make_optional("-" + strval.substr(3, strval.size() - 4));
+    }
     else
     {
+        //We seem to have a bug here where asserting == on the real values is not coming back unsat when the formula is unsat
+        assert(false);
+
         auto ival = realBinSearch(s, e, {0.0, 1.0, 3.0, -1.0, -3.0});
         if(!ival.has_value())
         {
