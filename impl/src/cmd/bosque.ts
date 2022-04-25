@@ -6,8 +6,9 @@
 //-------------------------------------------------------------------------------------------------------
 
 import { help } from "./args_load";
-import { processAppTestAction, processFuzzAction, processTestAction } from "./process_chk";
-import { processBuildAction, processRunAction } from "./process_exe";
+import { processBuildAction, processBuildActionMorphir } from "./process_build";
+import { processAppTestAction, processFuzzAction, processMorphirCheckAction, processTestAction } from "./process_chk";
+import { processRunAction } from "./process_exe";
 
 const fullargs = process.argv;
 
@@ -39,6 +40,10 @@ else if(cmdop === "test") {
 }
 else if(cmdop === "apptest") {
     processAppTestAction(cmdargs);
+}
+else if(cmdop === "morphir-chk") {
+    processBuildActionMorphir(["morphir", ...cmdargs]);
+    processMorphirCheckAction(cmdargs);
 }
 else if(cmdop === "fuzz") {
     processFuzzAction(cmdargs);
