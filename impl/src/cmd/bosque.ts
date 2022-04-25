@@ -42,7 +42,7 @@ else if(cmdop === "apptest") {
     processAppTestAction(cmdargs);
 }
 else if(cmdop === "morphir-chk") {
-    processBuildActionMorphir(["build", "morphir", ...cmdargs]);
+    processBuildActionMorphir(["morphir", ...cmdargs]);
     processMorphirCheckAction(cmdargs);
 }
 else if(cmdop === "fuzz") {

@@ -259,8 +259,8 @@ function processFuzzAction(args: string[]) {
 
 function processMorphirCheckAction(args: string[]) {
     let workingdir = process.cwd();
-    if (path.extname(args[1]) === ".json") {
-        workingdir = path.dirname(path.resolve(args[1]));
+    if (path.extname(args[0]) === ".json") {
+        workingdir = path.dirname(path.resolve(args[0]));
     }
 
     const output = extractOutput(workingdir, args);
@@ -276,7 +276,7 @@ function processMorphirCheckAction(args: string[]) {
     const dstpckg = path.join(dstdir, "package.json");
 
     process.stdout.write(`Running Bosque checker...\n`);
-    processAppTestAction(["apptest", dstpckg]);
+    processAppTestAction([dstpckg]);
 }
 
 export {

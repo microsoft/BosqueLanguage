@@ -513,7 +513,7 @@ function loadMainModule(jv: any): string {
         const mdef = mm[1].value;
         const mdecls: string[] = mdef.types.map((vv: any) => {
             const name = jconv.processNameAsType(vv[0]);
-            console.log(`Processing Type ${name}...`);
+            //console.log(`Processing Type ${name}...`);
 
             const declkind: string = vv[1].value.value[0];
             const vvdata = vv[1].value.value[2];
@@ -548,7 +548,7 @@ function loadMainModule(jv: any): string {
         const mdef = mm[1].value;
         const mdecls: string[] = mdef.values.map((vv: any) => {
             const name = jconv.processNameAsFunction(vv[0]);
-            console.log(`Processing Function ${name}...`);
+            //console.log(`Processing Function ${name}...`);
 
             return jconv.processFunctionDef(name, vv[1].value.value);
         });
