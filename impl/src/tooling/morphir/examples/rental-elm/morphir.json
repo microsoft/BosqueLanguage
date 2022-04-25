@@ -1,0 +1,10 @@
+{
+    "name": "Morphir.Example.App",
+    "sourceDirectory": "src",
+    "exposedModules": [
+        "App",
+        "Forecast",
+        "Rentals",
+        "Winds"
+    ]
+}
