@@ -15,7 +15,7 @@ import { TranspilerOptions } from "./icpp_assembly";
 import { ICPPEmitter } from "./icppdecls_emitter";
 import { CodeFileInfo } from "../../../ast/parser";
 
-import chalk from "chalk";
+import * as chalk from "chalk";
 import { BuildApplicationMode, BuildLevel } from "../../../ast/assembly";
 
 const bosque_dir: string = Path.join(__dirname, "../../../../");

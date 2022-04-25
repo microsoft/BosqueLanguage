@@ -9,3 +9,8 @@ chktest function createEnergy_Not0(): Bool {
     let system = NBodySystem::create{};
     return system.energy() != 0.0f;
 }
+/*
+errtest function createEnergy_Err(): NBodySystem {
+    return NBodySystem::create{};
+}
+*/

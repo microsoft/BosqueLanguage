@@ -6,12 +6,12 @@
 import * as fs from "fs";
 import * as path from "path";
 
-import chalk from "chalk";
+import * as chalk from "chalk";
 
 import { Config, ConfigAppTest, ConfigBuild, ConfigFuzz, ConfigRun, ConfigTest, Package, parsePackage, parseURIPath, parseURIPathGlob, URIPath, URIPathGlob } from "./package_load";
 import { cleanCommentsStringsFromFileContents } from "../ast/parser";
 
-type CmdTag = "run" | "symrun" | "build" | "test" | "apptest" | "fuzz";
+type CmdTag = "run" | "symrun" | "build" | "test" | "apptest" | "fuzz" | "morphir-chk";
 
 function help(cmd: CmdTag | undefined) {
     if(cmd === "run" || cmd === undefined) {
@@ -32,7 +32,8 @@ function help(cmd: CmdTag | undefined) {
         process.stdout.write("Build Application:\n");
         process.stdout.write("bosque build node [package_path.json] [--config cname] [out]\n");
         process.stdout.write("bosque build bytecode [package_path.json] [--config cname] [out]\n");
-        process.stdout.write("bosque build sym chk|eval --smtlib [package_path.json] [--entrypoint fname] [--config cname] [out]\n\n");
+        process.stdout.write("bosque build sym chk|eval --smtlib [package_path.json] [--entrypoint fname] [--config cname] [out]\n");
+        process.stdout.write("bosque build morphir [morphir_path.json] [out]\n\n");
     }
 
     if(cmd === "test" || cmd === undefined) {
@@ -51,6 +52,11 @@ function help(cmd: CmdTag | undefined) {
         process.stdout.write("Fuzz Application:\n");
         process.stdout.write("bosque fuzz [package_path.json] [--config cname]\n");
         process.stdout.write("bosque fuzz testfile.bsqapi ... --files ...\n\n");
+    }
+
+    if(cmd === "morphir-chk" || cmd === undefined) {
+        process.stdout.write("Check a Morphir (elm) Application:\n");
+        process.stdout.write("bosque morphir-chk [morphir.json]\n\n");
     }
 }
 
@@ -75,7 +81,7 @@ function generateBuildConfigDefault(workingdir: string): ConfigBuild {
 
 function generateTestConfigDefault(): ConfigTest {
     return {
-        flavors: ["sym", "icpp", "chk"],
+        flavors: ["sym", "icpp", "chk", "err"],
         dirs: "*"
     };
 }
@@ -445,7 +451,7 @@ function extractTestFlags(args: string[], cmd: CmdTag): ("sym" | "icpp" | "err" 
     const fidx = args.indexOf("--flavors");
     if(fidx === -1 || fidx === args.length - 1) {
         if(cmd === "test") {
-            return ["sym", "icpp", "chk"];
+            return ["sym", "icpp", "chk", "err"];
         }
         else {
             return ["sym", "icpp", "err"];

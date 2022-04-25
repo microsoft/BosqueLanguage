@@ -6,9 +6,9 @@
 import * as fs from "fs";
 import * as path from "path";
 
-import chalk from "chalk";
+import * as chalk from "chalk";
 
-import { extractConfig, extractFiles, extractTestFlags, help, loadUserSrc, tryLoadPackage } from "./args_load";
+import { extractConfig, extractFiles, extractOutput, extractTestFlags, help, loadUserSrc, tryLoadPackage } from "./args_load";
 import { ConfigAppTest, ConfigFuzz, ConfigTest, Package, parseURIPathGlob } from "./package_load";
 import { runtests } from "../test/runner/suite_runner";
 
@@ -257,6 +257,28 @@ function processFuzzAction(args: string[]) {
     }
 }
 
+function processMorphirCheckAction(args: string[]) {
+    let workingdir = process.cwd();
+    if (path.extname(args[0]) === ".json") {
+        workingdir = path.dirname(path.resolve(args[0]));
+    }
+
+    const output = extractOutput(workingdir, args);
+    if (output === undefined) {
+        process.stderr.write(chalk.red("Could not parse 'output' option\n"));
+
+        help("morphir-chk");
+        process.exit(1);
+    }
+
+    const srcfile = path.join(workingdir, "morphir-ir.json");
+    const dstdir = path.join(path.parse(srcfile).dir, "bsqproj");
+    const dstpckg = path.join(dstdir, "package.json");
+
+    process.stdout.write(`Running Bosque checker...\n`);
+    processAppTestAction([dstpckg]);
+}
+
 export {
-    processTestAction, processAppTestAction, processFuzzAction
+    processTestAction, processAppTestAction, processFuzzAction, processMorphirCheckAction
 };

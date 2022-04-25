@@ -20,7 +20,7 @@ import { ICPPTest, SMT_TIMEOUT, SMT_VOPTS_CHK, SMT_VOPTS_ERR, SymTest, SymTestIn
 import { enqueueICPPTests } from "./icpp_runner";
 import { enqueueSymTests } from "./sym_runner";
 
-import chalk from "chalk";
+import * as chalk from "chalk";
 
 type Verbosity = "std" | "extra" | "max";
 type Category = "sym" | "icpp" | "err" | "chk" | "fuzz" | "symexec";
