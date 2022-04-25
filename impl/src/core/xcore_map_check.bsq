@@ -27,6 +27,12 @@ internal entity MapOps provides Some {
         elif(m.is<Vector3<[K, V]>>()) {
             return 3n;
         }
+        elif(m.is<Vector4<[K, V]>>()) {
+            return 4n;
+        }
+        elif(m.is<Vector5<[K, V]>>()) {
+            return 5n;
+        }
         else {
             return m.count();
         }
@@ -47,6 +53,14 @@ internal entity MapOps provides Some {
         elif(m.is<Vector3<T>>()) {
             let mm = s_safeAs<MapRepr<K, V>, Vector3<[K, V]>>(m);
             return \/(KeyType::equal<K>(mm.v0.0, k), KeyType::equal<K>(mm.v1.0, k), KeyType::equal<K>(mm.v2.0, k));
+        }
+        elif(m.is<Vector4<T>>()) {
+            let mm = s_safeAs<MapRepr<K, V>, Vector4<[K, V]>>(m);
+            return \/(KeyType::equal<K>(mm.v0.0, k), KeyType::equal<K>(mm.v1.0, k), KeyType::equal<K>(mm.v2.0, k), KeyType::equal<K>(mm.v3.0, k));
+        }
+        elif(m.is<Vector5<T>>()) {
+            let mm = s_safeAs<MapRepr<K, V>, Vector5<[K, V]>>(m);
+            return \/(KeyType::equal<K>(mm.v0.0, k), KeyType::equal<K>(mm.v1.0, k), KeyType::equal<K>(mm.v2.0, k), KeyType::equal<K>(mm.v3.0, k), KeyType::equal<K>(mm.v4.0, k));
         }
         else {
             return m.has(k);
@@ -93,11 +107,51 @@ internal entity MapOps provides Some {
                 return none;
             }
         }
+        elif(m.is<Vector4<T>>()) {
+            let mm = s_safeAs<MapRepr<K, V>, Vector4<[K, V]>>(m);
+             if(KeyType::equal<K>(mm.v0.0, k)) {
+                return m.v0;
+            }
+            elif(KeyType::equal<K>(mm.v1.0, k)) {
+                return m.v1;
+            }
+            elif(KeyType::equal<K>(mm.v2.0, k)) {
+                return m.v2;
+            }
+            elif(KeyType::equal<K>(mm.v3.0, k)) {
+                return m.v3;
+            }
+            else {
+                return none;
+            }
+        }
+        elif(m.is<Vector5<T>>()) {
+            let mm = s_safeAs<MapRepr<K, V>, Vector5<[K, V]>>(m);
+             if(KeyType::equal<K>(mm.v0.0, k)) {
+                return m.v0;
+            }
+            elif(KeyType::equal<K>(mm.v1.0, k)) {
+                return m.v1;
+            }
+            elif(KeyType::equal<K>(mm.v2.0, k)) {
+                return m.v2;
+            }
+            elif(KeyType::equal<K>(mm.v3.0, k)) {
+                return m.v3;
+            }
+            elif(KeyType::equal<K>(mm.v4.0, k)) {
+                return m.v4;
+            }
+            else {
+                return none;
+            }
+        }
         else {
             return m.find(k);
         }
     }
 
+xxxx;
     function s_union<K grounded KeyType, V>(m1: MapRepr<K, V>, m2: MapRepr<K, V>): Map<K, V> {
         if(/\(m1 === none, m2 === none)) {
             return none;
@@ -166,6 +220,7 @@ internal entity MapOps provides Some {
         }
     }
 
+xxxx;
     recursive? function s_submap<K grounded KeyType, V>(m: MapRepr<K, V>, p: recursive? pred(k: K, v: V) -> Bool): MapRepr<K, V> {
         if(m === none) {
             return none;
@@ -269,11 +324,28 @@ internal entity MapOps provides Some {
             let v2 = mm.v2;
             return Vector3<[K, U]>{[v0.0, f[recursive?](v0.0, v0.1)], [v1.0, f[recursive?](v1.0, v1.1)], [v2.0, f[recursive?](v2.0, v2.1)]};
         }
+        elif(m.is<Vector4<[K, V]>>()) {
+            let mm = s_safeAs<MapRepr<K, V>, Vector4<[K, V]>>(m);
+
+            let v0 = mm.v0;
+            let v1 = mm.v1;
+            let v2 = mm.v2;
+            return Vector4<[K, U]>{[v0.0, f[recursive?](v0.0, v0.1)], [v1.0, f[recursive?](v1.0, v1.1)], [v2.0, f[recursive?](v2.0, v2.1)], [v3.0, f[recursive?](v3.0, v3.1)]};
+        }
+        elif(m.is<Vector5<[K, V]>>()) {
+            let mm = s_safeAs<MapRepr<K, V>, Vector5<[K, V]>>(m);
+
+            let v0 = mm.v0;
+            let v1 = mm.v1;
+            let v2 = mm.v2;
+            return Vector5<[K, U]>{[v0.0, f[recursive?](v0.0, v0.1)], [v1.0, f[recursive?](v1.0, v1.1)], [v2.0, f[recursive?](v2.0, v2.1)], [v3.0, f[recursive?](v3.0, v3.1)], [v4.0, f[recursive?](v4.0, v4.1)]};
+        }
         else {
             return m.remap<U>[recursive?](f);
         }
     }
 
+xxxx;
     function s_add<K grounded KeyType, V>(m: MapRepr<K, V>, k: K, v: V): MapRepr<K, V> {
         if(m === none) {
             return Vector1<[K, V]>{[k, v]};
@@ -311,6 +383,7 @@ internal entity MapOps provides Some {
         }
     }
 
+xxxx;
     function s_set<K grounded KeyType, V>(m: MapRepr<K, V>, k: K, v: V): MapRepr<K, V> {
         if(m === none) {
             return none;
@@ -353,6 +426,7 @@ internal entity MapOps provides Some {
         }
     }
 
+xxxx;
     function s_remove<K grounded KeyType, V>(m: MapRepr<K, V>, k: K): MapRepr<K, V> {
         if(m === none) {
             return none;
