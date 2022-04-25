@@ -6,7 +6,7 @@
 import * as fs from "fs";
 import * as path from "path";
 
-import chalk from "chalk";
+import * as chalk from "chalk";
 
 import { Config, ConfigAppTest, ConfigBuild, ConfigFuzz, ConfigRun, ConfigTest, Package, parsePackage, parseURIPath, parseURIPathGlob, URIPath, URIPathGlob } from "./package_load";
 import { cleanCommentsStringsFromFileContents } from "../ast/parser";

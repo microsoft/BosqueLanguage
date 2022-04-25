@@ -6,7 +6,7 @@
 import * as fs from "fs";
 import * as path from "path";
 
-import chalk from "chalk";
+import * as chalk from "chalk";
 
 import { extractConfig, extractFiles, extractOutput, extractTestFlags, help, loadUserSrc, tryLoadPackage } from "./args_load";
 import { ConfigAppTest, ConfigFuzz, ConfigTest, Package, parseURIPathGlob } from "./package_load";

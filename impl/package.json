@@ -11,13 +11,11 @@
         "url": "https://github.com/Microsoft/BosqueLanguage"
     },
     "dependencies": {
-        "@types/node": "~10.12.18",
-        "commander": "2.20.0",
-        "typescript": "^4.1.3"
-    },
-    "devDependencies": {
-        "chalk": "~2.4.2",
-        "fs-extra": "~8.1.0"
+        "@types/node": "^10.12.18",
+        "typescript": "^4.1.3",
+        "chalk": "^4.1.1",
+        "commander": "^9.0.0",
+        "fs-extra": "^9.1.0"
     },
     "scripts": {
         "build": "node ./build/build_all.js",

@@ -6,7 +6,7 @@
 import * as fs from "fs";
 import * as path from "path";
 
-import chalk from "chalk";
+import * as chalk from "chalk";
 const fsextra = require("fs-extra");
 
 import { help, loadUserSrc, tryLoadPackage, extractEntryPoint, extractConfig, extractOutput, extractEntryPointsAll } from "./args_load";
@@ -242,6 +242,11 @@ function processBuildActionMorphir(args: string[]) {
         process.exit(1);
     }
 
+    if(!fs.existsSync(pckg)) {
+        process.stderr.write(chalk.red(`Directory "${workingdir}" does not contain a morphir package\n`));
+        process.exit(1);
+    }
+
     const output = extractOutput(workingdir, args);
     if (output === undefined) {
         process.stderr.write(chalk.red("Could not parse 'output' option\n"));
@@ -261,16 +266,20 @@ function processBuildActionMorphir(args: string[]) {
     }
 
     try {
-        execSync("morphir-elm -v", {cwd: workingdir});
+        const mv = execSync("morphir-elm -v").toString().trim();
+        if(mv !== "2.49.0") {
+            process.stderr.write(`Unsupported version of "morphir-elm" compiler -- please install with "npm install -g morphir-elm@2.49.0"\n`);
+            process.exit(1);
+        }
     }
     catch(ex) {
-        process.stderr.write(`Please make sure "morphir-elm" is installed and on the path -- npm install -g morphir-elm\n`);
+        process.stderr.write(`Missing "morphir-elm" compiler -- please install with "npm install -g morphir-elm@2.49.0"\n`);
         process.exit(1);
     }
 
     try {
         process.stdout.write(`Converting Elm source in ${workingdir}...\n`);
-        execSync("morphir-elm make", {cwd: workingdir});
+        execSync("morphir-elm make", { cwd: workingdir });
     }
     catch(ex) {
         process.stderr.write(`Failed to convert elm source to MorphirIR -- ${ex}\n`);

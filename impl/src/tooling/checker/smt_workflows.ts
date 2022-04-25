@@ -7,7 +7,7 @@ import * as FS from "fs";
 import * as Path from "path";
 import { exec } from "child_process";
 
-import chalk from "chalk";
+import * as chalk from "chalk";
 
 import { MIRAssembly, PackageConfig, SymbolicActionMode } from "../../compiler/mir_assembly";
 import { MIREmitter } from "../../compiler/mir_emitter";

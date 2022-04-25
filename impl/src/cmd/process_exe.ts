@@ -7,7 +7,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as readline from "readline";
 
-import chalk from "chalk";
+import * as chalk from "chalk";
 
 import { help, extractEntryPointKnownFile, isStdInArgs, extractFiles, extractArgs, loadUserSrc, tryLoadPackage, extractEntryPoint, extractConfig } from "./args_load";
 import { ConfigRun, Package, parseURIPathGlob } from "./package_load";

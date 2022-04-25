@@ -6,5 +6,6 @@
 /src/test/apps/*/bin/_build_.smt2
 /src/tooling/morphir/examples/*/morphir-ir.json
 /src/tooling/morphir/examples/*/transpile.bsq
+/src/tooling/morphir/examples/*/bsqproj/*
 *.xml
 *.dgml

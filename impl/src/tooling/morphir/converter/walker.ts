@@ -105,7 +105,7 @@ class Transpiler {
 
     processTypeRecord(jv: any[]): string {
         const entries = jv[2].map((ee: any) => {
-            return `${this.processNameAsVarOrField(ee[0])}: ${this.processType(ee[1])}`;
+            return `${this.processNameAsVarOrField(ee.name)}: ${this.processType(ee.tpe)}`;
         });
 
         return "{" + entries.join(", ") + "}";
@@ -113,11 +113,11 @@ class Transpiler {
 
     processType(jv: any[]): string {
         switch(jv[0]) {
-            case "reference":
+            case "Reference":
                 return this.processTypeReference(jv);
-            case "tuple":
+            case "Tuple":
                 return this.processTypeTuple(jv);
-            case "record":
+            case "Record":
                 return this.processTypeRecord(jv);
             default:
                 return notImplemented(`processType -- ${jv[0]}`);
@@ -127,19 +127,19 @@ class Transpiler {
     processLiteral(jv: any[]): string {
         const lv = jv[2];
         switch(lv[0]) {
-            case "bool_literal":
+            case "BoolLiteral":
                 return lv[1] ? "true" : "false";
-            case "char_literal":
+            case "CharLiteral":
                 return `"${lv[1]}"`;
-            case "string_literal":
+            case "StringLiteral":
                 return `"${lv[1]}"`;
-            case "int_literal":
+            case "WholeNumberLiteral":
                 return `${lv[1]}i`;
-            case "float_literal": {
+            case "FloatLiteral": {
                 let fstr = `${lv[1]}`;
                 return fstr + (fstr.includes(".") ? "f" : ".0f");
             }
-            case "decimal_literal": {
+            case "DecimalLiteral": {
                 let fstr = `${lv[1]}`;
                 return fstr + (fstr.includes(".") ? "d" : ".0d");
             }
@@ -149,7 +149,7 @@ class Transpiler {
     }
 
     processConstructor(jv: any[]): string {
-        if(jv[1][0] !== "function") {
+        if(jv[1][0] !== "Function") {
             //it is an enum?
             const consname = this.processNameAsType(jv[1][2][2]);
             assert(this.enums.has(consname));
@@ -190,7 +190,7 @@ class Transpiler {
     }
 
     processReference(jv: any[]): string {
-        if (jv[1][0] !== "function") {
+        if (jv[1][0] !== "Function") {
             return this.processNameAsVarOrField(jv[2][2]);
         }
         else {
@@ -510,24 +510,24 @@ function loadMainModule(jv: any): string {
     const jconv: Transpiler = new Transpiler();
 
     const ddecls = jv.distribution[3].modules.map((mm: any) => {
-        const mdef = mm.def[1];
+        const mdef = mm[1].value;
         const mdecls: string[] = mdef.types.map((vv: any) => {
             const name = jconv.processNameAsType(vv[0]);
-            //console.log(`Processing ${name}...`);
+            console.log(`Processing Type ${name}...`);
 
-            const declkind: string = vv[1][1][1][0];
+            const declkind: string = vv[1].value.value[0];
+            const vvdata = vv[1].value.value[2];
             switch(declkind) {
-                case "type_alias_definition": {
-                    const oftype = jconv.processType(vv[1][1][1][2]);
+                case "TypeAliasDefinition": {
+                    const oftype = jconv.processType(vvdata);
                     return `typedef ${name} = ${oftype};`; 
                 }
-                case "custom_type_definition": {
-                    const tdecl = vv[1][1][1][2];
-                    if (tdecl[1].every((dd: any[]) => dd[1].length === 0)) {
+                case "CustomTypeDefinition": {
+                    if (vvdata.value.every((dd: any[]) => dd[1].length === 0)) {
                         //it is an enum
                         jconv.enums.add(name);
 
-                        const enames = tdecl[1].map((ev: any[]) => jconv.processNameAsVarOrField(ev[0])).join(",\n    ");
+                        const enames = vvdata.value.map((ev: any[]) => jconv.processNameAsVarOrField(ev[0])).join(",\n    ");
                         return `enum ${name} {\n    ${enames}\n}`;
                     }
                     else {
@@ -537,7 +537,6 @@ function loadMainModule(jv: any): string {
                 }
                 default: {
                     assert(false, "type decl");
-                    return "!!!";
                 }
             }
         });
@@ -546,14 +545,12 @@ function loadMainModule(jv: any): string {
     });
 
     const cdecls = jv.distribution[3].modules.map((mm: any) => {
-        const mdef = mm.def[1];
+        const mdef = mm[1].value;
         const mdecls: string[] = mdef.values.map((vv: any) => {
             const name = jconv.processNameAsFunction(vv[0]);
-            //console.log(`Processing ${name}...`);
+            console.log(`Processing Function ${name}...`);
 
-            const decl = jconv.processFunctionDef(name, vv[1][1]);
-
-            return decl;
+            return jconv.processFunctionDef(name, vv[1].value.value);
         });
 
         return mdecls;
