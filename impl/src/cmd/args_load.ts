@@ -75,7 +75,7 @@ function generateBuildConfigDefault(workingdir: string): ConfigBuild {
 
 function generateTestConfigDefault(): ConfigTest {
     return {
-        flavors: ["sym", "icpp", "chk"],
+        flavors: ["sym", "icpp", "chk", "err"],
         dirs: "*"
     };
 }
@@ -445,7 +445,7 @@ function extractTestFlags(args: string[], cmd: CmdTag): ("sym" | "icpp" | "err" 
     const fidx = args.indexOf("--flavors");
     if(fidx === -1 || fidx === args.length - 1) {
         if(cmd === "test") {
-            return ["sym", "icpp", "chk"];
+            return ["sym", "icpp", "chk", "err"];
         }
         else {
             return ["sym", "icpp", "err"];
