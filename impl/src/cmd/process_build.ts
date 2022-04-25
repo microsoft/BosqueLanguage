@@ -265,8 +265,9 @@ function processBuildActionMorphir(args: string[]) {
         process.exit(1);
     }
 
+    const morphir_cmd = path.join(__dirname, "../../", "node_modules/.bin/morphir-elm");
     try {
-        const mv = execSync("morphir-elm -v").toString().trim();
+        const mv = execSync(`${morphir_cmd} -v`).toString().trim();
         if(mv !== "2.49.0") {
             process.stderr.write(`Unsupported version of "morphir-elm" compiler -- please install with "npm install -g morphir-elm@2.49.0"\n`);
             process.exit(1);
@@ -279,7 +280,7 @@ function processBuildActionMorphir(args: string[]) {
 
     try {
         process.stdout.write(`Converting Elm source in ${workingdir}...\n`);
-        execSync("morphir-elm make", { cwd: workingdir });
+        execSync(`${morphir_cmd} make`, { cwd: workingdir });
     }
     catch(ex) {
         process.stderr.write(`Failed to convert elm source to MorphirIR -- ${ex}\n`);
