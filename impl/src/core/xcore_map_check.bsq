@@ -7,6 +7,10 @@
 namespace Core;
 
 #if CHECK_LIBS
+internal typedef MapVector<K grounded KeyType, V> = Vector1<[K, V]> | Vector2<[K, V]> | Vector3<[K, V]> | Vector4<[K, V]> | Vector5<[K, V]>;
+
+internal typedef MapRepr<K grounded KeyType, V> = None | Vector1<[K, V]> | Vector2<[K, V]> | Vector3<[K, V]> | Vector4<[K, V]> | Vector5<[K, V]> | LargeMap<[K, V]>;
+
 internal entity MapOps provides Some {
     internal function s_blockingfailure<T>(): T = s_blockingfailure; 
 
@@ -426,46 +430,82 @@ xxxx;
         }
     }
 
-xxxx;
-    function s_remove<K grounded KeyType, V>(m: MapRepr<K, V>, k: K): MapRepr<K, V> {
-        if(m === none) {
-            return none;
-        }
-        elif(m.is<Vector1<[K, V]>>()) {
-            let mm = s_safeAs<MapRepr<K, V>, Vector1<[K, V]>>(m);
-            assert KeyType::equal<K>(mm.v0.0, k);
-
-            return none;
-        }
-        elif(m.is<Vector2<[K, V]>>()) {
-            let mm = s_safeAs<MapRepr<K, V>, Vector2<[K, V]>>(m);
-
-            if(KeyType::equal<K>(mm.v0.0, k)) {
-                return Vector1<[K, V]>{mm.v1};
-            }
-            else {
-                assert KeyType::equal<K>(mm.v1.0, k);
-
-                return Vector1<[K, V]>{mm.v0};
-            }
-        }
-        elif(m.is<Vector3<T>>()) {
-            let mm = s_safeAs<MapRepr<K, V>, Vector3<[K, V]>>(m);
-
-            if(KeyType::equal<K>(mm.v0.0, k)) {
-                return Vector2<[K, V]>{m.v1, m.v2};
-            }
-            elif(KeyType::equal<K>(mm.v1.0, k)) {
-                return Vector2<[K, V]>{mm.v0, mm.v2};
-            }
-            else {
-                assert KeyType::equal<K>(mm.v2.0, k);
-
-                return Vector2<[K, V]>{mm.v0, mm.v1};
-            }
+    function s_safe_remove_vector_2<K, V>(m: Vector2<[K, V]>, k: K): Vector1<[K, V]> {
+        if(KeyType::equal<K>(m.v0.0, k)) {
+            return Vector1<[K, V]>{m.v1};
         }
         else {
+            return Vector1<[K, V]>{m.v0};
+        }
+    }
+    function s_safe_remove_vector_3<K, V>(m: Vector3<[K, V]>, k: K): Vector2<[K, V]> {
+        if(KeyType::equal<K>(m.v0.0, k)) {
+            return Vector2<[K, V]>{m.v1, m.v2};
+        }
+        elif(KeyType::equal<K>(m.v1.0, k)) {
+            return Vector2<[K, V]>{m.v0, m.v2};
+        }
+        else {
+            return Vector2<[K, V]>{m.v0, m.v1};
+        }
+    }
+    function s_safe_remove_vector_4<K, V>(m: Vector4<[K, V]>, k: K): Vector3<[K, V]> {
+        if(KeyType::equal<K>(m.v0.0, k)) {
+            return Vector3<[K, V]>{m.v1, m.v2, m.v3};
+        }
+        elif(KeyType::equal<K>(m.v1.0, k)) {
+            return Vector3<[K, V]>{m.v0, m.v2, m.v3};
+        }
+        elif(KeyType::equal<K>(m.v2.0, k)) {
+            return Vector3<[K, V]>{m.v0, m.v1, m.v3};
+        }
+        else {
+            return Vector3<[K, V]>{m.v0, m.v1, m.v2};
+        }
+    }
+    function s_safe_remove_vector_5<K, V>(m: Vector5<[K, V]>, k: k): Vector4<[K, V]> {
+        if(KeyType::equal<K>(m.v0.0, k)) {
+            return Vector4<[K, V]>{m.v1, m.v2, m.v3, m.v4};
+        }
+        elif(KeyType::equal<K>(m.v1.0, k)) {
+            return Vector4<[K, V]>{m.v0, m.v2, m.v3, m.v4};
+        }
+        elif(KeyType::equal<K>(m.v2.0, k)) {
+            return Vector4<[K, V]>{m.v0, m.v1, m.v3, m.v4};
+        }
+        elif(KeyType::equal<K>(m.v3.0, k)) {
+            return Vector4<[K, V]>{m.v0, m.v1, m.v2, m.v4};
+        }
+        else {
+            return Vector4<[K, V]>{m.v0, m.v1, m.v2, m.v3};
+        }
+    }
+    function s_safe_remove_vector_helper<K, V>(m: Vector2<[K, V]> | Vector3<[K, V]> | Vector4<[K, V]> | Vector5<[K, V]>, k: K): MapVector<K, V> {
+        if(m.is<Vector2<[K, V]>>()) {
+            return MapOps::s_safe_remove_vector_2<K, V>(m, k);
+        }
+        elif(m.is<Vector3<[K, V]>>()) {
+            return MapOps::s_safe_remove_vector_3<K, V>(m, k);
+        }
+        elif(m.is<Vector4<[K, V]>>()) {
+            return MapOps::s_safe_remove_vector_4<K, V>(m, k);
+        }
+        else {
+            return MapOps::s_safe_remove_vector_5<K, V>(m, k);
+        }
+    }
+    function s_remove<K grounded KeyType, V>(m: MapRepr<K, V>, k: K): MapRepr<K, V> {
+        if(m.is<LargeMap<K, V>>()) {
             return m.remove(k);
+        }
+        else {
+            if(m.is<Vector1<[K, V]>>()) {
+                return none;
+            }
+            else {
+                let mm = s_safeAs<MapRepr<[K, V]>, MapVector<K, V>>(m);
+                return MapOps::s_safe_remove_vector_helper<K, V>(mm, k);
+            }
         }
     }
 }
@@ -512,7 +552,4 @@ entity LargeMap<K grounded KeyType, V> provides Some {
         return MapOps::s_blockingfailure<MapRepr<K, V>>();
     }
 }
-
-internal typedef MapRepr<K grounded KeyType, V> = None | Vector1<[K, V]> | Vector2<[K, V]> | Vector3<[K, V]> | LargeMap<[K, V]>;
-
 #endif
