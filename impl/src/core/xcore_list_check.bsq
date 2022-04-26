@@ -14,11 +14,11 @@ internal typedef ListRepr<T> = None | Vector1<T> | Vector2<T> | Vector3<T> | Vec
 internal entity ListOps provides Some {
     internal function s_blockingfailure<T>(): T = s_blockingfailure; 
 
-    function s_split_vector_4(l: Vector4<T>): (|Vector2<T>, Vector2<T>|) {
+    function s_split_vector_4<T>(l: Vector4<T>): (|Vector2<T>, Vector2<T>|) {
         return (|Vector2<T>{l.v0, l.v1}, Vector2<T>{l.v2, l.v3}|);
     }
 
-    function s_split_vector_5(l: Vector5<T>): (|Vector2<T>, Vector3<T>|) {
+    function s_split_vector_5<T>(l: Vector5<T>): (|Vector2<T>, Vector3<T>|) {
         return (|Vector2<T>{l.v0, l.v1}, Vector3<T>{l.v2, l.v3, l.v4}|);
     }
 
@@ -34,107 +34,87 @@ internal entity ListOps provides Some {
         }
         else {
             if(/\(l.is<Vector1<T>>(), r.is<Vector1<T>>())) {
-                let ll = s_safeAs<ListRepr<T>, Vector1<T>>(l);
-                let rr = s_safeAs<ListRepr<T>, Vector1<T>>(r);
+                let ll = s_safeAs<ListVector<T>, Vector1<T>>(l);
+                let rr = s_safeAs<ListVector<T>, Vector1<T>>(r);
                 return Vector2<T>{ll.v0, rr.v0};
             }
             elif(/\(l.is<Vector1<T>>(), r.is<Vector2<T>>())) {
-                let ll = s_safeAs<ListRepr<T>, Vector1<T>>(l);
-                let rr = s_safeAs<ListRepr<T>, Vector2<T>>(r);
+                let ll = s_safeAs<ListVector<T>, Vector1<T>>(l);
+                let rr = s_safeAs<ListVector<T>, Vector2<T>>(r);
                 return Vector3<T>{ll.v0, rr.v0, rr.v1};
             }
             elif(/\(l.is<Vector1<T>>(), r.is<Vector3<T>>())) {
-                let ll = s_safeAs<ListRepr<T>, Vector1<T>>(l);
-                let rr = s_safeAs<ListRepr<T>, Vector3<T>>(r);
+                let ll = s_safeAs<ListVector<T>, Vector1<T>>(l);
+                let rr = s_safeAs<ListVector<T>, Vector3<T>>(r);
                 return Vector4<T>{ll.v0, rr.v0, rr.v1, rr.v2};
             }
-            elif(/\(l.is<Vector1<T>>(), r.is<Vector4<T>>())) {
-                let ll = s_safeAs<ListRepr<T>, Vector1<T>>(l);
-                let rr = s_safeAs<ListRepr<T>, Vector4<T>>(r);
-                return Vector5<T>{ll.v0, rr.v0, rr.v1, rr.v2, rr.v3};
-            }
             elif(/\(l.is<Vector2<T>>(), r.is<Vector1<T>>())) {
-                let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
-                let rr = s_safeAs<ListRepr<T>, Vector1<T>>(r);
+                let ll = s_safeAs<ListVector<T>, Vector2<T>>(l);
+                let rr = s_safeAs<ListVector<T>, Vector1<T>>(r);
                 return Vector3<T>{ll.v0, ll.v1, rr.v0};
             }
             elif(/\(l.is<Vector2<T>>(), r.is<Vector2<T>>())) {
-                let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
-                let rr = s_safeAs<ListRepr<T>, Vector2<T>>(r);
+                let ll = s_safeAs<ListVector<T>, Vector2<T>>(l);
+                let rr = s_safeAs<ListVector<T>, Vector2<T>>(r);
                 return Vector4<T>{ll.v0, ll.v1, rr.v0, rr.v1};
             }
-            elif(/\(l.is<Vector2<T>>(), r.is<Vector3<T>>())) {
-                let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
-                let rr = s_safeAs<ListRepr<T>, Vector3<T>>(r);
-                return Vector5<T>{ll.v0, ll.v1, rr.v0, rr.v1, rr.v2};
-            }
-            elif(/\(l.is<Vector3<T>>(), r.is<Vector1<T>>())) {
-                let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
-                let rr = s_safeAs<ListRepr<T>, Vector1<T>>(r);
-                return Vector4<T>{ll.v0, ll.v1, ll.v2, rr.v0};
-            }
-            elif(/\(l.is<Vector3<T>>(), r.is<Vector2<T>>())) {
-                let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
-                let rr = s_safeAs<ListRepr<T>, Vector2<T>>(r);
-                return Vector5<T>{ll.v0, ll.v1, ll.v2, rr.v0, rr.v1};
-            }
             else {
-                let ll = s_safeAs<ListRepr<T>, Vector4<T>>(l);
-                let rr = s_safeAs<ListRepr<T>, Vector1<T>>(r);
-                return Vector5<T>{ll.v0, ll.v1, ll.v2, ll.v3, rr.v0};
+                let ll = s_safeAs<ListVector<T>, Vector2<T>>(l);
+                let rr = s_safeAs<ListVector<T>, Vector3<T>>(r);
+                return Vector5<T>{ll.v0, ll.v1, rr.v0, rr.v1, rr.v2};
             }
         }
     }
 
     function s_append_vector_helper<T>(l: ListVector<T>, r: ListVector<T>): ListVector<T> | LargeList<T> {
         if(/\(l.is<Vector1<T>>(), r.is<Vector1<T>>())) {
-            let ll = s_safeAs<ListRepr<T>, Vector1<T>>(l);
-            let rr = s_safeAs<ListRepr<T>, Vector1<T>>(r);
+            let ll = s_safeAs<ListVector<T>, Vector1<T>>(l);
+            let rr = s_safeAs<ListVector<T>, Vector1<T>>(r);
             return Vector2<T>{ll.v0, rr.v0};
         }
         elif(/\(l.is<Vector1<T>>(), r.is<Vector2<T>>())) {
-            let ll = s_safeAs<ListRepr<T>, Vector1<T>>(l);
-            let rr = s_safeAs<ListRepr<T>, Vector2<T>>(r);
+            let ll = s_safeAs<ListVector<T>, Vector1<T>>(l);
+            let rr = s_safeAs<ListVector<T>, Vector2<T>>(r);
             return Vector3<T>{ll.v0, rr.v0, rr.v1};
         }
         elif(/\(l.is<Vector1<T>>(), r.is<Vector3<T>>())) {
-            let ll = s_safeAs<ListRepr<T>, Vector1<T>>(l);
-            let rr = s_safeAs<ListRepr<T>, Vector3<T>>(r);
+            let ll = s_safeAs<ListVector<T>, Vector1<T>>(l);
+            let rr = s_safeAs<ListVector<T>, Vector3<T>>(r);
             return Vector4<T>{ll.v0, rr.v0, rr.v1, rr.v2};
         }
         elif(/\(l.is<Vector1<T>>(), r.is<Vector4<T>>())) {
-            let ll = s_safeAs<ListRepr<T>, Vector1<T>>(l);
-            let rr = s_safeAs<ListRepr<T>, Vector4<T>>(r);
+            let ll = s_safeAs<ListVector<T>, Vector1<T>>(l);
+            let rr = s_safeAs<ListVector<T>, Vector4<T>>(r);
             return Vector5<T>{ll.v0, rr.v0, rr.v1, rr.v2, rr.v3};
         }
         elif(/\(l.is<Vector2<T>>(), r.is<Vector1<T>>())) {
-            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
-            let rr = s_safeAs<ListRepr<T>, Vector1<T>>(r);
+            let ll = s_safeAs<ListVector<T>, Vector2<T>>(l);
+            let rr = s_safeAs<ListVector<T>, Vector1<T>>(r);
             return Vector3<T>{ll.v0, ll.v1, rr.v0};
         }
         elif(/\(l.is<Vector2<T>>(), r.is<Vector2<T>>())) {
-            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
-            let rr = s_safeAs<ListRepr<T>, Vector2<T>>(r);
+            let ll = s_safeAs<ListVector<T>, Vector2<T>>(l);
+            let rr = s_safeAs<ListVector<T>, Vector2<T>>(r);
             return Vector4<T>{ll.v0, ll.v1, rr.v0, rr.v1};
         }
         elif(/\(l.is<Vector2<T>>(), r.is<Vector3<T>>())) {
-            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
-            let rr = s_safeAs<ListRepr<T>, Vector3<T>>(r);
+            let ll = s_safeAs<ListVector<T>, Vector2<T>>(l);
+            let rr = s_safeAs<ListVector<T>, Vector3<T>>(r);
             return Vector5<T>{ll.v0, ll.v1, rr.v0, rr.v1, rr.v2};
         }
         elif(/\(l.is<Vector3<T>>(), r.is<Vector1<T>>())) {
-            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
-            let rr = s_safeAs<ListRepr<T>, Vector1<T>>(r);
+            let ll = s_safeAs<ListVector<T>, Vector3<T>>(l);
+            let rr = s_safeAs<ListVector<T>, Vector1<T>>(r);
             return Vector4<T>{ll.v0, ll.v1, ll.v2, rr.v0};
         }
         elif(/\(l.is<Vector3<T>>(), r.is<Vector2<T>>())) {
-            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
-            let rr = s_safeAs<ListRepr<T>, Vector2<T>>(r);
+            let ll = s_safeAs<ListVector<T>, Vector3<T>>(l);
+            let rr = s_safeAs<ListVector<T>, Vector2<T>>(r);
             return Vector5<T>{ll.v0, ll.v1, ll.v2, rr.v0, rr.v1};
         }
         elif(/\(l.is<Vector4<T>>(), r.is<Vector1<T>>())) {
-            let ll = s_safeAs<ListRepr<T>, Vector4<T>>(l);
-            let rr = s_safeAs<ListRepr<T>, Vector1<T>>(r);
+            let ll = s_safeAs<ListVector<T>, Vector4<T>>(l);
+            let rr = s_safeAs<ListVector<T>, Vector1<T>>(r);
             return Vector5<T>{ll.v0, ll.v1, ll.v2, ll.v3, rr.v0};
         }
         else {
@@ -646,8 +626,11 @@ internal entity ListOps provides Some {
             return Vector4<T>{l.v0, l.v1, l.v2, l.v3};
         }
     }
-    function s_safe_remove_vector_helper<T>(l: Vector2<T> | Vector3<T> | Vector4<T> | Vector5<T>, i: Nat): ListVector<T> {
-        if(l.is<Vector2<T>>()) {
+    function s_safe_remove_vector_helper<T>(l: ListVector<T>, i: Nat): ListVector<T> {
+        if(l.is<Vector1<T>>()) {
+            return none;
+        }
+        elif(l.is<Vector2<T>>()) {
             return ListOps::s_safe_remove_vector_2<T>(l, i);
         }
         elif(l.is<Vector3<T>>()) {
@@ -2194,13 +2177,8 @@ internal entity ListOps provides Some {
             return l.remove(i);
         }
         else {
-            if(l.is<Vector1<T>>()) {
-                return none;
-            }
-            else {
-                let ll = s_safeAs<ListRepr<T>, ListVector<T>>(l);
-                return ListOps::s_safe_remove_vector_helper<T>(ll, i);
-            }
+            let ll = s_safeAs<ListRepr<T>, ListVector<T>>(l);
+            return ListOps::s_safe_remove_vector_helper<T>(ll, i);
         }
     }
 
