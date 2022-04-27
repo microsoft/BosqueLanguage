@@ -8,16 +8,6 @@ import * as Path from "path";
 
 import { Category, runtests } from "../runner/suite_runner";
 
-const testroot = Path.join(__dirname, "tests");
-
-const testfiles = FS.readdirSync(testroot)
-    .filter((ff) => ff.endsWith(".bsqtest"))
-    .map((ff) => Path.join(testroot, ff));
-
-//TODO: maybe we want to also read recursive in directories as well to make grouping some tests easier later (like collections)
-
-const pckg = {macros: [] as string[], files: testfiles};
-
 let opts: Category[] = [];
 let dirs: string[] = [];
 let aargs = process.argv.slice(2);
@@ -49,6 +39,22 @@ if(opts.length === 0) {
 if(dirs.length === 0) {
     dirs = ["*"];
 }
+
+const testroot = Path.join(__dirname, "tests");
+const testcorelibroot = Path.join(testroot, "corelib");
+const testlistroot = Path.join(testcorelibroot, "list");
+const testmaproot = Path.join(testcorelibroot, "map");
+
+const testfiles: string[] = [];
+[testroot, testcorelibroot, testlistroot, testmaproot].forEach((tdir) => {
+    const tfiles = FS.readdirSync(tdir)
+        .filter((ff) => ff.endsWith(".bsqtest"))
+        .map((ff) => Path.join(tdir, ff));
+
+    testfiles.push(...tfiles);
+});
+
+const pckg = {macros: [] as string[], files: testfiles};
 
 runtests([pckg], [], testfiles, "debug", true, {}, "extra", ["sym", "icpp", "err", "chk", "symexec"], dirs);
 

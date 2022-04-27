@@ -94,6 +94,10 @@ function runtestsICPP(buildlevel: BuildLevel, istestbuild: boolean, topts: Trans
 
     //check directory is enabled
     const filteredentry = entrypoint.filter((testpoint) => {
+        if(testpoint.names.length === 0) {
+            return false;
+        }
+
         return dirs.includes("*") || dirs.some((dname) => testpoint.filename.startsWith(dname));
     });
 
@@ -176,6 +180,10 @@ function runtestsSMT(buildlevel: BuildLevel, istestbuild: boolean, usercode: Pac
 
     //check directory is enabled
     const filteredentry = entrypoint.filter((testpoint) => {
+        if(testpoint.names.length === 0) {
+            return false;
+        }
+        
         return dirs.includes("*") || dirs.some((dname) => testpoint.filename.startsWith(dname));
     });
 
