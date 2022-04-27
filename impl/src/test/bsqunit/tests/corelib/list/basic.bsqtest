@@ -1,0 +1,25 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+namespace ListBasic;
+
+const l0: List<Int> = List<Int>{};
+const l1: List<Int> = List<Int>{1i};
+const l2: List<Int> = List<Int>{1i, 2i};
+const l3: List<Int> = List<Int>{1i, 2i, 3i};
+const l4: List<Int> = List<Int>{1i, 2i, 3i, 4i};
+const l5: List<Int> = List<Int>{1i, 2i, 3i, 4i, 5i};
+
+chktest function sizeops_vector(): Bool {
+    return /\(ListBasic::l0.size() == 0n, ListBasic::l1.size() == 1n, ListBasic::l2.size() == 2n, ListBasic::l3.size() == 3n, ListBasic::l4.size() == 4n, ListBasic::l5.size() == 5n);
+}
+
+chktest function getops_vector_0(): Bool {
+    return /\(ListBasic::l1.get(0n) == 1i, ListBasic::l2.get(0n) == 1i, ListBasic::l3.get(0n) == 1i, ListBasic::l4.get(0n) == 1i, ListBasic::l5.get(0n) == 1i);
+}
+
+__chktest function getops_vector_0_vchk(): Bool {
+    return /\(ListBasic::l1.get(0n) != 1i, ListBasic::l2.get(0n) != 1i, ListBasic::l3.get(0n) != 1i, ListBasic::l4.get(0n) != 1i, ListBasic::l5.get(0n) != 1i);
+}
