@@ -177,7 +177,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
 
     recursive? method singleOption(p: recursive? pred(_: T) -> Bool): Option<T> {
         let idx = ListOps::s_find_pred<T>[recursive?](this.value(), p);
-         if(idx === none) {
+        if(idx === none) {
             return nothing;
         }
         else {
@@ -207,6 +207,39 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                 res = ListOps::s_safe_get<T>(this.value(), idx);
                 return true;
             }
+        }
+    }
+
+    method getSingleton(): T {
+        assert ListOps::s_size<T>(this.value()) == 1n;
+        return ListOps::s_safe_front<T>(this.value());
+    }
+
+    method getSingletonOrNone(): T? {
+        if(ListOps::s_size<T>(this.value()) != 1n) {
+            return none;
+        }
+        else {
+            return ListOps::s_safe_front<T>(this.value());
+        }
+    }
+
+    recursive? method getSingletonOption(p: recursive? pred(_: T) -> Bool): Option<T> {
+        if(ListOps::s_size<T>(this.value()) != 1n) {
+            return nothing;
+        }
+        else {
+            return something(ListOps::s_safe_front<T>(this.value()));
+        }
+    }
+
+    recursive? method getSingletonTry(out? res: T, p: recursive? pred(_: T) -> Bool): Bool {
+        if(ListOps::s_size<T>(this.value()) != 1n) {
+            return false;
+        }
+        else {
+            res = ListOps::s_safe_front<T>(this.value());
+            return true;
         }
     }
 

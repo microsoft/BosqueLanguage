@@ -2793,7 +2793,7 @@ bool ICPPParseJSON::parseDateTimeImpl(const APIModule* apimodule, const IType* i
     dt->day = t.day;
     dt->hour = t.hour;
     dt->month = t.min;
-    dt->tzoffset = t.tzoffset;
+    dt->tzdata = t.tzdata;
 
     SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(value, dt);
     return true;
@@ -3289,7 +3289,7 @@ std::optional<DateTime> ICPPParseJSON::extractDateTimeImpl(const APIModule* apim
     dt.day = t->day;
     dt.hour = t->hour;
     dt.min = t->min;
-    dt.tzoffset = t->tzoffset;
+    dt.tzdata = t->tzdata;
 
     return std::make_optional(dt);
 }

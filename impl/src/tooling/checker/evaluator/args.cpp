@@ -700,7 +700,7 @@ bool SMTParseJSON::parseDateTimeImpl(const APIModule* apimodule, const IType* it
         ctx.add(bef(elocalmm) == ctx.ctx().int_val(t.min));
     }
 
-    ctx.add(bef(etzo) == ctx.ctx().int_val(t.tzoffset));
+    ctx.add(bef(etzo) == ctx.ctx().string_val(t.tzdata));
 
     return true;
 }
@@ -982,15 +982,15 @@ std::optional<DateTime> SMTParseJSON::extractDateTimeImpl(const APIModule* apimo
     }
 
     auto bes = getArgContextConstructor(ctx.ctx(), "BString@UFCons_API", ctx.ctx().string_sort());
-
-    auto tzo = expIntAsUIntSmall(ctx, bef(etzo));
+    auto tzo = evalStringAsString(ctx, bes(etzo));
     
     if(!tzo.has_value())
     {
         return std::nullopt;
     }
 
-    dt.tzoffset = tzo.value();
+    auto rpp = APIModule::s_tzdata.insert(tzo.value()).first;
+    dt.tzdata = rpp->c_str();
 
     return std::make_optional(dt);
 }

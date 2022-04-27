@@ -231,7 +231,7 @@ class ICPPTypeEmitter {
             return {layout: ICPPLayoutCategory.Ref, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "2"};
         }
         else if (this.isType(tt, "DateTime")) {
-            return {layout: ICPPLayoutCategory.Inline, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "1"};
+            return {layout: ICPPLayoutCategory.Inline, size: 2*ICPP_WORD_SIZE, asize: 2*ICPP_WORD_SIZE, mask: "11"};
         }
         else if (this.isType(tt, "TickTime")) {
             return {layout: ICPPLayoutCategory.Inline, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "1"};
