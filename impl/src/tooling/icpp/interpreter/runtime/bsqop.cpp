@@ -62,6 +62,8 @@ std::map<std::string, BSQPrimitiveImplTag> MarshalEnvironment::g_primitiveinvoke
     {"bytebuffer_getformat", BSQPrimitiveImplTag::bytebuffer_getformat},
     {"bytebuffer_getcompression", BSQPrimitiveImplTag::bytebuffer_getcompression},
 
+    {"datetime_create", BSQPrimitiveImplTag::datetime_create},
+
     {"s_list_build_k", BSQPrimitiveImplTag::s_list_build_k},
     {"s_list_size_ne", BSQPrimitiveImplTag::s_list_size_ne},
     {"s_list_set_ne", BSQPrimitiveImplTag::s_list_set_ne},

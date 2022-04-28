@@ -2180,7 +2180,26 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         SLPTR_STORE_CONTENTS_AS(BSQNat, resultsl, (BSQNat)bb.compression);
         break;
     }
-     case BSQPrimitiveImplTag::s_list_build_k: {
+    case BSQPrimitiveImplTag::datetime_create: {
+        BSQString sstr = SLPTR_LOAD_CONTENTS_AS(BSQString, params[5]);
+
+        //TODO: we need to handle larger strings as well and should probably handle interning better
+        assert(IS_INLINE_STRING(&sstr)); 
+        auto tziter = APIModule::s_tzdata.insert(std::string((const char*)BSQInlineString::utf8Bytes(sstr.u_inlineString), (const char*)BSQInlineString::utf8BytesEnd(sstr.u_inlineString)));
+
+        BSQDateTime dt = {
+            (uint16_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[0]),
+            (uint8_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]),
+            (uint8_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[2]),
+            (uint8_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[3]),
+            (uint8_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[4]),
+            tziter.first->c_str()
+        };
+
+        SLPTR_STORE_CONTENTS_AS(BSQDateTime, resultsl, dt);
+        break;
+    }
+    case BSQPrimitiveImplTag::s_list_build_k: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
         auto rres = BSQListOps::list_cons(lflavor, params);
         
@@ -2793,7 +2812,7 @@ bool ICPPParseJSON::parseDateTimeImpl(const APIModule* apimodule, const IType* i
     dt->day = t.day;
     dt->hour = t.hour;
     dt->month = t.min;
-    dt->tzoffset = t.tzoffset;
+    dt->tzdata = t.tzdata;
 
     SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(value, dt);
     return true;
@@ -3289,7 +3308,7 @@ std::optional<DateTime> ICPPParseJSON::extractDateTimeImpl(const APIModule* apim
     dt.day = t->day;
     dt.hour = t->hour;
     dt.min = t->min;
-    dt.tzoffset = t->tzoffset;
+    dt.tzdata = t->tzdata;
 
     return std::make_optional(dt);
 }

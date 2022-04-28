@@ -16,12 +16,14 @@ static std::regex re_fpdiverino("^[(]\\/\\s([-+]?([0-9]+\\.[0-9]+)([eE][-+]?[0-9
 static std::regex re_numberino_r("^[-+]?(0|[1-9][0-9]*)/([1-9][0-9]*)$");
 
 static std::regex re_utcisotime("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$");
-static std::regex re_lclisotime("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[+|-][0-9]{2}(:[0-9]{2})?$");
+static std::regex re_lclisotime("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}z[a-zA-Z_/]*$");
 
 static std::regex re_ticktime("^T(0|[1-9][0-9]*)ns$");
 
 static std::regex re_uuid("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$");
 static std::regex re_hash("^0x[0-9a-f]{128}$");
+
+std::set<std::string> APIModule::s_tzdata;
 
 std::optional<uint64_t> JSONParseHelper::parseToUnsignedNumber(json j)
 {
@@ -269,7 +271,7 @@ bool parseToDateTimeRaw(json j, uint16_t& y, uint8_t& m, uint8_t& d, uint8_t& hh
     return true;
 }
 
-std::optional<int32_t> parseToDateTimeTZ(json j)
+std::optional<const char*> parseToDateTimeTZ(json j)
 {
     if(!j.is_string())
     {
@@ -277,53 +279,24 @@ std::optional<int32_t> parseToDateTimeTZ(json j)
     }
 
     std::string sstr = j.get<std::string>();
+    std::string tzstr = "UTC";
+
     if(std::regex_match(sstr, re_utcisotime))
     {
-        return std::make_optional(0);
+        ;
     }
-
-    if(!std::regex_match(sstr, re_lclisotime))
+    else if(std::regex_match(sstr, re_lclisotime))
+    {
+        tzstr = sstr.substr(20);
+    }
+    else
     {
         return std::nullopt;
     }
 
-    std::string tstr = sstr.substr(19);
-    std::string hhstr = tstr.substr(0, 3);
-    std::string mmstr;
-    if(tstr.length() > 3)
-    {
-        if(tstr[3] == ':')
-        {
-            mmstr = tstr.substr(4);
-        }
-        else
-        {
-            mmstr = tstr.substr(3);
-        }
-    }
-
-    int32_t hh = std::strtol(&hhstr[0], nullptr, 10);
-    if(hh > 24)
-    {
-        return std::nullopt;
-    }
-
-    int32_t mm = 0;
-    if(!mmstr.empty())
-    {
-        mm = std::strtol(&mmstr[0], nullptr, 10);
-    }
-
-    if(mm > 59) {
-        return std::nullopt;
-    }
-    
-    int32_t mmoffset = mm + (60 * hh);
-    if(mmoffset < (-12 * 60) || (14 * 60) < mmoffset) {
-        return std::nullopt;
-    }
-
-    return std::make_optional(mmoffset);
+    //TODO: we should actually validate that this is a valid tzdata name
+    auto tz = APIModule::s_tzdata.insert(tzstr).first;
+    return std::make_optional(tz->c_str());
 }
 
 std::optional<DateTime> JSONParseHelper::parseToDateTime(json j)
@@ -344,7 +317,7 @@ std::optional<DateTime> JSONParseHelper::parseToDateTime(json j)
     {
         return std::nullopt;
     }
-    tinfo.tzoffset = tzo.value();
+    tinfo.tzdata = tzo.value();
 
     return std::make_optional(tinfo);
 }
@@ -512,7 +485,7 @@ std::optional<json> JSONParseHelper::emitRationalNumber(std::pair<std::string, u
 std::string emitDateTimeRaw_d(uint16_t y, uint8_t m, uint8_t d, uint8_t hh, uint8_t mm)
 {
     struct tm dt = {0};
-    dt.tm_year = y + 1900;
+    dt.tm_year = y;
     dt.tm_mon = m;
     dt.tm_mday = d;
     dt.tm_hour = hh;
@@ -527,20 +500,15 @@ std::string emitDateTimeRaw_d(uint16_t y, uint8_t m, uint8_t d, uint8_t hh, uint
 
 std::optional<json> JSONParseHelper::emitDateTime(DateTime t)
 {
-    if(t.tzoffset == 0)
+    auto tzstr = std::string(t.tzdata);
+    if(tzstr == "UTC")
     {
         auto tstr = emitDateTimeRaw_d(t.year, t.month, t.day, t.hour, t.min) + "Z"; 
         return std::make_optional(tstr);
     }
     else
     {
-        auto hh = t.tzoffset / 60;
-        auto mm = std::abs(t.tzoffset) % 60;
-        char sstrt[16] = {0};
-        sprintf(sstrt, "%+02d:%0d", hh, mm);
-        std::string tzstr(sstrt, sstrt + 10);
-
-        auto tstr = emitDateTimeRaw_d(t.year, t.month, t.day, t.hour, t.min) + tzstr;
+        auto tstr = emitDateTimeRaw_d(t.year, t.month, t.day, t.hour, t.min) + " " + tzstr;
         return std::make_optional(tstr);
     }
 }

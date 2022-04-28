@@ -1,0 +1,28 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+namespace Main;
+
+chktest function sanity_unit(): Bool {
+    let tt = TradeState{Trade{DateTime::create(year=2022, month=4, day=27)}};
+    let nosteps = WorkflowStep{List<EventTimestamp>{}};
+
+    let evt = ReportableEvent{nosteps, tt};
+    let report = CFTCPart45TransactionReport::create(evt);
+
+    return report.eventTimestamp === none;
+}
+
+chktest function sanity_property(evt: ReportableEvent): Bool {
+    let report = CFTCPart45TransactionReport::create(evt);
+
+    return report.eventTimestamp === none || evt.originatingWorkflowStep.timestamp.someOf(pred(item) => item.qualification === EventTimestampQualificationEnum::eventCreationDateTime);
+}
+
+chktest function sanity_property_fail(evt: ReportableEvent): Bool {
+    let report = CFTCPart45TransactionReport::create(evt);
+
+    return evt.originatingWorkflowStep.timestamp.someOf(pred(item) => item.qualification === EventTimestampQualificationEnum::eventCreationDateTime);
+}

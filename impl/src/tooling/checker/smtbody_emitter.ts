@@ -2768,6 +2768,10 @@ class SMTBodyEmitter {
             case "bytebuffer_getcompression": {
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTCallSimple("BByteBuffer@compress", [new SMTVar(args[0].vname)]));
             }
+            case "datetime_create": {
+                const dd = new SMTCallSimple("BDateTime@cons", args.map((arg) => new SMTVar(arg.vname)));
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);
+            }
             case "s_blockingfailure": {
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
             }

@@ -143,7 +143,7 @@ class TypeChecker {
 
     private resolveAndEnsureTypeOnly(sinfo: SourceInfo, ttype: TypeSignature, binds: Map<string, ResolvedType>): ResolvedType {
         const rtype = this.m_assembly.normalizeTypeOnly(ttype, binds);
-        this.raiseErrorIf(sinfo, rtype.isEmptyType(), "Bad type signature");
+        this.raiseErrorIf(sinfo, rtype.isEmptyType(), `Bad type signature ${ttype.getDiagnosticName()}`);
 
         this.m_emitter.registerResolvedTypeReference(rtype);
         return rtype;
@@ -2733,7 +2733,7 @@ class TypeChecker {
 
                 const argidx = cargs.length;
                 if(opdecl.invoke.params[i].refKind !== undefined) {
-                    this.raiseErrorIf(sinfo, !argtypes[argidx].layout.isSameType(opdecl.invoke.params[i].type as ResolvedType));
+                    this.raiseErrorIf(sinfo, !argtypes[argidx].layout.isSameType(fsig.params[i].type as ResolvedType));
                 }
                 cargs.push({ arglayouttype: this.m_emitter.registerResolvedTypeReference(fsig.params[argidx].type as ResolvedType), argflowtype: this.m_emitter.registerResolvedTypeReference(argtypes[argidx].flowtype), arg: this.emitInlineConvertIfNeeded(sinfo, args[argidx], argtypes[argidx], fsig.params[argidx].type as ResolvedType) });
             }
@@ -2806,7 +2806,7 @@ class TypeChecker {
 
                 const argidx = cargs.length;
                 if(opdecl.invoke.params[i].refKind !== undefined) {
-                    this.raiseErrorIf(sinfo, !argtypes[argidx].layout.isSameType(opdecl.invoke.params[i].type as ResolvedType));
+                    this.raiseErrorIf(sinfo, !argtypes[argidx].layout.isSameType(fsig.params[i].type as ResolvedType));
                 }
                 cargs.push({ arglayouttype: this.m_emitter.registerResolvedTypeReference(fsig.params[argidx].type as ResolvedType), argflowtype: this.m_emitter.registerResolvedTypeReference(argtypes[argidx].flowtype), arg: this.emitInlineConvertIfNeeded(sinfo, args[argidx], argtypes[argidx], fsig.params[argidx].type as ResolvedType) });
             }
@@ -5051,6 +5051,10 @@ class TypeChecker {
 
                 //check if all the assignments are conversion free -- if so we can do a multi-load
                 const convertfree = stmt.vars.every((v, i) => {
+                    if(v.vtype instanceof AutoTypeSignature) {
+                        return true;
+                    }
+
                     const decltype = this.resolveAndEnsureTypeOnly(stmt.sinfo, v.vtype, cenv.terms);
                     const exptype = elt.types[i];
 
@@ -5062,7 +5066,8 @@ class TypeChecker {
 
                     let trgts: { pos: number, into: MIRRegisterArgument, oftype: MIRType }[] = [];
                     for (let i = 0; i < stmt.vars.length; ++i) {
-                        const decltype = this.resolveAndEnsureTypeOnly(stmt.sinfo, stmt.vars[i].vtype, env.terms);
+                        const decltype = stmt.vars[i].vtype instanceof AutoTypeSignature ? elt.types[i] : this.resolveAndEnsureTypeOnly(stmt.sinfo, stmt.vars[i].vtype, env.terms);
+
                         const mirvtype = this.m_emitter.registerResolvedTypeReference(decltype);
                         this.m_emitter.localLifetimeStart(stmt.sinfo, stmt.vars[i].name, mirvtype);
 
@@ -5071,7 +5076,12 @@ class TypeChecker {
 
                     this.m_emitter.emitMultiLoadFromEpehmeralList(stmt.sinfo, etreg, this.m_emitter.registerResolvedTypeReference(eetype), trgts);
 
-                    cenv = cenv.multiVarUpdate(stmt.vars.map((vv) => [stmt.isConst, vv.name, this.resolveAndEnsureTypeOnly(stmt.sinfo, vv.vtype, env.terms), this.resolveAndEnsureTypeOnly(stmt.sinfo, vv.vtype, env.terms)]), []);
+                    cenv = cenv.multiVarUpdate(stmt.vars.map((vv, i) => {
+                            const decltype = vv.vtype instanceof AutoTypeSignature ? elt.types[i] : this.resolveAndEnsureTypeOnly(stmt.sinfo, vv.vtype, env.terms);
+                            return [stmt.isConst, vv.name, decltype, decltype]
+                        }), 
+                        []
+                    );
                 }
                 else {
                     for (let i = 0; i < stmt.vars.length; ++i) {

@@ -987,7 +987,7 @@ class MIREmitter {
         const sigkeys: string[] = [];
 
         for (let i = 0; i < invoke.params.length; ++i) {
-            const ptype = this.assembly.normalizeTypeGeneral(invoke.params[i], binds);
+            const ptype = this.assembly.normalizeTypeGeneral(invoke.params[i].type, binds);
             if (ptype instanceof ResolvedFunctionType || ptype.isEmptyType()) {
                 continue;
             }

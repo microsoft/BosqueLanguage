@@ -4130,6 +4130,9 @@ class Parser {
                 else if(ename === "Err") {
                     attributes.push("__err_type");
                 }
+                else if(ename === "Nothing") {
+                    attributes.push("__nothing_type");
+                }
                 else if(ename === "Something") {
                     attributes.push("__something_type");
                 }
@@ -4512,7 +4515,7 @@ class Parser {
             // | ...
             // [& {...}] | ;
 
-            const concepttype = new NominalTypeSignature(currentDecl.ns, [iname], terms);
+            const concepttype = new NominalTypeSignature(currentDecl.ns, [iname]);
 
             const provides = this.parseProvides(currentDecl.ns === "Core", ["of", "using"]);
 

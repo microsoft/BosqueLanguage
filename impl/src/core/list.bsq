@@ -49,12 +49,12 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     method front(): T {
-        assert !ListOps::s_empty(this.value());
+        assert !ListOps::s_empty<T>(this.value());
         return ListOps::s_safe_front<T>(this.value());
     }
 
     method frontOrNone(): T? {
-        if(ListOps::s_empty(this.value())) {
+        if(ListOps::s_empty<T>(this.value())) {
             return none;
         }
         else {
@@ -63,7 +63,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     method frontOption(): Option<T> {
-        if(ListOps::s_empty(this.value())) {
+        if(ListOps::s_empty<T>(this.value())) {
             return nothing;
         }
         else {
@@ -72,7 +72,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     method frontTry(out? res: T): Bool {
-        if(!ListOps::s_empty(this.value())) {
+        if(!ListOps::s_empty<T>(this.value())) {
             res = ListOps::s_safe_front<T>(this.value());
             return true;
         }
@@ -82,12 +82,12 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     method back(): T {
-        assert !ListOps::s_empty(this.value());
+        assert !ListOps::s_empty<T>(this.value());
         return ListOps::s_safe_back<T>(this.value());
     }
 
     method backOrNone(): T? {
-        if(ListOps::s_empty(this.value())) {
+        if(ListOps::s_empty<T>(this.value())) {
             return none;
         }
         else {
@@ -96,7 +96,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     method backOption(): Option<T> {
-        if(ListOps::s_empty(this.value())){
+        if(ListOps::s_empty<T>(this.value())){
             return nothing;
         }
         else {
@@ -105,7 +105,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     method backTry(out? res: T): Bool {
-        if(!ListOps::s_empty(this.value())) {
+        if(!ListOps::s_empty<T>(this.value())) {
             res = ListOps::s_safe_back<T>(this.value());
             return true;
         }
@@ -177,7 +177,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
 
     recursive? method singleOption(p: recursive? pred(_: T) -> Bool): Option<T> {
         let idx = ListOps::s_find_pred<T>[recursive?](this.value(), p);
-         if(idx === none) {
+        if(idx === none) {
             return nothing;
         }
         else {
@@ -207,6 +207,39 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                 res = ListOps::s_safe_get<T>(this.value(), idx);
                 return true;
             }
+        }
+    }
+
+    method getSingleton(): T {
+        assert ListOps::s_size<T>(this.value()) == 1n;
+        return ListOps::s_safe_front<T>(this.value());
+    }
+
+    method getSingletonOrNone(): T? {
+        if(ListOps::s_size<T>(this.value()) != 1n) {
+            return none;
+        }
+        else {
+            return ListOps::s_safe_front<T>(this.value());
+        }
+    }
+
+    recursive? method getSingletonOption(p: recursive? pred(_: T) -> Bool): Option<T> {
+        if(ListOps::s_size<T>(this.value()) != 1n) {
+            return nothing;
+        }
+        else {
+            return something(ListOps::s_safe_front<T>(this.value()));
+        }
+    }
+
+    recursive? method getSingletonTry(out? res: T, p: recursive? pred(_: T) -> Bool): Bool {
+        if(ListOps::s_size<T>(this.value()) != 1n) {
+            return false;
+        }
+        else {
+            res = ListOps::s_safe_front<T>(this.value());
+            return true;
         }
     }
 

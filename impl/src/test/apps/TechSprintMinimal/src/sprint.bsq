@@ -1,0 +1,70 @@
+namespace Main;
+
+enum EventTimestampQualificationEnum 
+{
+    clearingDateTime,
+    clearingConfirmationDateTime,
+    clearingSubmissionDateTime,
+    eventCreationDateTime,
+    eventExpirationDateTime,
+    eventProcessingDateTime,
+    eventSentDateTime,
+    eventSubmittedDateTime,
+    executionDateTime,
+    transactionCreationDateTime
+}
+
+entity EventTimestamp provides APIType 
+{ 
+    field dateTime: DateTime;
+    field qualification: EventTimestampQualificationEnum;
+}
+
+entity Trade provides APIType 
+{
+    field tradeDate: DateTime;
+}
+
+entity TradeState provides APIType 
+{
+    field trade: Trade;
+}
+
+entity WorkflowStep provides APIType 
+{ 
+    field timestamp: List<EventTimestamp>;
+}
+
+entity ReportableEvent provides APIType 
+{ 
+    field originatingWorkflowStep: WorkflowStep;
+    field reportableTrade: TradeState;
+
+    //Does it make sense to have a workflow that doesn't have a creation event?
+    //invariant $originatingWorkflowStep.timestamp.someOf(pred(item) => item.qualification === EventTimestampQualificationEnum::eventCreationDateTime);
+
+    method tradeDate(): DateTime {
+        return this.reportableTrade.trade.tradeDate;
+    }
+
+    method eventTimestamp(): DateTime? {
+        return this.originatingWorkflowStep.timestamp
+            .filter(pred(item) => item.qualification === EventTimestampQualificationEnum::eventCreationDateTime)
+            .map(fn(item) => item.dateTime)
+            .getSingletonOrNone();
+
+        //let createtime = this.originatingWorkflowStep.timestamp.singleOrNone(pred(item) => item.qualification === EventTimestampQualificationEnum::eventCreationDateTime);
+        //return createtime !== none ? createtime.dateTime : none;
+    }
+}
+
+entity CFTCPart45TransactionReport provides APIType 
+{ 
+    field tradeDate: DateTime;
+    field eventTimestamp: DateTime?;
+
+    function create(reportableEvent: ReportableEvent): CFTCPart45TransactionReport {
+        return CFTCPart45TransactionReport{reportableEvent.tradeDate(), reportableEvent.eventTimestamp()};
+    }
+}
+

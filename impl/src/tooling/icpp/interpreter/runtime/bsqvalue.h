@@ -1300,7 +1300,7 @@ struct BSQDateTime
     uint8_t hour;    // 0-23
     uint8_t min;     // 0-59
 
-    int16_t tzoffset; //in minutes
+    const char* tzdata; //timezone name in tzdata database
 };
 
 std::string entityDateTimeDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode);

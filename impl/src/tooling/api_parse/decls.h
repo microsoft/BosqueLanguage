@@ -33,8 +33,11 @@ public:
     const std::map<std::string, const IType*> typemap;
     const std::vector<InvokeSignature*> api;
 
+    //TODO: we are not applying these throughly/uniformly
     const std::map<std::string, std::string> typedefmap;
     const std::map<std::string, std::string> namespacemap;
+
+    static std::set<std::string> s_tzdata;
 
     APIModule(std::map<std::string, const IType*> typemap, std::vector<InvokeSignature*> api, std::map<std::string, std::string> typedefmap, std::map<std::string, std::string> namespacemap) : typemap(typemap), api(api), typedefmap(typedefmap), namespacemap(namespacemap)
     {
@@ -119,7 +122,7 @@ struct DateTime
     uint8_t hour;    // 0-23
     uint8_t min;     // 0-59
 
-    int16_t tzoffset; //in minutes
+    const char* tzdata; //timezone name as spec in tzdata database
 };
 
 template <typename ValueRepr, typename State>
@@ -938,27 +941,14 @@ public:
 
     virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
     {
-        auto jobj = json::object();
         std::time_t tval = std::time(nullptr);
 
         auto utctime = std::gmtime(&tval);
         char utcstr[20] = {0};
         size_t utcsize = strftime(utcstr, 20, "%Y-%m-%dT%H:%MZ", utctime);
         std::string utcres(utcstr, utcstr + utcsize);
-        jobj[0] = utcres;
-
-        auto lcltime = std::localtime(&tval);
-        char lclstr[20] = {0};
-        size_t lclsize = strftime(lclstr, 20, "%Y-%m-%dT%H:%M%z", lcltime);
-        std::string lclres(lclstr, lclstr + lclsize);
-        jobj[1] = lclres;
-
-        char tzdeets[20] = {0};
-        size_t tzsize = strftime(tzdeets, 20, "%Z", lcltime);
-        std::string tzres(tzdeets, tzdeets + tzsize);
-        jobj[2] = tzres;
         
-        return jobj;
+        return utcres;
     }
 
     template <typename ValueRepr, typename State>
@@ -1725,7 +1715,7 @@ public:
         return new UnionType(name, opts);
     }
 
-    virtual bool isUnion() const
+    virtual bool isUnion() const override
     {
         return true;
     }

@@ -450,9 +450,20 @@ __internal __constructable entity DataBuffer<T unique BufferParsable> provides S
 }
 
 //<summary>Primitive DateTime value.</summary>
-__internal __typedeclable entity DateTime provides Some, Orderable, KeyType, APIType {
+__internal __typedeclable entity DateTime provides Some, Orderable, APIType {
+    __assume_safe internal function s_create(year: Nat, month: Nat, day: Nat, hour: Nat, min: Nat, tzdata: String): DateTime = datetime_create;
+
+    function create(year: Nat, month?: Nat=0, day?: Nat=1, hour?: Nat=0, min?: Nat=0, tzdata?: String="UTC"): DateTime
+        requires year >= 1900n;
+        requires month < 12n;
+        requires day != 0n && day <= 31n;
+        requires hour < 24n;
+        requires min < 60n;
+    {
+        return DateTime::s_create(year, month, day, hour, min, tzdata);
+    }
 }
-//TODO: operators for orderable and make key type compliant
+//TODO: operators for orderable -- maybe Year, Month, Day, TZ, Hour, Min order ??
 
 //<summary>Primitive DateTime value.</summary>
 __internal __typedeclable entity TickTime provides Some, Orderable, APIType {

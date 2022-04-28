@@ -878,7 +878,7 @@ std::string entityByteBufferDisplay_impl(const BSQType* btype, StorageLocationPt
 std::string emitDateTimeRaw_v(uint16_t y, uint8_t m, uint8_t d, uint8_t hh, uint8_t mm)
 {
     struct tm dt = {0};
-    dt.tm_year = y + 1900;
+    dt.tm_year = y;
     dt.tm_mon = m;
     dt.tm_mday = d;
     dt.tm_hour = hh;
@@ -895,20 +895,15 @@ std::string entityDateTimeDisplay_impl(const BSQType* btype, StorageLocationPtr 
 {
     BSQDateTime* t = SLPTR_LOAD_CONTENTS_AS(BSQDateTime*, data);
 
-    if(t->tzoffset == 0)
+    auto tzstr = std::string(t->tzdata);
+    if(tzstr == "UTC")
     {
         auto tstr = emitDateTimeRaw_v(t->year, t->month, t->day, t->hour, t->min) + "Z"; 
         return tstr + ((btype->name == "DateTime") ? "" : ("_" + btype->name));
     }
     else
     {
-        auto hh = t->tzoffset / 60;
-        auto mm = std::abs(t->tzoffset) % 60;
-        char sstrt[16] = {0};
-        sprintf(sstrt, "%+02d:%0d", hh, mm);
-        std::string tzstr(sstrt, sstrt + 10);
-
-        auto tstr = emitDateTimeRaw_v(t->year, t->month, t->day, t->hour, t->min) + tzstr;
+        auto tstr = emitDateTimeRaw_v(t->year, t->month, t->day, t->hour, t->min) + " " + tzstr;
 
         return tstr + ((btype->name == "DateTime") ? "" : ("_" + btype->name));
     }
