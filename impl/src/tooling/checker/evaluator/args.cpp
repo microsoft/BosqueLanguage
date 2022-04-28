@@ -681,7 +681,6 @@ bool SMTParseJSON::parseDateTimeImpl(const APIModule* apimodule, const IType* it
 
     auto etime = extendContext(ctx.ctx(), value, 0);
     auto etzo = extendContext(ctx.ctx(), value, 1);
-    auto etzn = extendContext(ctx.ctx(), value, 2);
 
     {
         auto elocaly = extendContext(ctx.ctx(), etime, 0);

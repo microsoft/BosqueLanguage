@@ -340,7 +340,6 @@
 (declare-fun BRational@UFCons_API (HavocSequence) BRational)
 (declare-fun BString@UFCons_API (HavocSequence) BString)
 (declare-fun BByteBuffer@UFCons_API (HavocSequence) (Seq (_ BitVec 8)))
-(declare-fun BDateTime@UFCons_API (HavocSequence) BDateTime)
 (declare-fun BTickTime@UFCons_API (HavocSequence) BTickTime)
 (declare-fun BLogicalTime@UFCons_API (HavocSequence) BLogicalTime)
 (declare-fun BUUID@UFCons_API (HavocSequence) BUUID)
