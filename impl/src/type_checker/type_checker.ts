@@ -5051,7 +5051,7 @@ class TypeChecker {
 
                 //check if all the assignments are conversion free -- if so we can do a multi-load
                 const convertfree = stmt.vars.every((v, i) => {
-                    if(v instanceof AutoTypeSignature) {
+                    if(v.vtype instanceof AutoTypeSignature) {
                         return true;
                     }
 
