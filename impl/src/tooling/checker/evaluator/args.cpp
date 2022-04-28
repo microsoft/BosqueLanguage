@@ -677,29 +677,31 @@ bool SMTParseJSON::parseByteBufferImpl(const APIModule* apimodule, const IType* 
 
 bool SMTParseJSON::parseDateTimeImpl(const APIModule* apimodule, const IType* itype, DateTime t, z3::expr value, z3::solver& ctx)
 {
-    auto bef = getArgContextConstructor(ctx.ctx(), "BNat@UFCons_API", ctx.ctx().int_sort());
-
     auto etime = extendContext(ctx.ctx(), value, 0);
     auto etzo = extendContext(ctx.ctx(), value, 1);
 
-    {
-        auto elocaly = extendContext(ctx.ctx(), etime, 0);
-        ctx.add(bef(elocaly) == ctx.ctx().int_val(t.year));
+    auto elocaly = extendContext(ctx.ctx(), etime, 0);
+    auto byearf = getArgContextConstructor(ctx.ctx(), "BDateYear@UFCons_API", ctx.ctx().int_sort());
+    ctx.add(byearf(elocaly) == ctx.ctx().int_val(t.year));
 
-        auto elocalm = extendContext(ctx.ctx(), etime, 1);
-        ctx.add(bef(elocalm) == ctx.ctx().int_val(t.month));
+    auto elocalm = extendContext(ctx.ctx(), etime, 1);
+    auto bmonthf = getArgContextConstructor(ctx.ctx(), "BDateMonth@UFCons_API", ctx.ctx().int_sort());
+    ctx.add(bmonthf(elocalm) == ctx.ctx().int_val(t.month));
 
-        auto elocald = extendContext(ctx.ctx(), etime, 2);
-        ctx.add(bef(elocald) == ctx.ctx().int_val(t.day));
+    auto elocald = extendContext(ctx.ctx(), etime, 2);
+    auto bdayf = getArgContextConstructor(ctx.ctx(), "BDateDay@UFCons_API", ctx.ctx().int_sort());
+    ctx.add(bdayf(elocald) == ctx.ctx().int_val(t.day));
 
-        auto elocalh = extendContext(ctx.ctx(), etime, 3);
-        ctx.add(bef(elocalh) == ctx.ctx().int_val(t.hour));
+    auto elocalh = extendContext(ctx.ctx(), etime, 3);
+    auto bhourf = getArgContextConstructor(ctx.ctx(), "BDateHour@UFCons_API", ctx.ctx().int_sort());
+    ctx.add(bhourf(elocalh) == ctx.ctx().int_val(t.hour));
 
-        auto elocalmm = extendContext(ctx.ctx(), etime, 4);
-        ctx.add(bef(elocalmm) == ctx.ctx().int_val(t.min));
-    }
+    auto elocalmm = extendContext(ctx.ctx(), etime, 4);
+    auto bminutef = getArgContextConstructor(ctx.ctx(), "BDateMinute@UFCons_API", ctx.ctx().int_sort());
+    ctx.add(bminutef(elocalmm) == ctx.ctx().int_val(t.min));
 
-    ctx.add(bef(etzo) == ctx.ctx().string_val(t.tzdata));
+    auto btzf = getArgContextConstructor(ctx.ctx(), "BString@UFCons_API", ctx.ctx().string_sort());
+    ctx.add(btzf(etzo) == ctx.ctx().string_val(t.tzdata));
 
     return true;
 }
@@ -947,41 +949,42 @@ std::optional<DateTime> SMTParseJSON::extractDateTimeImpl(const APIModule* apimo
 {
     DateTime dt;
 
-    auto bef = getArgContextConstructor(ctx.ctx(), "BNat@UFCons_API", ctx.ctx().int_sort());
-
     auto etime = extendContext(ctx.ctx(), value, 0);
     auto etzo = extendContext(ctx.ctx(), value, 1);
 
-    {
-        auto elocaly = extendContext(ctx.ctx(), etime, 0);
-        auto y = expIntAsUIntSmall(ctx, bef(elocaly));
+    auto elocaly = extendContext(ctx.ctx(), etime, 0);
+    auto byearf = getArgContextConstructor(ctx.ctx(), "BDateYear@UFCons_API", ctx.ctx().int_sort());
+    auto y = expIntAsUIntSmall(ctx, byearf(elocaly));
 
-        auto elocalm = extendContext(ctx.ctx(), etime, 1);
-        auto m = expIntAsUIntSmall(ctx, bef(elocalm));
+    auto elocalm = extendContext(ctx.ctx(), etime, 1);
+    auto bmonthf = getArgContextConstructor(ctx.ctx(), "BDateMonth@UFCons_API", ctx.ctx().int_sort());
+    auto m = expIntAsUIntSmall(ctx, bmonthf(elocalm));
 
-        auto elocald = extendContext(ctx.ctx(), etime, 2);
-        auto d = expIntAsUIntSmall(ctx, bef(elocald));
+    auto elocald = extendContext(ctx.ctx(), etime, 2);
+    auto bdayf = getArgContextConstructor(ctx.ctx(), "BDateDay@UFCons_API", ctx.ctx().int_sort());
+    auto d = expIntAsUIntSmall(ctx, bdayf(elocald));
 
-        auto elocalh = extendContext(ctx.ctx(), etime, 3);
-        auto h = expIntAsUIntSmall(ctx, bef(elocalh));
+    auto elocalh = extendContext(ctx.ctx(), etime, 3);
+    auto bhourf = getArgContextConstructor(ctx.ctx(), "BDateHour@UFCons_API", ctx.ctx().int_sort());
+    auto h = expIntAsUIntSmall(ctx, bhourf(elocalh));
 
-        auto elocalmm = extendContext(ctx.ctx(), etime, 4);
-        auto mm = expIntAsUIntSmall(ctx, bef(elocalmm));
+    auto elocalmm = extendContext(ctx.ctx(), etime, 4);
+    auto bminutef = getArgContextConstructor(ctx.ctx(), "BDateMinute@UFCons_API", ctx.ctx().int_sort());
+    auto mm = expIntAsUIntSmall(ctx, bminutef(elocalmm));
         
-        if(!y.has_value() || !m.has_value() || !d.has_value() || !h.has_value() || !mm.has_value())
-        {
-            return std::nullopt;
-        }
-
-        dt.year = (uint16_t)y.value();
-        dt.month = (uint8_t)m.value();
-        dt.day = (uint8_t)d.value();
-        dt.hour = (uint8_t)h.value();
-        dt.min = (uint8_t)mm.value();
+    if(!y.has_value() || !m.has_value() || !d.has_value() || !h.has_value() || !mm.has_value())
+    {
+        return std::nullopt;
     }
 
-    auto bes = getArgContextConstructor(ctx.ctx(), "BString@UFCons_API", ctx.ctx().string_sort());
-    auto tzo = evalStringAsString(ctx, bes(etzo));
+    dt.year = (uint16_t)y.value();
+    dt.month = (uint8_t)m.value();
+    dt.day = (uint8_t)d.value();
+    dt.hour = (uint8_t)h.value();
+    dt.min = (uint8_t)mm.value();
+
+    auto btzf = getArgContextConstructor(ctx.ctx(), "BString@UFCons_API", ctx.ctx().string_sort());
+    auto tzo = evalStringAsString(ctx, btzf(etzo));
     
     if(!tzo.has_value())
     {

@@ -340,6 +340,11 @@
 (declare-fun BRational@UFCons_API (HavocSequence) BRational)
 (declare-fun BString@UFCons_API (HavocSequence) BString)
 (declare-fun BByteBuffer@UFCons_API (HavocSequence) (Seq (_ BitVec 8)))
+(declare-fun BDateYear@UFCons_API (HavocSequence) BNat)
+(declare-fun BDateMonth@UFCons_API (HavocSequence) BNat)
+(declare-fun BDateDay@UFCons_API (HavocSequence) BNat)
+(declare-fun BDateHour@UFCons_API (HavocSequence) BNat)
+(declare-fun BDateMinute@UFCons_API (HavocSequence) BNat)
 (declare-fun BTickTime@UFCons_API (HavocSequence) BTickTime)
 (declare-fun BLogicalTime@UFCons_API (HavocSequence) BLogicalTime)
 (declare-fun BUUID@UFCons_API (HavocSequence) BUUID)
@@ -431,7 +436,7 @@
 
 (define-fun _@@cons_DateTime_entrypoint ((ctx HavocSequence)) $Result_BDateTime
   (let ((tctx (seq.++ ctx (seq.unit 0))))
-    (let ((y (BNat@UFCons_API (seq.++ tctx (seq.unit 0)))) (m (BNat@UFCons_API (seq.++ tctx (seq.unit 1)))) (d (BNat@UFCons_API (seq.++ tctx (seq.unit 2)))) (hh (BNat@UFCons_API (seq.++ tctx (seq.unit 3)))) (mm (BNat@UFCons_API (seq.++ tctx (seq.unit 4)))) (tzo (BString@UFCons_API (seq.++ ctx (seq.unit 1)))))
+    (let ((y (BDateYear@UFCons_API (seq.++ tctx (seq.unit 0)))) (m (BDateMonth@UFCons_API (seq.++ tctx (seq.unit 1)))) (d (BDateDay@UFCons_API (seq.++ tctx (seq.unit 2)))) (hh (BDateHour@UFCons_API (seq.++ tctx (seq.unit 3)))) (mm (BDateMinute@UFCons_API (seq.++ tctx (seq.unit 4)))) (tzo (BString@UFCons_API (seq.++ ctx (seq.unit 1)))))
       (ite (and (<= 0 y) (<= y 300) (<= 0 m) (<= m 11) (<= 1 d) (<= d 31) (<= 0 hh) (<= hh 23) (<= 0 mm) (<= mm 59) (or (= tzo "UTC") (= tzo "PST") (= tzo "MST") (= tzo "CEST")))
         ($Result_BDateTime@success (BDateTime@cons y m d hh mm tzo))
         ($Result_BDateTime@error ErrorID_AssumeCheck) 

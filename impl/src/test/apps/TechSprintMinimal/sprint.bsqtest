@@ -5,19 +5,6 @@
 
 namespace Main;
 
-chktest function sanity_property_fail(dt: DateTime): Bool {
-    let tt = TradeState{Trade{DateTime::create(year=2022, month=4, day=27)}};
-    let steps = WorkflowStep{List<EventTimestamp>{
-        EventTimestamp{dt, EventTimestampQualificationEnum::clearingDateTime}
-    }};
-
-    let evt = ReportableEvent{steps, tt};
-    let report = CFTCPart45TransactionReport::create(evt);
-
-    return evt.originatingWorkflowStep.timestamp.someOf(pred(item) => item.qualification === EventTimestampQualificationEnum::eventCreationDateTime);
-}
-
-/*
 chktest function sanity_unit(): Bool {
     let tt = TradeState{Trade{DateTime::create(year=2022, month=4, day=27)}};
     let nosteps = WorkflowStep{List<EventTimestamp>{}};
@@ -39,4 +26,3 @@ chktest function sanity_property_fail(evt: ReportableEvent): Bool {
 
     return evt.originatingWorkflowStep.timestamp.someOf(pred(item) => item.qualification === EventTimestampQualificationEnum::eventCreationDateTime);
 }
-*/

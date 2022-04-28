@@ -485,7 +485,7 @@ std::optional<json> JSONParseHelper::emitRationalNumber(std::pair<std::string, u
 std::string emitDateTimeRaw_d(uint16_t y, uint8_t m, uint8_t d, uint8_t hh, uint8_t mm)
 {
     struct tm dt = {0};
-    dt.tm_year = y + 1900;
+    dt.tm_year = y;
     dt.tm_mon = m;
     dt.tm_mday = d;
     dt.tm_hour = hh;
