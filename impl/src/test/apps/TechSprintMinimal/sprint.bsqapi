@@ -5,6 +5,16 @@
 
 namespace Main;
 
+entrypoint function main(tt: TradeState, wl: List<EventTimestamp>): Bool {
+    let nosteps = WorkflowStep{wl};
+
+    let evt = ReportableEvent{nosteps, tt};
+    let report = CFTCPart45TransactionReport::create(evt);
+
+    return report.eventTimestamp === none;
+}
+
+/*
 entrypoint function main(): Bool {
     let tt = TradeState{Trade{DateTime::create(year=2022, month=4, day=27)}};
     let nosteps = WorkflowStep{List<EventTimestamp>{}};
@@ -14,4 +24,5 @@ entrypoint function main(): Bool {
 
     return report.eventTimestamp === none;
 }
+*/
 

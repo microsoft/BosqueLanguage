@@ -362,25 +362,25 @@ class SMTTypeEmitter {
                 let objval: SMTExp | undefined = undefined;
 
                 if (this.isType(from, "Float")) {
-                    objval = new SMTCallSimple("bsq_float@box", [exp]);
+                    objval = new SMTCallSimple("bsqobject_float@box", [exp]);
                 }
                 else if (this.isType(from, "Decimal")) {
-                    objval = new SMTCallSimple("bsq_decimal@box", [exp]);
+                    objval = new SMTCallSimple("bsqobject_decimal@box", [exp]);
                 }
                 else if (this.isType(from, "Rational")) {
-                    objval = new SMTCallSimple("bsq_rational@box", [exp]);
+                    objval = new SMTCallSimple("bsqobject_rational@box", [exp]);
                 }
                 else if (this.isType(from, "ByteBuffer")) {
-                    objval = new SMTCallSimple("bsq_bytebuffer@box", [exp]);
+                    objval = new SMTCallSimple("bsqobject_bytebuffer@box", [exp]);
                 }
                 else if(this.isType(from, "DateTime")) {
-                    objval = new SMTCallSimple("bsq_datetime@box", [exp]);
+                    objval = new SMTCallSimple("bsqobject_datetime@box", [exp]);
                 }
                 else if(this.isType(from, "TickTime")) {
-                    objval = new SMTCallSimple("bsq_ticktime@box", [exp]);
+                    objval = new SMTCallSimple("bsqobject_ticktime@box", [exp]);
                 }
                 else if (this.isType(from, "Regex")) {
-                    objval = new SMTCallSimple("bsq_regex@box", [exp]);
+                    objval = new SMTCallSimple("bsqobject_regex@box", [exp]);
                 }
                 else if (this.isUniqueTupleType(from)) {
                     objval = new SMTCallSimple(this.getSMTConstructorName(from).box, [exp]);

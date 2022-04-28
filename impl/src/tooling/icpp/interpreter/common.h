@@ -333,6 +333,8 @@ enum class BSQPrimitiveImplTag
     bytebuffer_getformat,
     bytebuffer_getcompression,
 
+    datetime_create,
+
     s_list_build_k,
     s_list_size_ne,
     s_list_set_ne,

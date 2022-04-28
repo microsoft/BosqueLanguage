@@ -41,7 +41,7 @@ entity ReportableEvent provides APIType
     field reportableTrade: TradeState;
 
     //Does it make sense to have a workflow that doesn't have a creation event?
-    //invariant $originatingWorkflowStep.timestamp.someOf(pred(item) => item.qualification == EventTimestampQualificationEnum::eventCreationDateTime);
+    //invariant $originatingWorkflowStep.timestamp.someOf(pred(item) => item.qualification === EventTimestampQualificationEnum::eventCreationDateTime);
 
     method tradeDate(): DateTime {
         return this.reportableTrade.trade.tradeDate;
@@ -49,11 +49,11 @@ entity ReportableEvent provides APIType
 
     method eventTimestamp(): DateTime? {
         return this.originatingWorkflowStep.timestamp
-            .filter(pred(item) => item.qualification == EventTimestampQualificationEnum::eventCreationDateTime)
+            .filter(pred(item) => item.qualification === EventTimestampQualificationEnum::eventCreationDateTime)
             .map(fn(item) => item.dateTime)
             .getSingletonOrNone();
 
-        //let createtime = this.originatingWorkflowStep.timestamp.singleOrNone(pred(item) => item.qualification == EventTimestampQualificationEnum::eventCreationDateTime);
+        //let createtime = this.originatingWorkflowStep.timestamp.singleOrNone(pred(item) => item.qualification === EventTimestampQualificationEnum::eventCreationDateTime);
         //return createtime !== none ? createtime.dateTime : none;
     }
 }

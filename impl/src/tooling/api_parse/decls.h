@@ -947,7 +947,6 @@ public:
         char utcstr[20] = {0};
         size_t utcsize = strftime(utcstr, 20, "%Y-%m-%dT%H:%MZ", utctime);
         std::string utcres(utcstr, utcstr + utcsize);
-        utcres;
         
         return utcres;
     }
@@ -1716,7 +1715,7 @@ public:
         return new UnionType(name, opts);
     }
 
-    virtual bool isUnion() const
+    virtual bool isUnion() const override
     {
         return true;
     }

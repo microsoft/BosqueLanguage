@@ -18,5 +18,5 @@ chktest function sanity_unit(): Bool {
 chktest function sanity_property(evt: ReportableEvent): Bool {
     let report = CFTCPart45TransactionReport::create(evt);
 
-    return report.eventTimestamp === none || evt.originatingWorkflowStep.timestamp.someOf(pred(item) => item.qualification == EventTimestampQualificationEnum::eventCreationDateTime);
+    return report.eventTimestamp === none || evt.originatingWorkflowStep.timestamp.someOf(pred(item) => item.qualification === EventTimestampQualificationEnum::eventCreationDateTime);
 }
