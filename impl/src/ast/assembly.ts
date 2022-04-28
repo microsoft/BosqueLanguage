@@ -630,25 +630,25 @@ class Assembly {
         const isfpnum = exp.value.includes(".");
 
         if(infertype.isSameType(this.getSpecialIntType())) {
-            return !isfpnum ? new LiteralIntegralExpression(exp.sinfo, exp.value + "i", this.getSpecialIntType()) : undefined;
+            return !isfpnum ? new LiteralIntegralExpression(exp.sinfo, exp.value + "i", new NominalTypeSignature("Core", ["Int"])) : undefined;
         }
         else if(infertype.isSameType(this.getSpecialNatType())) {
-            return !isfpnum ? new LiteralIntegralExpression(exp.sinfo, exp.value + "n", this.getSpecialNatType()) : undefined;
+            return !isfpnum ? new LiteralIntegralExpression(exp.sinfo, exp.value + "n", new NominalTypeSignature("Core", ["Nat"])) : undefined;
         }
         else if(infertype.isSameType(this.getSpecialBigIntType())) {
-            return !isfpnum ? new LiteralIntegralExpression(exp.sinfo, exp.value + "I", this.getSpecialBigIntType()) : undefined;
+            return !isfpnum ? new LiteralIntegralExpression(exp.sinfo, exp.value + "I", new NominalTypeSignature("Core", ["BigInt"])) : undefined;
         }
         else if(infertype.isSameType(this.getSpecialBigNatType())) {
-            return !isfpnum ? new LiteralIntegralExpression(exp.sinfo, exp.value + "N", this.getSpecialBigNatType()) : undefined;
+            return !isfpnum ? new LiteralIntegralExpression(exp.sinfo, exp.value + "N", new NominalTypeSignature("Core", ["BigNat"])) : undefined;
         }
         else if(infertype.isSameType(this.getSpecialFloatType())) {
-            return new LiteralFloatPointExpression(exp.sinfo, exp.value + "f", this.getSpecialFloatType());
+            return new LiteralFloatPointExpression(exp.sinfo, exp.value + "f", new NominalTypeSignature("Core", ["Float"]));
         }
         else if(infertype.isSameType(this.getSpecialDecimalType())) {
-            return new LiteralFloatPointExpression(exp.sinfo, exp.value + "d", this.getSpecialDecimalType());
+            return new LiteralFloatPointExpression(exp.sinfo, exp.value + "d", new NominalTypeSignature("Core", ["Decimal"]));
         }
         else if(infertype.isSameType(this.getSpecialRationalType())) {
-            return new LiteralRationalExpression(exp.sinfo, exp.value + "/1R", this.getSpecialRationalType());
+            return new LiteralRationalExpression(exp.sinfo, exp.value + "/1R", new NominalTypeSignature("Core", ["Rational"]));
         }
         else {
             if(!infertype.isUniqueCallTargetType() || !infertype.getUniqueCallTargetType().object.attributes.includes("__typedprimitive")) {
@@ -664,14 +664,14 @@ class Assembly {
             }
 
             if (le instanceof LiteralIntegralExpression) {
-                return new LiteralTypedPrimitiveConstructorExpression(exp.sinfo, le.value, le.itype, infertype);
+                return new LiteralTypedPrimitiveConstructorExpression(exp.sinfo, le.value, le.itype, tt);
             }
             else if (le instanceof LiteralFloatPointExpression) {
-                return new LiteralTypedPrimitiveConstructorExpression(exp.sinfo, le.value, le.fptype, infertype);
+                return new LiteralTypedPrimitiveConstructorExpression(exp.sinfo, le.value, le.fptype, tt);
             }
             else {
                 const re = le as LiteralRationalExpression;
-                return new LiteralTypedPrimitiveConstructorExpression(exp.sinfo, re.value, re.rtype, infertype);
+                return new LiteralTypedPrimitiveConstructorExpression(exp.sinfo, re.value, re.rtype, tt);
             }
         }
     }

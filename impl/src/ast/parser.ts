@@ -4512,7 +4512,7 @@ class Parser {
             // | ...
             // [& {...}] | ;
 
-            const concepttype = new NominalTypeSignature(currentDecl.ns, [iname], terms);
+            const concepttype = new NominalTypeSignature(currentDecl.ns, [iname]);
 
             const provides = this.parseProvides(currentDecl.ns === "Core", ["of", "using"]);
 

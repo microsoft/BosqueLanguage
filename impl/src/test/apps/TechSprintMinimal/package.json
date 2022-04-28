@@ -1,0 +1,17 @@
+{
+    "name": "tech-sprint",
+    "version": "0.0.0.0",
+    "description": "Bosque Implementation of the tech-sprint",
+    "license": "MIT",
+    "src": {
+        "bsqsource": [
+            "./src/*"
+        ],
+        "entrypoints": [
+            "./sprint.bsqapi"
+        ],
+        "testfiles": [
+            "./sprint.bsqtest"
+        ]
+    }
+}

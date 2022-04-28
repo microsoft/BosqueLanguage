@@ -6,12 +6,21 @@
 import {  ConstantExpressionValue, LiteralExpressionValue } from "./body";
 
 class TypeSignature {
+    getDiagnosticName(): string {
+        return "[Missing Implementation]";
+    }
 }
 
 class ParseErrorTypeSignature extends TypeSignature {
+    getDiagnosticName(): string {
+        return "[Parse Error]";
+    }
 }
 
 class AutoTypeSignature extends TypeSignature {
+    getDiagnosticName(): string {
+        return "[Auto Type]";
+    }
 }
 
 class TemplateTypeSignature extends TypeSignature {
@@ -20,6 +29,10 @@ class TemplateTypeSignature extends TypeSignature {
     constructor(name: string) {
         super();
         this.name = name;
+    }
+
+    getDiagnosticName(): string {
+        return this.name;
     }
 }
 
@@ -38,6 +51,10 @@ class NominalTypeSignature extends TypeSignature {
     computeResolvedName(): string {
         return this.tnames.join("::");
     }
+
+    getDiagnosticName(): string {
+        return (this.nameSpace !== "Core" ? (this.nameSpace + "::") : "") + this.tnames.join("::") + (this.terms.length !== 0 ? ("<" + this.terms.map((tt) => tt.getDiagnosticName()).join(", ") + ">") : "");
+    }
 }
 
 class TupleTypeSignature extends TypeSignature {
@@ -46,6 +63,10 @@ class TupleTypeSignature extends TypeSignature {
     constructor(entries: TypeSignature[]) {
         super();
         this.entries = entries;
+    }
+
+    getDiagnosticName(): string {
+        return "[" + this.entries.map((tt) => tt.getDiagnosticName()).join(", ") + "]";
     }
 }
 
@@ -56,6 +77,10 @@ class RecordTypeSignature extends TypeSignature {;
         super();
         this.entries = entries;
     }
+
+    getDiagnosticName(): string {
+        return "{" + this.entries.map((tt) => (tt[0] + ": " + tt[1].getDiagnosticName())).join(", ") + "}";
+    }
 }
 
 class EphemeralListTypeSignature extends TypeSignature {
@@ -64,6 +89,10 @@ class EphemeralListTypeSignature extends TypeSignature {
     constructor(entries: TypeSignature[]) {
         super();
         this.entries = entries;
+    }
+
+    getDiagnosticName(): string {
+        return "(|" + this.entries.map((tt) => tt.getDiagnosticName()).join(", ") + "|)";
     }
 }
 
@@ -102,6 +131,10 @@ class FunctionTypeSignature extends TypeSignature {
         this.resultType = resultType;
         this.isPred = isPred;
     }
+
+    getDiagnosticName(): string {
+        return "[FUNCTION SIGNATURE]";
+    }
 }
 
 class ProjectTypeSignature extends TypeSignature {
@@ -113,6 +146,10 @@ class ProjectTypeSignature extends TypeSignature {
         this.fromtype = fromtype;
         this.oftype = oftype;
     }
+
+    getDiagnosticName(): string {
+        return this.fromtype + "!" + this.oftype;
+    }
 }
 
 class PlusTypeSignature extends TypeSignature {
@@ -121,6 +158,10 @@ class PlusTypeSignature extends TypeSignature {
     constructor(types: TypeSignature[]) {
         super();
         this.types = types;
+    }
+
+    getDiagnosticName(): string {
+        return this.types.map((tt) => tt.getDiagnosticName()).join("+");
     }
 }
 
@@ -131,6 +172,10 @@ class AndTypeSignature extends TypeSignature {
         super();
         this.types = types;
     }
+
+    getDiagnosticName(): string {
+        return this.types.map((tt) => tt.getDiagnosticName()).join("&");
+    }
 }
 
 class UnionTypeSignature extends TypeSignature {
@@ -139,6 +184,10 @@ class UnionTypeSignature extends TypeSignature {
     constructor(types: TypeSignature[]) {
         super();
         this.types = types;
+    }
+
+    getDiagnosticName(): string {
+        return this.types.map((tt) => tt.getDiagnosticName()).join("|");
     }
 }
 
