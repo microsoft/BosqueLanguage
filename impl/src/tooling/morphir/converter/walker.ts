@@ -36,6 +36,8 @@ const FUNCTION_TAG = "[FUNCTION]";
 class Transpiler {
     private scopeStack: LetStackEntry[] = [];
     private opCurryStack: CurryStackEntry[] = [];
+    private typevars: Set<string> = new Set<string>();
+    fcallbinds = new Set<string>();
 
     enums: Set<string> = new Set<string>();
 
@@ -81,7 +83,7 @@ class Transpiler {
             const vtype = this.processType(tparams[1]);
             return `Map<${ktype}, ${vtype}>`;
         }
-        else if(tname === "Option") {
+        else if(tname === "Maybe") {
             const ttype = this.processType(tparams[0]);
             return `Option<${ttype}>`;
         }
@@ -90,9 +92,17 @@ class Transpiler {
             const oktype = this.processType(tparams[1]);
             return `Result<${oktype}, ${errtype}>`;
         }
+        else if(tname === "ZonedDateTime") {
+            return "DateTime";
+        }
         else {
             return tname;
         }
+    }
+
+    processTypeReferenceGetTParamVar(jv: any[]): string | undefined {
+        const tparams = jv[3];
+        return (tparams.length !== 0 && tparams[0][0] === "Variable") ? tparams[0][2][0] : undefined;
     }
 
     processTypeTuple(jv: any[]): string {
@@ -111,6 +121,13 @@ class Transpiler {
         return "{" + entries.join(", ") + "}";
     }
 
+    processTypeVariable(jv: any[]): string {
+        const tvar = jv[2][0].toUpperCase();
+        this.typevars.add(tvar);
+
+        return tvar;
+    }
+
     processType(jv: any[]): string {
         switch(jv[0]) {
             case "Reference":
@@ -119,6 +136,8 @@ class Transpiler {
                 return this.processTypeTuple(jv);
             case "Record":
                 return this.processTypeRecord(jv);
+            case "Variable":
+                return this.processTypeVariable(jv);
             default:
                 return notImplemented(`processType -- ${jv[0]}`);
         }
@@ -150,12 +169,16 @@ class Transpiler {
 
     processConstructor(jv: any[]): string {
         if(jv[1][0] !== "Function") {
-            //it is an enum?
             const consname = this.processNameAsType(jv[1][2][2]);
-            assert(this.enums.has(consname));
+            if (consname === "Maybe") {
+                return "nothing";
+            }
+            else {
+                assert(this.enums.has(consname));
 
-            const ename = this.processNameAsVarOrField(jv[2][2]);
-            return `${consname}::${ename}`;
+                const ename = this.processNameAsVarOrField(jv[2][2]);
+                return `${consname}::${ename}`;
+            }
         }
         else {
             const ctype = this.processNameAsType(jv[2][2]);
@@ -166,8 +189,8 @@ class Transpiler {
             else if(ctype === "Err") {
                 this.opCurryStack.push({ op: "err", isinfix: false, isdot: false, iscons: false, ispredfunctor: false, revargs: false, postaction: undefined, "args": [] });
             }
-            else if(ctype === "Some") {
-                this.opCurryStack.push({ op: "some", isinfix: false, isdot: false, iscons: false, ispredfunctor: false, revargs: false, postaction: undefined, "args": [] });
+            else if(ctype === "Just") {
+                this.opCurryStack.push({ op: "something", isinfix: false, isdot: false, iscons: false, ispredfunctor: false, revargs: false, postaction: undefined, "args": [] });
             }
             else {
                 this.opCurryStack.push({ op: ctype, isinfix: false, isdot: false, iscons: true, ispredfunctor: false, revargs: false, postaction: undefined, "args": [] });
@@ -178,11 +201,13 @@ class Transpiler {
     }
 
     processTuple(jv: any[]): string {
-        return notImplemented("processTuple");
+        const entries = jv[2].map((entry: any) => this.processValue(entry, EvalMode.Exp, true));
+        return `[${entries.join(", ")}]`;
     }
 
     processRecord(jv: any[]): string {
-        return notImplemented("processRecord");
+        const entries = jv[2].map((entry: any) => `${this.processNameAsVarOrField(entry[0])} = ${this.processValue(entry[1], EvalMode.Exp, true)}`);
+        return `{${entries.join(", ")}}`;
     }
 
     processVariable(jv: any[]): string {
@@ -267,7 +292,7 @@ class Transpiler {
                     this.opCurryStack.push({ op: "map", isinfix: false, isdot: true, iscons: false, ispredfunctor: false, revargs: true, postaction: undefined, "args": [] });
                     break;
                 case "filter":
-                    this.opCurryStack.push({ op: "map", isinfix: false, isdot: true, iscons: false, ispredfunctor: true, revargs: true, postaction: undefined, "args": [] });
+                    this.opCurryStack.push({ op: "filter", isinfix: false, isdot: true, iscons: false, ispredfunctor: true, revargs: true, postaction: undefined, "args": [] });
                     break;
                 case "sum":
                     this.opCurryStack.push({ op: "sum", isinfix: false, isdot: true, iscons: false, ispredfunctor: false, revargs: false, postaction: undefined, "args": [] });
@@ -333,7 +358,13 @@ class Transpiler {
                 op = `${ffunc.op}{${ffunc.args.join(", ")}}`;
             }
             else {
-                op = `${ffunc.op}(${ffunc.args.join(", ")})`;
+                if(!this.fcallbinds.has(ffunc.op)) {
+                    op = `${ffunc.op}(${ffunc.args.join(", ")})`;
+                }
+                else {
+                    const ttype = this.processTypeReference(jv[1][3][0]);
+                    op = `${ffunc.op}<${ttype}>(${ffunc.args.join(", ")})`;
+                }
             }
 
             if(ffunc.postaction !== undefined) {
@@ -424,7 +455,41 @@ class Transpiler {
     }
 
     processPatternMatch(jv: any[], mode: EvalMode, indent?: string): string {
-        return notImplemented("processPatternMatch");
+        const onval = this.processValue(jv[2], EvalMode.Exp, true);
+        const optflavors = (jv[3] as any[]).map((entry) => entry[0][0] as string);
+
+        //TODO: ugh this is a mess -- need to dig into all the patterns in detail to figure this out 
+        //      -- probably want to use our sequencing ability to do a bunch of ifs with early return for each clause
+
+        if(optflavors.every((action) => action === "head_tail_pattern" || action === "wildcard_pattern")) {
+            const nindent = indent !== undefined ? (indent + "    ") : undefined;
+
+            this.scopeStack.push([]);
+            const nemptyval = (nindent || "") + `return something(${onval}.front());`;
+            this.scopeStack.pop();
+
+            this.scopeStack.push([]);
+            const emptyval = this.processValue(jv[3][1][1], mode !== EvalMode.Stmt ? EvalMode.Exp : EvalMode.Stmt, true, nindent);
+            this.scopeStack.pop();
+
+            const rindent = (indent || "");
+            if (mode === EvalMode.Stmt) {
+                return `${rindent}if (${onval}.empty()) {\n${emptyval}\n${rindent}}\n${rindent}else {\n${nemptyval}\n${rindent}}`;
+            }
+            else {
+                const sep = indent !== undefined ? "\n" : " ";
+                const ee = `${sep}if (${onval}.empty())${sep}${emptyval}${sep}else${sep}${nemptyval}`;
+                if (mode === EvalMode.Exp) {
+                    return rindent + ee;
+                }
+                else {
+                    return rindent + `yield ${ee};`;
+                }
+            }
+        }
+        else {
+            return notImplemented(`processPatternMatch --  [${optflavors.join(", ")}]`);
+        }
     }
 
     processUpdateRecord(jv: any[]): string {
@@ -467,7 +532,7 @@ class Transpiler {
                 return this.processResultActionForValue(mode, this.processApply(v, force), indent);
             case "lambda":
                 assert(mode === EvalMode.Exp);
-                return this.processLambda(v, this.opCurryStack[this.opCurryStack.length].ispredfunctor);
+                return this.processLambda(v, this.opCurryStack[this.opCurryStack.length - 1].ispredfunctor);
             case "let_definition":
                 return this.processLet(v, mode, indent);
             case "let_recursion":
@@ -487,6 +552,8 @@ class Transpiler {
     }
 
     processFunctionDef(name: string, jv: any): string {
+        this.typevars.clear();
+
         const args = jv.inputTypes.map((arg: any) => {
             const vv = this.processNameAsVarOrField(arg[0]);
             const tt = this.processType(arg[1])
@@ -500,7 +567,10 @@ class Transpiler {
         const body = this.processValue(jv.body, EvalMode.Stmt, true, "    ");
         this.scopeStack.pop();
 
-        return `${name === "main" ? "entrypoint " : ""}function ${name}(${args.join(", ")}): ${result} {\n` 
+        const tvars = [...this.typevars].sort();
+        let tvinfo = tvars.length !== 0 ? `<${tvars.join(", ")}>` : "";
+
+        return `${name === "main" ? "entrypoint " : ""}function ${name}${tvinfo}(${args.join(", ")}): ${result} {\n` 
         + body + "\n"
         + "}";
     }
@@ -542,6 +612,16 @@ function loadMainModule(jv: any): string {
         });
 
         return mdecls;
+    });
+
+    jv.distribution[3].modules.forEach((mm: any) => {
+        const mdef = mm[1].value;
+        mdef.values.forEach((vv: any) => {
+            const tparam = jconv.processTypeReferenceGetTParamVar(vv[1].value.value.outputType);
+            if(tparam !== undefined) {
+                jconv.fcallbinds.add(jconv.processNameAsFunction(vv[0]));
+            }
+        });
     });
 
     const cdecls = jv.distribution[3].modules.map((mm: any) => {
