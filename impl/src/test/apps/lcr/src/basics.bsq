@@ -1,0 +1,54 @@
+namespace Main;
+
+typedecl ValidIdName = /[a-zA-Z0-9_]+/;
+
+enum AssetCategoryCodes
+{
+    level1Assets,
+    level2aAssets,
+    level2bAssets
+}
+
+enum InsuranceType
+{
+    fdic,
+    uninsured
+}
+
+typedef Entity = StringOf<ValidIdName>;
+
+typedef Balance = Float;
+typedef Ratio = Float;
+
+typedecl ValidCountryName = /[a-z_]+/;
+typedef CountryName = StringOf<ValidCountryName>;
+
+enum CurrencyKind
+{
+    usd, 
+    eur, 
+    gbp, 
+    chf, 
+    jpy, 
+    aud, 
+    cad,
+    brl,
+    mxn,
+    sek,
+    vnd
+}
+
+entity Currency provides APIType
+{
+    field country: ValidCountryName;
+    field currency: CurrencyKind;
+}
+
+function fed5GCurrency(currency: Currency): Currency {
+    if(\/(currency === USD, currency ===  EUR, currency === GBP, currency === CHF, currency === JPY, currency === AUD, currency === CAD)) {
+        return currency;
+    }
+    else {
+        return Currency::usd;
+    }
+}

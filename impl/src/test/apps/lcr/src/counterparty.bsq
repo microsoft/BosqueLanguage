@@ -1,0 +1,28 @@
+namespace Main;
+
+
+typedef CounterpartyId = StringOf<ValidIdName>;
+
+enum counterpartyType
+{
+    bank,
+    retail,
+    smallBusiness,
+    nonFinancialCorporate,
+    sovereign,
+    centralBank,
+    governmentSponsoredEntity,
+    publicSectorEntity,
+    multilateralDevelopmentBank,
+    otherSupranational,
+    supervisedNonBankFinancialEntity,
+    debtIssuingSpecialPurposeEntity,
+    otherFinancialEntity,
+    other,
+}
+
+entity Counterparty provides APIType
+{
+    field counterpartyId: CounterpartyId;
+    field counterpartyType: CounterpartyType;
+}

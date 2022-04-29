@@ -1,0 +1,18 @@
+namespace Main;
+
+typedef ProductId = StringOf<ValidIdName>;
+
+enum productType
+{
+    cash,
+    equity,
+    bond,
+    other
+}
+
+entity Product provides APIType
+{ 
+    field productId: ProductId;
+    field productType: ProductType;
+    field isHQLA: Bool;
+}

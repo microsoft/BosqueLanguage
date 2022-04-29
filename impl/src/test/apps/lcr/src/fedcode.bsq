@@ -1,0 +1,181 @@
+namespace Main;
+
+typedef PartyID = StringOf<ValidIdName>;
+
+typedef ValidCountryCodeISO3 = /[A-Z]{3,3}/;
+typedef CountryCode = StringOf<ValidCountryCodeISO3>;
+
+typedef ProductType = String;
+
+typedef Description5G = String;
+
+typedef AdjustedAmountUSD = String;
+
+typedef AdjustedMXAmount = String;
+
+typedef Account = String;
+
+typedef CostCenterCode = String;
+
+typedef CostCenterDescription = String;
+
+typedef LegalEntityCode = String;
+
+typedef TenQLevel1 = String;
+
+typedef TenQLevel2 = String;
+
+typedef TenQLevel3 = String;
+
+typedef TenQLevel4 = String;
+
+typedef ValidTenQLevel5 = /[A-z0-9 ]+/;
+typedef TenQLevel5 = String;
+
+typedef TenQLevel6 = String;
+
+orderable algebraic typedecl Usd = Float;
+orderable algebraic typedecl Mx = Float;
+
+entity LegalEntity provides APIType
+{ 
+    field code: LegalEntityCode;
+    field country: Country?;
+}
+
+entity CostCenter provides APIType
+{ 
+    field code: CostCenterCode;
+    field description: CostCenterDescription;
+}
+
+entity Counterparty provides APIType
+{ 
+    field country: Country;
+    field description5G: Description5G;
+    field account: Account;
+}
+
+entity Cashflow provides APIType
+{ 
+    field legalEntity: LegalEntity;
+    field partyId: PartyID;
+    field currency: Currency;
+    field counterparty: Counterparty;
+    field amountUSD: Usd;
+    field amountMx: Mx;
+    field tenQLevel1: TenQLevel1;
+    field tenQLevel2: TenQLevel2;
+    field tenQLevel3: TenQLevel3;
+    field tenQLevel4: TenQLevel4;
+    field tenQLevel5: TenQLevel5;
+    field tenQLevel6: TenQLevel6;
+}
+
+enum FedCode
+{
+    ia31,
+    ia32,
+    ia33,
+    ia34,
+    ia35,
+    ia36,
+    ia37,
+    ia38,
+    ia39,
+    ia41,
+    ia42,
+    ia43,
+    ia44,
+    ia45,
+    ia46,
+    ia47,
+    ia48,
+    ia49,
+    iu1,
+    iu2,
+    iu4,
+    ow9,
+    ow10,
+    unclassified
+}
+
+enum CentralBankSubProduct
+{
+    frb,
+    snb,
+    boe,
+    ecb,
+    boj,
+    rba,
+    boc,
+    ocb,
+    other_cash_currency_and_coin
+}
+
+function centralBankToSubProduct(cb: CentralBank): CentralBankSubProduct
+    switch(cb) {
+        CentralBank::federal_Reserve_Bank        => return CentralBankSubProduct::frb;
+        | CentralBank::swiss_National_Bank       => return CentralBankSubProduct::snb;
+        | CentralBank::bank_of_England           => return CentralBankSubProduct::boe;
+        | CentralBank::european_Central_Bank     => return CentralBankSubProduct::ecb;
+        | CentralBank::bank_of_Japan             => return CentralBankSubProduct::boj;
+        | CentralBank::reserve_Bank_of_Australia => return CentralBankSubProduct::rba;
+        | CentralBank::bank_of_Canada            => return CentralBankSubProduct::boc;
+        _                                        => return CentralBankSubProduct::ocb;
+    }
+}
+
+function classify(cashflow: Cashflow, centralBanks: Map<PartyID, CentralBank>): FedCode {
+    let partyAsCentralBank = centralBanks.getOrNone(cashflow.partyId);
+    if(partyAsCentralBank !== none) {
+        if(cashflow.tenQLevel6 !== "Segregated Cash") {
+            switch(centralBankToSubProduct(partyAsCentralBank)) {
+                CentralBankSubProduct::frb => return FedCode::ia31;
+                | CentralBankSubProduct::snb => return FedCode::ia32;
+                | CentralBankSubProduct::boe => return FedCode::ia33;
+                | CentralBankSubProduct::ecb => return FedCode::ia34;
+                | CentralBankSubProduct::boj => return FedCode::ia35;
+                | CentralBankSubProduct::rba => return FedCode::ia36;
+                | CentralBankSubProduct::boc => return FedCode::ia37;
+                | CentralBankSubProduct::ocb => return FedCode::ia38;
+                | CentralBankSubProduct::other_cash_currency_and_coin => return FedCode::ia39;
+            }
+        }
+        else {
+            switch(centralBankToSubProduct(partyAsCentralBank)) {
+                CentralBankSubProduct::frb => return FedCode::ia41;
+                | CentralBankSubProduct::snb => return FedCode::ia42;
+                | CentralBankSubProduct::boe => return FedCode::ia43;
+                | CentralBankSubProduct::ecb => return FedCode::ia44;
+                | CentralBankSubProduct::boj => return FedCode::ia45;
+                | CentralBankSubProduct::rba => return FedCode::ia46;
+                | CentralBankSubProduct::boc => return FedCode::ia47;
+                | CentralBankSubProduct::ocb => return FedCode::ia48;
+                | CentralBankSubProduct::other_cash_currency_and_coin => return FedCode::ia49;
+            }
+        }
+    }
+    else {
+        if(\/(cashflow.tenQLevel5 === "CASH AND DUE FROM BANKS", cashflow.tenQLevel5 === "OVERNIGHT AND TERM DEPOSITS", cashflow.tenQLevel5 === "CASH EQUIVALENTS")) {
+            if(cashflow.amountUSD.value() >= 0.0f) {
+                if(isOnshore(cashflow)) {
+                    return FedCode::iu1;
+                }
+                else {
+                    return FedCode::iu2;
+                }
+            }
+            else { 
+                return FedCode::iu4;
+            }
+        }
+        else {
+            return FedCode::unclassified;
+        }
+    }
+}
+
+function isOnshore(cashflow: Cashflow): Bool {
+    return cashflow.legalEntity.country === cashflow.currency.country && cashflow.legalEntity.country === cashflow.counterparty.country;
+}

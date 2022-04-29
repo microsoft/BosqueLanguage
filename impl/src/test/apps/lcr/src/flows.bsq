@@ -1,0 +1,22 @@
+namespace Main;
+
+typedef BusinessDate = DateTime;
+typedef ReportingEntity = EntityName;
+typedef Amount = Float;
+
+entity Flow provides APIType
+{ 
+    field amount: Amount;
+    field assetType: AssetCategoryCodes;
+    field businessDate : BusinessDate;
+    field collateralClass : AssetCategoryCodes;
+    field counterpartyId : CounterpartyId;
+    field currency : Currency;
+    field ruleCode : RuleCode;
+    field insured : InsuranceType;
+    field isTreasuryControl : Bool;
+    field isUnencumbered : Bool;
+    field maturityDate : BusinessDate;
+    field effectiveMaturityDate : BusinessDate;
+    field productId : ProductId;
+}

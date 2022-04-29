@@ -1,0 +1,21 @@
+namespace Main;
+
+enum CentralBank
+{
+    federal_Reserve_Bank,
+    bank_of_Canada,
+    bank_of_England,
+    bank_of_Japan,
+    european_Central_Bank,
+    reserve_Bank_of_Australia,
+    swiss_National_Bank,
+    banco_Central_Do_Brasil,
+    banca_De_France,
+    bance_Di_Italia,
+    bank_of_Korea,
+    deutsche_Bundesbank,
+    banque_Centrale_Du_Luxembourg,
+    peoples_Bank_of_China,
+    reserve_Bank_of_India,
+    central_Bank_of_The_Russian_Federation
+}
