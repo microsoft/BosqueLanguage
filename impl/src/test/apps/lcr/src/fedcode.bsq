@@ -177,5 +177,5 @@ function classify(cashflow: Cashflow, centralBanks: Map<PartyID, CentralBank>): 
 }
 
 function isOnshore(cashflow: Cashflow): Bool {
-    return cashflow.legalEntity.country === cashflow.currency.country && cashflow.legalEntity.country === cashflow.counterparty.country;
+    return cashflow.legalEntity.country === uniqueCountryLookup(cashflow.currency) && cashflow.legalEntity.country === cashflow.counterparty.country;
 }

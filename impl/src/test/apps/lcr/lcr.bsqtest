@@ -5,3 +5,30 @@
 
 namespace Main;
 
+chktest function fedcode_classify_other(cashflow: Cashflow): Bool {
+    let fc = classify(cashflow, Map<PartyID, CentralBank>{});
+
+    return \/(fc === FedCode::iu1, fc === FedCode::iu2, fc === FedCode::iu4, fc === FedCode::unclassified); 
+}
+
+/*
+chktest function fedcode_classify_centralbank_other(cashflow: Cashflow, centralBanks: Map<PartyID, CentralBank>): Bool
+    requires centralBanks.has(cashflow.partyId);
+    requires cashflow.tenQLevel6 !== "Segregated Cash";
+{
+    let fc = classify(cashflow, centralBanks);
+    return /\(fc !== FedCode::unclassified, fc !== FedCode::ia49);
+}
+
+chktest function fedcode_classify_centralbank_segregated(cashflow: Cashflow, centralBanks: Map<PartyID, CentralBank>): Bool
+    requires centralBanks.has(cashflow.partyId);
+    requires cashflow.tenQLevel6 === "Segregated Cash";
+{
+     let fc = classify(cashflow, centralBanks);
+    return /\(fc !== FedCode::unclassified, fc !== FedCode::ia39);
+}
+
+errtest function fedcode_classify_centralbank_errors(cashflow: Cashflow, centralBanks: Map<PartyID, CentralBank>): FedCode {
+    return classify(cashflow, centralBanks);
+}
+*/
