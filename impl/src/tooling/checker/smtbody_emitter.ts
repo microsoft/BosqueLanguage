@@ -497,6 +497,7 @@ class SMTBodyEmitter {
             bbody = this.typegen.coerce(new SMTCallSimple(this.typegen.getSMTConstructorName(v5type).cons, [new SMTVar("arg0"), new SMTVar("arg1"), new SMTVar("arg2"), new SMTVar("arg3"), new SMTVar("arg4")]), v5type, this.typegen.getMIRType(ldecl.oftype));
         }
         else {
+            xxxx;
             bbody =  NOT_IMPLEMENTED("Collection Constructor for lists larger than 3");
             //
             //TODO: Need to implement some nice LargeList action and also have a check on the constants info...

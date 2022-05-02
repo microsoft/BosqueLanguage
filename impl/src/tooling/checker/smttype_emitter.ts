@@ -202,8 +202,15 @@ class SMTTypeEmitter {
                     return new SMTTypeInfo("bsq_regex", "TypeTag_Regex", entity.tkey);
                 }
                 else {
-                    assert(false, "Unknown primitive internal entity");
-                    return new SMTTypeInfo("[UNKNOWN_TYPE]", "TypeTag_[UNKNOWN_TYPE]", entity.tkey);
+                    if(entity.name === "LargeList") {
+                        return new SMTTypeInfo(this.lookupTypeName(entity.tkey), `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
+                    }
+                    else if (entity.name === "LargeMap") {
+                        return new SMTTypeInfo(this.lookupTypeName(entity.tkey), `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
+                    }
+                    else {
+                        assert(false, "Unknown primitive internal entity");
+                    }
                 }
             }
             else if (entity instanceof MIRHavocEntityTypeDecl) {

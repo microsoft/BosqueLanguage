@@ -2356,14 +2356,20 @@ internal entity ListOps provides Some {
     }
 }
 
-internal entity LargeList<T> provides Some {
-    //TODO: what repr do we want here
-    //  field v1: Vector3<T>;
-    //  field v2: Vector1<T> | Vector2<T> | Vector3<T>;
-    //Or something else
+__internal entity LargeList<T> provides Some {
+    internal function s_large_list_count(): Nat = s_large_list_count; 
+    internal function s_large_list_append(l: LargeList<T>, r: LargeList<T>): LargeList<T> = s_large_list_count; 
 
-    method count(): Nat {
-        return ListOps::s_blockingfailure<Nat>();
+    function s_vector_to_large_list(vl: ListVector<T>): LargeList<T> {
+        xxxx;
+    }
+
+    function s_large_list_to_vector(l: LargeList<T>): ListVector<T> {
+        xxxx;
+    }
+
+    function count(): Nat {
+        return LargeList<T>::s_large_list_count();
     }
 
     function {when T unique Int | Nat} range(start: T, one: T, count: Nat): LargeList<T> {
@@ -2522,4 +2528,5 @@ internal entity LargeList<T> provides Some {
         return (|re, rlu|);
     }
 }
+
 #endif

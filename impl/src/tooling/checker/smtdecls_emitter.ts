@@ -6,7 +6,7 @@
 import * as assert  from "assert";
 import { BSQRegex } from "../../ast/bsqregex";
 
-import { MIRAssembly, MIRConceptType, MIRConstructableEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIRDataBufferInternalEntityTypeDecl, MIRDataStringInternalEntityTypeDecl, MIREntityType, MIREntityTypeDecl, MIREnumEntityTypeDecl, MIRFieldDecl, MIRInvokeDecl, MIRObjectEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRRecordType, MIRStringOfInternalEntityTypeDecl, MIRTupleType, MIRType, MIRTypeOption, SymbolicActionMode } from "../../compiler/mir_assembly";
+import { MIRAssembly, MIRConceptType, MIRConstructableEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIRDataBufferInternalEntityTypeDecl, MIRDataStringInternalEntityTypeDecl, MIREntityType, MIREntityTypeDecl, MIREnumEntityTypeDecl, MIRFieldDecl, MIRInvokeDecl, MIRObjectEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRRecordType, MIRStringOfInternalEntityTypeDecl, MIRTupleType, MIRType, MIRTypeOption, SymbolicActionMode } from "../../compiler/mir_assembly";
 import { constructCallGraphInfo, markSafeCalls } from "../../compiler/mir_callg";
 import { MIRInvokeKey } from "../../compiler/mir_ops";
 import { SMTBodyEmitter } from "./smtbody_emitter";
@@ -641,6 +641,10 @@ class SMTEmitter {
         this.assembly.entityDecls.push(smtdecl);
     }
 
+    private processPrimitiveLargeListEntityDecl(edecl: MIRPrimitiveInternalEntityTypeDecl) {
+       xxxx;
+    }
+
     private processPrimitiveStackEntityDecl(edecl: MIRPrimitiveStackEntityTypeDecl) {
         assert(false, "MIRPrimitiveStackEntityTypeDecl");
     }
@@ -662,6 +666,10 @@ class SMTEmitter {
         const smtdecl = new SMTEntityCollectionTypeDecl(smttype.smttypename, smttype.smttypetag, consfuncs.box, consfuncs.bfield);
         this.assembly.entityDecls.push(smtdecl);
     }
+
+    private processPrimitiveLargeMapEntityDecl(edecl: MIRPrimitiveInternalEntityTypeDecl) {
+        xxxx;
+     }
 
     private processVirtualInvokes() {
         for(let i = this.lastVInvokeIdx; i < this.bemitter.requiredVirtualFunctionInvokes.length; ++i) {
@@ -902,7 +910,15 @@ class SMTEmitter {
                 this.processPrimitiveMapEntityDecl(edcl as MIRPrimitiveMapEntityTypeDecl);
             }
             else {
-                //Don't need to do anything -- including for collection decls which all map to BTerm
+                if(edcl.name === "LargeList") {
+                    this.processPrimitiveLargeListEntityDecl(edcl as MIRPrimitiveInternalEntityTypeDecl);
+                }
+                else if(edcl.name === "LargeMap") {
+                    this.processPrimitiveLargeMapEntityDecl(edcl as MIRPrimitiveInternalEntityTypeDecl);
+                }
+                else {
+                    //Don't need to do anything -- including for collection decls which all map to BTerm
+                }
             }
         });
 

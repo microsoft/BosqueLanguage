@@ -684,11 +684,7 @@ internal entity MapOps provides Some {
 }
 
 entity LargeMap<K grounded KeyType, V> provides Some {
-    //TODO: what repr do we want here
-    //  field v1: Vector3<[K, V]>;
-    //  field v2: Vector1<[K, V]> | Vector2<[K, V]> | Vector3<[K, V]>;
-    //Or something else
-
+    xxxx;
     method count(): Nat {
         return MapOps::s_blockingfailure<Nat>();
     }
