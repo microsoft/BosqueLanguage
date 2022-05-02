@@ -31,6 +31,7 @@ const KeywordStrings = [
     "pred",
     "function",
     "if",
+    "import",
     "invariant",
     "istype",
     "let",
@@ -3758,13 +3759,7 @@ class Parser {
         this.ensureAndConsumeToken(";");
 
         const ffns = this.m_penv.assembly.getNamespace(fromns);
-        const names = [...ffns.declaredNames].map((vv) => vv.slice(ffns.ns.length + 2));
-
-        this.ensureAndConsumeToken(";");
-
-        if (currentDecl.checkUsingNameClash(names)) {
-            this.raiseError(this.getCurrentLine(), "Collision between imported using names");
-        }
+        const names = [...ffns.declaredNames];
 
         //
         //TODO: Packaging!!!!

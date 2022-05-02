@@ -1,4 +1,4 @@
-namespace Main;
+namespace NSCalculations;
 
 /*
 lcr : (Flow -> Counterparty) -> (ProductId -> Product) -> LocalDate -> (LocalDate -> List Flow) -> Balance -> Ratio

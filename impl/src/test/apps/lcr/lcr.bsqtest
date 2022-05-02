@@ -3,10 +3,13 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-namespace Main;
+namespace Test;
 
-chktest function fedcode_classify_other(cashflow: Cashflow): Bool {
-    let fc = classify(cashflow, Map<PartyID, CentralBank>{});
+import NSCentralBank;
+import NSFedCode;
+
+chktest function fedcode_classify_other(cashflow: NSFedCode::Cashflow): Bool {
+    let fc = classify(cashflow, Map<NSFedCode::PartyID, NSCentralBank::CentralBank>{});
 
     return \/(fc === FedCode::iu1, fc === FedCode::iu2, fc === FedCode::iu4, fc === FedCode::unclassified); 
 }

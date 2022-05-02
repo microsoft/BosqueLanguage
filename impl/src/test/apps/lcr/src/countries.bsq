@@ -1,4 +1,4 @@
-namespace Main;
+namespace NSCountry;
 
 enum Country
 {
@@ -20,52 +20,3 @@ enum Country
     vnm
 }
 
-enum Currency
-{
-    aud,
-    bsd,
-    brl,
-    cad,
-    eur,
-    jpy,
-    mxn,
-    nok,
-    pen,
-    zar,
-    chf,
-    gbp,
-    usd,
-    vnd   
-}
-
-
-const currencyCountries: List<[Currency, Country]> = List<[Currency, Country]>{
-    [Currency::aud, Currency::aus],
-    [Currency::bsd, Country::bhs],
-    [Currency::brl, Country::bra],
-    [Currency::cad, Country::can],
-    [Currency::chf, Country::che]
-    [Currency::eur, Country::fra],
-    [Currency::eur, Country::irl],
-    [Currency::eur, Country::esp],
-    [Currency::gbp, Country::gbr],
-    [Currency::jpy, Country::jpn],
-    [Currency::mxn, Country::mex],
-    [Currency::nok, Country::nor],
-    [Currency::pen, Country::per],
-    [Currency::zar, Country::zaf],
-    [Currency::usd, Country::usa],
-    [Currency::vnd, Country::vnm]
-};
-
-uniqueCountryLookup(currency: Currency): Country? {
-    if(currency === Currency::aud) {
-        return Country::aus;
-    }
-    elif(currency === Currency::usd) {
-        return Country::usa;
-    }
-    else {
-        return Main::currencyCountries.singleOrNone((cc) => cc.0 === currency);
-    }
-}

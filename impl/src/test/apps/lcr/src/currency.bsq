@@ -1,0 +1,59 @@
+namespace NSCurrency;
+
+import NSCountry;
+
+enum Currency
+{
+    aud,
+    bsd,
+    brl,
+    cad,
+    eur,
+    jpy,
+    mxn,
+    nok,
+    pen,
+    zar,
+    chf,
+    gbp,
+    usd,
+    vnd   
+}
+
+
+const currencyCountries: List<[Currency, NSCountry::Country]> = List<[Currency, NSCountry::Country]>{
+    [Currency::aud, NSCountry::Country::aus],
+    [Currency::bsd, NSCountry::Country::bhs],
+    [Currency::brl, NSCountry::Country::bra],
+    [Currency::cad, NSCountry::Country::can],
+    [Currency::chf, NSCountry::Country::che],
+    [Currency::eur, NSCountry::Country::fra],
+    [Currency::eur, NSCountry::Country::irl],
+    [Currency::eur, NSCountry::Country::esp],
+    [Currency::gbp, NSCountry::Country::gbr],
+    [Currency::jpy, NSCountry::Country::jpn],
+    [Currency::mxn, NSCountry::Country::mex],
+    [Currency::nok, NSCountry::Country::nor],
+    [Currency::pen, NSCountry::Country::per],
+    [Currency::zar, NSCountry::Country::zaf],
+    [Currency::usd, NSCountry::Country::usa],
+    [Currency::vnd, NSCountry::Country::vnm]
+};
+
+function country(currency: Currency): NSCountry::Country? {
+    if(currency === Currency::aud) {
+        return Country::aus;
+    }
+    elif(currency === Currency::usd) {
+        return Country::usa;
+    }
+    else {
+        let vv = NSCurrency::currencyCountries.singleOrNone(fn(cc) => cc.0 === currency);
+        if(vv === none) {
+            return none;
+        }
+        else {
+            return vv.1;
+        }
+    }
+}

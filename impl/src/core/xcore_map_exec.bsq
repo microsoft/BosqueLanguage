@@ -111,7 +111,7 @@ internal entity MapOps provides Some {
     }
 }
 
-__internal entity MapTree<T> provides Some {
+__internal entity MapTree<K grounded KeyType, V> provides Some {
     //Dummy placeholder
 }
 

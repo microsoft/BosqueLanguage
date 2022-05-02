@@ -1,4 +1,10 @@
-namespace Main;
+namespace NSFlows;
+
+import NSCurrency;
+import NSBasics;
+import NSCounterParty;
+import NSFedCodeRules;
+import NSProduct;
 
 typedef BusinessDate = DateTime;
 typedef ReportingEntity = EntityName;

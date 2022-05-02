@@ -1165,7 +1165,7 @@ internal entity ListOps provides Some {
 
     recursive? function s_find_pred<T>(l: ListRepr<T>, p: recursive? pred(_: T) -> Bool): Nat? {
         if(l === none) {
-            return false;
+            return none;
         }
         elif(l.is<Vector1<T>>()) {
             return ListOps::s_find_pred_vector_1<T>[recursive?](l, p);
@@ -1257,10 +1257,9 @@ internal entity ListOps provides Some {
             return none;
         }
     }
-
     recursive? function s_find_pred_idx<T>(l: ListRepr<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
         if(l === none) {
-            return false;
+            return none;
         }
         elif(l.is<Vector1<T>>()) {
             return ListOps::s_find_pred_idx_vector_1<T>[recursive?](l, p);
@@ -1352,10 +1351,9 @@ internal entity ListOps provides Some {
             return none;
         }
     }
-
     recursive? function s_find_last_pred<T>(l: ListRepr<T>, p: recursive? pred(_: T) -> Bool): Nat? {
         if(l === none) {
-            return false;
+            return none;
         }
         elif(l.is<Vector1<T>>()) {
             return ListOps::s_find_last_pred_vector_1<T>[recursive?](l, p);
@@ -1447,10 +1445,9 @@ internal entity ListOps provides Some {
             return none;
         }
     }
-
     recursive? function s_find_last_pred_idx<T>(l: ListRepr<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
         if(l === none) {
-            return false;
+            return none;
         }
         elif(l.is<Vector1<T>>()) {
             return ListOps::s_find_last_pred_idx_vector_1<T>[recursive?](l, p);

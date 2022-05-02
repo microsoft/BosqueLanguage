@@ -1,9 +1,9 @@
-namespace Main;
+namespace NSCounterParty;
 
+typedecl ValidCounterpartyName = /[a-zA-Z0-9_]+/;
+typedef CounterpartyId = StringOf<ValidCounterpartyName>;
 
-typedef CounterpartyId = StringOf<ValidIdName>;
-
-enum counterpartyType
+enum CounterpartyType
 {
     bank,
     retail,
@@ -18,7 +18,7 @@ enum counterpartyType
     supervisedNonBankFinancialEntity,
     debtIssuingSpecialPurposeEntity,
     otherFinancialEntity,
-    other,
+    other
 }
 
 entity Counterparty provides APIType

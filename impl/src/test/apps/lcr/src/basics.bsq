@@ -1,6 +1,6 @@
-namespace Main;
+namespace NSBasics;
 
-typedecl ValidIdName = /[a-zA-Z0-9_]+/;
+import NSCurrency;
 
 enum AssetCategoryCodes
 {
@@ -15,16 +15,23 @@ enum InsuranceType
     uninsured
 }
 
-typedef Entity = StringOf<ValidIdName>;
+typedecl ValidEntityName = /[a-zA-Z0-9_]+/;
+typedef Entity = StringOf<ValidEntityName>;
 
 typedef Balance = Float;
 typedef Ratio = Float;
 
-function fed5GCurrency(currency: Currency): Currency {
-    if(\/(currency === USD, currency ===  EUR, currency === GBP, currency === CHF, currency === JPY, currency === AUD, currency === CAD)) {
+function fed5GCurrency(currency: NSCurrency::Currency): NSCurrency::Currency {
+    if(\/(currency === NSCurrency::Currency::usd, 
+          currency === NSCurrency::Currency::eur, 
+          currency === NSCurrency::Currency::gbp, 
+          currency === NSCurrency::Currency::chf, 
+          currency === NSCurrency::Currency::jpy, 
+          currency === NSCurrency::Currency::aud, 
+          currency === NSCurrency::Currency::cad)) {
         return currency;
     }
     else {
-        return Currency::usd;
+        return NSCurrency::Currency::usd;
     }
 }

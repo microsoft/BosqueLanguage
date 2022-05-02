@@ -1,28 +1,22 @@
-namespace Main;
+namespace NSFedCodeRules;
+
+typedecl ValidRuleCode = /([ISUOA] | [0-9]{1,2}){3}/;
+typedef RuleCode = StringOf<ValidRuleCode>;
+
+enum CentralBankSubProduct
+{
+    frb,
+    snb,
+    boe,
+    ecb,
+    boj,
+    rba,
+    boc,
+    ocb,
+    other_cash_currency_and_coin
+}
 
 /*
-
-type alias RuleCode =
-    List String
-
-
-toString : RuleCode -> String
-toString rulecode =
-    rulecode |> String.join "."
-
-
-type CentralBankSubProduct
-    = FRB
-    | SNB
-    | BOE
-    | ECB
-    | BOJ
-    | RBA
-    | BOC
-    | OCB
-    | Other_Cash_Currency_And_Coin
-
-
 calculate : Dict PartyID CentralBank -> List Cashflow -> List ( Cashflow, RuleCode )
 calculate centralBanks cashflows =
     let

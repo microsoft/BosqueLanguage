@@ -9,7 +9,7 @@ namespace Core;
 #if CHECK_LIBS
 internal typedef MapVector<K grounded KeyType, V> = Vector1<[K, V]> | Vector2<[K, V]> | Vector3<[K, V]> | Vector4<[K, V]> | Vector5<[K, V]>;
 
-internal typedef MapRepr<K grounded KeyType, V> = None | Vector1<[K, V]> | Vector2<[K, V]> | Vector3<[K, V]> | Vector4<[K, V]> | Vector5<[K, V]> | LargeMap<[K, V]>;
+internal typedef MapRepr<K grounded KeyType, V> = None | MapVector<K, V> | LargeMap<K, V>;
 
 internal entity MapOps provides Some {
     internal function s_blockingfailure<T>(): T = s_blockingfailure; 

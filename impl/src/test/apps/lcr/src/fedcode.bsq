@@ -1,8 +1,13 @@
-namespace Main;
+namespace NSFedCode;
 
-typedef PartyID = StringOf<ValidIdName>;
+import NSCountry;
+import NSCurrency;
+import NSCentralBank;
 
-typedef ValidCountryCodeISO3 = /[A-Z]{3,3}/;
+typedecl ValidPartyName = /[a-zA-Z0-9_]+/;
+typedef PartyID = StringOf<ValidPartyName>;
+
+typedecl ValidCountryCodeISO3 = /[A-Z]{3,3}/;
 typedef CountryCode = StringOf<ValidCountryCodeISO3>;
 
 typedef ProductType = String;
@@ -29,7 +34,7 @@ typedef TenQLevel3 = String;
 
 typedef TenQLevel4 = String;
 
-typedef ValidTenQLevel5 = /[A-z0-9 ]+/;
+typedecl ValidTenQLevel5 = /[A-z0-9 ]+/;
 typedef TenQLevel5 = String;
 
 typedef TenQLevel6 = String;
@@ -40,7 +45,7 @@ orderable algebraic typedecl Mx = Float;
 entity LegalEntity provides APIType
 { 
     field code: LegalEntityCode;
-    field country: Country?;
+    field country: NSCountry::Country?;
 }
 
 entity CostCenter provides APIType
@@ -49,9 +54,9 @@ entity CostCenter provides APIType
     field description: CostCenterDescription;
 }
 
-entity Counterparty provides APIType
+entity FedCounterparty provides APIType
 { 
-    field country: Country;
+    field country: NSCountry::Country;
     field description5G: Description5G;
     field account: Account;
 }
@@ -60,8 +65,8 @@ entity Cashflow provides APIType
 { 
     field legalEntity: LegalEntity;
     field partyId: PartyID;
-    field currency: Currency;
-    field counterparty: Counterparty;
+    field currency: NSCurrency::Currency;
+    field counterparty: FedCounterparty;
     field amountUSD: Usd;
     field amountMx: Mx;
     field tenQLevel1: TenQLevel1;
@@ -113,20 +118,20 @@ enum CentralBankSubProduct
     other_cash_currency_and_coin
 }
 
-function centralBankToSubProduct(cb: CentralBank): CentralBankSubProduct
+function centralBankToSubProduct(cb: NSCentralBank::CentralBank): CentralBankSubProduct {
     switch(cb) {
-        CentralBank::federal_Reserve_Bank        => return CentralBankSubProduct::frb;
-        | CentralBank::swiss_National_Bank       => return CentralBankSubProduct::snb;
-        | CentralBank::bank_of_England           => return CentralBankSubProduct::boe;
-        | CentralBank::european_Central_Bank     => return CentralBankSubProduct::ecb;
-        | CentralBank::bank_of_Japan             => return CentralBankSubProduct::boj;
-        | CentralBank::reserve_Bank_of_Australia => return CentralBankSubProduct::rba;
-        | CentralBank::bank_of_Canada            => return CentralBankSubProduct::boc;
-        _                                        => return CentralBankSubProduct::ocb;
+        NSCentralBank::CentralBank::federal_Reserve_Bank        => return CentralBankSubProduct::frb;
+        | NSCentralBank::CentralBank::swiss_National_Bank       => return CentralBankSubProduct::snb;
+        | NSCentralBank::CentralBank::bank_of_England           => return CentralBankSubProduct::boe;
+        | NSCentralBank::CentralBank::european_Central_Bank     => return CentralBankSubProduct::ecb;
+        | NSCentralBank::CentralBank::bank_of_Japan             => return CentralBankSubProduct::boj;
+        | NSCentralBank::CentralBank::reserve_Bank_of_Australia => return CentralBankSubProduct::rba;
+        | NSCentralBank::CentralBank::bank_of_Canada            => return CentralBankSubProduct::boc;
+        | _                                                     => return CentralBankSubProduct::ocb;
     }
 }
 
-function classify(cashflow: Cashflow, centralBanks: Map<PartyID, CentralBank>): FedCode {
+function classify(cashflow: Cashflow, centralBanks: Map<PartyID, NSCentralBank::CentralBank>): FedCode {
     let partyAsCentralBank = centralBanks.getOrNone(cashflow.partyId);
     if(partyAsCentralBank !== none) {
         if(cashflow.tenQLevel6 !== "Segregated Cash") {
@@ -177,5 +182,10 @@ function classify(cashflow: Cashflow, centralBanks: Map<PartyID, CentralBank>): 
 }
 
 function isOnshore(cashflow: Cashflow): Bool {
-    return cashflow.legalEntity.country === uniqueCountryLookup(cashflow.currency) && cashflow.legalEntity.country === cashflow.counterparty.country;
+    if(cashflow.legalEntity.country === none) {
+        return false;
+    }
+    else {
+        return cashflow.legalEntity.country === NSCurrency::country(cashflow.currency) && cashflow.legalEntity.country === cashflow.counterparty.country;
+    }
 }

@@ -1,8 +1,9 @@
-namespace Main;
+namespace NSProduct;
 
-typedef ProductId = StringOf<ValidIdName>;
+typedecl ValidProductName = /[a-zA-Z0-9_]+/;
+typedef ProductId = StringOf<ValidProductName>;
 
-enum productType
+enum ProductType
 {
     cash,
     equity,
