@@ -878,12 +878,12 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     method slice(start?: Nat=0n, end?: Nat=ListOps::s_size<T>(this.value())): List<T> {
         assert start <= end;
         assert end <= ListOps::s_size<T>(this.value());
-        return List<T>::s_into(ListOps::s_slice_end<T>(ListOps::s_slice_front<T>(this.value(), start), end));
+        return List<T>::s_into(ListOps::s_slice_end<T>(ListOps::s_slice_start<T>(this.value(), start), end));
     }
 
     method removeFirst(k: Nat): List<T> {
         assert k <= ListOps::s_size<T>(this.value());
-        return List<T>::s_into(ListOps::s_slice_front<T>(this.value(), k));
+        return List<T>::s_into(ListOps::s_slice_start<T>(this.value(), k));
     } 
 
     method removeLast(k: Nat): List<T> {
@@ -920,7 +920,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return List<T>{};
         }
         else {
-            return List<T>::s_into(ListOps::s_slice_front<T>(this.value(), lpos));
+            return List<T>::s_into(ListOps::s_slice_start<T>(this.value(), lpos));
         }
     }
 
@@ -931,7 +931,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return List<T>{};
         }
         else {
-            return List<T>::s_into(ListOps::s_slice_front<T>(this.value(), lpos));
+            return List<T>::s_into(ListOps::s_slice_start<T>(this.value(), lpos));
         }
     }
 
@@ -964,7 +964,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return this;
         }
         else {
-            return List<T>::s_into(ListOps::s_slice_front<T>(this.value(), lpos));
+            return List<T>::s_into(ListOps::s_slice_start<T>(this.value(), lpos));
         }
     }
 
@@ -975,7 +975,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return this;
         }
         else {
-            return List<T>::s_into(ListOps::s_slice_front<T>(this.value(), lpos));
+            return List<T>::s_into(ListOps::s_slice_start<T>(this.value(), lpos));
         }
     }
 
