@@ -2363,11 +2363,11 @@ __internal entity LargeList<T> provides Some {
     internal function s_vector4_to_large_list(v: Vector4<T>): LargeList<T> = s_vector4_to_large_list;
     internal function s_vector5_to_large_list(v: Vector5<T>): LargeList<T> = s_vector5_to_large_list;
 
-    internal function s_large_list_to_vector1(l: LargeList<T>): Vector1<T> = s_large_list_to_vector1_to_large_list;
-    internal function s_large_list_to_vector2(l: LargeList<T>): Vector2<T> = s_large_list_to_vector2_to_large_list;
-    internal function s_large_list_to_vector3(l: LargeList<T>): Vector3<T> = s_large_list_to_vector3_to_large_list;
-    internal function s_large_list_to_vector4(l: LargeList<T>): Vector4<T> = s_large_list_to_vector4_to_large_list;
-    internal function s_large_list_to_vector5(l: LargeList<T>): Vector5<T> = s_large_list_to_vector5_to_large_list;
+    internal function s_large_list_to_vector1(l: LargeList<T>): Vector1<T> = s_vector1_to_large_list;
+    internal function s_large_list_to_vector2(l: LargeList<T>): Vector2<T> = s_vector2_to_large_list;
+    internal function s_large_list_to_vector3(l: LargeList<T>): Vector3<T> = s_vector3_to_large_list;
+    internal function s_large_list_to_vector4(l: LargeList<T>): Vector4<T> = s_vector4_to_large_list;
+    internal function s_large_list_to_vector5(l: LargeList<T>): Vector5<T> = s_vector5_to_large_list;
 
     internal function s_large_list_count(): Nat = s_large_list_count; 
     internal function s_large_list_append(l: LargeList<T>, r: LargeList<T>): LargeList<T> = s_large_list_append;
@@ -2387,6 +2387,15 @@ __internal entity LargeList<T> provides Some {
     internal function s_large_list_pop_back(l: LargeList<T>): LargeList<T> = s_large_list_pop_back; 
     internal function s_large_list_pop_front(l: LargeList<T>): LargeList<T> = s_large_list_pop_front; 
 
+    internal recursive? function s_large_list_map_pred(l: LargeList<T>, p: recursive? pred(_: T) -> Bool): LargeList<Bool> = s_large_list_map_pred;
+    internal recursive? function s_large_list_map_pred_idx(l: LargeList<T>, p: recursive? pred(_: T, _: Nat) -> Bool): LargeList<Bool> = s_large_list_map_pred_idx;
+    internal recursive? function s_large_list_map_fn<U>(l: LargeList<T>, f: recursive? fn(_: T) -> U): LargeList<U> = s_large_list_map_fn;
+    internal recursive? function s_large_list_map_fn_idx<U>(l: LargeList<T>, p: recursive? pred(_: T, _: Nat) -> U): LargeList<U> = s_large_list_map_fn_idx;
+
+    internal function s_large_list_has(l: LargeList<T>, v: T): Bool = s_large_list_has; 
+    internal function s_large_list_indexof(l: LargeList<T>, v: T): Int = s_large_list_indexof; 
+    internal function s_large_list_last_indexof(l: LargeList<T>, v: T): Int = s_large_list_last_indexof; 
+
     function s_vector_to_large_list(vl: ListVector<T>): LargeList<T> {
         if(vl.is<Vector1<T>>()) {
             return LargeList<T>::s_vector1_to_large_list(vl);
@@ -2405,9 +2414,7 @@ __internal entity LargeList<T> provides Some {
         }
     }
 
-    function s_large_list_to_vector(l: LargeList<T>): ListVector<T> {
-        let count = LargeList<T>::s_large_list_count(l);
-
+    function s_large_list_to_vector(l: LargeList<T>, count: Nat): ListVector<T> {
         if(count === 1) {
             return LargeList<T>::s_large_list_to_vector1(l);
         }
@@ -2475,7 +2482,7 @@ __internal entity LargeList<T> provides Some {
                 return ll;
             }
             else {
-                return LargeList<T>::s_large_list_to_vector(ll);
+                return LargeList<T>::s_large_list_to_vector(ll, llc);
             }
         }
     }
@@ -2491,7 +2498,7 @@ __internal entity LargeList<T> provides Some {
                 return ll;
             }
             else {
-                return LargeList<T>::s_large_list_to_vector(ll);
+                return LargeList<T>::s_large_list_to_vector(ll, llc);
             }
         }
     }
@@ -2509,46 +2516,115 @@ __internal entity LargeList<T> provides Some {
     }
 
     recursive? function has_pred(l: LargeList<T>, p: recursive? pred(_: T) -> Bool): Bool {
-        return ListOps::s_blockingfailure<Bool>();
+        let mask = LargeList<T>::s_large_list_map_pred[recursive](l, p);
+        return LargeList<Bool>::s_large_list_has(mask, true);
     }
 
     recursive? function has_pred_idx(l: LargeList<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Bool {
-        return ListOps::s_blockingfailure<Bool>();
+        let mask = LargeList<T>::s_large_list_map_pred_idx[recursive](l, p);
+        return LargeList<Bool>::s_large_list_has(mask, true);
     }
 
     recursive? function find_pred(l: LargeList<T>, p: recursive? pred(_: T) -> Bool): Nat? {
-        return ListOps::s_blockingfailure<Bool>();
+        let mask = LargeList<T>::s_large_list_map_pred[recursive](l, p);
+        let idx = LargeList<Bool>::s_large_list_indexof(mask, true);
+        if(idx == -1) {
+            return none;
+        }
+        else {
+            return NumericOps::s_intToNat(idx);
+        }
     }
 
     recursive? function find_pred_idx(l: LargeList<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
-        return ListOps::s_blockingfailure<Nat?>();
+        let mask = LargeList<T>::s_large_list_map_pred_idx[recursive](l, p);
+        let idx = LargeList<Bool>::s_large_list_indexof(mask, true);
+        if(idx == -1) {
+            return none;
+        }
+        else {
+            return NumericOps::s_intToNat(idx);
+        }
     }
 
     recursive? function find_last_pred(l: LargeList<T>, p: recursive? pred(_: T) -> Bool): Nat? {
-        return ListOps::s_blockingfailure<Nat?>();
+        let mask = LargeList<T>::s_large_list_map_pred[recursive](l, p);
+        let idx = LargeList<Bool>::s_large_list_last_indexof(mask, true);
+        if(idx == -1) {
+            return none;
+        }
+        else {
+            return NumericOps::s_intToNat(idx);
+        }
     }
 
     recursive? function find_last_pred_idx(l: LargeList<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Nat? {
-        return ListOps::s_blockingfailure<Nat>();
+        let mask = LargeList<T>::s_large_list_map_pred_idx[recursive](l, p);
+        let idx = LargeList<Bool>::s_large_list_last_indexof(mask, true);
+        if(idx == -1) {
+            return none;
+        }
+        else {
+            return NumericOps::s_intToNat(idx);
+        }
     }
 
     recursive? function filter_pred(l: LargeList<T>, p: recursive? pred(_: T) -> Bool): ListRepr<T> {
-        return ListOps::s_blockingfailure<ListRepr<T>>();
+        let mask = LargeList<T>::s_large_list_map_pred[recursive](l, p);
+
+        if(!LargeList<Bool>::s_large_list_has(mask, true)) {
+            return none;
+        }
+        elif(!LargeList<Bool>::s_large_list_has(mask, false)) {
+            return l;
+        }
+        else {
+            let idxl = LargeList<Bool>::s_large_list_indexof(mask, true);
+            let idxh = LargeList<Bool>::s_large_list_last_indexof(mask, true);
+
+            if(idxl == idxh) {
+                return Vector1<T>{LargeList<T>::s_large_list_get(l, idxl)};
+            }
+            else {
+                return ListOps::s_blockingfailure<ListRepr<T>>();
+            }
+        }
     }
 
     recursive? function filter_pred_idx(l: LargeList<T>, p: recursive? pred(_: T, _: Nat) -> Bool): ListRepr<T> {
-        return ListOps::s_blockingfailure<ListRepr<T>>();
+        let mask = LargeList<T>::s_large_list_map_pred_idx[recursive](l, p);
+
+        if(!LargeList<Bool>::s_large_list_has(mask, true)) {
+            return none;
+        }
+        elif(!LargeList<Bool>::s_large_list_has(mask, false)) {
+            return l;
+        }
+        else {
+            let idxl = LargeList<Bool>::s_large_list_indexof(mask, true);
+            let idxh = LargeList<Bool>::s_large_list_last_indexof(mask, true);
+
+            if(idxl == idxh) {
+                return Vector1<T>{LargeList<T>::s_large_list_get(l, idxl)};
+            }
+            else {
+                return ListOps::s_blockingfailure<ListRepr<T>>();
+            }
+        }
     }
 
     recursive? function map<U>(l: LargeList<T>, f: recursive? fn(_: T) -> U): LargeList<U> {
-        return ListOps::s_blockingfailure<LargeList<U>>();
+        return LargeList<T>::s_large_list_map_fn<U>[recursive](l, f);
     }
 
     recursive? function map_idx<U>(l: LargeList<T>, f: recursive? fn(_: T, _: Nat) -> U): LargeList<U> {
-        return ListOps::s_blockingfailure<LargeList<U>>();
+        return LargeList<T>::s_large_list_map_fn_idx<U>[recursive](l, f);
     }
 
     recursive? function min_arg<U unique Orderable>(l: LargeList<T>, f: recursive? fn(v: T) -> U): Nat, U {
+
+        //Use map + uninterpreted function to assert OR use foldl?????
+
         let ri = ListOps::s_blockingfailure<Nat>();
         let ru = ListOps::s_blockingfailure<U>();
 
@@ -2597,7 +2673,7 @@ __internal entity LargeList<T> provides Some {
             return ll;
         }
         else {
-            return LargeList<T>::s_large_list_to_vector(ll);
+            return LargeList<T>::s_large_list_to_vector(ll, llc);
         }
     }
 
@@ -2608,7 +2684,7 @@ __internal entity LargeList<T> provides Some {
             return ll;
         }
         else {
-            return LargeList<T>::s_large_list_to_vector(ll);
+            return LargeList<T>::s_large_list_to_vector(ll, llc);
         }
     }
 
@@ -2619,7 +2695,7 @@ __internal entity LargeList<T> provides Some {
             return ll;
         }
         else {
-            return LargeList<T>::s_large_list_to_vector(ll);
+            return LargeList<T>::s_large_list_to_vector(ll, llc);
         }
     }
 

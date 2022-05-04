@@ -118,7 +118,7 @@ internal entity MapOps provides Some {
             return MapOps::s_safe_insert_vector_4<K, V>(ll, rr.v0);
         }
         else {
-            return LargeList<T>::s_append(l, r); 
+            return LargeList<T>::union(l, r); 
         }
     }
 
@@ -377,7 +377,7 @@ internal entity MapOps provides Some {
             return MapOps::s_submap_vector5<K, V>[recursive?](m, p);
         }
         else {
-            return m.submap[recursive?](p);
+            return LargeMap<K, V>::submap[recursive?](m, p);
         }
     }
 
@@ -423,7 +423,7 @@ internal entity MapOps provides Some {
             return Vector5<[K, U]>{[v0.0, f[recursive?](v0.0, v0.1)], [v1.0, f[recursive?](v1.0, v1.1)], [v2.0, f[recursive?](v2.0, v2.1)], [v3.0, f[recursive?](v3.0, v3.1)], [v4.0, f[recursive?](v4.0, v4.1)]};
         }
         else {
-            return m.remap<U>[recursive?](f);
+            return LargeMap<K, V>::remap<U>[recursive?](m, f);
         }
     }
 
@@ -505,7 +505,7 @@ internal entity MapOps provides Some {
         }
         else {
             if(m.is<LargeMap<K, V>>()) {
-                return m.add(k, v);
+                return LargeMap<K, V>::add(m, k, v);
             }
             else {
                 return MapOps::s_safe_insert_vector_helper<K, V>(m, k, v);
@@ -591,7 +591,7 @@ internal entity MapOps provides Some {
 
     function s_set<K grounded KeyType, V>(m: MapRepr<K, V>, k: K, v: V): MapRepr<K, V> {
         if(m.is<LargeMap<K, V>>()) {
-            return m.set(k);
+            return LargeMap<K, V>::set(m, k);
         }
         else {
             let mm = s_safeAs<MapRepr<[K, V]>, MapVector<K, V>>(m);
@@ -674,7 +674,7 @@ internal entity MapOps provides Some {
 
     function s_remove<K grounded KeyType, V>(m: MapRepr<K, V>, k: K): MapRepr<K, V> {
         if(m.is<LargeMap<K, V>>()) {
-            return m.remove(k);
+            return LargeMap<K, V>::remove(m, k);
         }
         else {
             let mm = s_safeAs<MapRepr<[K, V]>, MapVector<K, V>>(m);
@@ -684,11 +684,66 @@ internal entity MapOps provides Some {
 }
 
 entity LargeMap<K grounded KeyType, V> provides Some {
+    internal function s_vector1_to_large_map(v: Vector1<[K, V]>): LargeMap<K, V> = s_vector1_to_large_map;
+    internal function s_vector2_to_large_map(v: Vector2<[K, V]>): LargeMap<K, V> = s_vector2_to_large_map;
+    internal function s_vector3_to_large_map(v: Vector3<[K, V]>): LargeMap<K, V> = s_vector3_to_large_map;
+    internal function s_vector4_to_large_map(v: Vector4<[K, V]>): LargeMap<K, V> = s_vector4_to_large_map;
+    internal function s_vector5_to_large_map(v: Vector5<[K, V]>): LargeMap<K, V> = s_vector5_to_large_map;
+
+    internal function s_large_map_to_vector1(l: LargeMap<K, V>): Vector1<[K, V]> = s_vector1_to_large_map;
+    internal function s_large_map_to_vector2(l: LargeMap<K, V>): Vector2<[K, V]> = s_vector2_to_large_map;
+    internal function s_large_map_to_vector3(l: LargeMap<K, V>): Vector3<[K, V]> = s_vector3_to_large_map;
+    internal function s_large_map_to_vector4(l: LargeMap<K, V>): Vector4<[K, V]> = s_vector4_to_large_map;
+    internal function s_large_map_to_vector5(l: LargeMap<K, V>): Vector5<[K, V]> = s_vector5_to_large_map;
+
     internal function s_large_map_count(m: LargeMap<K, V>): Nat = s_large_map_count; 
 
     internal function s_large_map_has(m: LargeMap<K, V>, k: K): Bool = s_large_map_has; 
     internal function s_large_map_get(m: LargeMap<K, V>, k: K): [K, V] = s_large_map_get; 
     
+    internal function s_large_map_disjoint(m1: LargeMap<K, V>, m2: LargeMap<K, V>): Bool = s_large_map_disjoint;
+    internal function s_large_map_union(m1: LargeMap<K, V>, m2: LargeMap<K, V>): LargeMap<K, V> = s_large_map_union; 
+
+    internal function s_large_map_add(m: LargeMap<K, V>, k: K, v: V): LargeMap<K, V> = s_large_map_add; 
+    internal function s_large_map_set(m: LargeMap<K, V>, k: K, v: V): LargeMap<K, V> = s_large_map_set;
+    internal function s_large_map_remove(m: LargeMap<K, V>, k: K): LargeMap<K, V> = s_large_map_remove;  
+
+    function s_vector_to_large_map(vm: MapVector<K, V>): LargeMap<K, V> {
+        if(vl.is<Vector1<[K, V]>>()) {
+            return LargeMap<K, V>::s_vector1_to_large_map(vm);
+        }
+        elif(vl.is<Vector2<[K, V]>>()) {
+            return LargeMap<K, V>::s_vector2_to_large_map(vm);
+        }
+        elif(vl.is<Vector3<[K, V]>>()) {
+            return LargeMap<K, V>::s_vector3_to_large_map(vm);
+        }
+        elif(vl.is<Vector4<[K, V]>>()) {
+            return LargeMap<K, V>::s_vector4_to_large_map(vm);
+        }
+        else {
+            return LargeMap<K, V>::s_vector5_to_large_map(vm);
+        }
+    }
+
+    function s_large_map_to_vector(m: LargeMap<K, V>, count: Nat): MapVector<K, V> {
+        if(count === 1) {
+            return LargeMap<K, V>::s_large_map_to_vector1(m);
+        }
+        elif(count === 2) {
+            return LargeMap<K, V>::s_large_map_to_vector2(m);
+        }
+        elif(count === 3) {
+            return LargeMap<K, V>::s_large_map_to_vector3(m);
+        }
+        elif(count === 4) {
+            return LargeMap<K, V>::s_large_map_to_vector4(m);
+        }
+        else {
+            return LargeMap<K, V>::s_large_map_to_vector5(m);
+        }
+    }
+
     function count(m: LargeMap<K, V>): Nat {
         return LargeMap<K, V>::s_large_map_count(m);
     }
@@ -707,32 +762,61 @@ entity LargeMap<K grounded KeyType, V> provides Some {
         }
     }
 
-    function union(m1: MapRepr<K, V>, m2: MapRepr<K, V>): MapRepr<K, V> {
-        xxxx;
-        return MapOps::s_blockingfailure<MapRepr<K, V>>();
+    function union(l: MapRepr<K, V>, r: MapRepr<K, V>): MapRepr<K, V> {
+        if(/\(l.is<LargeMap<K, V>>(), r.is<LargeMap<K, V>>())) {
+            assert(LargeMap<K, V>::s_large_map_disjoint(l, r));
+            return LargeMap<K, V>::s_large_map_union(l, r);
+        }
+        elif(l.is<LargeMap<K, V>>()) {
+            let rr = LargeMap<K, V>::s_vector_to_large_map(r);
+            assert(LargeMap<K, V>::s_large_map_disjoint(l, rr));
+            return LargeMap<K, V>::s_large_map_union(l, rr);
+        }
+        elif(r.is<LargeMap<K, V>>()) {
+            let ll = LargeMap<K, V>::s_vector_to_large_map(l);
+            assert(LargeMap<K, V>::s_large_map_disjoint(ll, r));
+            return LargeMap<K, V>::s_large_map_union(ll, r);
+        }
+        else {
+            let rr = LargeMap<K, V>::s_vector_to_large_map(r);
+            let ll = LargeMap<K, V>::s_vector_to_large_map(l);
+            assert(LargeMap<K, V>::s_large_map_disjoint(ll, rr));
+            return LargeMap<K, V>::s_large_map_union(ll, rr);
+        }
     }
 
-    recursive? method submap(p: recursive? pred(k: K, v: V) -> Bool): MapRepr<K, V> {
+    recursive? function submap(m: MapRepr<K, V>, p: recursive? pred(k: K, v: V) -> Bool): MapRepr<K, V> {
          return MapOps::s_blockingfailure<MapRepr<K, V>>();
     }
 
-    recursive? method remap<U>(f: recursive? fn(k: K, v: V) -> U): LargeMap<K, U> {
+    recursive? function remap<U>(m: MapRepr<K, V>, f: recursive? fn(k: K, v: V) -> U): LargeMap<K, U> {
         return MapOps::s_blockingfailure<LargeMap<K, V>>();
     }
 
-    method add(k: K, v: V): LargeMap<K, V> {
-        xxxx;
-        return MapOps::s_blockingfailure<LargeMap<K, V>>();
+    function add(m: MapRepr<K, V>, k: K, v: V): LargeMap<K, V> {
+        assert(!LargeMap<K, V>::s_large_map_has(m, k));
+
+        return LargeMap<K, V>::s_large_map_add(m, k, v);
     }
 
-    method set(k: K, v: V): LargeMap<K, V> {
-        xxxx;
-        return MapOps::s_blockingfailure<LargeMap<K, V>>();
+    function set(m: MapRepr<K, V>, k: K, v: V): LargeMap<K, V> {
+        assert(LargeMap<K, V>::s_large_map_has(m, k));
+
+        return LargeMap<K, V>::s_large_map_set(m, k, v);
     }
 
-    method remove(k: K): MapRepr<K, V> {
-        xxxx;
-        return MapOps::s_blockingfailure<MapRepr<K, V>>();
+    function remove(m: MapRepr<K, V>, k: K): MapRepr<K, V> {
+        assert(LargeMap<K, V>::s_large_map_has(m, k));
+
+        let mm = LargeMap<K, V>::s_large_map_remove(m, k);
+        let mmc = LargeMap<K, V>::s_large_map_count(mm);
+
+        if(mm > 5) {
+            return mm;
+        }
+        else {
+            return LargeMap<K, V>::s_large_map_to_vector(mm, mmc);
+        }
     }
 }
 #endif
