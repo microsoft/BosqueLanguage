@@ -2891,14 +2891,41 @@ class SMTBodyEmitter {
                 const cbody = new SMTCallSimple("seq.nth", [sval, new SMTConst("0")]);
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
             }
+            case "s_large_list_set": {
+                const lt = this.typegen.assembly.entityDecls.get(idecl.params[0].type) as MIRObjectEntityTypeDecl;
+                const sval = new SMTCallSimple(this.typegen.generateEntityFieldGetFunction(lt, lt.fields[0]), [new SMTVar(args[0].vname)]);
+                const cbody = new SMTLet("sval", sval, new SMTCallSimple(this.typegen.getSMTConstructorName(mirrestype).cons, [new SMTCallSimple("seq.++", [
+                    new SMTCallSimple("seq.extract", [new SMTVar("sval"), new SMTConst("0"), new SMTVar(args[1].vname)]),
+                    new SMTCallSimple("seq.unit", [new SMTVar(args[2].vname)]), 
+                    new SMTCallSimple("seq.extract", [new SMTVar("sval"), 
+                        new SMTCallSimple("+", [new SMTVar(args[1].vname), new SMTConst("1")]), 
+                        new SMTCallSimple("-", [new SMTCallSimple("seq.len", [sval]), new SMTCallSimple("+", [new SMTVar(args[1].vname), new SMTConst("1")])
+                    ])])
+                ])]));
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+            }
+            case "s_large_list_push_back": {
+                const lt = this.typegen.assembly.entityDecls.get(idecl.params[0].type) as MIRObjectEntityTypeDecl;
+                const sval = new SMTCallSimple(this.typegen.generateEntityFieldGetFunction(lt, lt.fields[0]), [new SMTVar(args[0].vname)]);
+                const cbody = new SMTCallSimple(this.typegen.getSMTConstructorName(mirrestype).cons, [new SMTCallSimple("seq.++", [
+                    sval,
+                    new SMTCallSimple("seq.unit", [new SMTVar(args[1].vname)])
+                ])]);
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+            }
+            case "s_large_list_push_front": {
+                const lt = this.typegen.assembly.entityDecls.get(idecl.params[0].type) as MIRObjectEntityTypeDecl;
+                const sval = new SMTCallSimple(this.typegen.generateEntityFieldGetFunction(lt, lt.fields[0]), [new SMTVar(args[0].vname)]);
+                const cbody = new SMTCallSimple(this.typegen.getSMTConstructorName(mirrestype).cons, [new SMTCallSimple("seq.++", [
+                    new SMTCallSimple("seq.unit", [new SMTVar(args[1].vname)]), 
+                    sval
+                ])]);
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+            }
 
-    s_large_list_set; 
-    s_large_list_push_back; 
-     s_large_list_push_front; 
-
-     s_large_list_remove; 
-     s_large_list_pop_back; 
-    s_large_list_pop_front; 
+            case "s_large_list_remove; 
+            case "s_large_list_pop_back; 
+            case "s_large_list_pop_front; 
 
     s_large_list_map_pred;
     s_large_list_map_pred_idx;
