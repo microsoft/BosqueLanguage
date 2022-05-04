@@ -2373,7 +2373,19 @@ __internal entity LargeList<T> provides Some {
     internal function s_large_list_append(l: LargeList<T>, r: LargeList<T>): LargeList<T> = s_large_list_append;
 
     internal function s_large_list_slice_front(l: LargeList<T>, idx: Nat): LargeList<T> = s_large_list_slice_front; 
-    internal function s_large_list_slice_end(l: LargeList<T>, idx: Nat): LargeList<T> = s_large_list_slice_front; 
+    internal function s_large_list_slice_end(l: LargeList<T>, idx: Nat): LargeList<T> = s_large_list_slice_end; 
+
+    internal function s_large_list_get(l: LargeList<T>, idx: Nat): T = s_large_list_get; 
+    internal function s_large_list_get_back(l: LargeList<T>): T = s_large_list_get_back; 
+    internal function s_large_list_get_front(l: LargeList<T>): T = s_large_list_get_front; 
+
+    internal function s_large_list_set(l: LargeList<T>, idx: Nat, v: T): LargeList<T> = s_large_list_set; 
+    internal function s_large_list_push_back(l: LargeList<T>, v: T): LargeList<T> = s_large_list_push_back; 
+    internal function s_large_list_push_front(l: LargeList<T>, v: T): LargeList<T> = s_large_list_push_front; 
+
+    internal function s_large_list_remove(l: LargeList<T>, idx: Nat): LargeList<T> = s_large_list_remove; 
+    internal function s_large_list_pop_back(l: LargeList<T>): LargeList<T> = s_large_list_pop_back; 
+    internal function s_large_list_pop_front(l: LargeList<T>): LargeList<T> = s_large_list_pop_front; 
 
     function s_vector_to_large_list(vl: ListVector<T>): LargeList<T> {
         if(vl.is<Vector1<T>>()) {
@@ -2469,19 +2481,31 @@ __internal entity LargeList<T> provides Some {
     }
 
     function slice_end(l: LargeList<T>, idx: Nat): ListRepr<T> {
-        xxxx;
+        if(idx === 0n) {
+            return none;
+        }
+        else {
+            let ll = LargeList<T>::s_large_list_slice_end(l, idx);
+            let llc = LargeList<T>::s_large_list_count(ll);
+            if(llc > 5) {
+                return ll;
+            }
+            else {
+                return LargeList<T>::s_large_list_to_vector(ll);
+            }
+        }
     }
 
     function safe_get(l: LargeList<T>, i: Nat): T {
-        xxxx;
+        return LargeList<T>::s_large_list_get(l, i);
     }
 
     function safe_back(l: LargeList<T>): T {
-        xxxx;
+        return LargeList<T>::s_large_list_get_back(l);
     }
 
     function safe_front(l: LargeList<T>): T {
-        xxxx;
+        return LargeList<T>::s_large_list_get_front(l);
     }
 
     recursive? function has_pred(l: LargeList<T>, p: recursive? pred(_: T) -> Bool): Bool {
@@ -2555,27 +2579,48 @@ __internal entity LargeList<T> provides Some {
     }
 
     function set(l: LargeList<T>, i: Nat, v: T): LargeList<T> {
-        xxxx;
+        return LargeList<T>::s_large_list_set(l, i, v);
     }
 
     function push_back(l: LargeList<T>, v: T): LargeList<T> {
-        xxxx;
+        return LargeList<T>::s_large_list_push_back(l, v);
     }
 
     function push_front(l: LargeList<T>, v: T): LargeList<T> {
-        xxxx;
+        return LargeList<T>::s_large_list_push_front(l, v);
     }
 
     function remove(l: LargeList<T>, i: Nat): ListRepr<T> {
-        xxxx;
+        let ll = LargeList<T>::s_large_list_remove(l, i);
+        let llc = LargeList<T>::s_large_list_count(ll);
+        if(llc > 5) {
+            return ll;
+        }
+        else {
+            return LargeList<T>::s_large_list_to_vector(ll);
+        }
     }
 
     function pop_front(l: LargeList<T>): ListRepr<T> {
-        xxxx;
+        let ll = LargeList<T>::s_large_list_pop_front(l);
+        let llc = LargeList<T>::s_large_list_count(ll);
+        if(llc > 5) {
+            return ll;
+        }
+        else {
+            return LargeList<T>::s_large_list_to_vector(ll);
+        }
     }
 
     function pop_back(l: LargeList<T>): ListRepr<T> {
-        xxxx;
+        let ll = LargeList<T>::s_large_list_pop_back(l);
+        let llc = LargeList<T>::s_large_list_count(ll);
+        if(llc > 5) {
+            return ll;
+        }
+        else {
+            return LargeList<T>::s_large_list_to_vector(ll);
+        }
     }
 
     recursive? function reduce<U>(l: LargeList<T>, init: U, op: recursive? fn(_: U, _: T) -> U): U {

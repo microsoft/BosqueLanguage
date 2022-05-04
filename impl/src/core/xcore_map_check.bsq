@@ -146,7 +146,7 @@ internal entity MapOps provides Some {
             return 5n;
         }
         else {
-            return m.count();
+            return LargeMap<K, V>::count(m);
         }
     }
 
@@ -175,7 +175,7 @@ internal entity MapOps provides Some {
             return \/(KeyType::equal<K>(mm.v0.0, k), KeyType::equal<K>(mm.v1.0, k), KeyType::equal<K>(mm.v2.0, k), KeyType::equal<K>(mm.v3.0, k), KeyType::equal<K>(mm.v4.0, k));
         }
         else {
-            return m.has(k);
+            return LargeMap<K, V>::has(m, k);
         }
     }
 
@@ -259,7 +259,7 @@ internal entity MapOps provides Some {
             }
         }
         else {
-            return m.find(k);
+            return LargeMap<K, V>::find(m, k);
         }
     }
 
@@ -684,20 +684,31 @@ internal entity MapOps provides Some {
 }
 
 entity LargeMap<K grounded KeyType, V> provides Some {
-    xxxx;
-    method count(): Nat {
-        return MapOps::s_blockingfailure<Nat>();
+    internal function s_large_map_count(m: LargeMap<K, V>): Nat = s_large_map_count; 
+
+    internal function s_large_map_has(m: LargeMap<K, V>, k: K): Bool = s_large_map_has; 
+    internal function s_large_map_get(m: LargeMap<K, V>, k: K): [K, V] = s_large_map_get; 
+    
+    function count(m: LargeMap<K, V>): Nat {
+        return LargeMap<K, V>::s_large_map_count(m);
     }
 
-    method has(k: K): Bool {
-        return MapOps::s_blockingfailure<Bool>();
+    function has(m: LargeMap<K, V>, k: K): Bool {
+        return LargeMap<K, V>::s_large_map_has(m, k);
     }
 
-    method find(k: K): [K, V]? {
-        return MapOps::s_blockingfailure<[K, V]?>();
+    function find(m: LargeMap<K, V>, k: K): [K, V]? {
+        let has = LargeMap<K, V>::s_large_map_has(m, k);
+        if(!has) {
+            return none;
+        }
+        else {
+            return LargeMap<K, V>::s_large_map_get(m, k);
+        }
     }
 
     function union(m1: MapRepr<K, V>, m2: MapRepr<K, V>): MapRepr<K, V> {
+        xxxx;
         return MapOps::s_blockingfailure<MapRepr<K, V>>();
     }
 
@@ -710,14 +721,17 @@ entity LargeMap<K grounded KeyType, V> provides Some {
     }
 
     method add(k: K, v: V): LargeMap<K, V> {
+        xxxx;
         return MapOps::s_blockingfailure<LargeMap<K, V>>();
     }
 
     method set(k: K, v: V): LargeMap<K, V> {
+        xxxx;
         return MapOps::s_blockingfailure<LargeMap<K, V>>();
     }
 
     method remove(k: K): MapRepr<K, V> {
+        xxxx;
         return MapOps::s_blockingfailure<MapRepr<K, V>>();
     }
 }
