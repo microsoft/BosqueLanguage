@@ -2948,13 +2948,13 @@ class SMTBodyEmitter {
                 xxxx;
             }
             case "s_large_list_map_pred_idx": {
-                xxxx;
+                assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
             }
             case "s_large_list_map_fn": {
                 xxxx;
             }
             case "s_large_list_map_fn_idx": {
-                xxxx;
+                assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
             }
             case "s_large_list_has": {
                 const sval = this.typegen.generateLargeListTypeGetSeq(mirrestype, new SMTVar(args[0].vname));
