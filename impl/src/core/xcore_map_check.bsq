@@ -431,8 +431,8 @@ entity LargeMap<K grounded KeyType, V> provides Some {
     __safe internal function s_large_map_disjoint(m1: LargeMap<K, V>, m2: LargeMap<K, V>): Bool = s_large_map_disjoint;
     __safe internal function s_large_map_union(m1: LargeMap<K, V>, m2: LargeMap<K, V>): LargeMap<K, V> = s_large_map_union; 
 
-    __safe internal function s_large_map_add(m: LargeMap<K, V>, k: K, v: V): LargeMap<K, V> = s_large_map_add; 
-    __safe internal function s_large_map_set(m: LargeMap<K, V>, k: K, v: V): LargeMap<K, V> = s_large_map_set;
+    __safe internal function s_large_map_add(m: LargeMap<K, V>, k: K, vtup: [K, V]): LargeMap<K, V> = s_large_map_add; 
+    __safe internal function s_large_map_set(m: LargeMap<K, V>, k: K, vtup: [K, V]): LargeMap<K, V> = s_large_map_set;
     __safe internal function s_large_map_remove(m: LargeMap<K, V>, k: K): LargeMap<K, V> = s_large_map_remove;  
 
     function s_vector_to_large_map(vm: MapVector<K, V>): LargeMap<K, V> {
