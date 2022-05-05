@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { MIRAssembly, MIRConstructableEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIRDataBufferInternalEntityTypeDecl, MIRDataStringInternalEntityTypeDecl, MIREntityType, MIREntityTypeDecl, MIREnumEntityTypeDecl, MIREphemeralListType, MIRFieldDecl, MIRHavocEntityTypeDecl, MIRInternalEntityTypeDecl, MIRPrimitiveCollectionEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRRecordType, MIRStringOfInternalEntityTypeDecl, MIRTupleType, MIRType } from "../../compiler/mir_assembly";
+import { MIRAssembly, MIRConstructableEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIRDataBufferInternalEntityTypeDecl, MIRDataStringInternalEntityTypeDecl, MIREntityType, MIREntityTypeDecl, MIREnumEntityTypeDecl, MIREphemeralListType, MIRFieldDecl, MIRHavocEntityTypeDecl, MIRInternalEntityTypeDecl, MIRObjectEntityTypeDecl, MIRPrimitiveCollectionEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRRecordType, MIRStringOfInternalEntityTypeDecl, MIRTupleType, MIRType } from "../../compiler/mir_assembly";
 import { MIRGlobalKey, MIRInvokeKey, MIRResolvedTypeKey } from "../../compiler/mir_ops";
 import { SMTCallGeneral, SMTCallSimple, SMTConst, SMTExp, SMTTypeInfo, VerifierOptions } from "./smt_exp";
 
@@ -629,6 +629,112 @@ class SMTTypeEmitter {
     generateAccessWithSetGuardResultGetFlag(ttype: MIRType, exp: SMTExp): SMTExp {
         return new SMTCallSimple(`$GuardResult_${this.getSMTTypeFor(ttype).smttypename}@flag`, [exp]);
     }
+
+
+    generateVectorTypeConstructor(ttype: MIRType, vals: SMTExp[]): SMTExp {
+        const consinfo = this.getSMTConstructorName(ttype);
+        return new SMTCallSimple(consinfo.cons, vals);
+    }
+
+    generateVectorTypeGet(ttype: MIRType, vv: SMTExp, idx: number): SMTExp {
+        const lt = this.assembly.entityDecls.get(ttype.typeID) as MIRObjectEntityTypeDecl;
+        return new SMTCallSimple(this.generateEntityFieldGetFunction(lt, lt.fields[idx]), [vv]);
+    }
+
+    generateLargeListTypeConsInfo(ttype: MIRType): {cons: string, seqf: string} {
+        return {cons: `${this.getSMTTypeFor(ttype).smttypename}@cons`, seqf: `${this.getSMTTypeFor(ttype).smttypename}_seq`};
+    }
+
+    generateLargeListTypeConstructor(ttype: MIRType, seq: SMTExp): SMTExp {
+        const consinfo = this.generateLargeListTypeConsInfo(ttype);
+        return new SMTCallSimple(consinfo.cons, [seq]);
+    }
+
+    generateLargeListTypeGetSeq(ttype: MIRType, ll: SMTExp): SMTExp {
+        const consinfo = this.generateLargeListTypeConsInfo(ttype);
+        return new SMTCallSimple(consinfo.seqf, [ll]);
+    }
+
+    generateLargeListTypeSeq_GetLength(seq: SMTExp): SMTExp {
+        return new SMTCallSimple("seq.len", [seq]);
+    }
+
+    generateLargeListTypeSeq_GetLengthMinus1(seq: SMTExp): SMTExp {
+        return new SMTCallSimple("-", [new SMTCallSimple("seq.len", [seq]), new SMTConst("1")]);
+    }
+
+    generateLargeMapEntryType(ttype: MIRType): SMTTypeInfo {
+        return new SMTTypeInfo(`$LargeMapEntry_${this.getSMTTypeFor(ttype).smttypename}`, "[INTERNAL RESULT]", "[INTERNAL RESULT]");
+    }
+
+    generateLargeMapEntryTypeConsInfo(ttype: MIRType): {cons: string, empty: string, keyf: string, valf: string} {
+        return {cons: `$LargeMapEntry_${this.getSMTTypeFor(ttype).smttypename}@cons`, empty: `$LargeMapEntry_${this.getSMTTypeFor(ttype).smttypename}@empty`, keyf: `$LargeMapEntry_${this.getSMTTypeFor(ttype).smttypename}_key`, valf: `$LargeMapEntry_${this.getSMTTypeFor(ttype).smttypename}_vtup`};
+    }
+
+    generateLargeMapEntryTypeConstructorValid(ttype: MIRType, key: SMTExp, val: SMTExp): SMTExp {
+        const consinfo = this.generateLargeMapEntryTypeConsInfo(ttype);
+        return new SMTCallSimple(consinfo.cons, [key, val]);
+    }
+
+    generateLargeMapEntryTypeConstructorEmpty(ttype: MIRType): SMTExp {
+        const consinfo = this.generateLargeMapEntryTypeConsInfo(ttype);
+        return new SMTConst(consinfo.empty);
+    }
+
+    generateLargeMapEntryTypeIsValid(ttype: MIRType, entry: SMTExp): SMTExp {
+        const consinfo = this.generateLargeMapEntryTypeConsInfo(ttype);
+        return SMTCallSimple.makeIsTypeOp(consinfo.cons, entry);
+    }
+
+    generateLargeMapEntryTypeGetKey(ttype: MIRType, entry: SMTExp): SMTExp {
+        const consinfo = this.generateLargeMapEntryTypeConsInfo(ttype);
+        return new SMTCallSimple(consinfo.keyf, [entry]);
+    }
+
+    generateLargeMapEntryTypeGetValueTuple(ttype: MIRType, entry: SMTExp): SMTExp {
+        const consinfo = this.generateLargeMapEntryTypeConsInfo(ttype);
+        return new SMTCallSimple(consinfo.valf, [entry]);
+    }
+
+    generateLargeMapTypeConsInfo(ttype: MIRType): {cons: string, lenf: string, arrayf: string} {
+        return {cons: `${this.getSMTTypeFor(ttype).smttypename}@cons`, lenf: `${this.getSMTTypeFor(ttype).smttypename}_len`, arrayf: `${this.getSMTTypeFor(ttype).smttypename}_array`};
+    }
+
+    generateLargeMapTypeConstructor(ttype: MIRType, len: SMTExp, array: SMTExp): SMTExp {
+        const consinfo = this.generateLargeMapTypeConsInfo(ttype);
+        return new SMTCallSimple(consinfo.cons, [len, array]);
+    }
+
+    generateLargeMapTypeConstructorElements(ttype: MIRType, vtype: MIRType, len: SMTExp, elements: SMTExp[]): SMTExp {
+        const consinfo = this.generateLargeMapTypeConsInfo(ttype);
+        
+        const entrytype = this.generateLargeMapEntryType(ttype);
+        const entryinfo = this.generateLargeMapEntryTypeConsInfo(ttype);
+
+        const mirktype = (this.assembly.entityDecls.get(ttype.typeID) as MIREntityTypeDecl).terms.get("K") as MIRType;
+        const mirtuptype = (this.assembly.entityDecls.get(vtype.typeID) as MIREntityTypeDecl).terms.get("T") as MIRType;
+
+        let array: SMTExp = new SMTConst(`((as const (Array ${this.getSMTTypeFor(mirktype).smttypename} ${entrytype.smttypename})) ${entryinfo.empty})`);
+        for(let i = 0; i < elements.length; ++i) {
+            const ekey = new SMTCallSimple(this.generateTupleIndexGetFunction(mirtuptype.getUniqueTupleTargetType(), 0), [elements[i]]);
+            array = new SMTCallSimple("store", [array, ekey, this.generateLargeMapEntryTypeConstructorValid(ttype, ekey, elements[i])]);
+        }
+
+        return new SMTCallSimple(consinfo.cons, [len, array]);
+    }
+
+    generateLargeMapTypeGetLength(ttype: MIRType, mm: SMTExp): SMTExp {
+        const consinfo = this.generateLargeMapTypeConsInfo(ttype);
+        return new SMTCallSimple(consinfo.lenf, [mm]);
+    }
+
+    generateLargeMapTypeGetArray(ttype: MIRType, mm: SMTExp): SMTExp {
+        const consinfo = this.generateLargeMapTypeConsInfo(ttype);
+        return new SMTCallSimple(consinfo.arrayf, [mm]);
+    }
+
+
+
 
     generateHavocConstructorName(tt: MIRType): string {
         return `_@@cons_${this.lookupTypeName(tt.typeID)}_entrypoint`;

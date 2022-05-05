@@ -8,7 +8,7 @@ import { SMTTypeEmitter } from "./smttype_emitter";
 import { MIRAbort, MIRArgGuard, MIRArgument, MIRAssertCheck, MIRBasicBlock, MIRBinKeyEq, MIRBinKeyLess, MIRConstantArgument, MIRConstantBigInt, MIRConstantBigNat, MIRConstantDataString, MIRConstantDecimal, MIRConstantFalse, MIRConstantFloat, MIRConstantInt, MIRConstantNat, MIRConstantNone, MIRConstantNothing, MIRConstantRational, MIRConstantRegex, MIRConstantString, MIRConstantStringOf, MIRConstantTrue, MIRConstantTypedNumber, MIRConstructorEntityDirect, MIRConstructorEphemeralList, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionMixed, MIRConstructorPrimaryCollectionSingletons, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConvertValue, MIRDeclareGuardFlagLocation, MIREntityProjectToEphemeral, MIREntityUpdate, MIREphemeralListExtend, MIRExtract, MIRFieldKey, MIRGlobalVariable, MIRGuard, MIRGuardedOptionInject, MIRInject, MIRInvokeFixedFunction, MIRInvokeKey, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRIsTypeOf, MIRJump, MIRJumpCond, MIRJumpNone, MIRLoadConst, MIRLoadField, MIRLoadFromEpehmeralList, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadUnintVariableValue, MIRLogicAction, MIRMaskGuard, MIRMultiLoadFromEpehmeralList, MIROp, MIROpTag, MIRPhi, MIRPrefixNotOp, MIRRecordHasProperty, MIRRecordProjectToEphemeral, MIRRecordUpdate, MIRRegisterArgument, MIRRegisterAssign, MIRResolvedTypeKey, MIRReturnAssign, MIRReturnAssignOfCons, MIRSetConstantGuardFlag, MIRSliceEpehmeralList, MIRStatmentGuard, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRTupleHasIndex, MIRTupleProjectToEphemeral, MIRTupleUpdate, MIRVirtualMethodKey } from "../../compiler/mir_ops";
 import { SMTCallSimple, SMTCallGeneral, SMTCallGeneralWOptMask, SMTCond, SMTConst, SMTExp, SMTIf, SMTLet, SMTLetMulti, SMTMaskConstruct, SMTVar, SMTCallGeneralWPassThroughMask, SMTTypeInfo, VerifierOptions } from "./smt_exp";
 import { SourceInfo } from "../../ast/parser";
-import { SMTFunction, SMTFunctionUninterpreted } from "./smt_assembly";
+import { SMTFunction } from "./smt_assembly";
 
 import * as assert from "assert";
 import { BSQRegex } from "../../ast/bsqregex";
@@ -2636,7 +2636,7 @@ class SMTBodyEmitter {
         return smtexps.get("entry") as SMTExp;
     }
 
-    generateSMTInvoke(idecl: MIRInvokeDecl): SMTFunction | SMTFunctionUninterpreted | undefined {
+    generateSMTInvoke(idecl: MIRInvokeDecl): SMTFunction | undefined {
         this.currentFile = idecl.srcFile;
         this.currentRType = this.typegen.getMIRType(idecl.resultType);
 
@@ -2664,7 +2664,7 @@ class SMTBodyEmitter {
         }
     }
 
-    generateBuiltinFunction(idecl: MIRInvokePrimitiveDecl): SMTFunction | SMTFunctionUninterpreted | undefined {
+    generateBuiltinFunction(idecl: MIRInvokePrimitiveDecl): SMTFunction | undefined {
         const args = idecl.params.map((arg) => {
             return { vname: this.varStringToSMT(arg.name).vname, vtype: this.typegen.getSMTTypeFor(this.typegen.getMIRType(arg.type)) };
         });
@@ -2787,171 +2787,161 @@ class SMTBodyEmitter {
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);
             }
             case "s_vector1_to_large_list": {
-                const vt = this.typegen.assembly.entityDecls.get(idecl.params[0].type) as MIRObjectEntityTypeDecl;
-                const cbody = new SMTCallSimple(this.typegen.getSMTConstructorName(mirrestype).cons, [
-                    new SMTCallSimple("seq.unit", [new SMTCallSimple(this.typegen.generateEntityFieldGetFunction(vt, vt.fields[0]), [new SMTVar(args[0].vname)])])
-                ]);
+                const vt = this.typegen.getMIRType(idecl.params[0].type);
+                const cbody = this.typegen.generateLargeListTypeConstructor(mirrestype, 
+                    new SMTCallSimple("seq.unit", [this.typegen.generateVectorTypeGet(vt, new SMTVar(args[0].vname), 0)])
+                );
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
             }
             case "s_vector2_to_large_list": {
-                const vt = this.typegen.assembly.entityDecls.get(idecl.params[0].type) as MIRObjectEntityTypeDecl;
-                const cbody = new SMTCallSimple(this.typegen.getSMTConstructorName(mirrestype).cons, [new SMTCallSimple("seq.++", [
-                    new SMTCallSimple("seq.unit", [new SMTCallSimple(this.typegen.generateEntityFieldGetFunction(vt, vt.fields[0]), [new SMTVar(args[0].vname)])]),
-                    new SMTCallSimple("seq.unit", [new SMTCallSimple(this.typegen.generateEntityFieldGetFunction(vt, vt.fields[1]), [new SMTVar(args[0].vname)])])
-                ])]);
+                const vt = this.typegen.getMIRType(idecl.params[0].type);
+                const cbody = this.typegen.generateLargeListTypeConstructor(mirrestype, new SMTCallSimple("seq.++", [
+                        new SMTCallSimple("seq.unit", [this.typegen.generateVectorTypeGet(vt, new SMTVar(args[0].vname), 0)]),
+                        new SMTCallSimple("seq.unit", [this.typegen.generateVectorTypeGet(vt, new SMTVar(args[0].vname), 1)])
+                    ])
+                );
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
             } 
             case "s_vector3_to_large_list": {
-                const vt = this.typegen.assembly.entityDecls.get(idecl.params[0].type) as MIRObjectEntityTypeDecl;
-                const cbody = new SMTCallSimple(this.typegen.getSMTConstructorName(mirrestype).cons, [new SMTCallSimple("seq.++", [
-                    new SMTCallSimple("seq.unit", [new SMTCallSimple(this.typegen.generateEntityFieldGetFunction(vt, vt.fields[0]), [new SMTVar(args[0].vname)])]),
-                    new SMTCallSimple("seq.unit", [new SMTCallSimple(this.typegen.generateEntityFieldGetFunction(vt, vt.fields[1]), [new SMTVar(args[0].vname)])]),
-                    new SMTCallSimple("seq.unit", [new SMTCallSimple(this.typegen.generateEntityFieldGetFunction(vt, vt.fields[2]), [new SMTVar(args[0].vname)])])
-                ])]);
+                const vt = this.typegen.getMIRType(idecl.params[0].type);
+                const cbody = this.typegen.generateLargeListTypeConstructor(mirrestype, new SMTCallSimple("seq.++", [
+                        new SMTCallSimple("seq.unit", [this.typegen.generateVectorTypeGet(vt, new SMTVar(args[0].vname), 0)]),
+                        new SMTCallSimple("seq.unit", [this.typegen.generateVectorTypeGet(vt, new SMTVar(args[0].vname), 1)]),
+                        new SMTCallSimple("seq.unit", [this.typegen.generateVectorTypeGet(vt, new SMTVar(args[0].vname), 2)])
+                    ])
+                );
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
             } 
             case "s_large_list_to_vector1": {
-                const lt = this.typegen.assembly.entityDecls.get(idecl.params[0].type) as MIRObjectEntityTypeDecl;
-                const sval = new SMTCallSimple(this.typegen.generateEntityFieldGetFunction(lt, lt.fields[0]), [new SMTVar(args[0].vname)]);
-                const cbody = new SMTLet("sval", sval, new SMTCallSimple(this.typegen.getSMTConstructorName(mirrestype).cons, [
-                    new SMTCallSimple("seq.nth", [new SMTVar("sval"), new SMTConst("0")])
-                ])
+                const lt = this.typegen.getMIRType(idecl.params[0].type);
+                const cbody = new SMTLet("sval", this.typegen.generateLargeListTypeGetSeq(lt, new SMTVar(args[0].vname)), 
+                    this.typegen.generateVectorTypeConstructor(mirrestype, [
+                        new SMTCallSimple("seq.nth", [new SMTVar("sval"), new SMTConst("0")])
+                    ])
                 );
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
             }
             case "s_large_list_to_vector2": {
-                const lt = this.typegen.assembly.entityDecls.get(idecl.params[0].type) as MIRObjectEntityTypeDecl;
-                const sval = new SMTCallSimple(this.typegen.generateEntityFieldGetFunction(lt, lt.fields[0]), [new SMTVar(args[0].vname)]);
-                const cbody = new SMTLet("sval", sval, new SMTCallSimple(this.typegen.getSMTConstructorName(mirrestype).cons, [
-                    new SMTCallSimple("seq.nth", [new SMTVar("sval"), new SMTConst("0")]),
-                    new SMTCallSimple("seq.nth", [new SMTVar("sval"), new SMTConst("1")])
-                ])
+                const lt = this.typegen.getMIRType(idecl.params[0].type);
+                const cbody = new SMTLet("sval", this.typegen.generateLargeListTypeGetSeq(lt, new SMTVar(args[0].vname)), 
+                    this.typegen.generateVectorTypeConstructor(mirrestype, [
+                        new SMTCallSimple("seq.nth", [new SMTVar("sval"), new SMTConst("0")]),
+                        new SMTCallSimple("seq.nth", [new SMTVar("sval"), new SMTConst("1")])
+                    ])
                 );
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
             }
             case "s_large_list_to_vector3": {
-                const lt = this.typegen.assembly.entityDecls.get(idecl.params[0].type) as MIRObjectEntityTypeDecl;
-                const sval = new SMTCallSimple(this.typegen.generateEntityFieldGetFunction(lt, lt.fields[0]), [new SMTVar(args[0].vname)]);
-                const cbody = new SMTLet("sval", sval, new SMTCallSimple(this.typegen.getSMTConstructorName(mirrestype).cons, [
-                    new SMTCallSimple("seq.nth", [new SMTVar("sval"), new SMTConst("0")]),
-                    new SMTCallSimple("seq.nth", [new SMTVar("sval"), new SMTConst("1")]),
-                    new SMTCallSimple("seq.nth", [new SMTVar("sval"), new SMTConst("2")])
-                ])
+                const lt = this.typegen.getMIRType(idecl.params[0].type);
+                const cbody = new SMTLet("sval", this.typegen.generateLargeListTypeGetSeq(lt, new SMTVar(args[0].vname)), 
+                    this.typegen.generateVectorTypeConstructor(mirrestype, [
+                        new SMTCallSimple("seq.nth", [new SMTVar("sval"), new SMTConst("0")]),
+                        new SMTCallSimple("seq.nth", [new SMTVar("sval"), new SMTConst("1")]),
+                        new SMTCallSimple("seq.nth", [new SMTVar("sval"), new SMTConst("2")])
+                    ])
                 );
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
             }
             case "s_large_list_count": {
-                const lt = this.typegen.assembly.entityDecls.get(idecl.params[0].type) as MIRObjectEntityTypeDecl;
-                const sval = new SMTCallSimple(this.typegen.generateEntityFieldGetFunction(lt, lt.fields[0]), [new SMTVar(args[0].vname)]);
-                const cbody = new SMTCallSimple("seq.len", [sval]);
+                const lt = this.typegen.getMIRType(idecl.params[0].type);
+                const cbody = this.typegen.generateLargeListTypeSeq_GetLength(this.typegen.generateLargeListTypeGetSeq(lt, new SMTVar(args[0].vname)));
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
             } 
             case "s_large_list_append": {
-                const lt = this.typegen.assembly.entityDecls.get(idecl.params[0].type) as MIRObjectEntityTypeDecl;
-                const svall = new SMTCallSimple(this.typegen.generateEntityFieldGetFunction(lt, lt.fields[0]), [new SMTVar(args[0].vname)]);
-                const svalr = new SMTCallSimple(this.typegen.generateEntityFieldGetFunction(lt, lt.fields[0]), [new SMTVar(args[1].vname)]);
-                const cbody = new SMTCallSimple(this.typegen.getSMTConstructorName(mirrestype).cons, [new SMTCallSimple("seq.++", [svall, svalr])]);
+                const cbody = this.typegen.generateLargeListTypeConstructor(mirrestype, new SMTCallSimple("seq.++", [
+                    this.typegen.generateLargeListTypeGetSeq(mirrestype, new SMTVar(args[0].vname)), 
+                    this.typegen.generateLargeListTypeGetSeq(mirrestype, new SMTVar(args[1].vname))
+                ]));
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
             }
             case "s_large_list_slice_front": {
-                const lt = this.typegen.assembly.entityDecls.get(idecl.params[0].type) as MIRObjectEntityTypeDecl;
-                const sval = new SMTCallSimple(this.typegen.generateEntityFieldGetFunction(lt, lt.fields[0]), [new SMTVar(args[0].vname)]);
-                const cbody = new SMTCallSimple(this.typegen.getSMTConstructorName(mirrestype).cons, [new SMTCallSimple("seq.extract", [
+                const sval = this.typegen.generateLargeListTypeGetSeq(mirrestype, new SMTVar(args[0].vname));
+                const cbody = this.typegen.generateLargeListTypeConstructor(mirrestype, new SMTCallSimple("seq.extract", [
                     sval, 
                     new SMTVar(args[1].vname), 
-                    new SMTCallSimple("-", [new SMTCallSimple("seq.len", [sval]), new SMTVar(args[1].vname)]) 
-                ])]);
+                    new SMTCallSimple("-", [this.typegen.generateLargeListTypeSeq_GetLength(sval), new SMTVar(args[1].vname)]) 
+                ]));
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
             }
             case "s_large_list_slice_end": {
-                const lt = this.typegen.assembly.entityDecls.get(idecl.params[0].type) as MIRObjectEntityTypeDecl;
-                const sval = new SMTCallSimple(this.typegen.generateEntityFieldGetFunction(lt, lt.fields[0]), [new SMTVar(args[0].vname)]);
-                const cbody = new SMTCallSimple(this.typegen.getSMTConstructorName(mirrestype).cons, [new SMTCallSimple("seq.extract", [
+                const sval = this.typegen.generateLargeListTypeGetSeq(mirrestype, new SMTVar(args[0].vname));
+                const cbody = this.typegen.generateLargeListTypeConstructor(mirrestype, new SMTCallSimple("seq.extract", [
                     sval,
                     new SMTConst("0"),
                     new SMTVar(args[1].vname)
-                ])]);
+                ]));
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
             }
             case "s_large_list_get": {
-                const lt = this.typegen.assembly.entityDecls.get(idecl.params[0].type) as MIRObjectEntityTypeDecl;
-                const sval = new SMTCallSimple(this.typegen.generateEntityFieldGetFunction(lt, lt.fields[0]), [new SMTVar(args[0].vname)]);
+                const sval = this.typegen.generateLargeListTypeGetSeq(mirrestype, new SMTVar(args[0].vname));
                 const cbody = new SMTCallSimple("seq.nth", [sval, new SMTVar(args[0].vname)]);
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
             }
             case "s_large_list_get_back": {
-                const lt = this.typegen.assembly.entityDecls.get(idecl.params[0].type) as MIRObjectEntityTypeDecl;
-                const sval = new SMTCallSimple(this.typegen.generateEntityFieldGetFunction(lt, lt.fields[0]), [new SMTVar(args[0].vname)]);
-                const cbody = new SMTCallSimple("seq.nth", [sval, new SMTCallSimple("-", [new SMTCallSimple("seq.len", [sval]), new SMTConst("1")])]);
+                const sval = this.typegen.generateLargeListTypeGetSeq(mirrestype, new SMTVar(args[0].vname));
+                const cbody = new SMTCallSimple("seq.nth", [sval, this.typegen.generateLargeListTypeSeq_GetLengthMinus1(sval)]);
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
             }
             case "s_large_list_get_front": {
-                const lt = this.typegen.assembly.entityDecls.get(idecl.params[0].type) as MIRObjectEntityTypeDecl;
-                const sval = new SMTCallSimple(this.typegen.generateEntityFieldGetFunction(lt, lt.fields[0]), [new SMTVar(args[0].vname)]);
+                const sval = this.typegen.generateLargeListTypeGetSeq(mirrestype, new SMTVar(args[0].vname));
                 const cbody = new SMTCallSimple("seq.nth", [sval, new SMTConst("0")]);
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
             }
             case "s_large_list_set": {
-                const lt = this.typegen.assembly.entityDecls.get(idecl.params[0].type) as MIRObjectEntityTypeDecl;
-                const sval = new SMTCallSimple(this.typegen.generateEntityFieldGetFunction(lt, lt.fields[0]), [new SMTVar(args[0].vname)]);
-                const cbody = new SMTLet("sval", sval, new SMTCallSimple(this.typegen.getSMTConstructorName(mirrestype).cons, [new SMTCallSimple("seq.++", [
+                const sval = this.typegen.generateLargeListTypeGetSeq(mirrestype, new SMTVar(args[0].vname));
+                const cbody = new SMTLet("sval", sval, this.typegen.generateLargeListTypeConstructor(mirrestype, new SMTCallSimple("seq.++", [
                     new SMTCallSimple("seq.extract", [new SMTVar("sval"), new SMTConst("0"), new SMTVar(args[1].vname)]),
                     new SMTCallSimple("seq.unit", [new SMTVar(args[2].vname)]), 
                     new SMTCallSimple("seq.extract", [new SMTVar("sval"), 
                         new SMTCallSimple("+", [new SMTVar(args[1].vname), new SMTConst("1")]), 
-                        new SMTCallSimple("-", [new SMTCallSimple("seq.len", [sval]), new SMTCallSimple("+", [new SMTVar(args[1].vname), new SMTConst("1")])
+                        new SMTCallSimple("-", [this.typegen.generateLargeListTypeSeq_GetLength(new SMTVar("sval")), new SMTCallSimple("+", [new SMTVar(args[1].vname), new SMTConst("1")])
                     ])])
-                ])]));
+                ])));
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
             }
             case "s_large_list_push_back": {
-                const lt = this.typegen.assembly.entityDecls.get(idecl.params[0].type) as MIRObjectEntityTypeDecl;
-                const sval = new SMTCallSimple(this.typegen.generateEntityFieldGetFunction(lt, lt.fields[0]), [new SMTVar(args[0].vname)]);
-                const cbody = new SMTCallSimple(this.typegen.getSMTConstructorName(mirrestype).cons, [new SMTCallSimple("seq.++", [
+                const sval = this.typegen.generateLargeListTypeGetSeq(mirrestype, new SMTVar(args[0].vname));
+                const cbody = this.typegen.generateLargeListTypeConstructor(mirrestype, new SMTCallSimple("seq.++", [
                     sval,
                     new SMTCallSimple("seq.unit", [new SMTVar(args[1].vname)])
-                ])]);
+                ]));
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
             }
             case "s_large_list_push_front": {
-                const lt = this.typegen.assembly.entityDecls.get(idecl.params[0].type) as MIRObjectEntityTypeDecl;
-                const sval = new SMTCallSimple(this.typegen.generateEntityFieldGetFunction(lt, lt.fields[0]), [new SMTVar(args[0].vname)]);
-                const cbody = new SMTCallSimple(this.typegen.getSMTConstructorName(mirrestype).cons, [new SMTCallSimple("seq.++", [
+                const sval = this.typegen.generateLargeListTypeGetSeq(mirrestype, new SMTVar(args[0].vname));
+                const cbody = this.typegen.generateLargeListTypeConstructor(mirrestype, new SMTCallSimple("seq.++", [
                     new SMTCallSimple("seq.unit", [new SMTVar(args[1].vname)]), 
                     sval
-                ])]);
+                ]));
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
             }
             case "s_large_list_remove": {
-                const lt = this.typegen.assembly.entityDecls.get(idecl.params[0].type) as MIRObjectEntityTypeDecl;
-                const sval = new SMTCallSimple(this.typegen.generateEntityFieldGetFunction(lt, lt.fields[0]), [new SMTVar(args[0].vname)]);
-                const cbody = new SMTLet("sval", sval, new SMTCallSimple(this.typegen.getSMTConstructorName(mirrestype).cons, [new SMTCallSimple("seq.++", [
+                const sval = this.typegen.generateLargeListTypeGetSeq(mirrestype, new SMTVar(args[0].vname));
+                const cbody = new SMTLet("sval", sval, this.typegen.generateLargeListTypeConstructor(mirrestype, new SMTCallSimple("seq.++", [
                     new SMTCallSimple("seq.extract", [new SMTVar("sval"), new SMTConst("0"), new SMTVar(args[1].vname)]),
                     new SMTCallSimple("seq.extract", [new SMTVar("sval"), 
                         new SMTCallSimple("+", [new SMTVar(args[1].vname), new SMTConst("1")]), 
-                        new SMTCallSimple("-", [new SMTCallSimple("seq.len", [sval]), new SMTCallSimple("+", [new SMTVar(args[1].vname), new SMTConst("1")])
+                        new SMTCallSimple("-", [this.typegen.generateLargeListTypeSeq_GetLength(new SMTVar("sval")), new SMTCallSimple("+", [new SMTVar(args[1].vname), new SMTConst("1")])
                     ])])
-                ])]));
+                ])));
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
             }
             case "s_large_list_pop_back": {
-                const lt = this.typegen.assembly.entityDecls.get(idecl.params[0].type) as MIRObjectEntityTypeDecl;
-                const sval = new SMTCallSimple(this.typegen.generateEntityFieldGetFunction(lt, lt.fields[0]), [new SMTVar(args[0].vname)]);
-                const cbody = new SMTCallSimple(this.typegen.getSMTConstructorName(mirrestype).cons, [new SMTCallSimple("seq.extract", [
+                const sval = this.typegen.generateLargeListTypeGetSeq(mirrestype, new SMTVar(args[0].vname));
+                const cbody = this.typegen.generateLargeListTypeConstructor(mirrestype, new SMTCallSimple("seq.extract", [
                     sval,
                     new SMTConst("0"),
-                    new SMTCallSimple("-", [new SMTCallSimple("seq.len", [sval]), new SMTConst("1")])
-                ])]);
+                    this.typegen.generateLargeListTypeSeq_GetLengthMinus1(sval)
+                ]));
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
             } 
             case "s_large_list_pop_front": {
-                const lt = this.typegen.assembly.entityDecls.get(idecl.params[0].type) as MIRObjectEntityTypeDecl;
-                const sval = new SMTCallSimple(this.typegen.generateEntityFieldGetFunction(lt, lt.fields[0]), [new SMTVar(args[0].vname)]);
-                const cbody = new SMTCallSimple(this.typegen.getSMTConstructorName(mirrestype).cons, [new SMTCallSimple("seq.extract", [
+                const sval = this.typegen.generateLargeListTypeGetSeq(mirrestype, new SMTVar(args[0].vname));
+                const cbody = this.typegen.generateLargeListTypeConstructor(mirrestype, new SMTCallSimple("seq.extract", [
                     sval, 
                     new SMTConst("1"), 
-                    new SMTCallSimple("-", [new SMTCallSimple("seq.len", [sval]), new SMTConst("1")])
-                ])]);
+                    this.typegen.generateLargeListTypeSeq_GetLengthMinus1(sval)
+                ]));
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
             }
             case "s_large_list_map_pred": {
@@ -2967,54 +2957,117 @@ class SMTBodyEmitter {
                 xxxx;
             }
             case "s_large_list_has": {
-                const lt = this.typegen.assembly.entityDecls.get(idecl.params[0].type) as MIRObjectEntityTypeDecl;
-                const sval = new SMTCallSimple(this.typegen.generateEntityFieldGetFunction(lt, lt.fields[0]), [new SMTVar(args[0].vname)]);
+                const sval = this.typegen.generateLargeListTypeGetSeq(mirrestype, new SMTVar(args[0].vname));
                 const cbody = new SMTCallSimple("seq.contains", [sval, new SMTVar(args[1].vname)]);
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
             }
             case "s_large_list_indexof": {
-                const lt = this.typegen.assembly.entityDecls.get(idecl.params[0].type) as MIRObjectEntityTypeDecl;
-                const sval = new SMTCallSimple(this.typegen.generateEntityFieldGetFunction(lt, lt.fields[0]), [new SMTVar(args[0].vname)]);
+                const sval = this.typegen.generateLargeListTypeGetSeq(mirrestype, new SMTVar(args[0].vname));
                 const cbody = new SMTCallSimple("seq.indexof", [sval, new SMTVar(args[1].vname)]);
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
             }
             case "s_large_list_last_indexof": {
-                const lt = this.typegen.assembly.entityDecls.get(idecl.params[0].type) as MIRObjectEntityTypeDecl;
-                const sval = new SMTCallSimple(this.typegen.generateEntityFieldGetFunction(lt, lt.fields[0]), [new SMTVar(args[0].vname)]);
+                const sval = this.typegen.generateLargeListTypeGetSeq(mirrestype, new SMTVar(args[0].vname));
                 const cbody = new SMTCallSimple("seq.lastindex", [sval, new SMTVar(args[1].vname)]);
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
             }
             case "s_vector1_to_large_map": {
-                const vt = this.typegen.assembly.entityDecls.get(idecl.params[0].type) as MIRObjectEntityTypeDecl;
-                xxxx;
-                const cbody = new SMTCallSimple(this.typegen.getSMTConstructorName(mirrestype).cons, [
-                    new SMTCallSimple("store", [empty, new SMTConst("0"), new SMTCallSimple(this.typegen.generateEntityFieldGetFunction(vt, vt.fields[0]), [new SMTVar(args[0].vname)])])
-                ]);
+                const vt = this.typegen.getMIRType(idecl.params[0].type);
+                const cbody = this.typegen.generateLargeMapTypeConstructorElements(mirrestype, vt, new SMTConst("1"), [
+                        this.typegen.generateVectorTypeGet(vt, new SMTVar(args[0].vname), 0)
+                    ]
+                );
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
             }
             case "s_vector2_to_large_map": {
-
+                const vt = this.typegen.getMIRType(idecl.params[0].type);
+                const cbody = this.typegen.generateLargeMapTypeConstructorElements(mirrestype, vt, new SMTConst("2"), [
+                        this.typegen.generateVectorTypeGet(vt, new SMTVar(args[0].vname), 0),
+                        this.typegen.generateVectorTypeGet(vt, new SMTVar(args[0].vname), 1)
+                    ]
+                );
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
             }
             case "s_vector3_to_large_map": {
-
+                const vt = this.typegen.getMIRType(idecl.params[0].type);
+                const cbody = this.typegen.generateLargeMapTypeConstructorElements(mirrestype, vt, new SMTConst("3"), [
+                        this.typegen.generateVectorTypeGet(vt, new SMTVar(args[0].vname), 0),
+                        this.typegen.generateVectorTypeGet(vt, new SMTVar(args[0].vname), 1),
+                        this.typegen.generateVectorTypeGet(vt, new SMTVar(args[0].vname), 2)
+                    ]
+                );
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
             }
-
-    s_vector1_to_large_map;
-     s_vector2_to_large_map;
-    s_vector3_to_large_map;
-
-    s_large_map_count; 
-
-    s_large_map_has; 
-    s_large_map_get; 
-    
-    s_large_map_disjoint;
-    s_large_map_union; 
-
-     s_large_map_add; 
-     s_large_map_set;
-    s_large_map_remove;  
-
+            case "s_large_map_to_vector1": {
+                assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
+            }
+            case "s_large_map_to_vector2": {
+                assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
+            }
+            case "s_large_map_to_vector3": {
+                //TODO: 
+                //let k0 = UF(mm);
+                //let k1 = UF(mm);
+                //let k2 = UF(mm);
+                //check (mm[k0].valid && mm[k0].0 == k0) && (mm[k1].valid && mm[k1].0 == k1) && (mm[k2].valid && mm[k2].0 == k2)
+                //check keyless(k0, k1) && keyless(k1, k2)
+                //bbody = vector3(mm[k0], mm[k1], mm[k2])
+                assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
+            }
+            case "s_large_map_count": {
+                const mt = this.typegen.getMIRType(idecl.params[0].type);
+                const cbody = this.typegen.generateLargeMapTypeGetLength(mt, new SMTVar(args[0].vname));
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+            }
+            case "s_large_map_has": {
+                const mt = this.typegen.getMIRType(idecl.params[0].type);
+                const cbody = this.typegen.generateLargeMapEntryTypeIsValid(mt, new SMTCallSimple("select", [this.typegen.generateLargeMapTypeGetArray(mt, new SMTVar(args[0].vname)), new SMTVar(args[0].vname)]));
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+            }
+            case "s_large_map_get": {
+                const mt = this.typegen.getMIRType(idecl.params[0].type);
+                const cbody = this.typegen.generateLargeMapEntryTypeGetValueTuple(mt, new SMTCallSimple("select", [this.typegen.generateLargeMapTypeGetArray(mt, new SMTVar(args[0].vname)), new SMTVar(args[0].vname)]));
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+            }
+            case "s_large_map_disjoint": {
+                assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
+            }
+            case "s_large_map_union": {
+                assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
+            }
+            case "s_large_map_add": {
+                const cbody = this.typegen.generateLargeMapTypeConstructor(mirrestype, 
+                    new SMTCallSimple("+", [this.typegen.generateLargeMapTypeGetLength(mirrestype, new SMTVar(args[0].vname)), new SMTConst("1")]),
+                    new SMTCallSimple("store", [
+                        this.typegen.generateLargeMapTypeGetArray(mirrestype, new SMTVar(args[0].vname)), 
+                        new SMTVar(args[1].vname),
+                        new SMTVar(args[2].vname)
+                    ])
+                );
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+            }
+            case "s_large_map_set": {
+                const cbody = this.typegen.generateLargeMapTypeConstructor(mirrestype, 
+                    this.typegen.generateLargeMapTypeGetLength(mirrestype, new SMTVar(args[0].vname)),
+                    new SMTCallSimple("store", [
+                        this.typegen.generateLargeMapTypeGetArray(mirrestype, new SMTVar(args[0].vname)), 
+                        new SMTVar(args[1].vname),
+                        this.typegen.generateLargeMapEntryTypeConstructorEmpty(mirrestype)
+                    ])
+                );
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+            }
+            case "s_large_map_remove": {
+                const cbody = this.typegen.generateLargeMapTypeConstructor(mirrestype, 
+                    new SMTCallSimple("-", [this.typegen.generateLargeMapTypeGetLength(mirrestype, new SMTVar(args[0].vname)), new SMTConst("1")]),
+                    new SMTCallSimple("store", [
+                        this.typegen.generateLargeMapTypeGetArray(mirrestype, new SMTVar(args[0].vname)), 
+                        new SMTVar(args[1].vname),
+                        this.typegen.generateLargeMapEntryTypeConstructorEmpty(mirrestype)
+                    ])
+                );
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+            }
             case "s_blockingfailure": {
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
             }

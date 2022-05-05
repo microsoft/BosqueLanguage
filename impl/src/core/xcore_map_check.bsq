@@ -419,9 +419,9 @@ entity LargeMap<K grounded KeyType, V> provides Some {
     __safe internal function s_vector2_to_large_map(v: Vector2<[K, V]>): LargeMap<K, V> = s_vector2_to_large_map;
     __safe internal function s_vector3_to_large_map(v: Vector3<[K, V]>): LargeMap<K, V> = s_vector3_to_large_map;
 
-    __safe internal function s_large_map_to_vector1(l: LargeMap<K, V>): Vector1<[K, V]> = s_large_map_to_vector1;
-    __safe internal function s_large_map_to_vector2(l: LargeMap<K, V>): Vector2<[K, V]> = s_large_map_to_vector2;
-    __safe internal function s_large_map_to_vector3(l: LargeMap<K, V>): Vector3<[K, V]> = s_large_map_to_vector3;
+    internal function s_large_map_to_vector1(l: LargeMap<K, V>): Vector1<[K, V]> = s_large_map_to_vector1;
+    internal function s_large_map_to_vector2(l: LargeMap<K, V>): Vector2<[K, V]> = s_large_map_to_vector2;
+    internal function s_large_map_to_vector3(l: LargeMap<K, V>): Vector3<[K, V]> = s_large_map_to_vector3;
 
     __safe internal function s_large_map_count(m: LargeMap<K, V>): Nat = s_large_map_count; 
 
