@@ -2994,11 +2994,39 @@ class SMTBodyEmitter {
                 const pcfn = this.typegen.lookupFunctionName(pc.code);
                 const captured = pc.cargs.map((carg) => carg.cname);
 
-                const cbody = this.typegen.generateLargeListTypeConstructor(mirrestype, new SMTCallSimple("seq.map", [
+                const maparray = new SMTCallSimple("seq.map", [
                     new SMTConst(`(lambda ((@@x ${argtype.smttypename})) (${pcfn} @@x${captured.length !== 0 ? (" " + captured.join(" ")) : ""}))`),
                     sval
-                ]));
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                ]);
+
+                if(this.isSafeInvoke(pc.code)) {
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateLargeListTypeConstructor(mirrestype, maparray));
+                }
+                else {
+                    const trgterr = this.typegen.generateResultTypeConstructorError(this.typegen.getMIRType("Bool"), new SMTConst("ErrorID_Target"));
+                    const trgtresulterr = this.typegen.generateResultTypeConstructorError(mirrestype, new SMTConst("ErrorID_Target"));
+                    const othererr = this.typegen.generateResultTypeConstructorError(this.typegen.getMIRType("Bool"), new SMTConst("ErrorID_AssumeCheck"));
+                    const otherresulterr = this.typegen.generateResultTypeConstructorError(mirrestype, new SMTConst("ErrorID_AssumeCheck"));
+
+                    const values = new SMTCallSimple("seq.map", [
+                        new SMTConst(`(lambda ((@@r ${this.typegen.generateResultType(this.typegen.getMIRType("Bool")).smttypename})) ${this.typegen.generateResultGetSuccess(this.typegen.getMIRType("Bool"), new SMTVar("@@r"))})`),
+                        sval
+                    ]);
+
+                    const cbody = new SMTLet("@maparray", maparray, 
+                        new SMTLetMulti([{vname: "@trgterr", value: new SMTCallSimple("seq.contains", [new SMTVar("@maparray"), trgterr])}, {vname: "@othererr", value: new SMTCallSimple("seq.contains", [new SMTVar("@maparray"), othererr])}],
+                            new SMTIf(new SMTVar("@trgterr"),
+                               trgtresulterr,
+                                new SMTIf(new SMTVar("@othererr"),
+                                    otherresulterr,
+                                    values
+                                )
+                            )
+                        )
+                    );
+
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                }
             }
             case "s_large_list_map_pred_idx": {
                 assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
@@ -3013,11 +3041,42 @@ class SMTBodyEmitter {
                 const pcfn = this.typegen.lookupFunctionName(pc.code);
                 const captured = pc.cargs.map((carg) => carg.cname);
 
-                const cbody = this.typegen.generateLargeListTypeConstructor(mirrestype, new SMTCallSimple("seq.map", [
+                const maparray = this.typegen.generateLargeListTypeConstructor(mirrestype, new SMTCallSimple("seq.map", [
                     new SMTConst(`(lambda ((@@x ${argtype.smttypename})) (${pcfn} @@x${captured.length !== 0 ? (" " + captured.join(" ")) : ""}))`),
                     sval
                 ]));
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+
+                
+                if(this.isSafeInvoke(pc.code)) {
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateLargeListTypeConstructor(mirrestype, maparray));
+                }
+                else {
+                    const mirresult_T = (this.typegen.assembly.entityDecls.get(mirrestype.typeID) as MIRPrimitiveInternalEntityTypeDecl).terms.get("T") as MIRType;
+
+                    const trgterr = this.typegen.generateResultTypeConstructorError(mirresult_T, new SMTConst("ErrorID_Target"));
+                    const trgtresulterr = this.typegen.generateResultTypeConstructorError(mirrestype, new SMTConst("ErrorID_Target"));
+                    const othererr = this.typegen.generateResultTypeConstructorError(mirresult_T, new SMTConst("ErrorID_AssumeCheck"));
+                    const otherresulterr = this.typegen.generateResultTypeConstructorError(mirrestype, new SMTConst("ErrorID_AssumeCheck"));
+
+                    const values = new SMTCallSimple("seq.map", [
+                        new SMTConst(`(lambda ((@@r ${this.typegen.generateResultType(mirresult_T).smttypename})) ${this.typegen.generateResultGetSuccess(this.typegen.getMIRType("Bool"), new SMTVar("@@r"))})`),
+                        sval
+                    ]);
+
+                    const cbody = new SMTLet("@maparray", maparray, 
+                        new SMTLetMulti([{vname: "@trgterr", value: new SMTCallSimple("seq.contains", [new SMTVar("@maparray"), trgterr])}, {vname: "@othererr", value: new SMTCallSimple("seq.contains", [new SMTVar("@maparray"), othererr])}],
+                            new SMTIf(new SMTVar("@trgterr"),
+                                trgtresulterr,
+                                new SMTIf(new SMTVar("@othererr"),
+                                    otherresulterr,
+                                    values
+                                )
+                            )
+                        )
+                    );
+
+                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                }
             }
             case "s_large_list_map_fn_idx": {
                 assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);

@@ -193,8 +193,14 @@ class SMTEntityCollectionLargeMapTypeDecl extends SMTEntityDecl {
 }
 
 class SMTEntityCollectionLargeMapEntryTypeDecl extends SMTEntityDecl {
-    constructor(smtname: string, typetag: string, boxf: string, ubf: string) {
-        super(false, smtname, typetag, boxf, ubf);
+    readonly consf: { cname: string, cargs: { fname: string, ftype: string }[] };
+    readonly emptyf: string;
+
+    constructor(smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: string }[] }, emptyf: string) {
+        super(false, smtname, typetag, "INVALID_SPECIAL", "INVALID_SPECIAL");
+
+        this.consf = consf;
+        this.emptyf = emptyf;
     }
 }
 
@@ -544,7 +550,37 @@ class SMTAssembly {
             });
 
 
-        xxxx; //collection special
+        const collectionlargelisttypeinfo = this.entityDecls
+            .filter((et) => (et instanceof SMTEntityCollectionLargeListTypeDecl))
+            .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
+            .map((tt) => {
+                return {
+                    decl: `(${tt.smtname} ())`,
+                    consf: `( (${(tt as SMTEntityCollectionLargeListTypeDecl).consf.cname} ${(tt as SMTEntityCollectionLargeListTypeDecl).consf.cargs.map((te) => `(${te.fname} ${te.ftype})`).join(" ")}) )`,
+                    boxf: `(${tt.boxf} (${tt.ubf} ${tt.smtname}))`
+                };
+            });
+
+        const collectionlargemapentrytypeinfo = this.entityDecls
+            .filter((et) => (et instanceof SMTEntityCollectionLargeMapTypeDecl))
+            .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
+            .map((tt) => {
+                return {
+                    decl: `(${(tt as SMTEntityCollectionLargeMapTypeDecl).entryinfo.smtname} ())`,
+                    consf: `( (${(tt as SMTEntityCollectionLargeMapTypeDecl).entryinfo.consf.cname} ${(tt as SMTEntityCollectionLargeMapTypeDecl).entryinfo.consf.cargs.map((te) => `(${te.fname} ${te.ftype})`).join(" ")}) )`
+                };
+            });
+
+        const collectionlargemaptypeinfo = this.entityDecls
+            .filter((et) => (et instanceof SMTEntityCollectionLargeMapTypeDecl))
+            .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
+            .map((tt) => {
+                return {
+                    decl: `(${tt.smtname} ())`,
+                    consf: `( (${(tt as SMTEntityCollectionLargeListTypeDecl).consf.cname} ${(tt as SMTEntityCollectionLargeListTypeDecl).consf.cargs.map((te) => `(${te.fname} ${te.ftype})`).join(" ")}) )`,
+                    boxf: `(${tt.boxf} (${tt.ubf} ${tt.smtname}))`
+                };
+            });
 
         const etypeinfo = this.ephemeralDecls
             .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
@@ -717,9 +753,25 @@ class SMTAssembly {
                 boxing: termrecordinfo.map((kti) => kti.boxf) 
             },
             TYPE_INFO: { 
-                decls: termtypeinfo.filter((tti) => tti.decl !== undefined).map((tti) => tti.decl as string), 
-                constructors: termtypeinfo.filter((tti) => tti.consf !== undefined).map((tti) => tti.consf as string), 
-                boxing: [...termtypeinfo.map((tti) => tti.boxf), ...ofinternaltypeinfo.map((ttofi) => ttofi.boxf), ...collectiontypeinfo.map((cti) => cti.boxf)] 
+                decls: [
+                    ...termtypeinfo.filter((tti) => tti.decl !== undefined).map((tti) => tti.decl as string),
+                    ...collectionlargelisttypeinfo.map((clti) => clti.decl),
+                    ...collectionlargemapentrytypeinfo.map((clti) => clti.decl),
+                    ...collectionlargemaptypeinfo.map((clti) => clti.decl),
+                ], 
+                constructors: [
+                    ...termtypeinfo.filter((tti) => tti.consf !== undefined).map((tti) => tti.consf as string),
+                    ...collectionlargelisttypeinfo.map((clti) => clti.consf),
+                    ...collectionlargemapentrytypeinfo.map((clti) => clti.consf),
+                    ...collectionlargemaptypeinfo.map((clti) => clti.consf),
+                ], 
+                boxing: [
+                    ...termtypeinfo.map((tti) => tti.boxf), 
+                    ...ofinternaltypeinfo.map((ttofi) => ttofi.boxf), 
+                    ...collectiontypeinfo.map((cti) => cti.boxf),
+                    ...collectionlargelisttypeinfo.map((clti) => clti.boxf),
+                    ...collectionlargemaptypeinfo.map((clti) => clti.boxf),
+                ] 
             },
             COLLECTION_INFO: collectiontypeinfo.map((cti) => cti.decl),
             EPHEMERAL_DECLS: { 

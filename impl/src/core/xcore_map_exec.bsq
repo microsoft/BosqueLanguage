@@ -112,7 +112,7 @@ internal entity MapOps provides Some {
 }
 
 __internal entity MapTree<K grounded KeyType, V> provides Some {
-    //Dummy placeholder
+    internal field dummy_tuple: [K, V]; //ensure the compiler always has the appropriate tuple type for manipulating the internal representation
 }
 
 internal typedef MapRepr<K grounded KeyType, V> = None | MapTree<K, V>;

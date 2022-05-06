@@ -683,6 +683,10 @@ class SMTEmitter {
     private processPrimitiveLargeMapEntityDecl(edecl: MIRPrimitiveInternalEntityTypeDecl) {
         const mirtype = this.temitter.getMIRType(edecl.tkey);
         const smttype = this.temitter.getSMTTypeFor(mirtype);
+        const esmttype = this.temitter.generateLargeMapEntryType(mirtype);
+
+        const smtk = this.temitter.getSMTTypeFor(edecl.terms.get("K") as MIRType, true);
+        const smtvtup = this.temitter.getSMTTypeFor(this.temitter.getMIRType(`[${(edecl.terms.get("K") as MIRType).typeID}, ${(edecl.terms.get("V") as MIRType).typeID}]`), true);
 
         const mminfo = this.temitter.generateLargeMapTypeConsInfo(mirtype);
         const consfuncs = this.temitter.getSMTConstructorName(mirtype);
@@ -690,11 +694,20 @@ class SMTEmitter {
             cname: consfuncs.cons, 
             cargs: [
                 { fname: mminfo.lenf, ftype: "BNat" },
-                { fname: mminfo.arrayf, ftype: xxxx }
+                { fname: mminfo.arrayf, ftype: `(Array ${smtk.smttypename} ${smtvtup.smttypename})` }
             ]
         };
 
-        const esmtdecl = new SMTEntityCollectionLargeMapEntryTypeDecl()
+        const econsfuncs = this.temitter.generateLargeMapEntryTypeConsInfo(mirtype);
+        const econsdecl = {
+            cname: econsfuncs.cons, 
+            cargs: [
+                { fname: econsfuncs.keyf, ftype: smtk.smttypename},
+                { fname: econsfuncs.valf, ftype: smtvtup.smttypename}
+            ]
+        };
+        const esmtdecl = new SMTEntityCollectionLargeMapEntryTypeDecl(esmttype.smttypename, esmttype.smttypetag, econsdecl, econsfuncs.empty);
+
         const smtdecl = new SMTEntityCollectionLargeMapTypeDecl(smttype.smttypename, smttype.smttypetag, consdecl, consfuncs.box, consfuncs.bfield, esmtdecl);
         this.assembly.entityDecls.push(smtdecl);
     }

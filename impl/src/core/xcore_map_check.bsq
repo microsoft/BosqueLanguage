@@ -415,6 +415,8 @@ internal entity MapOps provides Some {
 }
 
 entity LargeMap<K grounded KeyType, V> provides Some {
+    internal field dummy_tuple: [K, V]; //ensure the compiler always has the appropriate tuple type for manipulating the internal representation
+
     __safe internal function s_vector1_to_large_map(v: Vector1<[K, V]>): LargeMap<K, V> = s_vector1_to_large_map;
     __safe internal function s_vector2_to_large_map(v: Vector2<[K, V]>): LargeMap<K, V> = s_vector2_to_large_map;
     __safe internal function s_vector3_to_large_map(v: Vector3<[K, V]>): LargeMap<K, V> = s_vector3_to_large_map;
