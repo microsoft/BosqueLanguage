@@ -180,6 +180,7 @@ const AttributeStrings = [
     "__primitive",
     "__safe",
     "__assume_safe",
+    "__conditional_safe",
     "__universal"
 ];
 

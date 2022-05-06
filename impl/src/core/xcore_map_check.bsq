@@ -309,10 +309,10 @@ internal entity MapOps provides Some {
                 return LargeMap<K, V>::add(m, k, v);
             }
             else {
-                if(m.is<Vector1<[K, V]>()) {
+                if(m.is<Vector1<[K, V]>>()) {
                     return MapOps::s_safe_insert_vector_1<K, V>(m, k, v);
                 }
-                elif(m.is<Vector2<[K, V]>()) {
+                elif(m.is<Vector2<[K, V]>>()) {
                     return MapOps::s_safe_insert_vector_2<K, V>(m, k, v);
                 }
                 else {
@@ -414,7 +414,7 @@ internal entity MapOps provides Some {
     }
 }
 
-entity LargeMap<K grounded KeyType, V> provides Some {
+__internal entity LargeMap<K grounded KeyType, V> provides Some {
     internal field dummy_tuple: [K, V]; //ensure the compiler always has the appropriate tuple type for manipulating the internal representation
 
     __safe internal function s_vector1_to_large_map(v: Vector1<[K, V]>): LargeMap<K, V> = s_vector1_to_large_map;

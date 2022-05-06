@@ -550,18 +550,18 @@ class SMTAssembly {
             });
 
 
-        const collectionlargelisttypeinfo = this.entityDecls
+        const collectionlargelisttypeinfo = this.auxCollectionDecls
             .filter((et) => (et instanceof SMTEntityCollectionLargeListTypeDecl))
             .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
             .map((tt) => {
                 return {
-                    decl: `(${tt.smtname} ())`,
+                    decl: `(${tt.smtname} 0)`,
                     consf: `( (${(tt as SMTEntityCollectionLargeListTypeDecl).consf.cname} ${(tt as SMTEntityCollectionLargeListTypeDecl).consf.cargs.map((te) => `(${te.fname} ${te.ftype})`).join(" ")}) )`,
                     boxf: `(${tt.boxf} (${tt.ubf} ${tt.smtname}))`
                 };
             });
 
-        const collectionlargemapentrytypeinfo = this.entityDecls
+        const collectionlargemapentrytypeinfo = this.auxCollectionDecls
             .filter((et) => (et instanceof SMTEntityCollectionLargeMapTypeDecl))
             .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
             .map((tt) => {
@@ -571,12 +571,12 @@ class SMTAssembly {
                 };
             });
 
-        const collectionlargemaptypeinfo = this.entityDecls
+        const collectionlargemaptypeinfo = this.auxCollectionDecls
             .filter((et) => (et instanceof SMTEntityCollectionLargeMapTypeDecl))
             .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
             .map((tt) => {
                 return {
-                    decl: `(${tt.smtname} ())`,
+                    decl: `(${tt.smtname} 0)`,
                     consf: `( (${(tt as SMTEntityCollectionLargeListTypeDecl).consf.cname} ${(tt as SMTEntityCollectionLargeListTypeDecl).consf.cargs.map((te) => `(${te.fname} ${te.ftype})`).join(" ")}) )`,
                     boxf: `(${tt.boxf} (${tt.ubf} ${tt.smtname}))`
                 };

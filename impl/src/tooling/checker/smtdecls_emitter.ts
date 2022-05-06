@@ -650,7 +650,7 @@ class SMTEmitter {
         const consdecl = {
             cname: consfuncs.cons, 
             cargs: [
-                { fname: llinfo.seqf, ftype: `(Seq ${this.temitter.getSMTTypeFor(edecl.terms.get("T") as MIRType, true)})` },
+                { fname: llinfo.seqf, ftype: `(Seq ${this.temitter.getSMTTypeFor(edecl.terms.get("T") as MIRType, true).smttypename})` },
             ]
         };
 
