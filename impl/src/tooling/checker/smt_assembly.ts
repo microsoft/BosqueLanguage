@@ -566,7 +566,7 @@ class SMTAssembly {
             .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
             .map((tt) => {
                 return {
-                    decl: `(${(tt as SMTEntityCollectionLargeMapTypeDecl).entryinfo.smtname} ())`,
+                    decl: `(${(tt as SMTEntityCollectionLargeMapTypeDecl).entryinfo.smtname} 0)`,
                     consf: `( (${(tt as SMTEntityCollectionLargeMapTypeDecl).entryinfo.consf.cname} ${(tt as SMTEntityCollectionLargeMapTypeDecl).entryinfo.consf.cargs.map((te) => `(${te.fname} ${te.ftype})`).join(" ")}) )`
                 };
             });

@@ -709,7 +709,7 @@ class SMTEmitter {
         const esmtdecl = new SMTEntityCollectionLargeMapEntryTypeDecl(esmttype.smttypename, esmttype.smttypetag, econsdecl, econsfuncs.empty);
 
         const smtdecl = new SMTEntityCollectionLargeMapTypeDecl(smttype.smttypename, smttype.smttypetag, consdecl, consfuncs.box, consfuncs.bfield, esmtdecl);
-        this.assembly.entityDecls.push(smtdecl);
+        this.assembly.auxCollectionDecls.push(smtdecl);
     }
 
     private processVirtualInvokes() {
