@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { MIRAssembly, MIRConceptType, MIRConstructableEntityTypeDecl, MIRDataBufferInternalEntityTypeDecl, MIRDataStringInternalEntityTypeDecl, MIREntityType, MIREntityTypeDecl, MIREnumEntityTypeDecl, MIREphemeralListType, MIRFieldDecl, MIRInvokeBodyDecl, MIRInvokeDecl, MIRInvokePrimitiveDecl, MIRObjectEntityTypeDecl, MIRPrimitiveCollectionEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRRecordType, MIRStringOfInternalEntityTypeDecl, MIRTupleType, MIRType } from "../../compiler/mir_assembly";
+import { MIRAssembly, MIRConceptType, MIRConstructableEntityTypeDecl, MIRDataBufferInternalEntityTypeDecl, MIRDataStringInternalEntityTypeDecl, MIREntityType, MIREntityTypeDecl, MIREnumEntityTypeDecl, MIREphemeralListType, MIRFieldDecl, MIRInvokeBodyDecl, MIRInvokeDecl, MIRInvokePrimitiveDecl, MIRObjectEntityTypeDecl, MIRPCode, MIRPrimitiveCollectionEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRRecordType, MIRStringOfInternalEntityTypeDecl, MIRTupleType, MIRType } from "../../compiler/mir_assembly";
 import { SMTTypeEmitter } from "./smttype_emitter";
 import { MIRAbort, MIRArgGuard, MIRArgument, MIRAssertCheck, MIRBasicBlock, MIRBinKeyEq, MIRBinKeyLess, MIRConstantArgument, MIRConstantBigInt, MIRConstantBigNat, MIRConstantDataString, MIRConstantDecimal, MIRConstantFalse, MIRConstantFloat, MIRConstantInt, MIRConstantNat, MIRConstantNone, MIRConstantNothing, MIRConstantRational, MIRConstantRegex, MIRConstantString, MIRConstantStringOf, MIRConstantTrue, MIRConstantTypedNumber, MIRConstructorEntityDirect, MIRConstructorEphemeralList, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionMixed, MIRConstructorPrimaryCollectionSingletons, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConvertValue, MIRDeclareGuardFlagLocation, MIREntityProjectToEphemeral, MIREntityUpdate, MIREphemeralListExtend, MIRExtract, MIRFieldKey, MIRGlobalVariable, MIRGuard, MIRGuardedOptionInject, MIRInject, MIRInvokeFixedFunction, MIRInvokeKey, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRIsTypeOf, MIRJump, MIRJumpCond, MIRJumpNone, MIRLoadConst, MIRLoadField, MIRLoadFromEpehmeralList, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadUnintVariableValue, MIRLogicAction, MIRMaskGuard, MIRMultiLoadFromEpehmeralList, MIROp, MIROpTag, MIRPhi, MIRPrefixNotOp, MIRRecordHasProperty, MIRRecordProjectToEphemeral, MIRRecordUpdate, MIRRegisterArgument, MIRRegisterAssign, MIRResolvedTypeKey, MIRReturnAssign, MIRReturnAssignOfCons, MIRSetConstantGuardFlag, MIRSliceEpehmeralList, MIRStatmentGuard, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRTupleHasIndex, MIRTupleProjectToEphemeral, MIRTupleUpdate, MIRVirtualMethodKey } from "../../compiler/mir_ops";
 import { SMTCallSimple, SMTCallGeneral, SMTCallGeneralWOptMask, SMTCond, SMTConst, SMTExp, SMTIf, SMTLet, SMTLetMulti, SMTMaskConstruct, SMTVar, SMTCallGeneralWPassThroughMask, SMTTypeInfo, VerifierOptions } from "./smt_exp";
@@ -489,23 +489,14 @@ class SMTBodyEmitter {
             bbody = this.typegen.coerce(new SMTCallSimple(this.typegen.getSMTConstructorName(v3type).cons, [new SMTVar("arg0"), new SMTVar("arg1"), new SMTVar("arg2")]), v3type, this.typegen.getMIRType(ldecl.oftype));
         }
         else {
-            xxxx;
-            bbody =  NOT_IMPLEMENTED("Collection Constructor for lists larger than 3");
-            //
-            //TODO: Need to implement some nice LargeList action and also have a check on the constants info...
-            //
+            const lltype = this.assembly.typeMap.get(`LargeList<${etype.typeID}>`) as MIRType;
 
-            /*
-            const lrecl = this.assembly.typeMap.get(`LargeList<${etype.typeID}>`) as MIRType;
-            const tftype = this.assembly.typeMap.get((this.assembly.entityDecls.get(lrecl.typeID) as MIRObjectEntityTypeDecl).fields[1].declaredType) as MIRType;
-
-            bbody = this.typegen.coerce(new SMTConst("bsq_none"), this.typegen.getMIRType("None"), tftype);
-            for(let i = geninfo.argc - 1; i >= 0; --i) {
-                bbody = this.typegen.coerce(new SMTCallSimple(this.typegen.getSMTConstructorName(lrecl).cons, [new SMTVar(`arg${i}`), bbody]), lrecl, tftype);
+            let args: SMTExp[] = [];
+            for(let i = 0; i < geninfo.argc; ++i) {
+                args.push(new SMTCallSimple("seq.unit", [new SMTVar(`arg${i}`)]));
             }
 
-            bbody = this.typegen.coerce(bbody, lrecl, geninfo.resulttype);
-            */
+            bbody = this.typegen.coerce(this.typegen.generateLargeListTypeConstructor(lltype, new SMTCallSimple("seq.++", args)), lltype, this.typegen.getMIRType(ldecl.oftype));
         }
 
         return SMTFunction.create(this.typegen.lookupFunctionName(geninfo.inv), args, this.typegen.getSMTTypeFor(geninfo.resulttype), bbody);
@@ -516,6 +507,7 @@ class SMTBodyEmitter {
         const etype = ldecl.tupentrytype;
         const etuple = this.typegen.getMIRType(etype).options[0] as MIRTupleType;
         const keytype = ldecl.getTypeK();
+        const valtype = ldecl.getTypeV();
 
         let args: { vname: string, vtype: SMTTypeInfo }[] = [];
         for(let j = 0; j < geninfo.argc; ++j) {
@@ -529,43 +521,91 @@ class SMTBodyEmitter {
         }
         else if(geninfo.argc === 2) {
             const v2type = this.assembly.typeMap.get(`Vector2<${etype}>`) as MIRType;
-            const accesskey1 = new SMTCallSimple(this.typegen.generateTupleIndexGetFunction(etuple, 0), [new SMTVar("arg0")]);
-            const accesskey2 = new SMTCallSimple(this.typegen.generateTupleIndexGetFunction(etuple, 0), [new SMTVar("arg1")]);
+            const accesskey0 = new SMTCallSimple(this.typegen.generateTupleIndexGetFunction(etuple, 0), [new SMTVar("arg0")]);
+            const accesskey1 = new SMTCallSimple(this.typegen.generateTupleIndexGetFunction(etuple, 0), [new SMTVar("arg1")]);
 
-            const chkorder12: SMTExp = SMTCallSimple.makeNot(this.generateBinKeyCmpFor(keytype, keytype, accesskey1, keytype, accesskey2));
-            const chkorder21: SMTExp = SMTCallSimple.makeNot(this.generateBinKeyCmpFor(keytype, keytype, accesskey1, keytype, accesskey2));
-        
-            xxxx;
-            //(distinct arg0 arg1)
-
-            bbody = new SMTIf(chkorder12,
-                this.typegen.generateResultTypeConstructorSuccess(geninfo.resulttype, this.typegen.coerce(new SMTCallSimple(this.typegen.getSMTConstructorName(v2type).cons, [new SMTVar("arg0"), new SMTVar("arg1")]), v2type, this.typegen.getMIRType(ldecl.oftype))),
-                new SMTIf(chkorder21,
-                    this.typegen.generateResultTypeConstructorSuccess(geninfo.resulttype, this.typegen.coerce(new SMTCallSimple(this.typegen.getSMTConstructorName(v2type).cons, [new SMTVar("arg0"), new SMTVar("arg1")]), v2type, this.typegen.getMIRType(ldecl.oftype))),
+            let distinct = new SMTCallSimple("distinct", [new SMTVar("key0"), new SMTVar("key1")]);
+            
+            let ordercons = this.typegen.coerce(new SMTIf(this.generateBinKeyCmpFor(keytype, keytype, new SMTVar("key0"), keytype, new SMTVar("key1")),
+                    new SMTCallSimple(this.typegen.getSMTConstructorName(v2type).cons, [new SMTVar("arg0"), new SMTVar("arg1")]),
+                    new SMTCallSimple(this.typegen.getSMTConstructorName(v2type).cons, [new SMTVar("arg1"), new SMTVar("arg0")])
+                ),
+                v2type,
+                this.typegen.getMIRType(ldecl.oftype)
+            );
+            
+            bbody = new SMTLetMulti([{vname: "key0", value: accesskey0}, {vname: "key1", value: accesskey1}], 
+                new SMTIf(distinct,
+                    ordercons,
                     this.typegen.generateResultTypeConstructorError(geninfo.resulttype, this.generateErrorCreateWithFile(geninfo.srcFile, geninfo.sinfo, geninfo.resulttype, "Duplicate keys in map constructor"))
                 )
             );
         }
         else if(geninfo.argc === 3) {
-            const v2type = this.assembly.typeMap.get(`Vector2<${etype}>`) as MIRType;
-            const accesskey1 = new SMTCallSimple(this.typegen.generateTupleIndexGetFunction(etuple, 0), [new SMTVar("arg0")]);
-            const accesskey2 = new SMTCallSimple(this.typegen.generateTupleIndexGetFunction(etuple, 0), [new SMTVar("arg1")]);
+            const v3type = this.assembly.typeMap.get(`Vector3<${etype}>`) as MIRType;
+            const accesskey0 = new SMTCallSimple(this.typegen.generateTupleIndexGetFunction(etuple, 0), [new SMTVar("arg0")]);
+            const accesskey1 = new SMTCallSimple(this.typegen.generateTupleIndexGetFunction(etuple, 0), [new SMTVar("arg1")]);
+            const accesskey2 = new SMTCallSimple(this.typegen.generateTupleIndexGetFunction(etuple, 0), [new SMTVar("arg2")]);
 
-            const chkorder12: SMTExp = SMTCallSimple.makeNot(this.generateBinKeyCmpFor(keytype, keytype, accesskey1, keytype, accesskey2));
-            const chkorder21: SMTExp = SMTCallSimple.makeNot(this.generateBinKeyCmpFor(keytype, keytype, accesskey1, keytype, accesskey2));
-        
-            xxxx;
+            let distinct = new SMTCallSimple("distinct", [new SMTVar("key0"), new SMTVar("key1"), new SMTVar("key2")]);
+            
+            let order012 = SMTCallSimple.makeAndOf(this.generateBinKeyCmpFor(keytype, keytype, new SMTVar("key0"), keytype, new SMTVar("key1")), this.generateBinKeyCmpFor(keytype, keytype, new SMTVar("key1"), keytype, new SMTVar("key2")));
+            let order021 = SMTCallSimple.makeAndOf(this.generateBinKeyCmpFor(keytype, keytype, new SMTVar("key0"), keytype, new SMTVar("key2")), this.generateBinKeyCmpFor(keytype, keytype, new SMTVar("key2"), keytype, new SMTVar("key1")));
+            
+            let order102 = SMTCallSimple.makeAndOf(this.generateBinKeyCmpFor(keytype, keytype, new SMTVar("key1"), keytype, new SMTVar("key0")), this.generateBinKeyCmpFor(keytype, keytype, new SMTVar("key0"), keytype, new SMTVar("key2")));
+            let order120 = SMTCallSimple.makeAndOf(this.generateBinKeyCmpFor(keytype, keytype, new SMTVar("key1"), keytype, new SMTVar("key2")), this.generateBinKeyCmpFor(keytype, keytype, new SMTVar("key2"), keytype, new SMTVar("key0")));
 
-            bbody = new SMTIf(chkorder12,
-                this.typegen.generateResultTypeConstructorSuccess(geninfo.resulttype, this.typegen.coerce(new SMTCallSimple(this.typegen.getSMTConstructorName(v2type).cons, [new SMTVar("arg0"), new SMTVar("arg1")]), v2type, this.typegen.getMIRType(ldecl.oftype))),
-                new SMTIf(chkorder21,
-                    this.typegen.generateResultTypeConstructorSuccess(geninfo.resulttype, this.typegen.coerce(new SMTCallSimple(this.typegen.getSMTConstructorName(v2type).cons, [new SMTVar("arg0"), new SMTVar("arg1")]), v2type, this.typegen.getMIRType(ldecl.oftype))),
+            let order201 = SMTCallSimple.makeAndOf(this.generateBinKeyCmpFor(keytype, keytype, new SMTVar("key2"), keytype, new SMTVar("key0")), this.generateBinKeyCmpFor(keytype, keytype, new SMTVar("key0"), keytype, new SMTVar("key1")));
+            //default is order 210 
+
+            let ordercons = this.typegen.coerce(new SMTIf(order012,
+                    new SMTCallSimple(this.typegen.getSMTConstructorName(v3type).cons, [new SMTVar("arg0"), new SMTVar("arg1"), new SMTVar("arg2")]),
+                    new SMTIf(order021,
+                        new SMTCallSimple(this.typegen.getSMTConstructorName(v3type).cons, [new SMTVar("arg0"), new SMTVar("arg2"), new SMTVar("arg1")]),
+                        new SMTIf(order102,
+                            new SMTCallSimple(this.typegen.getSMTConstructorName(v3type).cons, [new SMTVar("arg1"), new SMTVar("arg0"), new SMTVar("arg2")]),
+                            new SMTIf(order120,
+                                new SMTCallSimple(this.typegen.getSMTConstructorName(v3type).cons, [new SMTVar("arg1"), new SMTVar("arg2"), new SMTVar("arg0")]),
+                                new SMTIf(order201,
+                                    new SMTCallSimple(this.typegen.getSMTConstructorName(v3type).cons, [new SMTVar("arg2"), new SMTVar("arg0"), new SMTVar("arg1")]),
+                                    new SMTCallSimple(this.typegen.getSMTConstructorName(v3type).cons, [new SMTVar("arg2"), new SMTVar("arg1"), new SMTVar("arg0")])
+                                )
+                            )
+                        )
+                    )
+                ),
+                v3type,
+                this.typegen.getMIRType(ldecl.oftype)
+            );
+            
+            bbody = new SMTLetMulti([{vname: "key0", value: accesskey0}, {vname: "key1", value: accesskey1}, {vname: "key2", value: accesskey2}], 
+                new SMTIf(distinct,
+                    ordercons,
                     this.typegen.generateResultTypeConstructorError(geninfo.resulttype, this.generateErrorCreateWithFile(geninfo.srcFile, geninfo.sinfo, geninfo.resulttype, "Duplicate keys in map constructor"))
                 )
             );
         }
         else {
-            assert(false, "generateSingletonConstructorMap -- only implemented for size 1 and 2")
+            const mmtype = this.assembly.typeMap.get(`LargeMap<${keytype.typeID}, ${valtype.typeID}>`) as MIRType;
+            const entrytype = this.typegen.generateLargeMapEntryType(mmtype);
+            const entryinfo = this.typegen.generateLargeMapEntryTypeConsInfo(mmtype);
+
+            let keys: SMTExp[] = [];
+            let array: SMTExp = new SMTConst(`((as const (Array ${this.typegen.getSMTTypeFor(keytype).smttypename} ${entrytype.smttypename})) ${entryinfo.empty})`);
+            for(let i = 0; i < geninfo.argc; ++i) {
+                const ekey = new SMTCallSimple(this.typegen.generateTupleIndexGetFunction(etuple, 0), [new SMTVar(`arg${i}`)]);
+
+                keys.push(ekey);
+                array = new SMTCallSimple("store", [array, ekey, this.typegen.generateLargeMapEntryTypeConstructorValid(mmtype, ekey, new SMTVar(`arg${i}`))]);
+            }
+
+            let distinct = new SMTCallSimple("distinct", keys);
+            let ccons = this.typegen.coerce(this.typegen.generateLargeMapTypeConstructor(mmtype, new SMTConst(`${geninfo.argc}`), array), mmtype, this.typegen.getMIRType(ldecl.oftype));
+            
+            bbody = new SMTIf(distinct,
+                ccons,
+                this.typegen.generateResultTypeConstructorError(geninfo.resulttype, this.generateErrorCreateWithFile(geninfo.srcFile, geninfo.sinfo, geninfo.resulttype, "Duplicate keys in map constructor"))
+            );
         }
 
         return SMTFunction.create(this.typegen.lookupFunctionName(geninfo.inv), args, this.typegen.generateResultType(geninfo.resulttype), bbody);
@@ -2945,13 +2985,39 @@ class SMTBodyEmitter {
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
             }
             case "s_large_list_map_pred": {
-                xxxx;
+                const lt = this.typegen.getMIRType(idecl.params[0].type);
+                const sval = this.typegen.generateLargeListTypeGetSeq(lt, new SMTVar(args[0].vname));
+
+                const pc = idecl.pcodes.get("p") as MIRPCode;
+                const pcdcl = this.typegen.assembly.invokeDecls.get(pc.code) as MIRInvokeDecl;
+                const argtype = this.typegen.getSMTTypeFor(this.typegen.getMIRType(pcdcl.params[0].type));
+                const pcfn = this.typegen.lookupFunctionName(pc.code);
+                const captured = pc.cargs.map((carg) => carg.cname);
+
+                const cbody = this.typegen.generateLargeListTypeConstructor(mirrestype, new SMTCallSimple("seq.map", [
+                    new SMTConst(`(lambda ((@@x ${argtype.smttypename})) (${pcfn} @@x${captured.length !== 0 ? (" " + captured.join(" ")) : ""}))`),
+                    sval
+                ]));
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
             }
             case "s_large_list_map_pred_idx": {
                 assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
             }
             case "s_large_list_map_fn": {
-                xxxx;
+                const lt = this.typegen.getMIRType(idecl.params[0].type);
+                const sval = this.typegen.generateLargeListTypeGetSeq(lt, new SMTVar(args[0].vname));
+
+                const pc = idecl.pcodes.get("p") as MIRPCode;
+                const pcdcl = this.typegen.assembly.invokeDecls.get(pc.code) as MIRInvokeDecl;
+                const argtype = this.typegen.getSMTTypeFor(this.typegen.getMIRType(pcdcl.params[0].type));
+                const pcfn = this.typegen.lookupFunctionName(pc.code);
+                const captured = pc.cargs.map((carg) => carg.cname);
+
+                const cbody = this.typegen.generateLargeListTypeConstructor(mirrestype, new SMTCallSimple("seq.map", [
+                    new SMTConst(`(lambda ((@@x ${argtype.smttypename})) (${pcfn} @@x${captured.length !== 0 ? (" " + captured.join(" ")) : ""}))`),
+                    sval
+                ]));
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
             }
             case "s_large_list_map_fn_idx": {
                 assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
