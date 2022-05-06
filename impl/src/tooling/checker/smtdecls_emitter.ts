@@ -11,7 +11,7 @@ import { constructCallGraphInfo, markSafeCalls } from "../../compiler/mir_callg"
 import { MIRInvokeKey } from "../../compiler/mir_ops";
 import { SMTBodyEmitter } from "./smtbody_emitter";
 import { SMTTypeEmitter } from "./smttype_emitter";
-import { SMTAssembly, SMTConstantDecl, SMTEntityCollectionTypeDecl, SMTEntityInternalOfTypeDecl, SMTEntityOfTypeDecl, SMTEntityStdDecl, SMTEphemeralListDecl, SMTFunction, SMTFunctionUninterpreted, SMTModelState, SMTRecordDecl, SMTTupleDecl } from "./smt_assembly";
+import { SMTAssembly, SMTConstantDecl, SMTEntityCollectionLargeListTypeDecl, SMTEntityCollectionLargeMapEntryTypeDecl, SMTEntityCollectionLargeMapTypeDecl, SMTEntityCollectionTypeDecl, SMTEntityInternalOfTypeDecl, SMTEntityOfTypeDecl, SMTEntityStdDecl, SMTEphemeralListDecl, SMTFunction, SMTFunctionUninterpreted, SMTModelState, SMTRecordDecl, SMTTupleDecl } from "./smt_assembly";
 import { SMTCallGeneral, SMTCallGeneralWOptMask, SMTCallSimple, SMTConst, SMTExp, SMTIf, SMTLet, SMTLetMulti, SMTMaskConstruct, SMTTypeInfo, SMTVar, VerifierOptions } from "./smt_exp";
 
 class SMTEmitter {
@@ -642,7 +642,20 @@ class SMTEmitter {
     }
 
     private processPrimitiveLargeListEntityDecl(edecl: MIRPrimitiveInternalEntityTypeDecl) {
-       xxxx;
+        const mirtype = this.temitter.getMIRType(edecl.tkey);
+        const smttype = this.temitter.getSMTTypeFor(mirtype);
+
+        const llinfo = this.temitter.generateLargeListTypeConsInfo(mirtype);
+        const consfuncs = this.temitter.getSMTConstructorName(mirtype);
+        const consdecl = {
+            cname: consfuncs.cons, 
+            cargs: [
+                { fname: llinfo.seqf, ftype: `(Seq ${this.temitter.getSMTTypeFor(edecl.terms.get("T") as MIRType, true)})` },
+            ]
+        };
+
+        const smtdecl = new SMTEntityCollectionLargeListTypeDecl(smttype.smttypename, smttype.smttypetag, consdecl, consfuncs.box, consfuncs.bfield);
+        this.assembly.auxCollectionDecls.push(smtdecl);
     }
 
     private processPrimitiveStackEntityDecl(edecl: MIRPrimitiveStackEntityTypeDecl) {
@@ -668,8 +681,23 @@ class SMTEmitter {
     }
 
     private processPrimitiveLargeMapEntityDecl(edecl: MIRPrimitiveInternalEntityTypeDecl) {
-        xxxx;
-     }
+        const mirtype = this.temitter.getMIRType(edecl.tkey);
+        const smttype = this.temitter.getSMTTypeFor(mirtype);
+
+        const mminfo = this.temitter.generateLargeMapTypeConsInfo(mirtype);
+        const consfuncs = this.temitter.getSMTConstructorName(mirtype);
+        const consdecl = {
+            cname: consfuncs.cons, 
+            cargs: [
+                { fname: mminfo.lenf, ftype: "BNat" },
+                { fname: mminfo.arrayf, ftype: xxxx }
+            ]
+        };
+
+        const esmtdecl = new SMTEntityCollectionLargeMapEntryTypeDecl()
+        const smtdecl = new SMTEntityCollectionLargeMapTypeDecl(smttype.smttypename, smttype.smttypetag, consdecl, consfuncs.box, consfuncs.bfield, esmtdecl);
+        this.assembly.entityDecls.push(smtdecl);
+    }
 
     private processVirtualInvokes() {
         for(let i = this.lastVInvokeIdx; i < this.bemitter.requiredVirtualFunctionInvokes.length; ++i) {

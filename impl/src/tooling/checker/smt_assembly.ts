@@ -172,6 +172,32 @@ class SMTEntityCollectionTypeDecl extends SMTEntityDecl {
     }
 }
 
+class SMTEntityCollectionLargeListTypeDecl extends SMTEntityDecl {
+    readonly consf: { cname: string, cargs: { fname: string, ftype: string }[] };
+
+    constructor(smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: string }[] }, boxf: string, ubf: string) {
+        super(false, smtname, typetag, boxf, ubf);
+        this.consf = consf;
+    }
+}
+
+class SMTEntityCollectionLargeMapTypeDecl extends SMTEntityDecl {
+    readonly consf: { cname: string, cargs: { fname: string, ftype: string }[] };
+    readonly entryinfo: SMTEntityCollectionLargeMapEntryTypeDecl;
+
+    constructor(smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: string }[] }, boxf: string, ubf: string, entryinfo: SMTEntityCollectionLargeMapEntryTypeDecl) {
+        super(false, smtname, typetag, boxf, ubf);
+        this.consf = consf;
+        this.entryinfo = entryinfo;
+    }
+}
+
+class SMTEntityCollectionLargeMapEntryTypeDecl extends SMTEntityDecl {
+    constructor(smtname: string, typetag: string, boxf: string, ubf: string) {
+        super(false, smtname, typetag, boxf, ubf);
+    }
+}
+
 class SMTEntityStdDecl extends SMTEntityDecl {
     readonly consf: { cname: string, cargs: { fname: string, ftype: SMTTypeInfo }[] };
     
@@ -294,6 +320,8 @@ class SMTAssembly {
     tupleDecls: SMTTupleDecl[] = [];
     recordDecls: SMTRecordDecl[] = [];
     ephemeralDecls: SMTEphemeralListDecl[] = [];
+
+    auxCollectionDecls: (SMTEntityCollectionLargeListTypeDecl | SMTEntityCollectionLargeMapTypeDecl)[] = [];
 
     typeTags: string[] = [
         "TypeTag_None",
@@ -514,6 +542,9 @@ class SMTAssembly {
                     boxf: `(${tt.boxf} (${tt.ubf} BTerm))`
                 };
             });
+
+
+        xxxx; //collection special
 
         const etypeinfo = this.ephemeralDecls
             .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
@@ -764,7 +795,8 @@ class SMTAssembly {
 }
 
 export {
-    SMTEntityDecl, SMTEntityOfTypeDecl, SMTEntityInternalOfTypeDecl, SMTEntityCollectionTypeDecl, SMTEntityStdDecl,
+    SMTEntityDecl, SMTEntityOfTypeDecl, SMTEntityInternalOfTypeDecl, SMTEntityCollectionTypeDecl, SMTEntityCollectionLargeListTypeDecl, SMTEntityCollectionLargeMapTypeDecl, SMTEntityCollectionLargeMapEntryTypeDecl,
+    SMTEntityStdDecl,
     SMTTupleDecl, SMTRecordDecl, SMTEphemeralListDecl,
     SMTConstantDecl,
     SMTFunction, SMTFunctionUninterpreted,
