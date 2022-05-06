@@ -2914,7 +2914,7 @@ class SMTBodyEmitter {
             }
             case "s_large_list_get": {
                 const sval = this.typegen.generateLargeListTypeGetSeq(this.typegen.getMIRType(idecl.params[0].type), new SMTVar(args[0].vname));
-                const cbody = new SMTCallSimple("seq.nth", [sval, new SMTVar(args[0].vname)]);
+                const cbody = new SMTCallSimple("seq.nth", [sval, new SMTVar(args[1].vname)]);
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
             }
             case "s_large_list_get_back": {
