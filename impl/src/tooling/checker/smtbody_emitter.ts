@@ -3010,7 +3010,7 @@ class SMTBodyEmitter {
 
                     const values = new SMTCallSimple("seq.map", [
                         new SMTConst(`(lambda ((@@r ${this.typegen.generateResultType(this.typegen.getMIRType("Bool")).smttypename})) ${this.typegen.generateResultGetSuccess(this.typegen.getMIRType("Bool"), new SMTVar("@@r"))})`),
-                        sval
+                        new SMTVar("@maparray")
                     ]);
 
                     const cbody = new SMTLet("@maparray", maparray, 
@@ -3019,7 +3019,7 @@ class SMTBodyEmitter {
                                trgtresulterr,
                                 new SMTIf(new SMTVar("@othererr"),
                                     otherresulterr,
-                                    values
+                                    this.typegen.generateResultTypeConstructorSuccess(mirrestype, this.typegen.generateLargeListTypeConstructor(mirrestype, values))
                                 )
                             )
                         )
@@ -3035,17 +3035,16 @@ class SMTBodyEmitter {
                 const lt = this.typegen.getMIRType(idecl.params[0].type);
                 const sval = this.typegen.generateLargeListTypeGetSeq(lt, new SMTVar(args[0].vname));
 
-                const pc = idecl.pcodes.get("p") as MIRPCode;
+                const pc = idecl.pcodes.get("f") as MIRPCode;
                 const pcdcl = this.typegen.assembly.invokeDecls.get(pc.code) as MIRInvokeDecl;
                 const argtype = this.typegen.getSMTTypeFor(this.typegen.getMIRType(pcdcl.params[0].type));
                 const pcfn = this.typegen.lookupFunctionName(pc.code);
                 const captured = pc.cargs.map((carg) => carg.cname);
 
-                const maparray = this.typegen.generateLargeListTypeConstructor(mirrestype, new SMTCallSimple("seq.map", [
+                const maparray = new SMTCallSimple("seq.map", [
                     new SMTConst(`(lambda ((@@x ${argtype.smttypename})) (${pcfn} @@x${captured.length !== 0 ? (" " + captured.join(" ")) : ""}))`),
                     sval
-                ]));
-
+                ]);
                 
                 if(this.isSafeInvoke(pc.code)) {
                     return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateLargeListTypeConstructor(mirrestype, maparray));
@@ -3059,8 +3058,8 @@ class SMTBodyEmitter {
                     const otherresulterr = this.typegen.generateResultTypeConstructorError(mirrestype, new SMTConst("ErrorID_AssumeCheck"));
 
                     const values = new SMTCallSimple("seq.map", [
-                        new SMTConst(`(lambda ((@@r ${this.typegen.generateResultType(mirresult_T).smttypename})) ${this.typegen.generateResultGetSuccess(this.typegen.getMIRType("Bool"), new SMTVar("@@r"))})`),
-                        sval
+                        new SMTConst(`(lambda ((@@r ${this.typegen.generateResultType(mirresult_T).smttypename})) ${this.typegen.generateResultGetSuccess(mirresult_T, new SMTVar("@@r")).emitSMT2(undefined)})`),
+                        new SMTVar("@maparray")
                     ]);
 
                     const cbody = new SMTLet("@maparray", maparray, 
@@ -3069,7 +3068,7 @@ class SMTBodyEmitter {
                                 trgtresulterr,
                                 new SMTIf(new SMTVar("@othererr"),
                                     otherresulterr,
-                                    values
+                                    this.typegen.generateResultTypeConstructorSuccess(mirrestype, this.typegen.generateLargeListTypeConstructor(mirrestype, values))
                                 )
                             )
                         )

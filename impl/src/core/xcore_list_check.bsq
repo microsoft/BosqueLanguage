@@ -1523,21 +1523,25 @@ __internal entity LargeList<T> provides Some {
         return ListOps::s_blockingfailure<LargeList<[T, U]>>();
     }
 
-    function s_append(l: LargeList<T> | ListVector<T>, r: LargeList<T> | ListVector<T>): LargeList<T> {
+    function s_append(l: ListRepr<T>, r: ListRepr<T>): LargeList<T> {
         if(/\(l.is<LargeList<T>>(), r.is<LargeList<T>>())) {
-            return LargeList<T>::s_large_list_append(l, r);
+            let ll = s_safeAs<ListRepr<T>, LargeList<T>>(l);
+            let rr = s_safeAs<ListRepr<T>, LargeList<T>>(r);
+            return LargeList<T>::s_large_list_append(ll, rr);
         }
         elif(l.is<LargeList<T>>()) {
-            let rr = LargeList<T>::s_vector_to_large_list(r);
-            return LargeList<T>::s_large_list_append(l, rr);
+            let ll = s_safeAs<ListRepr<T>, LargeList<T>>(l);
+            let rr = LargeList<T>::s_vector_to_large_list(s_safeAs<ListRepr<T>, ListVector<T>>(r));
+            return LargeList<T>::s_large_list_append(ll, rr);
         }
         elif(r.is<LargeList<T>>()) {
-            let ll = LargeList<T>::s_vector_to_large_list(l);
-            return LargeList<T>::s_large_list_append(ll, r);
+            let ll = LargeList<T>::s_vector_to_large_list(s_safeAs<ListRepr<T>, ListVector<T>>(l));
+            let rr = s_safeAs<ListRepr<T>, LargeList<T>>(r);
+            return LargeList<T>::s_large_list_append(ll, rr);
         }
         else {
-            let rr = LargeList<T>::s_vector_to_large_list(r);
-            let ll = LargeList<T>::s_vector_to_large_list(l);
+            let ll = LargeList<T>::s_vector_to_large_list(s_safeAs<ListRepr<T>, ListVector<T>>(l));
+            let rr = LargeList<T>::s_vector_to_large_list(s_safeAs<ListRepr<T>, ListVector<T>>(r));
             return LargeList<T>::s_large_list_append(ll, rr);
         }
     }

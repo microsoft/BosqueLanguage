@@ -5,6 +5,22 @@
 
 namespace Main;
 
+///////////////////////////////////////////////
+
+entrypoint function main(c: BoardPostion): Bool {
+    let bb = Board::createEmpty{}
+            .setCellMark(BoardPostion{1, 1}, PlayerMark::x)
+            .setCellMark(BoardPostion{0, 2}, PlayerMark::o)
+            .setCellMark(BoardPostion{1, 2}, PlayerMark::x)
+            .setCellMark(BoardPostion{0, 1}, PlayerMark::o);
+
+    let nb = bb.setCellMark(c, PlayerMark::x);
+
+    return !nb.hasWinner();
+}
+///////////////////////////////////////////////
+
+
 entrypoint function getInitialBoard(): Board {
     return Board::createEmpty{};
 }

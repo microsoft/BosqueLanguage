@@ -481,22 +481,30 @@ __internal entity LargeMap<K grounded KeyType, V> provides Some {
 
     function union(l: MapRepr<K, V>, r: MapRepr<K, V>): MapRepr<K, V> {
         if(/\(l.is<LargeMap<K, V>>(), r.is<LargeMap<K, V>>())) {
-            assert(LargeMap<K, V>::s_large_map_disjoint(l, r));
-            return LargeMap<K, V>::s_large_map_union(l, r);
+            let ll = s_safeAs<MapRepr<K, V>, LargeMap<K, V>>(l);
+            let rr = s_safeAs<MapRepr<K, V>, LargeMap<K, V>>(r);
+
+            assert(LargeMap<K, V>::s_large_map_disjoint(ll, rr));
+            return LargeMap<K, V>::s_large_map_union(ll, rr);
         }
         elif(l.is<LargeMap<K, V>>()) {
+            let ll = s_safeAs<MapRepr<K, V>, LargeMap<K, V>>(s_safeAs<MapRepr<K, V>, MapVector<K, V>>(l));
             let rr = LargeMap<K, V>::s_vector_to_large_map(r);
-            assert(LargeMap<K, V>::s_large_map_disjoint(l, rr));
-            return LargeMap<K, V>::s_large_map_union(l, rr);
+
+            assert(LargeMap<K, V>::s_large_map_disjoint(ll, rr));
+            return LargeMap<K, V>::s_large_map_union(ll, rr);
         }
         elif(r.is<LargeMap<K, V>>()) {
-            let ll = LargeMap<K, V>::s_vector_to_large_map(l);
-            assert(LargeMap<K, V>::s_large_map_disjoint(ll, r));
-            return LargeMap<K, V>::s_large_map_union(ll, r);
+            let ll = LargeMap<K, V>::s_vector_to_large_map(s_safeAs<MapRepr<K, V>, MapVector<K, V>>(r));
+            let rr = s_safeAs<MapRepr<K, V>, LargeMap<K, V>>(r);
+
+            assert(LargeMap<K, V>::s_large_map_disjoint(ll, rr));
+            return LargeMap<K, V>::s_large_map_union(ll, rr);
         }
         else {
-            let rr = LargeMap<K, V>::s_vector_to_large_map(r);
-            let ll = LargeMap<K, V>::s_vector_to_large_map(l);
+            let ll = LargeMap<K, V>::s_vector_to_large_map(s_safeAs<MapRepr<K, V>, LargeMap<K, V>>(l));
+            let rr = LargeMap<K, V>::s_vector_to_large_map(s_safeAs<MapRepr<K, V>, LargeMap<K, V>>(r));
+
             assert(LargeMap<K, V>::s_large_map_disjoint(ll, rr));
             return LargeMap<K, V>::s_large_map_union(ll, rr);
         }
