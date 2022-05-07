@@ -42,7 +42,8 @@ entity Board provides APIType {
     //Board is a map from cells to marks (or not in map if cell is unoccupied)
     field cells: Cells;
 
-    invariant test $cells.size() == 3n && $cells.allOf(pred(row) => row.size() == 3n);
+    invariant test $cells.size() == 3n;
+    invariant test $cells.allOf(pred(row) => row.size() == 3n);
 
     factory function createEmpty(): { cells: Cells } {
         return 
