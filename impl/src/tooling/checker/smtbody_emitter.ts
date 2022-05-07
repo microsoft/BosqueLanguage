@@ -3087,12 +3087,12 @@ class SMTBodyEmitter {
             }
             case "s_large_list_indexof": {
                 const sval = this.typegen.generateLargeListTypeGetSeq(this.typegen.getMIRType(idecl.params[0].type), new SMTVar(args[0].vname));
-                const cbody = new SMTCallSimple("seq.indexof", [sval, new SMTVar(args[1].vname)]);
+                const cbody = new SMTCallSimple("seq.indexof", [sval, new SMTCallSimple("seq.unit", [new SMTVar(args[1].vname)])]);
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
             }
             case "s_large_list_last_indexof": {
                 const sval = this.typegen.generateLargeListTypeGetSeq(this.typegen.getMIRType(idecl.params[0].type), new SMTVar(args[0].vname));
-                const cbody = new SMTCallSimple("seq.lastindex", [sval, new SMTVar(args[1].vname)]);
+                const cbody = new SMTCallSimple("seq.last_indexof", [sval, new SMTCallSimple("seq.unit", [new SMTVar(args[1].vname)])]);
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
             }
             case "s_vector1_to_large_map": {
@@ -3145,12 +3145,15 @@ class SMTBodyEmitter {
             }
             case "s_large_map_has": {
                 const mt = this.typegen.getMIRType(idecl.params[0].type);
-                const cbody = this.typegen.generateLargeMapEntryTypeIsValid(mt, new SMTCallSimple("select", [this.typegen.generateLargeMapTypeGetArray(mt, new SMTVar(args[0].vname)), new SMTVar(args[0].vname)]));
+                const cbody = SMTCallSimple.makeEq(
+                    this.typegen.generateLargeMapEntryTypeConstructorEmpty(mt),
+                    new SMTCallSimple("select", [this.typegen.generateLargeMapTypeGetArray(mt, new SMTVar(args[0].vname)), new SMTVar(args[1].vname)])
+                );
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
             }
             case "s_large_map_get": {
                 const mt = this.typegen.getMIRType(idecl.params[0].type);
-                const cbody = this.typegen.generateLargeMapEntryTypeGetValueTuple(mt, new SMTCallSimple("select", [this.typegen.generateLargeMapTypeGetArray(mt, new SMTVar(args[0].vname)), new SMTVar(args[0].vname)]));
+                const cbody = this.typegen.generateLargeMapEntryTypeGetValueTuple(mt, new SMTCallSimple("select", [this.typegen.generateLargeMapTypeGetArray(mt, new SMTVar(args[0].vname)), new SMTVar(args[1].vname)]));
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
             }
             case "s_large_map_disjoint": {

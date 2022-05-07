@@ -48,7 +48,7 @@ class SMTEmitter {
         const accept: SMTExp = new SMTCallSimple("str.in.re", [this.temitter.generateResultGetSuccess(this.temitter.getMIRType("String"), new SMTVar("str")), new SMTConst(lre)]);
         const fbody = new SMTLet("str", bcreate,
             new SMTIf(SMTCallSimple.makeAndOf(this.temitter.generateResultIsSuccessTest(this.temitter.getMIRType("String"), new SMTVar("str")), accept),
-                new SMTVar("str"),
+                this.temitter.generateResultTypeConstructorSuccess(tt, this.temitter.generateResultGetSuccess(this.temitter.getMIRType("String"), new SMTVar("str"))),
                 this.temitter.generateErrorResultAssert(tt)
             )
         );
@@ -694,13 +694,13 @@ class SMTEmitter {
             cname: consfuncs.cons, 
             cargs: [
                 { fname: mminfo.lenf, ftype: "BNat" },
-                { fname: mminfo.arrayf, ftype: `(Array ${smtk.smttypename} ${smtvtup.smttypename})` }
+                { fname: mminfo.arrayf, ftype: `(Array ${smtk.smttypename} ${esmttype.smttypename})` }
             ]
         };
 
         const econsfuncs = this.temitter.generateLargeMapEntryTypeConsInfo(mirtype);
         const econsdecl = {
-            cname: econsfuncs.cons, 
+            cname: econsfuncs.cons,
             cargs: [
                 { fname: econsfuncs.keyf, ftype: smtk.smttypename},
                 { fname: econsfuncs.valf, ftype: smtvtup.smttypename}

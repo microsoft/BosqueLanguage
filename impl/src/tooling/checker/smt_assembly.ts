@@ -567,7 +567,7 @@ class SMTAssembly {
             .map((tt) => {
                 return {
                     decl: `(${(tt as SMTEntityCollectionLargeMapTypeDecl).entryinfo.smtname} 0)`,
-                    consf: `( (${(tt as SMTEntityCollectionLargeMapTypeDecl).entryinfo.consf.cname} ${(tt as SMTEntityCollectionLargeMapTypeDecl).entryinfo.consf.cargs.map((te) => `(${te.fname} ${te.ftype})`).join(" ")}) )`
+                    consf: `( (${(tt as SMTEntityCollectionLargeMapTypeDecl).entryinfo.consf.cname} ${(tt as SMTEntityCollectionLargeMapTypeDecl).entryinfo.consf.cargs.map((te) => `(${te.fname} ${te.ftype})`).join(" ")}) (${(tt as SMTEntityCollectionLargeMapTypeDecl).entryinfo.emptyf}) )`
                 };
             });
 

@@ -212,8 +212,7 @@ internal entity ListOps provides Some {
                 return Vector1<T>{v};
             }
             elif(l.is<Vector1<T>>()) {
-                let ll = s_safeAs<ListRepr<T>, Vector1<T>>(l);
-                return Vector2<T>{ll.v0, v};
+                return Vector2<T>{l.v0, v};
             }
             else {
                 let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
@@ -231,8 +230,7 @@ internal entity ListOps provides Some {
                 return Vector1<T>{v};
             }
             elif(l.is<Vector1<T>>()) {
-                let ll = s_safeAs<ListRepr<T>, Vector1<T>>(l);
-                return Vector2<T>{v, ll.v0};
+                return Vector2<T>{v, l.v0};
             }
             else {
                 let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
