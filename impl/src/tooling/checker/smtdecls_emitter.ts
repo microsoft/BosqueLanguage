@@ -740,7 +740,15 @@ class SMTEmitter {
             const etypes = [...this.temitter.assembly.typeMap].filter((edi) => this.temitter.assembly.subtypeOf(edi[1], this.temitter.getMIRType(tt.typeID)));
             const opts: MIRTypeOption[] = etypes.map((opt) => opt[1].options[0]).sort((a, b) => a.typeID.localeCompare(b.typeID));
 
-            this.generateAPITypeConstructorFunction_Union(tt, opts, havocfuncs, ufuncs);
+            let ropts: MIRTypeOption[] = [];
+            for(let i = 0; i < opts.length; ++i) {
+                const has = ropts.find((ropt) => ropt.typeID === opts[i].typeID) !== undefined;
+                if(!has) {
+                    ropts.push(opts[i]);
+                }
+            }
+
+            this.generateAPITypeConstructorFunction_Union(tt, ropts, havocfuncs, ufuncs);
         }
         else {
             if (this.temitter.isUniqueTupleType(tt)) {
@@ -803,7 +811,15 @@ class SMTEmitter {
                 const etypes = [...this.temitter.assembly.entityDecls].filter((edi) => this.temitter.assembly.subtypeOf(this.temitter.getMIRType(edi[1].tkey), this.temitter.getMIRType(tt.typeID)));
                 const opts: MIRTypeOption[] = etypes.map((opt) => this.temitter.getMIRType(opt[1].tkey).options[0]).sort((a, b) => a.typeID.localeCompare(b.typeID));
 
-                this.generateAPITypeConstructorFunction_Union(tt, opts, havocfuncs, ufuncs);
+                let ropts: MIRTypeOption[] = [];
+                for(let i = 0; i < opts.length; ++i) {
+                    const has = ropts.find((ropt) => ropt.typeID === opts[i].typeID) !== undefined;
+                    if(!has) {
+                        ropts.push(opts[i]);
+                    }
+                }
+
+                this.generateAPITypeConstructorFunction_Union(tt, ropts, havocfuncs, ufuncs);
             }
             else {
                 //Don't need to do anything

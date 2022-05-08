@@ -11,7 +11,7 @@ import NSFedCode;
 chktest function fedcode_classify_other(cashflow: NSFedCode::Cashflow): Bool {
     let fc = NSFedCode::classify(cashflow, Map<NSFedCode::PartyID, NSCentralBank::CentralBank>{});
 
-    return \/(fc === FedCode::iu1, fc === FedCode::iu2, fc === FedCode::iu4, fc === FedCode::unclassified); 
+    return \/(fc === FedCode::iu2, fc === FedCode::iu4, fc === FedCode::unclassified); 
 }
 
 /*
