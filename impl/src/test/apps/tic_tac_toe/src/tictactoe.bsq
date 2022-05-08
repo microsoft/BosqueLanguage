@@ -56,6 +56,17 @@ entity Board provides APIType {
         };
     }
 
+    factory function create4(): { cells: Cells } {
+        return 
+        {
+            cells=List<List<PlayerMark>>{
+                List<PlayerMark>{PlayerMark::x, PlayerMark::x, PlayerMark::empty},
+                List<PlayerMark>{PlayerMark::o, PlayerMark::o, PlayerMark::empty},
+                List<PlayerMark>{PlayerMark::empty, PlayerMark::empty, PlayerMark::empty}
+            }
+        };
+    }
+
     method isCellEmpty(c: BoardPostion): Bool {
         return this.cells.get(c.rowpos).get(c.colpos) === PlayerMark::empty;
     }
