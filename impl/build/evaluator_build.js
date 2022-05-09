@@ -23,7 +23,7 @@ let outfile = "";
 let z3lib = "";
 if(process.platform === "darwin") {
     compiler = "clang++";
-    ccflags = "-O0 -g -Wall -std=c++20 -arch x86_64";
+    ccflags = "-O0 -g -Wall -std=c++20 -arch arm64";
     includes = includeheaders.map((ih) => `-I ${ih}`).join(" ");
     z3lib = path.join(includebase, "/macos/z3/bin/libz3.a")
     outfile = "-o " + outexec + "/chk";

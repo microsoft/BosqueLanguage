@@ -203,7 +203,13 @@ function isBodySafe(ikey: MIRInvokeKey, masm: MIRAssembly, errorTrgtPos: { file:
         }
         else {
             const istrgt = [...cn.callees].every((callee) => safeinfo.has(callee) && (safeinfo.get(callee) as { safe: boolean, trgt: boolean }).trgt);
-            return { safe: false, trgt: istrgt };
+            if(!pinvk.attributes.includes("__conditional_safe")) {
+                return { safe: false, trgt: istrgt };
+            }
+            else {
+                const issafe = [...cn.callees].every((callee) => safeinfo.has(callee) && (safeinfo.get(callee) as { safe: boolean, trgt: boolean }).safe);
+                return { safe: issafe, trgt: istrgt };
+            }
         }
     }
     else {

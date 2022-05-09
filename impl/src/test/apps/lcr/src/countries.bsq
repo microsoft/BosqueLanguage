@@ -1,0 +1,22 @@
+namespace NSCountry;
+
+enum Country
+{
+    aus,
+    bhs,
+    bra,
+    can,
+    fra,
+    irl,
+    jpn,
+    mex,
+    nor,
+    per,
+    zaf,
+    esp,
+    che,
+    gbr,
+    usa,
+    vnm
+}
+

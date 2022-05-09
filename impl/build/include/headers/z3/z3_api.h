@@ -996,6 +996,8 @@ typedef enum
         information is exposed. Tools may use the string representation of the
         function declaration to obtain more information.
 
+   - Z3_OP_RECURSIVE: function declared as recursive
+
    - Z3_OP_UNINTERPRETED: kind used for uninterpreted symbols.
 */
 typedef enum {
@@ -1208,6 +1210,8 @@ typedef enum {
     Z3_OP_INT_TO_STR,
     Z3_OP_UBV_TO_STR,
     Z3_OP_SBV_TO_STR,
+    Z3_OP_STR_TO_CODE,
+    Z3_OP_STR_FROM_CODE,
     Z3_OP_STRING_LT,
     Z3_OP_STRING_LE,
 
@@ -1218,13 +1222,17 @@ typedef enum {
     Z3_OP_RE_CONCAT,
     Z3_OP_RE_UNION,
     Z3_OP_RE_RANGE,
+    Z3_OP_RE_DIFF,
+    Z3_OP_RE_INTERSECT,
     Z3_OP_RE_LOOP,
     Z3_OP_RE_POWER,
-    Z3_OP_RE_INTERSECT,
-    Z3_OP_RE_DIFF,
+    Z3_OP_RE_COMPLEMENT,
     Z3_OP_RE_EMPTY_SET,
     Z3_OP_RE_FULL_SET,
-    Z3_OP_RE_COMPLEMENT,
+    Z3_OP_RE_FULL_CHAR_SET,
+    Z3_OP_RE_OF_PRED,
+    Z3_OP_RE_REVERSE,
+    Z3_OP_RE_DERIVATIVE,
 
     // char
     Z3_OP_CHAR_CONST,
@@ -1314,6 +1322,7 @@ typedef enum {
     Z3_OP_FPA_BV2RM,
 
     Z3_OP_INTERNAL,
+    Z3_OP_RECURSIVE,
 
     Z3_OP_UNINTERPRETED
 } Z3_decl_kind;
@@ -1423,19 +1432,19 @@ typedef enum
 /**
    \brief Z3 custom error handler (See #Z3_set_error_handler).
 */
-typedef void Z3_error_handler(Z3_context c, Z3_error_code e);
-
+Z3_DECLARE_CLOSURE(Z3_error_handler, void, (Z3_context c, Z3_error_code e));
 
 /**
    \brief callback functions for user propagator.
 */
-typedef void Z3_push_eh(void* ctx);
-typedef void Z3_pop_eh(void* ctx, unsigned num_scopes);
-typedef void* Z3_fresh_eh(void* ctx, Z3_context new_context);
-typedef void Z3_fixed_eh(void* ctx, Z3_solver_callback cb, unsigned id, Z3_ast value);
-typedef void Z3_eq_eh(void* ctx, Z3_solver_callback cb, unsigned x, unsigned y);
-typedef void Z3_final_eh(void* ctx, Z3_solver_callback cb);
-typedef void Z3_created_eh(void* ctx, Z3_solver_callback cb, Z3_ast e, unsigned id);
+Z3_DECLARE_CLOSURE(Z3_push_eh,    void, (void* ctx, Z3_solver_callback cb));
+Z3_DECLARE_CLOSURE(Z3_pop_eh,     void, (void* ctx, Z3_solver_callback cb, unsigned num_scopes));
+Z3_DECLARE_CLOSURE(Z3_fresh_eh,   void*, (void* ctx, Z3_context new_context));
+Z3_DECLARE_CLOSURE(Z3_fixed_eh,   void, (void* ctx, Z3_solver_callback cb, Z3_ast t, Z3_ast value));
+Z3_DECLARE_CLOSURE(Z3_eq_eh,      void, (void* ctx, Z3_solver_callback cb, Z3_ast s, Z3_ast t));
+Z3_DECLARE_CLOSURE(Z3_final_eh,   void, (void* ctx, Z3_solver_callback cb));
+Z3_DECLARE_CLOSURE(Z3_created_eh, void, (void* ctx, Z3_solver_callback cb, Z3_ast t));
+Z3_DECLARE_CLOSURE(Z3_decide_eh,  void, (void* ctx, Z3_solver_callback cb, Z3_ast*, unsigned*, Z3_lbool*));
 
 
 /**
@@ -1516,7 +1525,7 @@ extern "C" {
 
        def_API('Z3_global_param_get', BOOL, (_in(STRING), _out(STRING)))
     */
-    Z3_bool_opt Z3_API Z3_global_param_get(Z3_string param_id, Z3_string_ptr param_value);
+    Z3_bool Z3_API Z3_global_param_get(Z3_string param_id, Z3_string_ptr param_value);
 
     /**@}*/
 
@@ -2084,6 +2093,19 @@ extern "C" {
                                   Z3_symbol name,
                                   unsigned num_constructors,
                                   Z3_constructor constructors[]);
+
+    /**
+       \brief create a forward reference to a recursive datatype being declared.
+       The forward reference can be used in a nested occurrence: the range of an array
+       or as element sort of a sequence. The forward reference should only be used when
+       used in an accessor for a recursive datatype that gets declared.
+
+       Forward references can replace the use sort references, that are unsigned integers
+       in the \c Z3_mk_constructor call
+
+       def_API('Z3_mk_datatype_sort', SORT, (_in(CONTEXT), _in(SYMBOL)))
+     */
+    Z3_sort Z3_API Z3_mk_datatype_sort(Z3_context c, Z3_symbol name);
 
     /**
        \brief Create list of constructors.
@@ -2905,6 +2927,16 @@ extern "C" {
        def_API('Z3_mk_repeat', AST, (_in(CONTEXT), _in(UINT), _in(AST)))
     */
     Z3_ast Z3_API Z3_mk_repeat(Z3_context c, unsigned i, Z3_ast t1);
+    
+    /**
+       \brief Extracts the bit at position \ccode{i} of a bit-vector and 
+       yields a boolean.
+
+       The node \c t1 must have a bit-vector sort.
+
+       def_API('Z3_mk_bit2bool', AST, (_in(CONTEXT), _in(UINT), _in(AST)))
+    */
+    Z3_ast Z3_API Z3_mk_bit2bool(Z3_context c, unsigned i, Z3_ast t1);
 
     /**
        \brief Shift left.
@@ -3708,6 +3740,21 @@ extern "C" {
      */
     Z3_ast Z3_API Z3_mk_int_to_str(Z3_context c, Z3_ast s);
 
+
+    /**
+       \brief String to code conversion.
+       
+       def_API('Z3_mk_string_to_code', AST, (_in(CONTEXT), _in(AST)))
+    */
+    Z3_ast Z3_API Z3_mk_string_to_code(Z3_context c, Z3_ast a);
+
+    /**
+       \brief Code to string conversion.
+       
+       def_API('Z3_mk_string_from_code', AST, (_in(CONTEXT), _in(AST)))
+    */
+    Z3_ast Z3_API Z3_mk_string_from_code(Z3_context c, Z3_ast a);
+
     /**
        \brief Unsigned bit-vector to string conversion.
 
@@ -3802,6 +3849,13 @@ extern "C" {
     Z3_ast Z3_API Z3_mk_re_loop(Z3_context c, Z3_ast r, unsigned lo, unsigned hi);
 
     /**
+       \brief Create a power regular expression.
+
+       def_API('Z3_mk_re_power', AST, (_in(CONTEXT), _in(AST), _in(UINT)))
+     */
+    Z3_ast Z3_API Z3_mk_re_power(Z3_context c, Z3_ast, unsigned n);
+
+    /**
        \brief Create the intersection of the regular languages.
 
        \pre n > 0
@@ -3842,6 +3896,13 @@ extern "C" {
        def_API('Z3_mk_re_full', AST ,(_in(CONTEXT), _in(SORT)))
      */
     Z3_ast Z3_API Z3_mk_re_full(Z3_context c, Z3_sort re);
+
+
+    /**
+       \brief Create a character literal
+       def_API('Z3_mk_char', AST, (_in(CONTEXT), _in(UINT)))
+    */
+    Z3_ast Z3_API Z3_mk_char(Z3_context c, unsigned ch);
 
     /**
          \brief Create less than or equal to between two characters.
@@ -4325,7 +4386,7 @@ extern "C" {
 
         def_API('Z3_get_finite_domain_sort_size', BOOL, (_in(CONTEXT), _in(SORT), _out(UINT64)))
     */
-    Z3_bool_opt Z3_API Z3_get_finite_domain_sort_size(Z3_context c, Z3_sort s, uint64_t* r);
+    Z3_bool Z3_API Z3_get_finite_domain_sort_size(Z3_context c, Z3_sort s, uint64_t* r);
 
     /**
        \brief Return the domain of the given array sort.
@@ -4335,10 +4396,26 @@ extern "C" {
 
        \sa Z3_mk_array_sort
        \sa Z3_get_sort_kind
+       \sa Z3_get_array_sort_domain_n
 
        def_API('Z3_get_array_sort_domain', SORT, (_in(CONTEXT), _in(SORT)))
     */
     Z3_sort Z3_API Z3_get_array_sort_domain(Z3_context c, Z3_sort t);
+
+
+    /**
+       \brief Return the i'th domain sort of an n-dimensional array.
+
+       \pre Z3_get_sort_kind(c, t) == Z3_ARRAY_SORT
+
+       \sa Z3_mk_array_sort
+       \sa Z3_get_sort_kind
+       \sa Z3_get_array_sort_domain
+
+       def_API('Z3_get_array_sort_domain_n', SORT, (_in(CONTEXT), _in(SORT), _in(UINT)))
+       
+     */
+    Z3_sort Z3_API Z3_get_array_sort_domain_n(Z3_context c, Z3_sort t, unsigned idx);
 
     /**
        \brief Return the range of the given array sort.
@@ -5264,7 +5341,7 @@ extern "C" {
 
        def_API('Z3_model_eval', BOOL, (_in(CONTEXT), _in(MODEL), _in(AST), _in(BOOL), _out(AST)))
     */
-    Z3_bool_opt Z3_API Z3_model_eval(Z3_context c, Z3_model m, Z3_ast t, bool model_completion, Z3_ast * v);
+    Z3_bool Z3_API Z3_model_eval(Z3_context c, Z3_model m, Z3_ast t, bool model_completion, Z3_ast * v);
 
     /**
        \brief Return the interpretation (i.e., assignment) of constant \c a in the model \c m.
@@ -6649,6 +6726,13 @@ extern "C" {
 
     /**
        \brief register a user-properator with the solver.
+
+       \param c - context.
+       \param s - solver object.
+       \param user_context - a context used to maintain state for callbacks.
+       \param push_eh - a callback invoked when scopes are pushed
+       \param pop_eh - a callback invoked when scopes are poped
+       \param fresh_eh - a solver may spawn new solvers internally. This callback is used to produce a fresh user_context to be associated with fresh solvers. 
      */
 
     void Z3_API Z3_solver_propagate_init(
@@ -6671,11 +6755,15 @@ extern "C" {
     /**
        \brief register a callback on final check.
        This provides freedom to the propagator to delay actions or implement a branch-and bound solver.
+       The final check is invoked when all decision variables have been assigned by the solver.
 
-       The final_eh callback takes as argument the original user_context that was used
-       when calling \c Z3_solver_propagate_init, and it takes a callback context for propagations.
-       If may use the callback context to invoke the \c Z3_solver_propagate_consequence function.
-       If the callback context gets used, the solver continues. 
+       The \c final_eh callback takes as argument the original user_context that was used
+       when calling \c Z3_solver_propagate_init, and it takes a callback context with the
+       opaque type \c Z3_solver_callback. 
+       The callback context is passed as argument to invoke the \c Z3_solver_propagate_consequence function.
+       The callback context can only be accessed (for propagation and for dynamically registering expressions) within a callback. 
+       If the callback context gets used for propagation or conflicts, those propagations take effect and
+       may trigger new decision variables to be set.
      */
     void Z3_API Z3_solver_propagate_final(Z3_context c, Z3_solver s, Z3_final_eh final_eh);
     
@@ -6690,10 +6778,18 @@ extern "C" {
     void Z3_API Z3_solver_propagate_diseq(Z3_context c, Z3_solver s, Z3_eq_eh eq_eh);
 
     /**
-    * \brief register a callback when a new expression with a registered function is used by the solver 
-    * The registered function appears at the top level and is created using \ref Z3_propagate_solver_declare.
+       \brief register a callback when a new expression with a registered function is used by the solver 
+       The registered function appears at the top level and is created using \ref Z3_propagate_solver_declare.
     */
     void Z3_API Z3_solver_propagate_created(Z3_context c, Z3_solver s, Z3_created_eh created_eh);
+    
+    /**
+       \brief register a callback when the solver decides to split on a registered expression.
+       The callback may set the passed expression to another registered expression which will be selected instead.
+       In case the expression is a bitvector the bit to split on is determined by the bit argument and the 
+       truth-value to try first is given by is_pos. In case the truth value is undefined the solver will decide.
+    */
+    void Z3_API Z3_solver_propagate_decide(Z3_context c, Z3_solver s, Z3_decide_eh decide_eh);
 
     /**
         Create uninterpreted function declaration for the user propagator.
@@ -6711,10 +6807,10 @@ extern "C" {
        \brief register an expression to propagate on with the solver.
        Only expressions of type Bool and type Bit-Vector can be registered for propagation.
 
-       def_API('Z3_solver_propagate_register', UINT, (_in(CONTEXT), _in(SOLVER), _in(AST)))
+       def_API('Z3_solver_propagate_register', VOID, (_in(CONTEXT), _in(SOLVER), _in(AST)))
     */
 
-    unsigned Z3_API Z3_solver_propagate_register(Z3_context c, Z3_solver s, Z3_ast e);   
+    void Z3_API Z3_solver_propagate_register(Z3_context c, Z3_solver s, Z3_ast e);   
 
     /**
         \brief register an expression to propagate on with the solver.
@@ -6722,9 +6818,9 @@ extern "C" {
         Unlike \ref Z3_solver_propagate_register, this function takes a solver callback context
         as argument. It can be invoked during a callback to register new expressions.
 
-        def_API('Z3_solver_propagate_register_cb', UINT, (_in(CONTEXT), _in(SOLVER_CALLBACK), _in(AST)))
+        def_API('Z3_solver_propagate_register_cb', VOID, (_in(CONTEXT), _in(SOLVER_CALLBACK), _in(AST)))
     */
-    unsigned Z3_API Z3_solver_propagate_register_cb(Z3_context c, Z3_solver_callback cb, Z3_ast e);
+    void Z3_API Z3_solver_propagate_register_cb(Z3_context c, Z3_solver_callback cb, Z3_ast e);
 
     /**
        \brief propagate a consequence based on fixed values.
@@ -6732,10 +6828,10 @@ extern "C" {
        The callback adds a propagation consequence based on the fixed values of the
        \c ids. 
        
-       def_API('Z3_solver_propagate_consequence', VOID, (_in(CONTEXT), _in(SOLVER_CALLBACK), _in(UINT), _in_array(2, UINT), _in(UINT), _in_array(4, UINT), _in_array(4, UINT), _in(AST)))
+       def_API('Z3_solver_propagate_consequence', VOID, (_in(CONTEXT), _in(SOLVER_CALLBACK), _in(UINT), _in_array(2, AST), _in(UINT), _in_array(4, AST), _in_array(4, AST), _in(AST)))
     */
     
-    void Z3_API Z3_solver_propagate_consequence(Z3_context c, Z3_solver_callback, unsigned num_fixed, unsigned const* fixed_ids, unsigned num_eqs, unsigned const* eq_lhs, unsigned const* eq_rhs, Z3_ast conseq);
+    void Z3_API Z3_solver_propagate_consequence(Z3_context c, Z3_solver_callback, unsigned num_fixed, Z3_ast const* fixed, unsigned num_eqs, Z3_ast const* eq_lhs, Z3_ast const* eq_rhs, Z3_ast conseq);
 
     /**
        \brief Check whether the assertions in a given solver are consistent or not.

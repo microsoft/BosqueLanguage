@@ -213,10 +213,6 @@ std::optional<double> realBinSearch(z3::solver& s, const z3::expr& e, const std:
         }
     }
 
-    printf("Search Find...\n");
-    printf("%d\n", rmin);
-    fflush(stdout);
-
     return std::make_optional(rmin);
 }
 

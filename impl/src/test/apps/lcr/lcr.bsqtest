@@ -1,0 +1,35 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+namespace Test;
+
+import NSCentralBank;
+import NSFedCode;
+
+chktest function fedcode_classify_other(cashflow: NSFedCode::Cashflow): Bool {
+    let fc = NSFedCode::classify(cashflow, Map<NSFedCode::PartyID, NSCentralBank::CentralBank>{});
+
+    return \/(fc === FedCode::iu1, fc === FedCode::iu2, fc === FedCode::iu4, fc === FedCode::unclassified); 
+}
+
+chktest function fedcode_classify_centralbank_other(cashflow: Cashflow, centralBanks: Map<PartyID, CentralBank>): Bool
+    requires centralBanks.has(cashflow.partyId);
+    requires cashflow.tenQLevel6 !== "Segregated Cash";
+{
+    let fc = classify(cashflow, centralBanks);
+    return /\(fc !== FedCode::unclassified, fc !== FedCode::ia49);
+}
+
+chktest function fedcode_classify_centralbank_segregated(cashflow: Cashflow, centralBanks: Map<PartyID, CentralBank>): Bool
+    requires centralBanks.has(cashflow.partyId);
+    requires cashflow.tenQLevel6 === "Segregated Cash";
+{
+     let fc = classify(cashflow, centralBanks);
+    return /\(fc !== FedCode::unclassified, fc !== FedCode::ia39);
+}
+
+errtest function fedcode_classify_centralbank_errors(cashflow: Cashflow, centralBanks: Map<PartyID, CentralBank>): FedCode {
+    return classify(cashflow, centralBanks);
+}
