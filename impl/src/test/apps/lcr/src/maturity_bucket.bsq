@@ -1,8 +1,5 @@
 namespace NSMaturityBucket;
 
-/*
-
-
 type MaturityBucket
     = Daily Int
     | DayRange Int Int
@@ -11,71 +8,64 @@ type MaturityBucket
     | Residual
 
 
-daysToMaturity : LocalDate -> LocalDate -> Int
-daysToMaturity fromDate maturityDate =
-    diffInDays maturityDate fromDate
+function daysToMaturity(fromdate: DateTime, maturityDate: DateTime): Int {
+    return DateTime::diffInDays(maturityDate, fromDate);
+}
 
+function yearssToMaturity(fromdate: DateTime, maturityDate: DateTime): Int {
+    return DateTime::diffInYears(maturityDate, fromDate);
+}
 
-yearsToMaturity : LocalDate -> LocalDate -> Int
-yearsToMaturity fromDate maturityDate =
-    diffInYears maturityDate fromDate
+function bucket(fromdate: DateTime, maturityDate: DateTime): MaturityBucket {
+    let days = daysToMaturity(fromDate, maturityDate);
+    assert(days >= 0);
 
+    let years = yearsToMaturity(maturityDate, fromDate);
+    assert(years >= 0);
 
-{-| The Fed spec on maturity buckets
--}
-bucket : LocalDate -> LocalDate -> MaturityBucket
-bucket fromDate maturityDate =
-    let
-        days : Int
-        days =
-            daysToMaturity fromDate maturityDate
-
-        years : Int
-        years =
-            yearsToMaturity maturityDate fromDate
-    in
-    if days <= 60 then
-        Daily days
-
-    else if days <= 67 then
-        DayRange 61 67
-
-    else if days <= 74 then
-        DayRange 68 74
-
-    else if days <= 82 then
-        DayRange 75 82
-
-    else if days <= 90 then
-        DayRange 83 90
-
-    else if days <= 120 then
-        DayRange 92 120
-
-    else if days <= 150 then
-        DayRange 121 150
-
-    else if days <= 180 then
-        DayRange 151 180
-
-    else if days <= 270 then
-        DayYear 181 270
-
-    else if years <= 1 then
-        DayYear 271 1
-
-    else if years <= 2 then
-        Yearly 1 2
-
-    else if years <= 3 then
-        Yearly 2 3
-
-    else if years <= 4 then
-        Yearly 3 4
-
-    else if years <= 5 then
-        Yearly 4 5
-
-    else
-        Residual
-*/
+    if(days <= 60i) {
+        return Daily{days};
+    }
+    elif(days <= 67i) {
+        return DayRange{61, 67};
+    }
+    elif(days <= 74i) {
+        return DayRange{68, 74};
+    }
+    elif(days <= 82i) {
+        return DayRange{75, 82};
+    }
+    elif(days <= 90i) {
+        return DayRange{83, 90};
+    }
+    elif(days <= 120i) {
+        return DayRange{92, 120};
+    }
+    elif(days <= 150i) {
+        return DayRange{121, 150};
+    }
+    elif(days <= 180i) {
+        return DayRange{151, 180};
+    }
+    elif(days <= 270i) {
+        return DayYear{181, 270};
+    }
+    elif(years <= 1i) {
+        return DayYear{271, 1};
+    }
+    elif(years <= 2i) {
+        return Yearly{1, 2};
+    }
+    elif(years <= 3i) {
+        return Yearly{2, 3};
+    }
+    elif(years <= 4i) {
+        return Yearly{3, 4};
+    }
+    elif(years <= 5i) {
+        return Yearly{4, 5};
+    }
+    else {
+        return Residual{};
+    }
+}
