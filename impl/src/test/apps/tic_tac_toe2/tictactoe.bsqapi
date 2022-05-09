@@ -1,0 +1,52 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+namespace Main;
+
+///////////////////////////////////////////////
+
+entrypoint function main(c: BoardPostion): Bool {
+    let bb = Board::create4{};
+    let nb = bb.setCellMark(c, PlayerMark::x);
+
+    return !nb.hasWinner();
+}
+///////////////////////////////////////////////
+
+entrypoint function getInitialBoard(): Board {
+    return Board::createEmpty{};
+}
+
+entrypoint function hasWinner(b: Board): Bool {
+    let winner = b.checkAnyWinner();
+    return winner === PlayerMark::x || winner === PlayerMark::o;
+}
+
+entrypoint function getWinner(b: Board): PlayerMark? {
+    return b.checkAnyWinner();
+}
+
+entrypoint function isMoveLegal(b: Board, cell: BoardPostion): Bool {
+    return b.isCellEmpty(cell);
+}
+
+entrypoint function makeExplicitMove(b: Board, cell: BoardPostion, mark: PlayerMark): Result<[Board, Bool], String> {
+    if(!b.isCellEmpty(cell)) {
+        return err("Location is Occupied");
+    }
+    else {
+        let bb = b.setCellMark(cell, mark);
+        let winner = b.checkAnyWinner();
+
+        return ok([bb, winner === PlayerMark::x || winner === PlayerMark::o]);
+    }
+}
+
+entrypoint function makeExplicitMove_oops(b: Board, cell: BoardPostion, mark: PlayerMark): [Board, Bool] {
+    let bb = b.setCellMark(cell, mark);
+    let winner = b.checkAnyWinner();
+
+    return [bb, winner === PlayerMark::x || winner === PlayerMark::o];
+}
