@@ -7,450 +7,48 @@
 namespace Core;
 
 #if CHECK_LIBS
-internal typedef ListVector<T> = Vector1<T> | Vector2<T> | Vector3<T>;
-
-internal typedef ListRepr<T> = None | Vector1<T> | Vector2<T> | Vector3<T> | LargeList<T>;
-
 internal entity ListOps provides Some {
     internal function s_blockingfailure<T>(): T = s_blockingfailure; 
 
-    function s_append_vector_safe_helper<T>(l: ListVector<T> | None, r: ListVector<T> | None): ListVector<T> | None {
-        if(/\(l === none, r === none)) {
-            return none;
-        }
-        elif(l === none) {
-            return r;
-        }
-        elif(r === none) {
-            return l;
-        }
-        else {
-            if(/\(l.is<Vector1<T>>(), r.is<Vector1<T>>())) {
-                let ll = s_safeAs<ListVector<T>, Vector1<T>>(l);
-                let rr = s_safeAs<ListVector<T>, Vector1<T>>(r);
-                return Vector2<T>{ll.v0, rr.v0};
-            }
-            elif(/\(l.is<Vector1<T>>(), r.is<Vector2<T>>())) {
-                let ll = s_safeAs<ListVector<T>, Vector1<T>>(l);
-                let rr = s_safeAs<ListVector<T>, Vector2<T>>(r);
-                return Vector3<T>{ll.v0, rr.v0, rr.v1};
-            }
-            else {
-                let ll = s_safeAs<ListVector<T>, Vector2<T>>(l);
-                let rr = s_safeAs<ListVector<T>, Vector1<T>>(r);
-                return Vector3<T>{ll.v0, ll.v1, rr.v0};
-            }
-        }
-    }
+    __safe internal function s_list_empty<T>(l: List<T>): Nat = s_list_empty; 
+    __safe internal function s_list_size<T>(l: List<T>): Nat = s_list_size; 
 
-    function s_append_vector_helper<T>(l: ListVector<T>, r: ListVector<T>): ListVector<T> | LargeList<T> {
-        if(/\(l.is<Vector1<T>>(), r.is<Vector1<T>>())) {
-            let ll = s_safeAs<ListVector<T>, Vector1<T>>(l);
-            let rr = s_safeAs<ListVector<T>, Vector1<T>>(r);
-            return Vector2<T>{ll.v0, rr.v0};
-        }
-        elif(/\(l.is<Vector1<T>>(), r.is<Vector2<T>>())) {
-            let ll = s_safeAs<ListVector<T>, Vector1<T>>(l);
-            let rr = s_safeAs<ListVector<T>, Vector2<T>>(r);
-            return Vector3<T>{ll.v0, rr.v0, rr.v1};
-        }
-        elif(/\(l.is<Vector2<T>>(), r.is<Vector1<T>>())) {
-            let ll = s_safeAs<ListVector<T>, Vector2<T>>(l);
-            let rr = s_safeAs<ListVector<T>, Vector1<T>>(r);
-            return Vector3<T>{ll.v0, ll.v1, rr.v0};
-        }
-        else {
-            return LargeList<T>::s_append(l, r); 
-        }
-    }
+    __safe internal function s_list_append<T>(l: List<T>, r: List<T>): List<T> = s_list_append;
 
-    function s_slice_start_vector_helper_1<T>(l: Vector1<T>, start: Nat): ListVector<T> | None {
-        if(start == 1n) {
-            return none;
-        }
-        else {
-            return l;
-        }
-    }
-    function s_slice_start_vector_helper_2<T>(l: Vector2<T>, start: Nat): ListVector<T> | None {
-        if(start == 2n) {
-            return none;
-        }
-        elif(start == 1n) {
-            return Vector1<T>{l.v1};
-        }
-        else {
-            return l;
-        }
-    }
-    function s_slice_start_vector_helper_3<T>(l: Vector3<T>, start: Nat): ListVector<T> | None {
-        if(start == 3n) {
-            return none;
-        }
-        elif(start == 2n) {
-            return Vector1<T>{l.v2};
-        }
-        elif(start == 1n) {
-            return Vector2<T>{l.v1, l.v2};
-        }
-        else {
-            return l;
-        }
-    }
-    
-    function s_slice_start_vector_helper<T>(l: ListVector<T>, start: Nat): ListVector<T> | None {
-        if(l.is<Vector1<T>>()) {
-            return ListOps::s_slice_start_vector_helper_1<T>(l, start);
-        }
-        elif(l.is<Vector2<T>>()) {
-            return ListOps::s_slice_start_vector_helper_2<T>(l, start);
-        }
-        else {
-            return ListOps::s_slice_start_vector_helper_3<T>(l, start);
-        }
-    }
+    __safe internal function s_list_slice_front<T>(l: List<T>, idx: Nat): List<T> = s_list_slice_front; 
+    __safe internal function s_list_slice_end<T>(l: List<T>, idx: Nat): List<T> = s_list_slice_end; 
 
-    function s_slice_end_vector_helper_1<T>(l: Vector1<T>, end: Nat): ListVector<T> | None {
-        if(end == 1n) {
-            return l;
-        }
-        else {
-            return none;
-        }
-    }
-    function s_slice_end_vector_helper_2<T>(l: Vector2<T>, end: Nat): ListVector<T> | None {
-        if(end == 2n) {
-            return l;
-        }
-        elif(end == 1n) {
-            return Vector1<T>{l.v0};
-        }
-        else {
-            return none;
-        }
-    }
-    function s_slice_end_vector_helper_3<T>(l: Vector3<T>, end: Nat): ListVector<T> | None {
-        if(end == 3n) {
-            return l;
-        }
-        elif(end == 2n) {
-            return Vector2<T>{l.v0, l.v1};
-        }
-        elif(end == 1n) {
-            return Vector2<T>{l.v0};
-        }
-        else {
-            return none;
-        }
-    }
-    function s_slice_end_vector_helper<T>(l: ListVector<T>, end: Nat): ListVector<T> | None {
-        if(l.is<Vector1<T>>()) {
-            return ListOps::s_slice_end_vector_helper_1<T>(l, end);
-        }
-        elif(l.is<Vector2<T>>()) {
-            return ListOps::s_slice_end_vector_helper_2<T>(l, end);
-        }
-        else {
-            return ListOps::s_slice_end_vector_helper_3<T>(l, end);
-        }
-    }
+    __safe internal function s_list_get<T>(l: List<T>, idx: Nat): T = s_list_get; 
+    __safe internal function s_list_get_back<T>(l: List<T>): T = s_list_get_back; 
+    __safe internal function s_list_get_front<T>(l: List<T>): T = s_list_get_front; 
 
-    function s_pop_front_vector<T>(l: ListVector<T>): (|T, ListVector<T>|) {
-        if(l.is<Vector1<T>>()) {
-            return (|l.v0, none|);
-        }
-        elif(l.is<Vector2<T>>()) {
-            return (|l.v0, Vector1<T>{l.v1}|);
-        }
-        else {
-            return (|l.v0, Vector2<T>{l.v1, l.v2}|);
-        }
-    }
+    __safe internal function s_list_set<T>(l: List<T>, idx: Nat, v: T): List<T> = s_list_set; 
+    __safe internal function s_list_push_back<T>(l: List<T>, v: T): List<T> = s_list_push_back; 
+    __safe internal function s_list_push_front<T>(l: List<T>, v: T): List<T> = s_list_push_front; 
 
-    function s_pop_back_vector<T>(l: ListVector<T>): (|T, ListVector<T>|) {
-        if(l.is<Vector1<T>>()) {
-            return (|l.v0, none|);
-        }
-        elif(l.is<Vector2<T>>()) {
-            return (|l.v1, Vector1<T>{l.v0}|);
-        }
-        else {
-            return (|l.v2, Vector2<T>{l.v0, l.v1}|);
-        }
-    }
+    __safe internal function s_list_remove<T>(l: List<T>, idx: Nat): List<T> = s_list_remove; 
+    __safe internal function s_list_pop_back<T>(l: List<T>): List<T> = s_list_pop_back; 
+    __safe internal function s_list_pop_front<T>(l: List<T>): List<T> = s_list_pop_front; 
 
-    function s_get_back_vector_helper<T>(l: ListVector<T>): T {
-        if(l.is<Vector1<T>>()) {
-            return l.v0;
-        }
-        elif(l.is<Vector2<T>>()) {
-            return l.v1;
-        }
-        else {
-            return l.v2;
-        }
-    }
+    __conditional_safe internal recursive? function s_list_map_pred<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): List<Bool> = s_list_map_pred;
+    __conditional_safe internal recursive? function s_list_map_pred_idx<T>(l: List<T>, p: recursive? pred(_: T, _: Nat) -> Bool): List<Bool> = s_list_map_pred_idx;
+    __conditional_safe internal recursive? function s_list_map_fn<T, U>(l: List<T>, f: recursive? fn(_: T) -> U): List<U> = s_list_map_fn;
+    __conditional_safe internal recursive? function s_list_map_fn_idx<T, U>(l: List<T>, p: recursive? pred(_: T, _: Nat) -> U): List<U> = s_list_map_fn_idx;
 
-    function s_get_front_vector_helper<T>(l: ListVector<T>): T {
-        if(l.is<Vector1<T>>()) {
-            return l.v0;
-        }
-        elif(l.is<Vector2<T>>()) {
-            return l.v0;
-        }
-        else {
-            return l.v0;
-        }
-    }
+    __safe internal function s_list_has<T>(l: List<T>, v: T): Bool = s_list_has; 
+    __safe internal function s_list_indexof<T>(l: List<T>, v: T): Int = s_list_indexof; 
+    __safe internal function s_list_last_indexof<T>(l: List<T>, v: T): Int = s_list_last_indexof; 
 
-    function s_push_back_helper<T>(l: ListRepr<T>, v: T): ListRepr<T> {
-        if(\/(l.is<LargeList<T>>(), l.is<Vector3<T>>())) {
-             return LargeList<T>::s_append(l, Vector1<T>{v}); 
-        }
-        else {
-            if(l === none) {
-                return Vector1<T>{v};
-            }
-            elif(l.is<Vector1<T>>()) {
-                return Vector2<T>{l.v0, v};
-            }
-            else {
-                let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
-                return Vector3<T>{ll.v0, ll.v1, v};
-            }
-        }
-    }
+    __safe internal function s_list_has_true(l: List<Bool>): Bool = s_list_has_true; 
+    __safe internal function s_list_has_false(l: List<Bool>): Bool = s_list_has_false; 
+    __safe internal function s_list_single_true(l: List<Bool>): Bool = s_list_single_true; 
+    __safe internal function s_list_single_indexof_true(l: List<Bool>): Int = s_list_single_indexof; 
 
-    function s_push_front_helper<T>(l: ListRepr<T>, v: T): ListRepr<T> {
-        if(\/(l.is<LargeList<T>>(), l.is<Vector3<T>>())) {
-             return LargeList<T>::s_append(Vector1<T>{v}, l); 
-        }
-        else {
-            if(l === none) {
-                return Vector1<T>{v};
-            }
-            elif(l.is<Vector1<T>>()) {
-                return Vector2<T>{v, l.v0};
-            }
-            else {
-                let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
-                return Vector3<T>{v, ll.v0, ll.v1};
-            }
-        }
-    }
+    __safe internal function s_list_indexof_true(l: List<T>): Int = s_list_indexof_true; 
+    __safe internal function s_list_last_indexof_true(l: List<T>): Int = s_list_last_indexof_true; 
 
-    function s_safe_get_vector_1<T>(l: Vector1<T>, i: Nat): T {
-        return l.v0;
-    }
-    function s_safe_get_vector_2<T>(l: Vector2<T>, i: Nat): T {
-        if(i == 0n) {
-            return l.v0;
-        }
-        else {
-            return l.v1;
-        }
-    }
-    function s_safe_get_vector_3<T>(l: Vector3<T>, i: Nat): T {
-        if(i == 0n) {
-            return l.v0;
-        }
-        elif(i == 1n) {
-            return l.v1;
-        }
-        else {
-            return l.v2;
-        }
-    }
-    function s_safe_get_vector_helper<T>(l: ListVector<T>, i: Nat): T {
-        if(l.is<Vector1<T>>()) {
-           return ListOps::s_safe_get_vector_1<T>(l, i);
-        }
-        elif(l.is<Vector2<T>>()) {
-            return ListOps::s_safe_get_vector_2<T>(l, i);
-        }
-        else {
-            return ListOps::s_safe_get_vector_3<T>(l, i);
-        }
-    }
-
-    function s_safe_set_vector_1<T>(l: Vector1<T>, i: Nat, v: T): Vector1<T> {
-        return Vector1<T>{v};
-    }
-    function s_safe_set_vector_2<T>(l: Vector2<T>, i: Nat, v: T): Vector2<T> {
-        if(i == 0n) {
-            return Vector2<T>{v, l.v1};
-        }
-        else {
-            return Vector2<T>{l.v0, v};
-        }
-    }
-    function s_safe_set_vector_3<T>(l: Vector3<T>, i: Nat, v: T): Vector3<T> {
-        if(i == 0n) {
-            return Vector3<T>{v, l.v1, l.v2};
-        }
-        elif(i == 1n) {
-            return Vector3<T>{l.v0, v, l.v2};
-        }
-        else {
-            return Vector3<T>{l.v0, l.v1, v};
-        }
-    }
-    function s_safe_set_vector_helper<T>(l: ListVector<T>, i: Nat, v: T): ListVector<T> {
-        if(l.is<Vector1<T>>()) {
-           return ListOps::s_safe_set_vector_1<T>(l, i, v);
-        }
-        elif(l.is<Vector2<T>>()) {
-            return ListOps::s_safe_set_vector_2<T>(l, i, v);
-        }
-        else {
-            return ListOps::s_safe_set_vector_3<T>(l, i, v);
-        }
-    }
-
-    function s_safe_remove_vector_2<T>(l: Vector2<T>, i: Nat): Vector1<T> {
-        if(i == 0n) {
-            return Vector1<T>{l.v1};
-        }
-        else {
-            return Vector1<T>{l.v0};
-        }
-    }
-    function s_safe_remove_vector_3<T>(l: Vector3<T>, i: Nat): Vector2<T> {
-        if(i == 0n) {
-            return Vector2<T>{l.v1, l.v2};
-        }
-        elif(i == 1n) {
-            return Vector2<T>{l.v0, l.v2};
-        }
-        else {
-            return Vector2<T>{l.v0, l.v1};
-        }
-    }
-    function s_safe_remove_vector_helper<T>(l: ListVector<T>, i: Nat): ListVector<T> {
-        if(l.is<Vector1<T>>()) {
-            return none;
-        }
-        elif(l.is<Vector2<T>>()) {
-            return ListOps::s_safe_remove_vector_2<T>(l, i);
-        }
-        else {
-            return ListOps::s_safe_remove_vector_3<T>(l, i);
-        }
-    }
-
-    function s_empty<T>(l: ListRepr<T>): Bool {
-        return l === none;
-    }
-
-    function s_size<T>(l: ListRepr<T>): Nat {
-        if(l === none) {
-            return 0n;
-        }
-        elif(l.is<Vector1<T>>()) {
-            return 1n;
-        }
-        elif(l.is<Vector2<T>>()) {
-            return 2n;
-        }
-        elif(l.is<Vector3<T>>()) {
-            return 3n;
-        }
-        else {
-            return LargeList<T>::count(l);
-        }
-    }
-
-    function s_range<T unique Int | Nat>(start: T, end: T, one: T, count: Nat): ListRepr<T> {
-        if(start == end) {
-            return none;
-        }
-        else {
-            if(count == 1n) {
-                return Vector1<T>{start};
-            }
-            elif(count == 2n) {
-                return Vector2<T>{start, end};
-            }
-            else {
-                let s1 = start + one;
-                if (count == 3n) {
-                    return Vector3<T>{start, s1, end};
-                }
-                else {
-                   return LargeList<T>::range(start, one, count);
-                }
-            }
-        }
-    }
-
-    function s_fill<T>(count: Nat, v: T): ListRepr<T> {
-        if(count == 0n) {
-            return none;
-        }
-        elif(count == 1n) {
-            return Vector1<T>{v};
-        }
-        elif(count == 2n) {
-            return Vector2<T>{v, v};
-        }
-        elif(count == 3n) {
-            return Vector3<T>{v, v, v};
-        }
-        else {
-            return LargeList<T>::fill(count, v);
-        }
-    }
-
-    function s_zip_index<T>(l: ListRepr<T>): ListRepr<[Nat, T]> {
-        if(l === none) {
-            return none;
-        }
-        elif(l.is<Vector1<T>>()) {
-            let ll = s_safeAs<ListRepr<T>, Vector1<T>>(l);
-            return Vector1<T>{[0, ll.v0]};
-        }
-        elif(l.is<Vector2<T>>()) {
-            let ll = s_safeAs<ListRepr<T>, Vector2<T>>(l);
-            return Vector2<T>{[0, ll.v0], [1, ll.v1]};
-        }
-        elif(l.is<Vector3<T>>()) {
-            let ll = s_safeAs<ListRepr<T>, Vector3<T>>(l);
-            return Vector3<T>{[0, ll.v0], [1, ll.v1], [2, ll.v2]};
-        }
-        else {
-            return LargeList<T>::zip_index(l);
-        }
-    }
-
-    function s_zip<T, U>(l1: ListRepr<T>, l2: ListRepr<U>): ListRepr<[T, U]> {
-        if(\/(l1 === none, l2 === none)) {
-            return none;
-        }
-        elif(/\(l1.is<Vector1<T>>(), l2.is<Vector1<U>>())) {
-            let ll1 = s_safeAs<ListRepr<T>, Vector1<T>>(l1);
-            let ll2 = s_safeAs<ListRepr<U>, Vector1<U>>(l2);
-
-            return Vector1<[T, U]>{[l11.v0, l12.v0]};
-        }
-        elif(/\(l1.is<Vector2<T>>(), l2.is<Vector2<U>>())) {
-            let ll1 = s_safeAs<ListRepr<T>, Vector2<T>>(l1);
-            let ll2 = s_safeAs<ListRepr<U>, Vector2<U>>(l2);
-
-            return Vector2<[T, U]>{[l1.v0, l2.v0], [l1.v1, l2.v1]};
-        }
-        elif(/\(l1.is<Vector3<T>>(), l2.is<Vector3<U>>())) {
-            let ll1 = s_safeAs<ListRepr<T>, Vector3<T>>(l1);
-            let ll2 = s_safeAs<ListRepr<U>, Vector3<U>>(l2);
-
-            return Vector3<[T, U]>{[l1.v0, l2.v0], [l1.v1, l2.v1], [l1.v2, l2.v2]};
-        }
-        else {
-            let ll1 = s_safeAs<ListRepr<T>, LargeList<T>>(l1);
-            let ll2 = s_safeAs<ListRepr<U>, LargeList<U>>(l2);
-
-            return LargeList<T>::zip<U>(ll1, ll2);
-        }
-    }
+    __safe internal function s_list_true_count(l: List<Bool>): Nat = s_list_true_count; 
+    __safe internal function s_list_false_count(l: List<Bool>): Nat = s_list_false_count; 
 
     function s_append<T>(l: ListRepr<T>, r: ListRepr<T>): ListRepr<T> {
         if(/\(l === none, r === none)) {
@@ -1442,40 +1040,9 @@ internal entity ListOps provides Some {
 }
 
 __internal entity LargeList<T> provides Some {
-    __safe internal function s_vector1_to_large_list(v: Vector1<T>): LargeList<T> = s_vector1_to_large_list;
-    __safe internal function s_vector2_to_large_list(v: Vector2<T>): LargeList<T> = s_vector2_to_large_list;
-    __safe internal function s_vector3_to_large_list(v: Vector3<T>): LargeList<T> = s_vector3_to_large_list;
-
-    __safe internal function s_large_list_to_vector1(l: LargeList<T>): Vector1<T> = s_large_list_to_vector1;
-    __safe internal function s_large_list_to_vector2(l: LargeList<T>): Vector2<T> = s_large_list_to_vector2;
-    __safe internal function s_large_list_to_vector3(l: LargeList<T>): Vector3<T> = s_large_list_to_vector3;
-
-    __safe internal function s_large_list_count(l: LargeList<T>): Nat = s_large_list_count; 
-    __safe internal function s_large_list_append(l: LargeList<T>, r: LargeList<T>): LargeList<T> = s_large_list_append;
-
-    __safe internal function s_large_list_slice_front(l: LargeList<T>, idx: Nat): LargeList<T> = s_large_list_slice_front; 
-    __safe internal function s_large_list_slice_end(l: LargeList<T>, idx: Nat): LargeList<T> = s_large_list_slice_end; 
-
-    __safe internal function s_large_list_get(l: LargeList<T>, idx: Nat): T = s_large_list_get; 
-    __safe internal function s_large_list_get_back(l: LargeList<T>): T = s_large_list_get_back; 
-    __safe internal function s_large_list_get_front(l: LargeList<T>): T = s_large_list_get_front; 
-
-    __safe internal function s_large_list_set(l: LargeList<T>, idx: Nat, v: T): LargeList<T> = s_large_list_set; 
-    __safe internal function s_large_list_push_back(l: LargeList<T>, v: T): LargeList<T> = s_large_list_push_back; 
-    __safe internal function s_large_list_push_front(l: LargeList<T>, v: T): LargeList<T> = s_large_list_push_front; 
-
-    __safe internal function s_large_list_remove(l: LargeList<T>, idx: Nat): LargeList<T> = s_large_list_remove; 
-    __safe internal function s_large_list_pop_back(l: LargeList<T>): LargeList<T> = s_large_list_pop_back; 
-    __safe internal function s_large_list_pop_front(l: LargeList<T>): LargeList<T> = s_large_list_pop_front; 
-
-    __conditional_safe internal recursive? function s_large_list_map_pred(l: LargeList<T>, p: recursive? pred(_: T) -> Bool): LargeList<Bool> = s_large_list_map_pred;
-    __conditional_safe internal recursive? function s_large_list_map_pred_idx(l: LargeList<T>, p: recursive? pred(_: T, _: Nat) -> Bool): LargeList<Bool> = s_large_list_map_pred_idx;
-    __conditional_safe internal recursive? function s_large_list_map_fn<U>(l: LargeList<T>, f: recursive? fn(_: T) -> U): LargeList<U> = s_large_list_map_fn;
-    __conditional_safe internal recursive? function s_large_list_map_fn_idx<U>(l: LargeList<T>, p: recursive? pred(_: T, _: Nat) -> U): LargeList<U> = s_large_list_map_fn_idx;
-
-    __safe internal function s_large_list_has(l: LargeList<T>, v: T): Bool = s_large_list_has; 
-    __safe internal function s_large_list_indexof(l: LargeList<T>, v: T): Int = s_large_list_indexof; 
-    __safe internal function s_large_list_last_indexof(l: LargeList<T>, v: T): Int = s_large_list_last_indexof; 
+   
+    
+    
 
     function s_vector_to_large_list(vl: ListVector<T>): LargeList<T> {
         if(vl.is<Vector1<T>>()) {
