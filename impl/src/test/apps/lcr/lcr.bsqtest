@@ -21,7 +21,7 @@ chktest function fedcode_classify_centralbank_other(cashflow: Cashflow, centralB
     let fc = classify(cashflow, centralBanks);
     return /\(fc !== FedCode::unclassified, fc !== FedCode::ia49);
 }
-/*
+
 chktest function fedcode_classify_centralbank_segregated(cashflow: Cashflow, centralBanks: Map<PartyID, CentralBank>): Bool
     requires centralBanks.has(cashflow.partyId);
     requires cashflow.tenQLevel6 === "Segregated Cash";
@@ -33,4 +33,3 @@ chktest function fedcode_classify_centralbank_segregated(cashflow: Cashflow, cen
 errtest function fedcode_classify_centralbank_errors(cashflow: Cashflow, centralBanks: Map<PartyID, CentralBank>): FedCode {
     return classify(cashflow, centralBanks);
 }
-*/

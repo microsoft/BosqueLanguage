@@ -8,8 +8,10 @@ namespace Main;
 import NSCentralBank;
 import NSFedCode;
 
-entrypoint function main(cashflow: NSFedCode::Cashflow): Bool {
-    let fc = NSFedCode::classify(cashflow, Map<NSFedCode::PartyID, NSCentralBank::CentralBank>{});
-
-    return \/(fc === FedCode::iu2, fc === FedCode::iu4, fc === FedCode::unclassified); 
+entrypoint function main(cashflow: Cashflow, centralBanks: Map<PartyID, CentralBank>): Bool
+    requires centralBanks.has(cashflow.partyId);
+    requires cashflow.tenQLevel6 !== "Segregated Cash";
+{
+    let fc = classify(cashflow, centralBanks);
+    return /\(fc !== FedCode::unclassified, fc !== FedCode::ia49);
 }
