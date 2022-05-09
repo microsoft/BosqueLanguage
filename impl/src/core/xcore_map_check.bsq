@@ -7,20 +7,12 @@
 namespace Core;
 
 #if CHECK_LIBS
-internal typedef MapVector<K grounded KeyType, V> = Vector1<[K, V]> | Vector2<[K, V]> | Vector3<[K, V]> | Vector4<[K, V]> | Vector5<[K, V]>;
+internal typedef MapVector<K grounded KeyType, V> = Vector1<[K, V]> | Vector2<[K, V]> | Vector3<[K, V]>;
 
-internal typedef MapRepr<K grounded KeyType, V> = None | Vector1<[K, V]> | Vector2<[K, V]> | Vector3<[K, V]> | Vector4<[K, V]> | Vector5<[K, V]> | LargeMap<[K, V]>;
+internal typedef MapRepr<K grounded KeyType, V> = None | MapVector<K, V> | LargeMap<K, V>;
 
 internal entity MapOps provides Some {
-    internal function s_blockingfailure<T>(): T = s_blockingfailure; 
-
-    function s_split_vector_4<K, V>(m: Vector4<[K, V]>): (|Vector2<[K, V]>, Vector2<[K, V]>|) {
-        return (|Vector2<[K, V]>{l.v0, l.v1}, Vector2<[K, V]>{l.v2, l.v3}|);
-    }
-
-    function s_split_vector_5<K, V>(l: Vector5<[K, V]>): (|Vector2<[K, V]>, Vector3<[K, V]>|) {
-        return (|Vector2<[K, V]>{l.v0, l.v1}, Vector3<[K, V]>{l.v2, l.v3, l.v4}|);
-    }
+    internal function s_blockingfailure<T>(): T = s_blockingfailure;
 
     function s_append_map_vector_safe_helper<K, V>(l: MapVector<K, V> | None, r: MapVector<K, V> | None): MapVector<K, V> | None {
         if(/\(l === none, r === none)) {
@@ -43,25 +35,10 @@ internal entity MapOps provides Some {
                 let rr = s_safeAs<MapVector<K, V>, Vector2<[K, V]>>(r);
                 return Vector3<[K, V]>{ll.v0, rr.v0, rr.v1};
             }
-            elif(/\(l.is<Vector1<[K, V]>>(), r.is<Vector3<[K, V]>>())) {
-                let ll = s_safeAs<MapVector<K, V>, Vector1<[K, V]>>(l);
-                let rr = s_safeAs<MapVector<K, V>, Vector3<[K, V]>>(r);
-                return Vector4<[K, V]>{ll.v0, rr.v0, rr.v1, rr.v2};
-            }
-            elif(/\(l.is<Vector2<[K, V]>>(), r.is<Vector1<[K, V]>>())) {
-                let ll = s_safeAs<MapVector<K, V>, Vector2<[K, V]>>(l);
-                let rr = s_safeAs<MapVector<K, V>, Vector1<[K, V]>>(r);
-                return Vector2<[K, V]>{ll.v0, ll.v1, rr.v0};
-            }
-            elif(/\(l.is<Vector2<[K, V]>>(), r.is<Vector2<[K, V]>>())) {
-                let ll = s_safeAs<MapVector<K, V>, Vector2<[K, V]>>(l);
-                let rr = s_safeAs<MapVector<K, V>, Vector2<[K, V]>>(r);
-                return Vector2<[K, V]>{ll.v0, ll.v1, rr.v0, rr.v1};
-            }
             else {
                 let ll = s_safeAs<MapVector<K, V>, Vector2<[K, V]>>(l);
-                let rr = s_safeAs<MapVector<K, V>, Vector3<[K, V]>>(r);
-                return Vector2<[K, V]>{ll.v0, ll.v1, rr.v0, rr.v1, rr.v2};
+                let rr = s_safeAs<MapVector<K, V>, Vector1<[K, V]>>(r);
+                return Vector3<[K, V]>{ll.v0, ll.v1, rr.v0};
             }
         }
     }
@@ -77,48 +54,13 @@ internal entity MapOps provides Some {
             let rr = s_safeAs<MapVector<K, V>, Vector2<[K, V]>>(r);
             return MapOps::s_safe_insert_vector_2<K, V>(rr, ll.v0);
         }
-        elif(/\(l.is<Vector1<[K, V]>>(), r.is<Vector3<[K, V]>>())) {
-            let ll = s_safeAs<MapVector<K, V>, Vector1<[K, V]>>(l);
-            let rr = s_safeAs<MapVector<K, V>, Vector3<[K, V]>>(r);
-            return MapOps::s_safe_insert_vector_3<K, V>(rr, ll.v0);
-        }
-        elif(/\(l.is<Vector1<[K, V]>>(), r.is<Vector4<[K, V]>>())) {
-            let ll = s_safeAs<MapVector<K, V>, Vector1<[K, V]>>(l);
-            let rr = s_safeAs<MapVector<K, V>, Vector4<[K, V]>>(r);
-            return MapOps::s_safe_insert_vector_4<K, V>(rr, ll.v0);
-        }
         elif(/\(l.is<Vector2<[K, V]>>(), r.is<Vector1<[K, V]>>())) {
             let ll = s_safeAs<MapVector<K, V>, Vector2<[K, V]>>(l);
             let rr = s_safeAs<MapVector<K, V>, Vector1<[K, V]>>(r);
             return MapOps::s_safe_insert_vector_2<K, V>(ll, rr.v0);
         }
-        elif(/\(l.is<Vector2<[K, V]>>(), r.is<Vector2<[K, V]>>())) {
-            let ll = s_safeAs<MapVector<K, V>, Vector2<[K, V]>>(l);
-            let rr = s_safeAs<MapVector<K, V>, Vector2<[K, V]>>(r);
-            return MapOps::s_safe_insert_vector_3<K, V>(MapOps::s_safe_insert_vector_2<K, V>(ll, rr.v0), rr.v0);
-        }
-        elif(/\(l.is<Vector2<[K, V]>>(), r.is<Vector3<[K, V]>>())) {
-            let ll = s_safeAs<MapVector<K, V>, Vector2<[K, V]>>(l);
-            let rr = s_safeAs<MapVector<K, V>, Vector3<[K, V]>>(r);
-            return MapOps::s_safe_insert_vector_4<K, V>(MapOps::s_safe_insert_vector_3<K, V>(rr, ll.v0), ll.v0);
-        }
-        elif(/\(l.is<Vector3<[K, V]>>(), r.is<Vector1<[K, V]>>())) {
-            let ll = s_safeAs<MapVector<K, V>, Vector3<[K, V]>>(l);
-            let rr = s_safeAs<MapVector<K, V>, Vector1<[K, V]>>(r);
-            return MapOps::s_safe_insert_vector_3<K, V>(rr, ll.v0);
-        }
-        elif(/\(l.is<Vector3<[K, V]>>(), r.is<Vector2<[K, V]>>())) {
-            let ll = s_safeAs<MapVector<K, V>, Vector3<[K, V]>>(l);
-            let rr = s_safeAs<MapVector<K, V>, Vector2<[K, V]>>(r);
-            return MapOps::s_safe_insert_vector_4<K, V>(MapOps::s_safe_insert_vector_3<K, V>(ll, rr.v0), rr.v0);
-        }
-        elif(/\(l.is<Vector4<[K, V]>>(), r.is<Vector1<[K, V]>>())) {
-            let ll = s_safeAs<MapVector<K, V>, Vector4<[K, V]>>(l);
-            let rr = s_safeAs<MapVector<K, V>, Vector1<[K, V]>>(r);
-            return MapOps::s_safe_insert_vector_4<K, V>(ll, rr.v0);
-        }
         else {
-            return LargeList<T>::s_append(l, r); 
+            return LargeMap<[K, V]>::union(l, r); 
         }
     }
 
@@ -139,14 +81,8 @@ internal entity MapOps provides Some {
         elif(m.is<Vector3<[K, V]>>()) {
             return 3n;
         }
-        elif(m.is<Vector4<[K, V]>>()) {
-            return 4n;
-        }
-        elif(m.is<Vector5<[K, V]>>()) {
-            return 5n;
-        }
         else {
-            return m.count();
+            return LargeMap<K, V>::count(m);
         }
     }
 
@@ -166,16 +102,8 @@ internal entity MapOps provides Some {
             let mm = s_safeAs<MapRepr<K, V>, Vector3<[K, V]>>(m);
             return \/(KeyType::equal<K>(mm.v0.0, k), KeyType::equal<K>(mm.v1.0, k), KeyType::equal<K>(mm.v2.0, k));
         }
-        elif(m.is<Vector4<[K, V]>>()) {
-            let mm = s_safeAs<MapRepr<K, V>, Vector4<[K, V]>>(m);
-            return \/(KeyType::equal<K>(mm.v0.0, k), KeyType::equal<K>(mm.v1.0, k), KeyType::equal<K>(mm.v2.0, k), KeyType::equal<K>(mm.v3.0, k));
-        }
-        elif(m.is<Vector5<[K, V]>>()) {
-            let mm = s_safeAs<MapRepr<K, V>, Vector5<[K, V]>>(m);
-            return \/(KeyType::equal<K>(mm.v0.0, k), KeyType::equal<K>(mm.v1.0, k), KeyType::equal<K>(mm.v2.0, k), KeyType::equal<K>(mm.v3.0, k), KeyType::equal<K>(mm.v4.0, k));
-        }
         else {
-            return m.has(k);
+            return LargeMap<K, V>::has(m, k);
         }
     }
 
@@ -219,47 +147,8 @@ internal entity MapOps provides Some {
                 return none;
             }
         }
-        elif(m.is<Vector4<[K, V]>>()) {
-            let mm = s_safeAs<MapRepr<K, V>, Vector4<[K, V]>>(m);
-             if(KeyType::equal<K>(mm.v0.0, k)) {
-                return m.v0;
-            }
-            elif(KeyType::equal<K>(mm.v1.0, k)) {
-                return m.v1;
-            }
-            elif(KeyType::equal<K>(mm.v2.0, k)) {
-                return m.v2;
-            }
-            elif(KeyType::equal<K>(mm.v3.0, k)) {
-                return m.v3;
-            }
-            else {
-                return none;
-            }
-        }
-        elif(m.is<Vector5<[K, V]>>()) {
-            let mm = s_safeAs<MapRepr<K, V>, Vector5<[K, V]>>(m);
-             if(KeyType::equal<K>(mm.v0.0, k)) {
-                return m.v0;
-            }
-            elif(KeyType::equal<K>(mm.v1.0, k)) {
-                return m.v1;
-            }
-            elif(KeyType::equal<K>(mm.v2.0, k)) {
-                return m.v2;
-            }
-            elif(KeyType::equal<K>(mm.v3.0, k)) {
-                return m.v3;
-            }
-            elif(KeyType::equal<K>(mm.v4.0, k)) {
-                return m.v4;
-            }
-            else {
-                return none;
-            }
-        }
         else {
-            return m.find(k);
+            return LargeMap<K, V>::find(m, k);
         }
     }
 
@@ -341,22 +230,6 @@ internal entity MapOps provides Some {
             return none;
         }
     }
-    recursive? function s_submap_vector4<K grounded KeyType, V>(m: Vector4<K, V>, p: recursive? pred(k: K, v: V) -> Bool): MapVector<K, V> | None {
-        let lm, rm = MapOps::s_split_vector_4<K, V>(l);
-        
-        let lmf = MapOps::s_submap_vector2<K, V>[recursive?](ll, p);
-        let rmf = MapOps::s_submap_vector2<K, V>[recursive?](rl, p);
-
-        return MapOps::s_append_map_vector_safe_helper<K, V>(lmf, rmf);
-    }
-    recursive? function s_submap_vector5<K grounded KeyType, V>(m: Vector5<K, V>, p: recursive? pred(k: K, v: V) -> Bool): MapVector<K, V> | None {
-        let lm, rm = MapOps::s_split_vector_5<K, V>(l);
-        
-        let lmf = MapOps::s_submap_vector2<K, V>[recursive?](ll, p);
-        let rmf = MapOps::s_submap_vector3<K, V>[recursive?](rl, p);
-
-        return MapOps::s_append_map_vector_safe_helper<K, V>(lmf, rmf);
-    }
     recursive? function s_submap<K grounded KeyType, V>(m: MapRepr<K, V>, p: recursive? pred(k: K, v: V) -> Bool): MapRepr<K, V> {
         if(m === none) {
             return none;
@@ -370,14 +243,8 @@ internal entity MapOps provides Some {
         elif(m.is<Vector3<[K, V]>>()) {
             return MapOps::s_submap_vector3<K, V>[recursive?](m, p);
         }
-        elif(m.is<Vector4<[K, V]>>()) {
-            return MapOps::s_submap_vector4<K, V>[recursive?](m, p);
-        }
-        elif(m.is<Vector5<[K, V]>>()) {
-            return MapOps::s_submap_vector5<K, V>[recursive?](m, p);
-        }
         else {
-            return m.submap[recursive?](p);
+            return LargeMap<K, V>::submap[recursive?](m, p);
         }
     }
 
@@ -406,24 +273,8 @@ internal entity MapOps provides Some {
             let v2 = mm.v2;
             return Vector3<[K, U]>{[v0.0, f[recursive?](v0.0, v0.1)], [v1.0, f[recursive?](v1.0, v1.1)], [v2.0, f[recursive?](v2.0, v2.1)]};
         }
-        elif(m.is<Vector4<[K, V]>>()) {
-            let mm = s_safeAs<MapRepr<K, V>, Vector4<[K, V]>>(m);
-
-            let v0 = mm.v0;
-            let v1 = mm.v1;
-            let v2 = mm.v2;
-            return Vector4<[K, U]>{[v0.0, f[recursive?](v0.0, v0.1)], [v1.0, f[recursive?](v1.0, v1.1)], [v2.0, f[recursive?](v2.0, v2.1)], [v3.0, f[recursive?](v3.0, v3.1)]};
-        }
-        elif(m.is<Vector5<[K, V]>>()) {
-            let mm = s_safeAs<MapRepr<K, V>, Vector5<[K, V]>>(m);
-
-            let v0 = mm.v0;
-            let v1 = mm.v1;
-            let v2 = mm.v2;
-            return Vector5<[K, U]>{[v0.0, f[recursive?](v0.0, v0.1)], [v1.0, f[recursive?](v1.0, v1.1)], [v2.0, f[recursive?](v2.0, v2.1)], [v3.0, f[recursive?](v3.0, v3.1)], [v4.0, f[recursive?](v4.0, v4.1)]};
-        }
         else {
-            return m.remap<U>[recursive?](f);
+            return LargeMap<K, V>::remap<U>[recursive?](m, f);
         }
     }
 
@@ -448,56 +299,6 @@ internal entity MapOps provides Some {
             return Vector3<[K, V]>{m.v0, m.v1, [k, v]};
         }
     }
-    function s_safe_insert_vector_3<K grounded KeyType, V>(m: Vector4<[K, V]>, k: K, v: T): Vector4<[K, V]> {
-        if(KeyType::less<K>(k, m.v0.0)) {
-            return Vector4<[K, V]>{[k, v], m.v0, m.v1, m.v2};
-        }
-        elif(KeyType::less<K>(k, m.v1.0)) {
-            return Vector4<[K, V]>{m.v0, [k, v], m.v1, m.v2};
-        }
-        elif(KeyType::less<K>(k, m.v2.0)) {
-            return Vector4<[K, V]>{m.v0, m.v1, [k, v], m.v2};
-        }
-        else {
-            assert !KeyType::equal<K>(m.v2.0, k);
-            return Vector4<[K, V]>{m.v0, m.v1, m.v2, [k, v]};
-        }
-    }
-    function s_safe_insert_vector_4<K grounded KeyType, V>(m: Vector4<[K, V]>, k: K, v: T): Vector5<[K, V]> {
-        if(KeyType::less<K>(k, m.v0.0)) {
-            return Vector5<[K, V]>{[k, v], m.v0, m.v1, m.v2, m.v3};
-        }
-        elif(KeyType::less<K>(k, m.v1.0)) {
-            return Vector5<[K, V]>{m.v0, [k, v], m.v1, m.v2, m.v3};
-        }
-        elif(KeyType::less<K>(k, m.v2.0)) {
-            return Vector5<[K, V]>{m.v0, m.v1, [k, v], m.v2, m.v3};
-        }
-        elif(KeyType::less<K>(k, m.v3.0)) {
-            return Vector5<[K, V]>{m.v0, m.v1, m.v2, [k, v], m.v3};
-        }
-        else {
-            assert !KeyType::equal<K>(m.v3.0, k);
-            return Vector4<[K, V]>{m.v0, m.v1, m.v2, m.v3, [k, v]};
-        }
-    }
-    function s_safe_insert_vector_helper<K grounded KeyType, V>(m: MapVector<K, V>, k: K, v: T): MapRepr<K, V> {
-        if(l.is<Vector1<[K, V]>>()) {
-           return MapOps::s_safe_insert_vector_1<K, V>(m, k, v);
-        }
-        elif(l.is<Vector2<[K, V]>>()) {
-            return MapOps::s_safe_insert_vector_2<K, V>(m, k, v);
-        }
-        elif(l.is<Vector3<[K, V]>>()) {
-            return MapOps::s_safe_insert_vector_3<K, V>(m, k, v);
-        }
-        elif(l.is<Vector4<[K, V]>>()) {
-            return MapOps::s_safe_insert_vector_4<K, V>(m, k, v);
-        }
-        else {
-            return MapOps::s_blockingfailure<MapRepr<K, V>>();
-        }
-    }
 
     function s_add<K grounded KeyType, V>(m: MapRepr<K, V>, k: K, v: V): MapRepr<K, V> {
         if(m === none) {
@@ -505,10 +306,18 @@ internal entity MapOps provides Some {
         }
         else {
             if(m.is<LargeMap<K, V>>()) {
-                return m.add(k, v);
+                return LargeMap<K, V>::add(m, k, v);
             }
             else {
-                return MapOps::s_safe_insert_vector_helper<K, V>(m, k, v);
+                if(m.is<Vector1<[K, V]>>()) {
+                    return MapOps::s_safe_insert_vector_1<K, V>(m, k, v);
+                }
+                elif(m.is<Vector2<[K, V]>>()) {
+                    return MapOps::s_safe_insert_vector_2<K, V>(m, k, v);
+                }
+                else {
+                    return LargeMap<[K, V]>::union(m, Vector1<[K, V]>{[k, v]}); 
+                }
             }
         }
     }
@@ -538,39 +347,6 @@ internal entity MapOps provides Some {
             return Vector3<[K, V]>{m.v0, m.v1, [k, v]};
         }
     }
-    function s_safe_set_vector_4<K grounded KeyType, V>(m: Vector4<[K, V]>, k: K, v: T): Vector4<[K, V]> {
-        if(KeyType::equal<K>(m.v0.0, k)) {
-            return Vector4<[K, V]>{[k, v], m.v1, m.v2, m.v3};
-        }
-        elif(KeyType::equal<K>(m.v1.0, k)) {
-            return Vector4<[K, V]>{m.v0, [k, v], m.v2, m.v3};
-        }
-        elif(KeyType::equal<K>(m.v2.0, k)) {
-            return Vector4<[K, V]>{m.v0, m.v1, [k, v], m.v3};
-        }
-        else {
-            assert KeyType::equal<K>(m.v3.0, k);
-            return Vector4<[K, V]>{m.v0, m.v1, m.v2, [k, v]};
-        }
-    }
-    function s_safe_set_vector_5<K grounded KeyType, V>(m: Vector5<[K, V]>, k: K, v: T): Vector5<[K, V]> {
-        if(KeyType::equal<K>(m.v0.0, k)) {
-            return Vector5<[K, V]>{[k, v], m.v1, m.v2, m.v3, m.v4};
-        }
-        elif(KeyType::equal<K>(m.v1.0, k)) {
-            return Vector5<[K, V]>{m.v0, [k, v], m.v2, m.v3, m.v4};
-        }
-        elif(KeyType::equal<K>(m.v2.0, k)) {
-            return Vector5<[K, V]>{m.v0, m.v1, [k, v], m.v3, m.v4};
-        }
-        elif(KeyType::equal<K>(m.v3.0, k)) {
-            return Vector5<[K, V]>{m.v0, m.v1, m.v2, [k, v], m.v4};
-        }
-        else {
-            assert KeyType::equal<K>(m.v4.0, k);
-            return Vector5<[K, V]>{m.v0, m.v1, m.v2, m.v3, [k, v]};
-        }
-    }
     function s_safe_set_vector_helper<K grounded KeyType, V>(m: MapVector<K, V>, k: K, v: T): MapVector<K, V> {
         if(l.is<Vector1<[K, V]>>()) {
            return MapOps::s_safe_set_vector_1<K, V>(m, k, v);
@@ -578,20 +354,14 @@ internal entity MapOps provides Some {
         elif(l.is<Vector2<[K, V]>>()) {
             return MapOps::s_safe_set_vector_2<K, V>(m, k, v);
         }
-        elif(l.is<Vector3<[K, V]>>()) {
-            return MapOps::s_safe_set_vector_3<K, V>(m, k, v);
-        }
-        elif(l.is<Vector4<[K, V]>>()) {
-            return MapOps::s_safe_set_vector_4<K, V>(m, k, v);
-        }
         else {
-            return MapOps::s_safe_set_vector_5<K, V>(m, k, v);
+            return MapOps::s_safe_set_vector_3<K, V>(m, k, v);
         }
     }
 
     function s_set<K grounded KeyType, V>(m: MapRepr<K, V>, k: K, v: V): MapRepr<K, V> {
         if(m.is<LargeMap<K, V>>()) {
-            return m.set(k);
+            return LargeMap<K, V>::set(m, k);
         }
         else {
             let mm = s_safeAs<MapRepr<[K, V]>, MapVector<K, V>>(m);
@@ -620,39 +390,6 @@ internal entity MapOps provides Some {
             return Vector2<[K, V]>{m.v0, m.v1};
         }
     }
-    function s_safe_remove_vector_4<K grounded KeyType, V>(m: Vector4<[K, V]>, k: K): Vector3<[K, V]> {
-        if(KeyType::equal<K>(m.v0.0, k)) {
-            return Vector3<[K, V]>{m.v1, m.v2, m.v3};
-        }
-        elif(KeyType::equal<K>(m.v1.0, k)) {
-            return Vector3<[K, V]>{m.v0, m.v2, m.v3};
-        }
-        elif(KeyType::equal<K>(m.v2.0, k)) {
-            return Vector3<[K, V]>{m.v0, m.v1, m.v3};
-        }
-        else {
-            assert KeyType::equal<K>(m.v3.0, k);
-            return Vector3<[K, V]>{m.v0, m.v1, m.v2};
-        }
-    }
-    function s_safe_remove_vector_5<K grounded KeyType, V>(m: Vector5<[K, V]>, k: K): Vector4<[K, V]> {
-        if(KeyType::equal<K>(m.v0.0, k)) {
-            return Vector4<[K, V]>{m.v1, m.v2, m.v3, m.v4};
-        }
-        elif(KeyType::equal<K>(m.v1.0, k)) {
-            return Vector4<[K, V]>{m.v0, m.v2, m.v3, m.v4};
-        }
-        elif(KeyType::equal<K>(m.v2.0, k)) {
-            return Vector4<[K, V]>{m.v0, m.v1, m.v3, m.v4};
-        }
-        elif(KeyType::equal<K>(m.v3.0, k)) {
-            return Vector4<[K, V]>{m.v0, m.v1, m.v2, m.v4};
-        }
-        else {
-            assert KeyType::equal<K>(m.v4.0, k);
-            return Vector4<[K, V]>{m.v0, m.v1, m.v2, m.v3};
-        }
-    }
     function s_safe_remove_vector_helper<K grounded KeyType, V>(m: MapVector<K, V>, k: K): MapVector<K, V> {
         if(m.is<Vector1<[K, V]>>()) {
             assert KeyType::equal<K>(m.v0.0, k);
@@ -661,20 +398,14 @@ internal entity MapOps provides Some {
         elif(m.is<Vector2<[K, V]>>()) {
             return MapOps::s_safe_remove_vector_2<K, V>(m, k);
         }
-        elif(m.is<Vector3<[K, V]>>()) {
-            return MapOps::s_safe_remove_vector_3<K, V>(m, k);
-        }
-        elif(m.is<Vector4<[K, V]>>()) {
-            return MapOps::s_safe_remove_vector_4<K, V>(m, k);
-        }
         else {
-            return MapOps::s_safe_remove_vector_5<K, V>(m, k);
+            return MapOps::s_safe_remove_vector_3<K, V>(m, k);
         }
     }
 
     function s_remove<K grounded KeyType, V>(m: MapRepr<K, V>, k: K): MapRepr<K, V> {
         if(m.is<LargeMap<K, V>>()) {
-            return m.remove(k);
+            return LargeMap<K, V>::remove(m, k);
         }
         else {
             let mm = s_safeAs<MapRepr<[K, V]>, MapVector<K, V>>(m);
@@ -683,46 +414,134 @@ internal entity MapOps provides Some {
     }
 }
 
-entity LargeMap<K grounded KeyType, V> provides Some {
-    //TODO: what repr do we want here
-    //  field v1: Vector3<[K, V]>;
-    //  field v2: Vector1<[K, V]> | Vector2<[K, V]> | Vector3<[K, V]>;
-    //Or something else
+__internal entity LargeMap<K grounded KeyType, V> provides Some {
+    internal field dummy_tuple: [K, V]; //ensure the compiler always has the appropriate tuple type for manipulating the internal representation
 
-    method count(): Nat {
-        return MapOps::s_blockingfailure<Nat>();
+    __safe internal function s_vector1_to_large_map(v: Vector1<[K, V]>): LargeMap<K, V> = s_vector1_to_large_map;
+    __safe internal function s_vector2_to_large_map(v: Vector2<[K, V]>): LargeMap<K, V> = s_vector2_to_large_map;
+    __safe internal function s_vector3_to_large_map(v: Vector3<[K, V]>): LargeMap<K, V> = s_vector3_to_large_map;
+
+    internal function s_large_map_to_vector1(l: LargeMap<K, V>): Vector1<[K, V]> = s_large_map_to_vector1;
+    internal function s_large_map_to_vector2(l: LargeMap<K, V>): Vector2<[K, V]> = s_large_map_to_vector2;
+    internal function s_large_map_to_vector3(l: LargeMap<K, V>): Vector3<[K, V]> = s_large_map_to_vector3;
+
+    __safe internal function s_large_map_count(m: LargeMap<K, V>): Nat = s_large_map_count; 
+
+    __safe internal function s_large_map_has(m: LargeMap<K, V>, k: K): Bool = s_large_map_has; 
+    __safe internal function s_large_map_get(m: LargeMap<K, V>, k: K): [K, V] = s_large_map_get; 
+    
+    __safe internal function s_large_map_disjoint(m1: LargeMap<K, V>, m2: LargeMap<K, V>): Bool = s_large_map_disjoint;
+    __safe internal function s_large_map_union(m1: LargeMap<K, V>, m2: LargeMap<K, V>): LargeMap<K, V> = s_large_map_union; 
+
+    __safe internal function s_large_map_add(m: LargeMap<K, V>, k: K, vtup: [K, V]): LargeMap<K, V> = s_large_map_add; 
+    __safe internal function s_large_map_set(m: LargeMap<K, V>, k: K, vtup: [K, V]): LargeMap<K, V> = s_large_map_set;
+    __safe internal function s_large_map_remove(m: LargeMap<K, V>, k: K): LargeMap<K, V> = s_large_map_remove;  
+
+    function s_vector_to_large_map(vm: MapVector<K, V>): LargeMap<K, V> {
+        if(vl.is<Vector1<[K, V]>>()) {
+            return LargeMap<K, V>::s_vector1_to_large_map(vm);
+        }
+        elif(vl.is<Vector2<[K, V]>>()) {
+            return LargeMap<K, V>::s_vector2_to_large_map(vm);
+        }
+        else {
+            return LargeMap<K, V>::s_vector3_to_large_map(vm);
+        }
     }
 
-    method has(k: K): Bool {
-        return MapOps::s_blockingfailure<Bool>();
+    function s_large_map_to_vector(m: LargeMap<K, V>, count: Nat): MapVector<K, V> {
+        if(count === 1) {
+            return LargeMap<K, V>::s_large_map_to_vector1(m);
+        }
+        elif(count === 2) {
+            return LargeMap<K, V>::s_large_map_to_vector2(m);
+        }
+        else {
+            return LargeMap<K, V>::s_large_map_to_vector3(m);
+        }
     }
 
-    method find(k: K): [K, V]? {
-        return MapOps::s_blockingfailure<[K, V]?>();
+    function count(m: LargeMap<K, V>): Nat {
+        return LargeMap<K, V>::s_large_map_count(m);
     }
 
-    function union(m1: MapRepr<K, V>, m2: MapRepr<K, V>): MapRepr<K, V> {
-        return MapOps::s_blockingfailure<MapRepr<K, V>>();
+    function has(m: LargeMap<K, V>, k: K): Bool {
+        return LargeMap<K, V>::s_large_map_has(m, k);
     }
 
-    recursive? method submap(p: recursive? pred(k: K, v: V) -> Bool): MapRepr<K, V> {
+    function find(m: LargeMap<K, V>, k: K): [K, V]? {
+        let has = LargeMap<K, V>::s_large_map_has(m, k);
+        if(!has) {
+            return none;
+        }
+        else {
+            return LargeMap<K, V>::s_large_map_get(m, k);
+        }
+    }
+
+    function union(l: MapRepr<K, V>, r: MapRepr<K, V>): MapRepr<K, V> {
+        if(/\(l.is<LargeMap<K, V>>(), r.is<LargeMap<K, V>>())) {
+            let ll = s_safeAs<MapRepr<K, V>, LargeMap<K, V>>(l);
+            let rr = s_safeAs<MapRepr<K, V>, LargeMap<K, V>>(r);
+
+            assert(LargeMap<K, V>::s_large_map_disjoint(ll, rr));
+            return LargeMap<K, V>::s_large_map_union(ll, rr);
+        }
+        elif(l.is<LargeMap<K, V>>()) {
+            let ll = s_safeAs<MapRepr<K, V>, LargeMap<K, V>>(s_safeAs<MapRepr<K, V>, MapVector<K, V>>(l));
+            let rr = LargeMap<K, V>::s_vector_to_large_map(r);
+
+            assert(LargeMap<K, V>::s_large_map_disjoint(ll, rr));
+            return LargeMap<K, V>::s_large_map_union(ll, rr);
+        }
+        elif(r.is<LargeMap<K, V>>()) {
+            let ll = LargeMap<K, V>::s_vector_to_large_map(s_safeAs<MapRepr<K, V>, MapVector<K, V>>(r));
+            let rr = s_safeAs<MapRepr<K, V>, LargeMap<K, V>>(r);
+
+            assert(LargeMap<K, V>::s_large_map_disjoint(ll, rr));
+            return LargeMap<K, V>::s_large_map_union(ll, rr);
+        }
+        else {
+            let ll = LargeMap<K, V>::s_vector_to_large_map(s_safeAs<MapRepr<K, V>, LargeMap<K, V>>(l));
+            let rr = LargeMap<K, V>::s_vector_to_large_map(s_safeAs<MapRepr<K, V>, LargeMap<K, V>>(r));
+
+            assert(LargeMap<K, V>::s_large_map_disjoint(ll, rr));
+            return LargeMap<K, V>::s_large_map_union(ll, rr);
+        }
+    }
+
+    recursive? function submap(m: MapRepr<K, V>, p: recursive? pred(k: K, v: V) -> Bool): MapRepr<K, V> {
          return MapOps::s_blockingfailure<MapRepr<K, V>>();
     }
 
-    recursive? method remap<U>(f: recursive? fn(k: K, v: V) -> U): LargeMap<K, U> {
+    recursive? function remap<U>(m: MapRepr<K, V>, f: recursive? fn(k: K, v: V) -> U): LargeMap<K, U> {
         return MapOps::s_blockingfailure<LargeMap<K, V>>();
     }
 
-    method add(k: K, v: V): LargeMap<K, V> {
-        return MapOps::s_blockingfailure<LargeMap<K, V>>();
+    function add(m: MapRepr<K, V>, k: K, v: V): LargeMap<K, V> {
+        assert(!LargeMap<K, V>::s_large_map_has(m, k));
+
+        return LargeMap<K, V>::s_large_map_add(m, k, v);
     }
 
-    method set(k: K, v: V): LargeMap<K, V> {
-        return MapOps::s_blockingfailure<LargeMap<K, V>>();
+    function set(m: MapRepr<K, V>, k: K, v: V): LargeMap<K, V> {
+        assert(LargeMap<K, V>::s_large_map_has(m, k));
+
+        return LargeMap<K, V>::s_large_map_set(m, k, v);
     }
 
-    method remove(k: K): MapRepr<K, V> {
-        return MapOps::s_blockingfailure<MapRepr<K, V>>();
+    function remove(m: MapRepr<K, V>, k: K): MapRepr<K, V> {
+        assert(LargeMap<K, V>::s_large_map_has(m, k));
+
+        let mm = LargeMap<K, V>::s_large_map_remove(m, k);
+        let mmc = LargeMap<K, V>::s_large_map_count(mm);
+
+        if(mm > 3) {
+            return mm;
+        }
+        else {
+            return LargeMap<K, V>::s_large_map_to_vector(mm, mmc);
+        }
     }
 }
 #endif

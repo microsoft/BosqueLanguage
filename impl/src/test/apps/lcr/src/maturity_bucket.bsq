@@ -1,0 +1,71 @@
+namespace NSMaturityBucket;
+
+type MaturityBucket
+    = Daily Int
+    | DayRange Int Int
+    | DayYear Int Int
+    | Yearly Int Int
+    | Residual
+
+
+function daysToMaturity(fromdate: DateTime, maturityDate: DateTime): Int {
+    return DateTime::diffInDays(maturityDate, fromDate);
+}
+
+function yearssToMaturity(fromdate: DateTime, maturityDate: DateTime): Int {
+    return DateTime::diffInYears(maturityDate, fromDate);
+}
+
+function bucket(fromdate: DateTime, maturityDate: DateTime): MaturityBucket {
+    let days = daysToMaturity(fromDate, maturityDate);
+    assert(days >= 0);
+
+    let years = yearsToMaturity(maturityDate, fromDate);
+    assert(years >= 0);
+
+    if(days <= 60i) {
+        return Daily{days};
+    }
+    elif(days <= 67i) {
+        return DayRange{61, 67};
+    }
+    elif(days <= 74i) {
+        return DayRange{68, 74};
+    }
+    elif(days <= 82i) {
+        return DayRange{75, 82};
+    }
+    elif(days <= 90i) {
+        return DayRange{83, 90};
+    }
+    elif(days <= 120i) {
+        return DayRange{92, 120};
+    }
+    elif(days <= 150i) {
+        return DayRange{121, 150};
+    }
+    elif(days <= 180i) {
+        return DayRange{151, 180};
+    }
+    elif(days <= 270i) {
+        return DayYear{181, 270};
+    }
+    elif(years <= 1i) {
+        return DayYear{271, 1};
+    }
+    elif(years <= 2i) {
+        return Yearly{1, 2};
+    }
+    elif(years <= 3i) {
+        return Yearly{2, 3};
+    }
+    elif(years <= 4i) {
+        return Yearly{3, 4};
+    }
+    elif(years <= 5i) {
+        return Yearly{4, 5};
+    }
+    else {
+        return Residual{};
+    }
+}

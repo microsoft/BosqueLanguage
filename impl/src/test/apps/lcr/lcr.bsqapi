@@ -1,0 +1,17 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+namespace Main;
+
+import NSCentralBank;
+import NSFedCode;
+
+entrypoint function main(cashflow: Cashflow, centralBanks: Map<PartyID, CentralBank>): Bool
+    requires centralBanks.has(cashflow.partyId);
+    requires cashflow.tenQLevel6 !== "Segregated Cash";
+{
+    let fc = classify(cashflow, centralBanks);
+    return /\(fc !== FedCode::unclassified, fc !== FedCode::ia49);
+}

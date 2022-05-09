@@ -1253,14 +1253,31 @@ class MIRAssembly {
         }
         else if(tt.options.length === 1 && (tt.options[0] instanceof MIRConceptType)) {
             const etypes = [...this.entityDecls].filter((edi) => this.subtypeOf(this.typeMap.get(edi[1].tkey) as MIRType, tt));
-            const opts: string[] = etypes.map((opt) => opt[1].tkey);
+            const opts: string[] = etypes.map((opt) => opt[1].tkey).sort((a, b) => a.localeCompare(b));
 
-            return {tag: APIEmitTypeTag.UnionTag, name: tt.typeID, opts: opts};
+            let ropts: string[] = [];
+            for(let i = 0; i < opts.length; ++i) {
+                const has = ropts.includes(opts[i]);
+                if(!has) {
+                    ropts.push(opts[i]);
+                }
+            }
+
+            return {tag: APIEmitTypeTag.UnionTag, name: tt.typeID, opts: ropts};
         }
         else {
-            const opts: string[] = tt.options.map((opt) => opt.typeID);
+            const etypes = [...this.entityDecls].filter((edi) => this.subtypeOf(this.typeMap.get(edi[1].tkey) as MIRType, tt));
+            const opts: string[] = etypes.map((opt) => opt[1].tkey).sort((a, b) => a.localeCompare(b));
             
-            return {tag: APIEmitTypeTag.UnionTag, name: tt.typeID, opts: opts};
+            let ropts: string[] = [];
+            for(let i = 0; i < opts.length; ++i) {
+                const has = ropts.includes(opts[i]);
+                if(!has) {
+                    ropts.push(opts[i]);
+                }
+            }
+
+            return {tag: APIEmitTypeTag.UnionTag, name: tt.typeID, opts: ropts};
         }
     }
 

@@ -11,7 +11,7 @@ enum PlayerMark {
     o
 }
 
-typedef Cells = List<List<PlayerMark>>;
+typedef Cells = List<PlayerMark>;
 
 entity BoardPostion provides APIType {
     //From top left corner -- 0 indexed
@@ -42,16 +42,15 @@ entity Board provides APIType {
     //Board is a map from cells to marks (or not in map if cell is unoccupied)
     field cells: Cells;
 
-    invariant test $cells.size() == 3n;
-    invariant test $cells.allOf(pred(row) => row.size() == 3n);
+    invariant test $cells.size() == 9n;
 
     factory function createEmpty(): { cells: Cells } {
         return 
         {
-            cells=List<List<PlayerMark>>{
-                List<PlayerMark>{PlayerMark::empty, PlayerMark::empty, PlayerMark::empty},
-                List<PlayerMark>{PlayerMark::empty, PlayerMark::empty, PlayerMark::empty},
-                List<PlayerMark>{PlayerMark::empty, PlayerMark::empty, PlayerMark::empty}
+            cells=List<PlayerMark>{
+                PlayerMark::empty, PlayerMark::empty, PlayerMark::empty,
+                PlayerMark::empty, PlayerMark::empty, PlayerMark::empty,
+                PlayerMark::empty, PlayerMark::empty, PlayerMark::empty
             }
         };
     }
@@ -59,27 +58,26 @@ entity Board provides APIType {
     factory function create4(): { cells: Cells } {
         return 
         {
-            cells=List<List<PlayerMark>>{
-                List<PlayerMark>{PlayerMark::x, PlayerMark::x, PlayerMark::empty},
-                List<PlayerMark>{PlayerMark::o, PlayerMark::o, PlayerMark::empty},
-                List<PlayerMark>{PlayerMark::empty, PlayerMark::empty, PlayerMark::empty}
+            cells=List<PlayerMark>{
+                PlayerMark::x, PlayerMark::x, PlayerMark::empty,
+                PlayerMark::o, PlayerMark::o, PlayerMark::empty,
+                PlayerMark::empty, PlayerMark::empty, PlayerMark::empty
             }
         };
     }
 
     method isCellEmpty(c: BoardPostion): Bool {
-        return this.cells.get(c.rowpos).get(c.colpos) === PlayerMark::empty;
+        return this.cells.get((3n*c.rowpos) + c.colpos) === PlayerMark::empty;
     }
 
     method getCellMark(c: BoardPostion): PlayerMark {
-        return this.cells.get(c.rowpos).get(c.colpos);
+        return this.cells.get((3n*c.rowpos) + c.colpos);
     }
 
     method setCellMark(c: BoardPostion, mark: PlayerMark): Board 
         requires this.isCellEmpty(c);
     {
-        let newrow = this.cells.get(c.rowpos).set(c.colpos, mark);
-        return this.{cells=$cells.set(c.rowpos, newrow)};
+        return this.{cells=$cells.set((3n*c.rowpos) + c.colpos, mark)};
     }
 
     private method check3(c1: BoardPostion, c2: BoardPostion, c3: BoardPostion, player: PlayerMark): Bool {

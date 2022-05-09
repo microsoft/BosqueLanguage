@@ -1,0 +1,50 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+namespace Main;
+
+const test_empty_board: Board = Board::createEmpty{};
+const test_no_win_2: Board = Main::test_empty_board.setCellMark(BoardPostion{1, 1}, PlayerMark::x).setCellMark(BoardPostion{0, 2}, PlayerMark::o);
+const test_no_win_4: Board = Main::test_no_win_2.setCellMark(BoardPostion{1, 2}, PlayerMark::x).setCellMark(BoardPostion{0, 1}, PlayerMark::o);
+const test_win_5: Board = Main::test_no_win_4.setCellMark(BoardPostion{1, 0}, PlayerMark::x);
+const test_blocked_5: Board = Main::test_no_win_4.setCellMark(BoardPostion{0, 0}, PlayerMark::x);
+
+chktest function no_winner_empty(): Bool {
+    return !Main::test_empty_board.hasWinner();
+}
+
+chktest function no_winner_2(): Bool {
+    return !Main::test_no_win_2.hasWinner();
+}
+
+chktest function no_winner_3(c: BoardPostion): Bool
+    requires Main::test_no_win_2.isCellEmpty(c);
+{
+    let nb = Main::test_no_win_2.setCellMark(c, PlayerMark::x);
+    return !nb.hasWinner();
+}
+
+chktest function no_winner_4(): Bool {
+    return !Main::test_no_win_4.hasWinner();
+}
+
+chktest function winner_5(): Bool {
+    return Main::test_win_5.checkAnyWinner() === PlayerMark::x;
+}
+
+chktest function blocked_5(c: BoardPostion): Bool
+    requires Main::test_blocked_5.isCellEmpty(c);
+{
+    let nb = Main::test_blocked_5.setCellMark(c, PlayerMark::o);
+    return !nb.hasWinner();
+}
+
+//Expected to fail
+chktest function failing_test(c: BoardPostion): Bool {
+    let nb = Main::test_no_win_4.setCellMark(c, PlayerMark::x);
+
+    return !nb.hasWinner();
+}
+

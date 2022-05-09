@@ -1,0 +1,17 @@
+{
+    "name": "lcr",
+    "version": "0.0.0.0",
+    "description": "Partial implementation of LCR regulation",
+    "license": "MIT",
+    "src": {
+        "bsqsource": [
+            "./src/*"
+        ],
+        "entrypoints": [
+            "./lcr.bsqapi"
+        ],
+        "testfiles": [
+            "./lcr.bsqtest"
+        ]
+    }
+}

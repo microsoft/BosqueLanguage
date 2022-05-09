@@ -31,6 +31,7 @@ const KeywordStrings = [
     "pred",
     "function",
     "if",
+    "import",
     "invariant",
     "istype",
     "let",
@@ -179,6 +180,7 @@ const AttributeStrings = [
     "__primitive",
     "__safe",
     "__assume_safe",
+    "__conditional_safe",
     "__universal"
 ];
 
@@ -3758,13 +3760,7 @@ class Parser {
         this.ensureAndConsumeToken(";");
 
         const ffns = this.m_penv.assembly.getNamespace(fromns);
-        const names = [...ffns.declaredNames].map((vv) => vv.slice(ffns.ns.length + 2));
-
-        this.ensureAndConsumeToken(";");
-
-        if (currentDecl.checkUsingNameClash(names)) {
-            this.raiseError(this.getCurrentLine(), "Collision between imported using names");
-        }
+        const names = [...ffns.declaredNames];
 
         //
         //TODO: Packaging!!!!
@@ -4174,12 +4170,6 @@ class Parser {
                 }
                 else if(ename === "Vector3") {
                     attributes.push("__vector3_type");
-                }
-                else if(ename === "Vector4") {
-                    attributes.push("__vector4_type");
-                }
-                else if(ename === "Vector5") {
-                    attributes.push("__vector5_type");
                 }
                 else if(ename === "LargeList") {
                     attributes.push("__largelist_type");

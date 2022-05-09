@@ -618,29 +618,11 @@ std::vector<const IType*> APIModule::getAllTypesInUnion(const UnionType* tt) con
     std::vector<const IType*> res;
     std::for_each(tt->opts.cbegin(), tt->opts.cend(), [this, &res](const std::string& ttname) {
         const IType* opttt = this->typemap.find(ttname)->second;
+        assert(!opttt->isUnion());
 
-        if(!opttt->isUnion())
-        {
-            res.push_back(opttt);
-        }
-        else
-        {
-            //Because we can have union of concepts which goes to union of union (but not deeper)
-            const UnionType* utt = dynamic_cast<const UnionType*>(opttt);
-            std::transform(utt->opts.cbegin(), utt->opts.cend(), std::back_inserter(res), [this](const std::string& uuname) {
-                return this->typemap.find(uuname)->second;
-            });
-        }
+        res.push_back(opttt);
     });
 
-    std::stable_sort(res.begin(), res.end(), [](const IType* a, const IType* b) {
-        return a->name < b->name;
-    });
-    auto unqend = std::unique(res.begin(), res.end(), [](const IType* a, const IType* b) {
-        return a->name == b->name;
-    });
-
-    res.erase(unqend, res.end());
     return res;
 }
 

@@ -1,0 +1,19 @@
+namespace NSProduct;
+
+typedecl ValidProductName = /[a-zA-Z0-9_]+/;
+typedef ProductId = StringOf<ValidProductName>;
+
+enum ProductType
+{
+    cash,
+    equity,
+    bond,
+    other
+}
+
+entity Product provides APIType
+{ 
+    field productId: ProductId;
+    field productType: ProductType;
+    field isHQLA: Bool;
+}

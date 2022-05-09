@@ -1,0 +1,28 @@
+namespace NSCounterParty;
+
+typedecl ValidCounterpartyName = /[a-zA-Z0-9_]+/;
+typedef CounterpartyId = StringOf<ValidCounterpartyName>;
+
+enum CounterpartyType
+{
+    bank,
+    retail,
+    smallBusiness,
+    nonFinancialCorporate,
+    sovereign,
+    centralBank,
+    governmentSponsoredEntity,
+    publicSectorEntity,
+    multilateralDevelopmentBank,
+    otherSupranational,
+    supervisedNonBankFinancialEntity,
+    debtIssuingSpecialPurposeEntity,
+    otherFinancialEntity,
+    other
+}
+
+entity Counterparty provides APIType
+{
+    field counterpartyId: CounterpartyId;
+    field counterpartyType: CounterpartyType;
+}

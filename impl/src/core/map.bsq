@@ -60,6 +60,8 @@ __internal entity Map<K grounded KeyType, V> provides Some, Expandoable<[K, V]>,
         }
     }
 
+    //TODO: do we want a disjoint and/or submap check here?
+
     method union(m: Map<K, V>): Map<K, V> {
         return Map<K, V>::s_into(MapOps::s_union<K, V>(this.value(), m.value()));
     }

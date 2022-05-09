@@ -15,7 +15,6 @@ entrypoint function main(c: BoardPostion): Bool {
 }
 ///////////////////////////////////////////////
 
-
 entrypoint function getInitialBoard(): Board {
     return Board::createEmpty{};
 }

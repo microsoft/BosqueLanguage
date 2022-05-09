@@ -1,0 +1,37 @@
+namespace NSBasics;
+
+import NSCurrency;
+
+enum AssetCategoryCodes
+{
+    level1Assets,
+    level2aAssets,
+    level2bAssets
+}
+
+enum InsuranceType
+{
+    fdic,
+    uninsured
+}
+
+typedecl ValidEntityName = /[a-zA-Z0-9_]+/;
+typedef Entity = StringOf<ValidEntityName>;
+
+typedef Balance = Float;
+typedef Ratio = Float;
+
+function fed5GCurrency(currency: NSCurrency::Currency): NSCurrency::Currency {
+    if(\/(currency === NSCurrency::Currency::usd, 
+          currency === NSCurrency::Currency::eur, 
+          currency === NSCurrency::Currency::gbp, 
+          currency === NSCurrency::Currency::chf, 
+          currency === NSCurrency::Currency::jpy, 
+          currency === NSCurrency::Currency::aud, 
+          currency === NSCurrency::Currency::cad)) {
+        return currency;
+    }
+    else {
+        return NSCurrency::Currency::usd;
+    }
+}

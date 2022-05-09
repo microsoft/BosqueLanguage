@@ -620,7 +620,6 @@ class ICPPTypeEmitter {
                     }
                     else {
                         assert(false, "Unknown primitive internal entity");
-                        return ICPPLayoutInfoFixed.createByRefLayout(entity.tkey, ICPP_WORD_SIZE, undefined);
                     }
                 }
             }
