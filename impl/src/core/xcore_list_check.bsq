@@ -43,12 +43,9 @@ internal entity ListOps provides Some {
     __safe internal function s_list_has_true(l: List<Bool>): Bool = s_list_has_true; 
     __safe internal function s_list_has_false(l: List<Bool>): Bool = s_list_has_false; 
     __safe internal function s_list_single_true(l: List<Bool>): Bool = s_list_single_true; 
-    __safe internal function s_list_single_indexof_true(l: List<Bool>): Int = s_list_single_indexof; 
+    __safe internal function s_list_single_indexof_true(l: List<Bool>): Int = s_list_single_indexof_true; 
 
     __safe internal function s_list_indexof_true(l: List<T>): Int = s_list_indexof_true; 
     __safe internal function s_list_last_indexof_true(l: List<T>): Int = s_list_last_indexof_true; 
-
-    __safe internal function s_list_true_count(l: List<Bool>): Nat = s_list_true_count; 
-    __safe internal function s_list_false_count(l: List<Bool>): Nat = s_list_false_count; 
 }
 #endif

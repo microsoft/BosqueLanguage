@@ -342,7 +342,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                     return 1n;
                 }
                 else {
-                    return ListOps::s_list_true_count(mask);
+                    return ListOps::s_blockingfailure<Nat>();
                 }
             }
         }
@@ -399,7 +399,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
         }
     }
 
-    method {when T grounded KeyType} count(v: T): Int {
+    method {when T grounded KeyType} count(v: T): Nat {
         if(ListOps::s_list_empty<T>(this)) {
             return 0n;
         }
@@ -416,13 +416,13 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                     return 1n;
                 }
                 else {
-                    return ListOps::s_list_true_count(mask);
+                    return ListOps::s_blockingfailure<Nat>();
                 }
             }
         }
     }
 
-    method countNone(): Bool {
+    method countNone(): Nat {
         if(ListOps::s_list_empty<T>(this)) {
             return 0n;
         }
@@ -439,13 +439,13 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                     return 1n;
                 }
                 else {
-                    return ListOps::s_list_true_count(mask);
+                    return ListOps::s_blockingfailure<Nat>();
                 }
             }
         }
     }
 
-    method countNothing(): Bool {
+    method countNothing(): Nat {
         if(ListOps::s_list_empty<T>(this)) {
             return 0n;
         }
@@ -462,7 +462,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                     return 1n;
                 }
                 else {
-                    return ListOps::s_list_true_count(mask);
+                    return ListOps::s_blockingfailure<Nat>();
                 }
             }
         }

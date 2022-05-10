@@ -166,9 +166,30 @@ class SMTEntityInternalOfTypeDecl extends SMTEntityDecl {
     }
 }
 
+
+class SMTEntityCollectionEntryTypeDecl extends SMTEntityDecl {
+    readonly consf: { cname: string, cargs: { fname: string, ftype: string }[] };
+    readonly emptyf: string;
+
+    constructor(smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: string }[] }, emptyf: string) {
+        super(false, smtname, typetag, "INVALID_SPECIAL", "INVALID_SPECIAL");
+
+        this.consf = consf;
+        this.emptyf = emptyf;
+    }
+}
+
 class SMTEntityCollectionTypeDecl extends SMTEntityDecl {
-    constructor(smtname: string, typetag: string, boxf: string, ubf: string) {
+    readonly consf: { cname: string, cargs: { fname: string, ftype: string }[] };
+    readonly emptyconst: {fkind: string, fname: string, fexp: string};
+    readonly entrydecl: SMTEntityCollectionEntryTypeDecl | undefined;
+
+    constructor(smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: string }[] }, boxf: string, ubf: string, emptyconst: {fkind: string, fname: string, fexp: string}, entrydecl: SMTEntityCollectionEntryTypeDecl | undefined) {
         super(false, smtname, typetag, boxf, ubf);
+
+        this.consf = consf;
+        this.emptyconst = emptyconst;
+        this.entrydecl = entrydecl;
     }
 }
 
@@ -506,45 +527,33 @@ class SMTAssembly {
             });
 
         const collectiontypeinfo = this.entityDecls
-            .filter((et) => et instanceof SMTEntityCollectionTypeDecl)
+            .filter((et) => (et instanceof SMTEntityCollectionTypeDecl))
             .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
             .map((tt) => {
-                return {
-                    decl: `(define-sort ${tt.smtname} () BTerm)`,
-                    boxf: `(${tt.boxf} (${tt.ubf} BTerm))`
-                };
-            });
-
-
-        const collectionlargelisttypeinfo = this.auxCollectionDecls
-            .filter((et) => (et instanceof SMTEntityCollectionLargeListTypeDecl))
-            .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
-            .map((tt) => {
+                const ctype = tt as SMTEntityCollectionTypeDecl;
                 return {
                     decl: `(${tt.smtname} 0)`,
-                    consf: `( (${(tt as SMTEntityCollectionLargeListTypeDecl).consf.cname} ${(tt as SMTEntityCollectionLargeListTypeDecl).consf.cargs.map((te) => `(${te.fname} ${te.ftype})`).join(" ")}) )`,
+                    consf: `( (${ctype.consf.cname} ${ctype.consf.cargs.map((te) => `(${te.fname} ${te.ftype})`).join(" ")}) )`,
                     boxf: `(${tt.boxf} (${tt.ubf} ${tt.smtname}))`
                 };
             });
 
-        const collectionlargemapentrytypeinfo = this.auxCollectionDecls
-            .filter((et) => (et instanceof SMTEntityCollectionLargeMapTypeDecl))
+        const collectiontypeinfoconsts = this.entityDecls
+            .filter((et) => (et instanceof SMTEntityCollectionTypeDecl))
             .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
             .map((tt) => {
-                return {
-                    decl: `(${(tt as SMTEntityCollectionLargeMapTypeDecl).entryinfo.smtname} 0)`,
-                    consf: `( (${(tt as SMTEntityCollectionLargeMapTypeDecl).entryinfo.consf.cname} ${(tt as SMTEntityCollectionLargeMapTypeDecl).entryinfo.consf.cargs.map((te) => `(${te.fname} ${te.ftype})`).join(" ")}) (${(tt as SMTEntityCollectionLargeMapTypeDecl).entryinfo.emptyf}) )`
-                };
+                const ctype = tt as SMTEntityCollectionTypeDecl;
+                return `(declare-const ${ctype.emptyconst.fname} ${ctype.emptyconst.fkind}) (assert (= ${ctype.emptyconst.fname} ${ctype.emptyconst.fexp}))`;
             });
 
-        const collectionlargemaptypeinfo = this.auxCollectionDecls
-            .filter((et) => (et instanceof SMTEntityCollectionLargeMapTypeDecl))
+        const collectionentrytypeinfo = this.entityDecls
+            .filter((et) => (et instanceof SMTEntityCollectionTypeDecl) && (et as SMTEntityCollectionTypeDecl).entrydecl !== undefined)
             .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
             .map((tt) => {
+                const einfo = (tt as SMTEntityCollectionTypeDecl).entrydecl as SMTEntityCollectionEntryTypeDecl;
                 return {
-                    decl: `(${tt.smtname} 0)`,
-                    consf: `( (${(tt as SMTEntityCollectionLargeListTypeDecl).consf.cname} ${(tt as SMTEntityCollectionLargeListTypeDecl).consf.cargs.map((te) => `(${te.fname} ${te.ftype})`).join(" ")}) )`,
-                    boxf: `(${tt.boxf} (${tt.ubf} ${tt.smtname}))`
+                    decl: `(${einfo.smtname} 0)`,
+                    consf: `( (${einfo.consf.cname} ${einfo.consf.cargs.map((te) => `(${te.fname} ${te.ftype})`).join(" ")}) (${einfo.emptyf}) )`
                 };
             });
 
@@ -721,22 +730,19 @@ class SMTAssembly {
             TYPE_INFO: { 
                 decls: [
                     ...termtypeinfo.filter((tti) => tti.decl !== undefined).map((tti) => tti.decl as string),
-                    ...collectionlargelisttypeinfo.map((clti) => clti.decl),
-                    ...collectionlargemapentrytypeinfo.map((clti) => clti.decl),
-                    ...collectionlargemaptypeinfo.map((clti) => clti.decl),
+                    ...collectiontypeinfo.map((clti) => clti.decl),
+                    ...collectionentrytypeinfo.map((clti) => clti.decl)
                 ], 
                 constructors: [
                     ...termtypeinfo.filter((tti) => tti.consf !== undefined).map((tti) => tti.consf as string),
-                    ...collectionlargelisttypeinfo.map((clti) => clti.consf),
-                    ...collectionlargemapentrytypeinfo.map((clti) => clti.consf),
-                    ...collectionlargemaptypeinfo.map((clti) => clti.consf),
+                    ...collectiontypeinfo.map((clti) => clti.consf),
+                    ...collectionentrytypeinfo.map((clti) => clti.consf)
                 ], 
                 boxing: [
                     ...termtypeinfo.map((tti) => tti.boxf), 
                     ...ofinternaltypeinfo.map((ttofi) => ttofi.boxf), 
                     ...collectiontypeinfo.map((cti) => cti.boxf),
-                    ...collectionlargelisttypeinfo.map((clti) => clti.boxf),
-                    ...collectionlargemaptypeinfo.map((clti) => clti.boxf),
+                    ...collectiontypeinfo.map((clti) => clti.boxf)
                 ] 
             },
             COLLECTION_INFO: collectiontypeinfo.map((cti) => cti.decl),
@@ -753,7 +759,10 @@ class SMTAssembly {
                 constructors: maskinfo.map((mi) => mi.consf) 
             },
             V_MIN_MAX: v_min_max,
-            GLOBAL_DECLS: gdecls,
+            GLOBAL_DECLS: [
+                ...collectiontypeinfoconsts,
+                ...gdecls
+            ],
             UF_DECLS: ufdecls,
             FUNCTION_DECLS: foutput.reverse(),
             GLOBAL_DEFINITIONS: gdefs,
@@ -813,7 +822,7 @@ class SMTAssembly {
 }
 
 export {
-    SMTEntityDecl, SMTEntityOfTypeDecl, SMTEntityInternalOfTypeDecl, SMTEntityCollectionTypeDecl,
+    SMTEntityDecl, SMTEntityOfTypeDecl, SMTEntityInternalOfTypeDecl, SMTEntityCollectionTypeDecl, SMTEntityCollectionEntryTypeDecl,
     SMTEntityStdDecl,
     SMTTupleDecl, SMTRecordDecl, SMTEphemeralListDecl,
     SMTConstantDecl,
