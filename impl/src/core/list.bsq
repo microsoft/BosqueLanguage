@@ -76,7 +76,12 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     method size(): Nat {
-        return ListOps::s_list_size<T>(this);
+        if(ListOps::s_list_empty<T>(this)) {
+            return 0n;
+        }
+        else {
+            return ListOps::s_list_size<T>(this);
+        }
     }
 
     method empty(): Bool {
@@ -1653,130 +1658,167 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return List<[T, U]>{};
         }
         else {
-            xxxx;
-        }
-
-        if(ListOps::s_empty<T>(this.value()) || ListOps::s_empty<U>(ol.value())) {
-            return List<T>{};
-        }
-        else {
-            let jjl = ListOps::s_map<T, List<[T, U]>>[recursive?](this.value(), recursive? fn(v: T): List<[T, U]> => {
-                let ul = ListOps::s_filter_pred<U>[recursive?](ol.value(), pred(u: U) => p[recursive?](v, u));
-                return List<U>::s_into(ListOps::s_map<U>(ul, fn(u: U): [T, U] => [v, u]));
-            });
-
-            let count = ListOps::s_size<List<[T, U]>>(jjl);
-            if(count == 1) {
-                return ListOps::s_safe_get<List<[T, U]>>(jjl, 0n);
-            }
-            elif(count == 2) {
-                return List<[T, U]>::s_into(ListOps::s_append<[T, U]>(ListOps::s_safe_get<List<[T, U]>>(jjl, 0n), ListOps::s_safe_get<List<[T, U]>>(jjl, 1n)));
-            }
-            elif(count == 3) {
-                let la = ListOps::s_append<T>(ListOps::s_safe_get<List<[T, U]>>(jjl, 0n), ListOps::s_safe_get<List<[T, U]>>(jjl, 1n));
-                return List<[T, U]>::s_into(ListOps::s_append<[T, U]>(la, ListOps::s_safe_get<List<T>>(jjl, 2n)));
-            }
-            elif(count == 4) {
-                let la = ListOps::s_append<[T, U]>(ListOps::s_safe_get<List<[T, U]>>(jjl, 0n), ListOps::s_safe_get<List<[T, U]>>(jjl, 1n));
-                let ra = ListOps::s_append<[T, U]>(ListOps::s_safe_get<List<[T, U]>>(jjl, 2n), ListOps::s_safe_get<List<[T, U]>>(jjl, 3n));
-                return List<[T, U]>::s_into(ListOps::s_append<[T, U]>(la, ra));
-            }
-            else {
-                return List<T>::s_into(List<T>::s_concat<T>(jjl));
-            }
+            return ListOps::s_blockingfailure<List<[T, U]>>();
+            //implement using other primitives (like join group followed by concat) or do some UF magic?
         }
     }
 
     recursive? method joinGroup<U=?>(ol: List<U>, p: recursive? pred(_: T, _: U) -> Bool): List<[T, List<U>]> {
-        return List<[T, List<U>]>::s_into(ListOps::s_map<T, [T, List<U>]>[recursive?](this.value(), recursive? fn(v: T): [T, List<U>] => {
-            let ul = List<U>::s_into(ListOps::s_filter_pred<U>[recursive?](ol.value(), pred(u: U) => p[recursive?](v, u)));
-            return [v, ul];
-        }));
+        if(ListOps::s_list_empty<T>(this)) {
+            return List<[T, List<U>]>{};
+        }
+        elif(ListOps::s_list_empty<T>(ol)) {
+            return List<[T, List<U>]>{};
+        }
+        else {
+            return ListOps::s_blockingfailure<List<[T, U]>>();
+            //implement using other primitives (like map a filter) or do some UF magic?
+        }
     }
 
     method append(l: List<T>): List<T> {
-        return List<T>::s_into(ListOps::s_append<T>(this.value(), l.value()));
+        if(/\(ListOps::s_list_empty<T>(this), ListOps::s_list_empty<T>(l))) {
+            return List<T>{};
+        }
+        elif(ListOps::s_list_empty<T>(this)) {
+            return l;
+        }
+        elif(ListOps::s_list_empty<T>(l)) {
+            return this;
+        }
+        else {
+            return ListOps::s_list_append<T>(this, l);
+        }
     }
 
     method prepend(l: List<T>): List<T> {
-        return List<T>::s_into(ListOps::s_append<T>(l.value(), this.value()));
+        if(/\(ListOps::s_list_empty<T>(this), ListOps::s_list_empty<T>(l))) {
+            return List<T>{};
+        }
+        elif(ListOps::s_list_empty<T>(this)) {
+            return l;
+        }
+        elif(ListOps::s_list_empty<T>(l)) {
+            return this;
+        }
+        else {
+            return ListOps::s_list_append<T>(l, this);
+        }
     }
 
     recursive? method partition<K grounded KeyType=?>(pf: recursive? fn(_: T) -> K): Map<K, List<T>> {
-        let allkeys = ListOps::s_map<T, K>[recursive?](this.value(), pf);
-        let ukeys = ListOps::s_unique_from_sorted<T>[recursive?](ListOps::s_sort<T>[recursive?](this.value(), pred(a: K, b: K): Bool => KeyType::less<K>(a, b)), pred(a: K, b: K): Bool => KeyType::equal<K>(a, b));
-
-        let kopts = ListOps::s_zip<K, T>(allkeys, this.value());
-        let classes = List<[K, List<T>]>::s_into(ListOps::s_map<K, [K, List<T>]>(ukeys, fn(k: K): [K, List<T>] => {
-            let pl = ListOps::s_filter_pred<[K, T]>(kopts, pred(v: [K, T]) => k === v.0);
-            let tl = List<T>::s_into(ListOps::s_map<[K, T], T>(pl, fn(vv: [K, T]): T => vv.1));
-
-            return [k, tl];
-        }));
-
-        return Map<K, T>::s_from_list(classes);
+        if(ListOps::s_list_empty<T>(this)) {
+            return Map<K, List<T>>{};
+        }
+        else {
+            return ListOps::s_blockingfailure<Map<K, List<T>>>();
+            //implement using other primitives or do some UF magic?
+        }
     }
 
     recursive? method sort(cmp: recursive? pred(_: T, _: T) -> Bool): List<T> {
-        return List<T>::s_into(ListOps::s_sort<T>[recursive?](this.value(), cmp));
+        if(ListOps::s_list_empty<T>(this)) {
+            return List<T>{};
+        }
+        else {
+            return ListOps::s_blockingfailure<List<T>>();
+        }
     }
 
     recursive? method uniqueify(cmp: recursive? pred(_: T, _: T) -> Bool, eq: recursive? pred(_: T, _: T) -> Bool): List<T> {
-       return List<T>::s_into(ListOps::s_unique_from_sorted<T>[recursive?](ListOps::s_sort<T>[recursive?](this.value(), cmp), eq));
+        if(ListOps::s_list_empty<T>(this)) {
+            return List<T>{};
+        }
+        else {
+            return ListOps::s_blockingfailure<List<T>>();
+        }
     }
 
     method reverse(): List<T> {
-        return List<T>::s_into(ListOps::s_reverse<T>(this.value()));
+        if(ListOps::s_list_empty<T>(this)) {
+            return List<T>{};
+        }
+        else {
+            return ListOps::s_blockingfailure<List<T>>();
+        }
     }
 
     method pushBack(v: T): List<T> {
-        return List<T>::s_into(ListOps::s_push_back<T>(this.value(), v));
+        if(ListOps::s_list_empty<T>(this)) {
+            return List<T>{v};
+        }
+        else {
+            return ListOps::s_list_push_back<T>(this, v);
+        }
     }
 
     method pushFront(v: T): List<T> {
-        return List<T>::s_into(ListOps::s_push_front<T>(this.value(), v));
+        if(ListOps::s_list_empty<T>(this)) {
+            return List<T>{v};
+        }
+        else {
+            return ListOps::s_list_push_front<T>(this, v);
+        }
     }
 
-    method popBack(): List<T> {
-        assert !ListOps::s_empty(this.value());
-
-        return List<T>::s_into(ListOps::s_safe_pop_back<T>(this.value()));
+    method popBack(): List<T> 
+        requires !ListOps::s_list_empty<T>(this);
+    {
+        return ListOps::s_list_pop_back<T>(this);
     }
 
-    method popFront(): List<T> {
-        assert !ListOps::s_empty(this.value());
-
-        return List<T>::s_into(ListOps::s_safe_pop_front<T>(this.value()));
+    method popFront(): List<T> 
+        requires !ListOps::s_list_empty<T>(this);
+    {
+        return ListOps::s_list_pop_front<T>(this);
     }
 
-    method set(i: Nat, v: T): List<T> {
-        assert i < ListOps::s_size<T>(this.value());
-
-        return List<T>::s_into(ListOps::s_set<T>(this.value(), i, v));
+    method set(i: Nat, v: T): List<T> 
+        requires i < ListOps::s_list_size<T>(this);
+    {
+        return ListOps::s_list_set<T>(this, i, v);
     }
 
-    method remove(i: Nat): List<T> {
-        assert i < ListOps::s_size<T>(this.value());
-
-        return List<T>::s_into(ListOps::s_remove<T>(this.value(), i));
+    method remove(i: Nat): List<T> 
+        requires i < ListOps::s_list_size<T>(this);
+    {
+        return ListOps::s_list_remove<T>(this, i);
     }
 
     recursive? method reduce<U=?>(init: U, f: recursive? fn(_: U, _: T) -> U): U {
-        return ListOps::s_reduce<T, U>[recursive?](this.value(), init, f);
+        if(ListOps::s_list_empty<T>(this)) {
+            return init;
+        }
+        else {
+            return ListOps::s_blockingfailure<U>();
+        }
     }
 
     recursive? method reduce<U=?>(init: U, f: recursive? fn(_: U, _: T, _: Nat) -> U): U {
-        return ListOps::s_reduce_idx<T, U>[recursive?](this.value(), init, f);
+                if(ListOps::s_list_empty<T>(this)) {
+            return init;
+        }
+        else {
+            return ListOps::s_blockingfailure<U>();
+        }
     }
 
     recursive? method transduce<E=?, U=?>(env: E, f: recursive? fn(_: T, _: E) -> (|E, U|)): (|E, List<U>|) {
-        let ee, llu = ListOps::s_transduce<T, E, U>[recursive?](this.value(), env, f);
-        return (|ee, List<U>::s_into(llu)|);
+        if(ListOps::s_list_empty<T>(this)) {
+            return (|env, List<U>{}|);
+        }
+        else {
+            return ListOps::s_blockingfailure<(|E, List<U>|)>();
+        }
     }
 
     recursive? method transduce<E=?, U=?>(env: E, f: recursive? fn(_: T, _: E, _: Nat) -> (|E, U|)): (|E, List<U>|) {
-        let ee, llu = ListOps::s_transduce_idx<T, E, U>[recursive?](this.value(), env, f);
-        return (|ee, List<U>::s_into(llu)|);
+        if(ListOps::s_list_empty<T>(this)) {
+            return (|env, List<U>{}|);
+        }
+        else {
+            return ListOps::s_blockingfailure<(|E, List<U>|)>();
+        }
     }
 
     //
