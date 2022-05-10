@@ -4162,21 +4162,6 @@ class Parser {
                 else if(ename === "MapTree") {
                     attributes.push("__map_tree_type");
                 }
-                else if(ename === "Vector1") {
-                    attributes.push("__vector1_type");
-                }
-                else if(ename === "Vector2") {
-                    attributes.push("__vector2_type");
-                }
-                else if(ename === "Vector3") {
-                    attributes.push("__vector3_type");
-                }
-                else if(ename === "LargeList") {
-                    attributes.push("__largelist_type");
-                }
-                else if(ename === "LargeMap") {
-                    attributes.push("__largemap_type");
-                }
                 else {
                     //not special
                 }

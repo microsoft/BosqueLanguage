@@ -475,31 +475,12 @@ class SMTBodyEmitter {
             args.push({ vname: `arg${j}`, vtype: this.typegen.getSMTTypeFor(etype) });
         }
 
-        let bbody: SMTExp = new SMTConst("[INVALID]");
-        if(geninfo.argc === 1) {
-            const v1type = this.assembly.typeMap.get(`Vector1<${etype.typeID}>`) as MIRType;
-            bbody = this.typegen.coerce(new SMTCallSimple(this.typegen.getSMTConstructorName(v1type).cons, [new SMTVar("arg0")]), v1type, this.typegen.getMIRType(ldecl.oftype));
-        }
-        else if(geninfo.argc === 2) {
-            const v2type = this.assembly.typeMap.get(`Vector2<${etype.typeID}>`) as MIRType;
-            bbody = this.typegen.coerce(new SMTCallSimple(this.typegen.getSMTConstructorName(v2type).cons, [new SMTVar("arg0"), new SMTVar("arg1")]), v2type, this.typegen.getMIRType(ldecl.oftype));
-        }
-        else if(geninfo.argc === 3) {
-            const v3type = this.assembly.typeMap.get(`Vector3<${etype.typeID}>`) as MIRType;
-            bbody = this.typegen.coerce(new SMTCallSimple(this.typegen.getSMTConstructorName(v3type).cons, [new SMTVar("arg0"), new SMTVar("arg1"), new SMTVar("arg2")]), v3type, this.typegen.getMIRType(ldecl.oftype));
-        }
-        else {
-            const lltype = this.assembly.typeMap.get(`LargeList<${etype.typeID}>`) as MIRType;
-
-            let args: SMTExp[] = [];
-            for(let i = 0; i < geninfo.argc; ++i) {
-                args.push(new SMTCallSimple("seq.unit", [new SMTVar(`arg${i}`)]));
-            }
-
-            bbody = this.typegen.coerce(this.typegen.generateLargeListTypeConstructor(lltype, new SMTCallSimple("seq.++", args)), lltype, this.typegen.getMIRType(ldecl.oftype));
+        let largs: SMTExp[] = [];
+        for(let i = 0; i < geninfo.argc; ++i) {
+            largs.push(new SMTCallSimple("seq.unit", [new SMTVar(`arg${i}`)]));
         }
 
-        return SMTFunction.create(this.typegen.lookupFunctionName(geninfo.inv), args, this.typegen.getSMTTypeFor(geninfo.resulttype), bbody);
+        return SMTFunction.create(this.typegen.lookupFunctionName(geninfo.inv), args, this.typegen.getSMTTypeFor(geninfo.resulttype), new SMTCallSimple("seq.++", largs));
     }
 
     generateSingletonConstructorMap(geninfo: { srcFile: string, sinfo: SourceInfo, inv: string, argc: number, resulttype: MIRType }): SMTFunction {

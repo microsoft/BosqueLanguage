@@ -202,15 +202,7 @@ class SMTTypeEmitter {
                     return new SMTTypeInfo("bsq_regex", "TypeTag_Regex", entity.tkey);
                 }
                 else {
-                    if(entity.name === "LargeList") {
-                        return new SMTTypeInfo(this.lookupTypeName(entity.tkey), `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
-                    }
-                    else if (entity.name === "LargeMap") {
-                        return new SMTTypeInfo(this.lookupTypeName(entity.tkey), `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
-                    }
-                    else {
-                        assert(false, "Unknown primitive internal entity");
-                    }
+                    assert(false, "Unknown primitive internal entity");
                 }
             }
             else if (entity instanceof MIRHavocEntityTypeDecl) {
@@ -233,6 +225,7 @@ class SMTTypeEmitter {
             else {
                 assert(entity instanceof MIRPrimitiveCollectionEntityTypeDecl, "Should be a collection type");
 
+                xxxx;
                 if(fordecl) {
                     return new SMTTypeInfo("BTerm", "[BTERM]", tt.typeID);
                 }

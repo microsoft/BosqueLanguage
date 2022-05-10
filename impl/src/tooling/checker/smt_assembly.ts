@@ -172,38 +172,6 @@ class SMTEntityCollectionTypeDecl extends SMTEntityDecl {
     }
 }
 
-class SMTEntityCollectionLargeListTypeDecl extends SMTEntityDecl {
-    readonly consf: { cname: string, cargs: { fname: string, ftype: string }[] };
-
-    constructor(smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: string }[] }, boxf: string, ubf: string) {
-        super(false, smtname, typetag, boxf, ubf);
-        this.consf = consf;
-    }
-}
-
-class SMTEntityCollectionLargeMapTypeDecl extends SMTEntityDecl {
-    readonly consf: { cname: string, cargs: { fname: string, ftype: string }[] };
-    readonly entryinfo: SMTEntityCollectionLargeMapEntryTypeDecl;
-
-    constructor(smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: string }[] }, boxf: string, ubf: string, entryinfo: SMTEntityCollectionLargeMapEntryTypeDecl) {
-        super(false, smtname, typetag, boxf, ubf);
-        this.consf = consf;
-        this.entryinfo = entryinfo;
-    }
-}
-
-class SMTEntityCollectionLargeMapEntryTypeDecl extends SMTEntityDecl {
-    readonly consf: { cname: string, cargs: { fname: string, ftype: string }[] };
-    readonly emptyf: string;
-
-    constructor(smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: string }[] }, emptyf: string) {
-        super(false, smtname, typetag, "INVALID_SPECIAL", "INVALID_SPECIAL");
-
-        this.consf = consf;
-        this.emptyf = emptyf;
-    }
-}
-
 class SMTEntityStdDecl extends SMTEntityDecl {
     readonly consf: { cname: string, cargs: { fname: string, ftype: SMTTypeInfo }[] };
     
@@ -326,8 +294,6 @@ class SMTAssembly {
     tupleDecls: SMTTupleDecl[] = [];
     recordDecls: SMTRecordDecl[] = [];
     ephemeralDecls: SMTEphemeralListDecl[] = [];
-
-    auxCollectionDecls: (SMTEntityCollectionLargeListTypeDecl | SMTEntityCollectionLargeMapTypeDecl)[] = [];
 
     typeTags: string[] = [
         "TypeTag_None",
@@ -847,7 +813,7 @@ class SMTAssembly {
 }
 
 export {
-    SMTEntityDecl, SMTEntityOfTypeDecl, SMTEntityInternalOfTypeDecl, SMTEntityCollectionTypeDecl, SMTEntityCollectionLargeListTypeDecl, SMTEntityCollectionLargeMapTypeDecl, SMTEntityCollectionLargeMapEntryTypeDecl,
+    SMTEntityDecl, SMTEntityOfTypeDecl, SMTEntityInternalOfTypeDecl, SMTEntityCollectionTypeDecl,
     SMTEntityStdDecl,
     SMTTupleDecl, SMTRecordDecl, SMTEphemeralListDecl,
     SMTConstantDecl,
