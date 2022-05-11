@@ -6786,11 +6786,9 @@ class TypeChecker {
                     this.m_emitter.masm.entityDecls.set(tkey, havocentity);
                 }
                 else if(tdecl.attributes.includes("__list_type")) {
-                    const oftype = (tdecl.memberMethods.find((mf) => mf.name === "value") as MemberMethodDecl).invoke.resultType;
-                    const miroftype = this.m_emitter.registerResolvedTypeReference(this.m_assembly.normalizeTypeOnly(oftype, new Map().set("T", binds.get("T") as ResolvedType)));
                     const mirbinds = new Map<string, MIRType>().set("T", this.m_emitter.registerResolvedTypeReference(binds.get("T") as ResolvedType));
 
-                    const mirentity = new MIRPrimitiveListEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, miroftype.typeID, mirbinds);
+                    const mirentity = new MIRPrimitiveListEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, mirbinds);
                     this.m_emitter.masm.entityDecls.set(tkey, mirentity);
                 }
                 else if(tdecl.attributes.includes("__stack_type")) {
@@ -6806,15 +6804,12 @@ class TypeChecker {
                     //MIRPrimitiveSetEntityTypeDecl
                 }
                 else if(tdecl.attributes.includes("__map_type")) {
-                    const ofbinds = new Map().set("K", binds.get("K") as ResolvedType).set("V", binds.get("V") as ResolvedType);
-                    const oftype = (tdecl.memberMethods.find((mf) => mf.name === "value") as MemberMethodDecl).invoke.resultType;
-                    const miroftype = this.m_emitter.registerResolvedTypeReference(this.m_assembly.normalizeTypeOnly(oftype, ofbinds));
                     const mirbinds = new Map<string, MIRType>().set("K", this.m_emitter.registerResolvedTypeReference(binds.get("K") as ResolvedType)).set("V", this.m_emitter.registerResolvedTypeReference(binds.get("V") as ResolvedType));
 
                     const tupletype = ResolvedType.createSingle(ResolvedTupleAtomType.create([binds.get("K") as ResolvedType, binds.get("V") as ResolvedType]));
                     const mirtupletype = this.m_emitter.registerResolvedTypeReference(tupletype);
 
-                    const mirentity = new MIRPrimitiveMapEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, miroftype.typeID, mirbinds, mirtupletype.typeID);
+                    const mirentity = new MIRPrimitiveMapEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, mirbinds, mirtupletype.typeID);
                     this.m_emitter.masm.entityDecls.set(tkey, mirentity);
                 }
                 else if(tdecl.attributes.includes("__internal")) { 

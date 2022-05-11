@@ -1204,12 +1204,14 @@ class ICPPBodyEmitter {
     }
 
     processConstructorPrimaryCollectionEmptyList_Helper(op: MIRConstructorPrimaryCollectionEmpty, ltype: MIRPrimitiveListEntityTypeDecl): ICPPOp {
-        const miroftype = this.typegen.getMIRType(ltype.oftype);
+        const miroftype = this.typegen.getMIRType("None");
+        //TODO: clean this up
         return this.typegen.coerce(op.sinfo, this.getSpecialLiteralValue("none"), this.typegen.getMIRType("None"), this.trgtToICPPTargetLocation(op.trgt, op.tkey), miroftype,  ICPPOpEmitter.genNoStatmentGuard());
     }
 
     processConstructorPrimaryCollectionEmptyMap_Helper(op: MIRConstructorPrimaryCollectionEmpty, ltype: MIRPrimitiveMapEntityTypeDecl): ICPPOp {
-        const miroftype = this.typegen.getMIRType(ltype.oftype);
+        const miroftype = this.typegen.getMIRType("None");
+        //TODO: clean this up
         return this.typegen.coerce(op.sinfo, this.getSpecialLiteralValue("none"), this.typegen.getMIRType("None"), this.trgtToICPPTargetLocation(op.trgt, op.tkey), miroftype,  ICPPOpEmitter.genNoStatmentGuard());
     }
 

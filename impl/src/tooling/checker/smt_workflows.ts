@@ -31,6 +31,7 @@ function generateStandardVOpts(mode: SymbolicActionMode): VerifierOptions {
         SLEN_MAX: 48,
         BLEN_MAX: 32,
 
+        ARRAY_MODE: "Seq",
         CONTAINER_MAX: 3,
 
         ActionMode: mode
