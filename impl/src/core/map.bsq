@@ -62,7 +62,7 @@ __internal entity Map<K grounded KeyType, V> provides Some, Expandoable<[K, V]>,
         }
         else {
             let e = MapOps::s_map_get<K, V>(this, key);
-            res = e.1;
+            v = e.1;
             return true;
         }
     }

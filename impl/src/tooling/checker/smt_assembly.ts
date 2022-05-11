@@ -23,7 +23,6 @@ type SMT2FileInfo = {
     TUPLE_INFO: { decls: string[], constructors: string[], boxing: string[] },
     RECORD_INFO: { decls: string[], constructors: string[], boxing: string[] },
     TYPE_INFO: { decls: string[], constructors: string[], boxing: string[] }
-    COLLECTION_INFO: string[],
     EPHEMERAL_DECLS: { decls: string[], constructors: string[] },
     RESULT_INFO: { decls: string[], constructors: string[] },
     MASK_INFO: { decls: string[], constructors: string[] },
@@ -43,8 +42,9 @@ class SMTFunction {
     readonly result: SMTTypeInfo;
 
     readonly body: SMTExp;
+    readonly implicitlambdas: string[] | undefined;
 
-    constructor(fname: string, args: { vname: string, vtype: SMTTypeInfo }[], maskname: string | undefined, masksize: number, result: SMTTypeInfo, body: SMTExp) {
+    constructor(fname: string, args: { vname: string, vtype: SMTTypeInfo }[], maskname: string | undefined, masksize: number, result: SMTTypeInfo, body: SMTExp, implicitlambdas: string[] | undefined) {
         this.fname = fname;
         this.args = args;
         this.maskname = maskname;
@@ -52,14 +52,19 @@ class SMTFunction {
         this.result = result;
 
         this.body = body;
+        this.implicitlambdas = implicitlambdas;
     }
 
     static create(fname: string, args: { vname: string, vtype: SMTTypeInfo }[], result: SMTTypeInfo, body: SMTExp): SMTFunction {
-        return new SMTFunction(fname, args, undefined, 0, result, body);
+        return new SMTFunction(fname, args, undefined, 0, result, body, undefined);
+    }
+
+    static createWithImplicitLambdas(fname: string, args: { vname: string, vtype: SMTTypeInfo }[], result: SMTTypeInfo, body: SMTExp, implicitlambdas: string[]): SMTFunction {
+        return new SMTFunction(fname, args, undefined, 0, result, body, implicitlambdas);
     }
 
     static createWithMask(fname: string, args: { vname: string, vtype: SMTTypeInfo }[], maskname: string, masksize: number, result: SMTTypeInfo, body: SMTExp): SMTFunction {
-        return new SMTFunction(fname, args, maskname, masksize, result, body);
+        return new SMTFunction(fname, args, maskname, masksize, result, body, undefined);
     }
 
     emitSMT2(): string {
@@ -420,7 +425,15 @@ class SMTAssembly {
 
         const okinv = new Set<string>(assembly.functions.map((f) => f.fname));
         assembly.functions.forEach((smtfun) => {
-            invokes.set(smtfun.fname, SMTAssembly.processBodyInfo(smtfun.fname, smtfun.body, okinv));
+            const cn = SMTAssembly.processBodyInfo(smtfun.fname, smtfun.body, okinv);
+            if(smtfun.implicitlambdas !== undefined) {
+                smtfun.implicitlambdas.forEach((cc) => {
+                    if(okinv.has(cc)) {
+                        cn.callees.add(cc);
+                    }
+                });
+            }
+            invokes.set(smtfun.fname, cn);
         });
 
         let roots: SMTCallGNode[] = [];
@@ -741,11 +754,9 @@ class SMTAssembly {
                 boxing: [
                     ...termtypeinfo.map((tti) => tti.boxf), 
                     ...ofinternaltypeinfo.map((ttofi) => ttofi.boxf), 
-                    ...collectiontypeinfo.map((cti) => cti.boxf),
-                    ...collectiontypeinfo.map((clti) => clti.boxf)
+                    ...collectiontypeinfo.map((cti) => cti.boxf)
                 ] 
             },
-            COLLECTION_INFO: collectiontypeinfo.map((cti) => cti.decl),
             EPHEMERAL_DECLS: { 
                 decls: etypeinfo.map((kti) => kti.decl), 
                 constructors: etypeinfo.map((kti) => kti.consf) 
@@ -803,7 +814,6 @@ class SMTAssembly {
             .replace(";;TUPLE_TYPE_BOXING;;", joinWithIndent(sfileinfo.TUPLE_INFO.boxing, "      "))
             .replace(";;RECORD_TYPE_BOXING;;", joinWithIndent(sfileinfo.RECORD_INFO.boxing, "      "))
             .replace(";;TYPE_BOXING;;", joinWithIndent(sfileinfo.TYPE_INFO.boxing, "      "))
-            .replace(";;COLLECTION_DECLS;;", joinWithIndent(sfileinfo.COLLECTION_INFO, ""))
             .replace(";;EPHEMERAL_DECLS;;", joinWithIndent(sfileinfo.EPHEMERAL_DECLS.decls, "      "))
             .replace(";;EPHEMERAL_CONSTRUCTORS;;", joinWithIndent(sfileinfo.EPHEMERAL_DECLS.constructors, "      "))
             .replace(";;RESULT_DECLS;;", joinWithIndent(sfileinfo.RESULT_INFO.decls, "      "))

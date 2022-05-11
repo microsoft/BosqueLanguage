@@ -109,7 +109,7 @@ entity Board provides APIType {
     }
 
     method checkDraw(): Bool {
-        return !this.cells.containsNone();
+        return !this.cells.contains(PlayerMark::empty);
     }
 
     method checkAnyWinner(): PlayerMark? {

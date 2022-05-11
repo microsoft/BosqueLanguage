@@ -2747,7 +2747,7 @@ class SMTBodyEmitter {
                 const cbody = SMTCallSimple.makeEq(new SMTVar(args[0].vname), new SMTConst(emptyconst));
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
             }
-            case "s_list_count": {
+            case "s_list_size": {
                 const lt = this.typegen.getMIRType(idecl.params[0].type);
                 const cbody = this.typegen.generateListTypeGetLength(lt, new SMTVar(args[0].vname));
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
@@ -2956,6 +2956,8 @@ class SMTBodyEmitter {
                 const pcfn = this.typegen.lookupFunctionName(pc.code);
                 const captured = pc.cargs.map((carg) => carg.cname);
 
+                const implicitlambdas = [pcfn];
+
                 if (this.vopts.ARRAY_MODE === "Seq") {
                     const maparray = new SMTCallSimple("seq.map", [
                         new SMTConst(`(lambda ((@@x ${argtype.smttypename})) (${pcfn} @@x${captured.length !== 0 ? (" " + captured.join(" ")) : ""}))`),
@@ -2963,7 +2965,7 @@ class SMTBodyEmitter {
                     ]);
 
                     if (this.isSafeInvoke(pc.code)) {
-                        return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateListTypeConstructorSeq(mirrestype, maparray));
+                        return SMTFunction.createWithImplicitLambdas(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateListTypeConstructorSeq(mirrestype, maparray), implicitlambdas);
                     }
                     else {
                         const trgterr = new SMTCallSimple("seq.unit", [this.typegen.generateResultTypeConstructorError(this.typegen.getMIRType("Bool"), new SMTConst("ErrorID_Target"))]);
@@ -2988,12 +2990,12 @@ class SMTBodyEmitter {
                             )
                         );
 
-                        return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                        return SMTFunction.createWithImplicitLambdas(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody, implicitlambdas);
                     }
                 }
                 else {
                     const cbody = NOT_IMPLEMENTED("s_list_map_pred array");
-                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                    return SMTFunction.createWithImplicitLambdas(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody, implicitlambdas);
                 }
             }
             case "s_llist_map_pred_idx": {
@@ -3009,6 +3011,8 @@ class SMTBodyEmitter {
                 const pcfn = this.typegen.lookupFunctionName(pc.code);
                 const captured = pc.cargs.map((carg) => carg.cname);
 
+                const implicitlambdas = [pcfn];
+
                 if (this.vopts.ARRAY_MODE === "Seq") {
                     const maparray = new SMTCallSimple("seq.map", [
                         new SMTConst(`(lambda ((@@x ${argtype.smttypename})) (${pcfn} @@x${captured.length !== 0 ? (" " + captured.join(" ")) : ""}))`),
@@ -3016,7 +3020,7 @@ class SMTBodyEmitter {
                     ]);
 
                     if (this.isSafeInvoke(pc.code)) {
-                        return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateListTypeConstructorSeq(mirrestype, maparray));
+                        return SMTFunction.createWithImplicitLambdas(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateListTypeConstructorSeq(mirrestype, maparray), implicitlambdas);
                     }
                     else {
                         const mirresult_T = (this.typegen.assembly.entityDecls.get(mirrestype.typeID) as MIRPrimitiveInternalEntityTypeDecl).terms.get("T") as MIRType;
@@ -3043,12 +3047,12 @@ class SMTBodyEmitter {
                             )
                         );
 
-                        return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                        return SMTFunction.createWithImplicitLambdas(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody, implicitlambdas);
                     }
                 }
                 else {
                     const cbody = NOT_IMPLEMENTED("s_list_map_fn array");
-                    return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                    return SMTFunction.createWithImplicitLambdas(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody, implicitlambdas);
                 }
             }
             case "s_list_map_fn_idx": {

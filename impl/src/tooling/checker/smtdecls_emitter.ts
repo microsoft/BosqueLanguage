@@ -368,11 +368,17 @@ class SMTEmitter {
         }
 
         if(this.temitter.vopts.ARRAY_MODE === "Seq") {
-            let optblock: SMTExp = this.temitter.generateListTypeConstructorSeq(tt, new SMTCallSimple("seq.++", cargs.map((cc) => this.temitter.generateResultGetSuccess(lentrytype, cc))));
+            let optblock: SMTExp = new SMTLet(`carg_${this.vopts.CONTAINER_MAX - 1}`, this.temitter.generateHavocConstructorCall(lentrytype, new SMTVar("path"), new SMTConst(`${this.vopts.CONTAINER_MAX - 1}`)),
+                new SMTIf(
+                    this.temitter.generateResultIsErrorTest(lentrytype, new SMTVar(`carg_${this.vopts.CONTAINER_MAX - 1}`)),
+                    this.temitter.generateErrorResultAssert(tt),
+                    this.temitter.generateResultTypeConstructorSuccess(tt, this.temitter.generateListTypeConstructorSeq(tt, new SMTCallSimple("seq.++", cargs.map((cc) => new SMTCallSimple("seq.unit", [this.temitter.generateResultGetSuccess(lentrytype, cc)])))))
+                )
+            );
             
             for (let i = this.vopts.CONTAINER_MAX - 1; i > 0; --i) {
-                const ehavoc = this.temitter.generateHavocConstructorCall(lentrytype, new SMTVar("path"), new SMTConst(`${i}`));
-                const ccvar = `carg_${i}`;
+                const ehavoc = this.temitter.generateHavocConstructorCall(lentrytype, new SMTVar("path"), new SMTConst(`${i-1}`));
+                const ccvar = `carg_${i-1}`;
                 const chkfun = this.temitter.generateResultIsErrorTest(lentrytype, new SMTVar(ccvar));
 
                 optblock = new SMTLet(ccvar, ehavoc, 
@@ -381,7 +387,7 @@ class SMTEmitter {
                         this.temitter.generateErrorResultAssert(tt),
                         new SMTIf(
                             SMTCallSimple.makeEq(new SMTVar("len"), new SMTConst(`${i}`)),
-                            this.temitter.generateListTypeConstructorSeq(tt, new SMTCallSimple("seq.++", cargs.slice(0, i).map((cc) => this.temitter.generateResultGetSuccess(lentrytype, cc)))),
+                            this.temitter.generateResultTypeConstructorSuccess(tt, this.temitter.generateListTypeConstructorSeq(tt, new SMTCallSimple("seq.++", cargs.slice(0, i).map((cc) => new SMTCallSimple("seq.unit", [this.temitter.generateResultGetSuccess(lentrytype, cc)]))))),
                             optblock
                         )
                     )
@@ -391,7 +397,11 @@ class SMTEmitter {
             const hbody = new SMTLet("len", clen,
                 new SMTIf(SMTCallSimple.makeOrOf(new SMTCallSimple("<", [new SMTVar("len"), new SMTConst("0")]), new SMTCallSimple("<", [new SMTConst("@CONTAINERMAX"), new SMTVar("len")])),
                     this.temitter.generateErrorResultAssert(tt),
-                    optblock
+                    new SMTIf(
+                        SMTCallSimple.makeEq(new SMTVar("len"), new SMTConst("0")),
+                        this.temitter.generateResultTypeConstructorSuccess(tt, new SMTConst(`${this.temitter.getSMTTypeFor(tt).smttypename}@@empty`)),
+                        optblock
+                    )
                 )
             );
 
@@ -424,36 +434,45 @@ class SMTEmitter {
 
         this.walkAndGenerateHavocType(lentrytype, havocfuncs, ufuncs);
 
-
         let cargs: SMTExp[] = [];
         for(let i = 0; i < this.vopts.CONTAINER_MAX; ++i) {
             cargs.push(new SMTVar(`carg_${i}`));
         }
 
-        let optblock: SMTExp = this.temitter.generateMapTypeConstructorElements(tt, new SMTConst(`${this.vopts.CONTAINER_MAX}`), cargs.map((cc) => this.temitter.generateResultGetSuccess(lentrytype, cc)));
-
+        let optblock: SMTExp = new SMTLet(`carg_${this.vopts.CONTAINER_MAX - 1}`, this.temitter.generateHavocConstructorCall(lentrytype, new SMTVar("path"), new SMTConst(`${this.vopts.CONTAINER_MAX - 1}`)),
+            new SMTIf(
+                this.temitter.generateResultIsErrorTest(lentrytype, new SMTVar(`carg_${this.vopts.CONTAINER_MAX - 1}`)),
+                this.temitter.generateErrorResultAssert(tt),
+                this.temitter.generateResultTypeConstructorSuccess(tt, this.temitter.generateMapTypeConstructorElements(tt, new SMTConst(`${this.vopts.CONTAINER_MAX}`), cargs.map((cc) => this.temitter.generateResultGetSuccess(lentrytype, cc))))
+            )
+        );
+            
         for (let i = this.vopts.CONTAINER_MAX - 1; i > 0; --i) {
-            const ehavoc = this.temitter.generateHavocConstructorCall(lentrytype, new SMTVar("path"), new SMTConst(`${i}`));
-            const ccvar = `carg_${i}`;
+            const ehavoc = this.temitter.generateHavocConstructorCall(lentrytype, new SMTVar("path"), new SMTConst(`${i-1}`));
+            const ccvar = `carg_${i-1}`;
             const chkfun = this.temitter.generateResultIsErrorTest(lentrytype, new SMTVar(ccvar));
 
-            optblock = new SMTLet(ccvar, ehavoc,
+            optblock = new SMTLet(ccvar, ehavoc, 
                 new SMTIf(
                     chkfun,
                     this.temitter.generateErrorResultAssert(tt),
                     new SMTIf(
                         SMTCallSimple.makeEq(new SMTVar("len"), new SMTConst(`${i}`)),
-                        this.temitter.generateMapTypeConstructorElements(tt, new SMTConst(`${i}`), cargs.slice(0, i).map((cc) => this.temitter.generateResultGetSuccess(lentrytype, cc))),
+                        this.temitter.generateResultTypeConstructorSuccess(tt, this.temitter.generateMapTypeConstructorElements(tt, new SMTConst(`${i}`), cargs.slice(0, i).map((cc) => this.temitter.generateResultGetSuccess(lentrytype, cc)))),
                         optblock
                     )
                 )
             );
         }
-
+        
         const hbody = new SMTLet("len", clen,
             new SMTIf(SMTCallSimple.makeOrOf(new SMTCallSimple("<", [new SMTVar("len"), new SMTConst("0")]), new SMTCallSimple("<", [new SMTConst("@CONTAINERMAX"), new SMTVar("len")])),
                 this.temitter.generateErrorResultAssert(tt),
-                optblock
+                new SMTIf(
+                    SMTCallSimple.makeEq(new SMTVar("len"), new SMTConst("0")),
+                    this.temitter.generateResultTypeConstructorSuccess(tt, new SMTConst(`${this.temitter.getSMTTypeFor(tt).smttypename}@@empty`)),
+                    optblock
+                )
             )
         );
 
@@ -591,7 +610,7 @@ class SMTEmitter {
                 cargs: [{ fname: consfuncs.seqf, ftype: `(Seq ${this.temitter.getSMTTypeFor(edecl.getTypeT(), true).smttypename})`}]
             };
 
-            const efunc = this.temitter.generateListTypeConstructorSeq(mirtype, new SMTConst("seq.empty"));
+            const efunc = this.temitter.generateListTypeConstructorSeq(mirtype, new SMTConst(`(as seq.empty (Seq ${this.temitter.getSMTTypeFor(edecl.getTypeT(), true).smttypename}))`));
             const emptyconst = {fkind: smttype.smttypename, fname: smttype.smttypename + "@@empty", fexp: efunc.emitSMT2(undefined)};
 
             const smtdecl = new SMTEntityCollectionTypeDecl(smttype.smttypename, smttype.smttypetag, consdecl, consopfuncs.box, consopfuncs.bfield, emptyconst, undefined);
