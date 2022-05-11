@@ -676,7 +676,7 @@ class SMTEmitter {
             cname: consfuncs.cons,
             cargs: [
                 { fname: consfuncs.lenf, ftype: this.temitter.getSMTTypeFor(this.temitter.getMIRType("Nat")).smttypename},
-                { fname: consfuncs.arrayf, ftype: `(Array BNat ${smtvtup.smttypename})`}
+                { fname: consfuncs.arrayf, ftype: `(Array ${smtk.smttypename} ${esmttype.smttypename})`}
             ]
         };
 
