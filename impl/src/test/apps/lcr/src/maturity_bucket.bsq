@@ -1,12 +1,13 @@
 namespace NSMaturityBucket;
 
-type MaturityBucket
-    = Daily Int
-    | DayRange Int Int
-    | DayYear Int Int
-    | Yearly Int Int
-    | Residual
-
+typedecl MaturityBucket provides APIType
+of
+Daily { days: Int }
+| DayRange { x: Int, y: Int }
+| DayYear { x: Int, y: Int }
+| Yearly { x: Int, y: Int }
+| Residual
+;
 
 function daysToMaturity(fromdate: DateTime, maturityDate: DateTime): Int {
     return DateTime::diffInDays(maturityDate, fromDate);

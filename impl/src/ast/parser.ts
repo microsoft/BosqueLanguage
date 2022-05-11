@@ -2911,7 +2911,7 @@ class Parser {
 
             if (vars !== undefined) {
                 if (decls.has(name)) {
-                    this.raiseError(sinfo.line, "Variable is already defined in scope");
+                    this.raiseError(sinfo.line, `Variable "${name}" is already defined in scope`);
                 }
                 decls.add(name);
 
@@ -2919,11 +2919,11 @@ class Parser {
             }
             else {
                 if (!this.m_penv.getCurrentFunctionScope().isVarNameDefined(name)) {
-                    this.raiseError(sinfo.line, "Variable is not defined in scope");
+                    this.raiseError(sinfo.line, `Variable "${name}" is not defined in scope`);
                 }
 
                 if (!(itype instanceof AutoTypeSignature)) {
-                    this.raiseError(sinfo.line, "Cannot redeclare type of variable on assignment");
+                    this.raiseError(sinfo.line, `Cannot redeclare type of variable "${name}" on assignment`);
                 }
 
                 return new VariableAssignmentStructuredAssignment(name);

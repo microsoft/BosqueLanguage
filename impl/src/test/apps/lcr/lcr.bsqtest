@@ -7,6 +7,11 @@ namespace Test;
 
 import NSCentralBank;
 import NSFedCode;
+import NSFedCodeRules;
+
+errtest function classifySingle(centralBanks: Map<NSFedCodeRules::PartyID, NSCentralBank::CentralBank>, cashflow: NSFedCodeRules::Cashflow): NSFedCodeRules::RuleCode? {
+    return NSFedCodeRules::classify(centralBanks, cashflow);
+}
 
 chktest function fedcode_classify_other(cashflow: NSFedCode::Cashflow): Bool {
     let fc = NSFedCode::classify(cashflow, Map<NSFedCode::PartyID, NSCentralBank::CentralBank>{});

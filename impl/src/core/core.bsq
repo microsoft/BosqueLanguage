@@ -450,10 +450,10 @@ __internal __constructable entity DataBuffer<T unique BufferParsable> provides S
 }
 
 //<summary>Primitive DateTime value.</summary>
-__internal __typedeclable entity DateTime provides Some, Orderable, APIType {
+__internal __typedeclable entity DateTime provides Some, APIType {
     __assume_safe internal function s_create(year: Nat, month: Nat, day: Nat, hour: Nat, min: Nat, tzdata: String): DateTime = datetime_create;
 
-    function create(year: Nat, month?: Nat=0, day?: Nat=1, hour?: Nat=0, min?: Nat=0, tzdata?: String="UTC"): DateTime
+    function create(year: Nat, month?: Nat=0n, day?: Nat=1n, hour?: Nat=0n, min?: Nat=0n, tzdata?: String="UTC"): DateTime
         requires year >= 1900n;
         requires month < 12n;
         requires day != 0n && day <= 31n;
