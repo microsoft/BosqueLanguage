@@ -1688,8 +1688,8 @@ class SMTBodyEmitter {
     }
 
     processConstructorPrimaryCollectionEmpty(op: MIRConstructorPrimaryCollectionEmpty, continuation: SMTExp): SMTExp {
-        const consexp = new SMTConst("BTerm@none");
-        return new SMTLet(this.varToSMTName(op.trgt).vname, consexp, continuation);
+        const emptyconst = this.typegen.getSMTTypeFor(this.typegen.getMIRType(op.tkey)).smttypename + "@@empty";
+        return new SMTLet(this.varToSMTName(op.trgt).vname, new SMTConst(emptyconst), continuation);
     }
 
     processConstructorPrimaryCollectionSingletons_ListHelper(ltype: MIRPrimitiveListEntityTypeDecl, exps: SMTExp[]): SMTExp {
