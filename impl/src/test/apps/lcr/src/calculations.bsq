@@ -10,8 +10,19 @@ import NSOutflows;
 import NSProduct;
 import NSRules;
 
+
+function datesEqual(t1: DateTime, t2: DateTime): Bool {
+    //TODO: actually do something
+    return true;
+}
+
+function addDays(dcount: Int, t: DateTime): DateTime {
+    //TODO: actually do something
+    return t;
+}
+
 function lcr(toCounterparty: Map<NSCounterParty::CounterpartyId, NSCounterParty::Counterparty>, product: Map<NSProduct::ProductId, NSProduct::Product>, t: DateTime, flowsForDate: List<[DateTime, NSFlows::Flow]>, reserveBalanceRequirement: NSBasics::Balance): NSBasics::Ratio {
-    let relevantFlows = flowsForDate.filter(pred(fdp) => datesEqual(fdp.0, t)).map(fn(pdp) => fdp.1);
+    let relevantFlows = flowsForDate.filter(pred(fdp) => datesEqual(fdp.0, t)).map(fn(fdp) => fdp.1);
     let hqla = hqlaAmount(product, relevantFlows, reserveBalanceRequirement);
 
     let totalNetCashOutflow = totalNetCashOutflowAmount(toCounterparty, t, flowsForDate);
@@ -130,11 +141,18 @@ function maturityMismatchInflowRules(toCounterparty: Map<NSCounterParty::Counter
 }
 
 function totalNetCashOutflowAmount(toCounterparty: Map<NSCounterParty::CounterpartyId, NSCounterParty::Counterparty>, t: DateTime, flowsForDate: List<[DateTime, Flow]>): Balance {
-    let dates = List<Int>{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30}
+    //let dates = List<Int>{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30}
+    //TODO: once we have dates doing something
+    let dates = List<Int>{1, 20}
         .map(fn(i) => addDays(i, t));
 
-    let nonMaturityOutflowAmount = aggregateSpan(NSRules::isAnyApplicable(nonMaturityOutflowRules(toCounterparty, t)));
-    let nonMaturityInflowAmount = aggregateSpan(NSRules::isAnyApplicable((nonMaturityInflowRules(toCounterparty, t))));
+    let nonMaturityOutflowAmount = aggregateSpan(dates, flowsForDate, pred(flow: NSFlows::Flow) => {
+        return NSRules::isAnyApplicable(flow, nonMaturityOutflowRules(toCounterparty, t));
+    });
+
+    let nonMaturityInflowAmount = aggregateSpan(dates, flowsForDate, pred(flow: NSFlows::Flow) => {
+        NSRules::isAnyApplicable((nonMaturityInflowRules(toCounterparty, t)));
+    });
 
     let mmorules = maturityMismatchOutflowRules(toCounterparty, t);
     let maturityOutflows = spanDates(dates, flowsForDate, pred(flow: NSFlows::Flow) => {

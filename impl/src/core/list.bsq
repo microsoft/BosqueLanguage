@@ -1141,13 +1141,14 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                 return this;
             }
             else {
-                let sti = ListOps::s_list_single_indexof_true(mask);
-                if(sti != -1i) {
-                    return List<T>{ListOps::s_list_get<T>(this, NumericOps::s_intToNat(sti))};
-                }
-                else {
-                    return ListOps::s_list_filter_mask<T>(this, mask);
-                }
+                return ListOps::s_list_reduce<T, List<T>>(this, List<T>{}, recursive? fn(accl: List<T>, x: T): U => {
+                    if(!p[recursive?](x)) {
+                        return accl;
+                    }
+                    else {
+                        return ListOps::s_push_back<T>(accl, x);
+                    }
+                });
             }
         }
     }
@@ -1169,13 +1170,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                 return ListOps::s_map_fn<T, U>(fl, fn(v: T): U => s_safeAs<T, U>(v));
             }
             else {
-                let sti = ListOps::s_list_single_indexof_true(mask);
-                if(sti != -1) {
-                    return List<T>{s_safeAs<T, U>(ListOps::s_list_get<T>(this, NumericOps::s_intToNat(idx)))};
-                }
-                else {
-                    return ListOps::s_blockingfailure<List<T>>();
-                }
+                return ListOps::s_blockingfailure<List<T>>();
             }
         }
     }
@@ -1193,13 +1188,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                 return ListOps::s_map_fn<T, T!Some>(fl, fn(v: T): U => s_safeAs<T, T!Some>(v));
             }
             else {
-                let sti = ListOps::s_list_single_indexof_true(mask);
-                if(sti != -1) {
-                    return List<T!Some>{s_safeAs<T, T!Some>(ListOps::s_list_get<T>(this, NumericOps::s_intToNat(idx)))};
-                }
-                else {
-                    return ListOps::s_blockingfailure<List<T!Some>>();
-                }
+                return ListOps::s_blockingfailure<List<T!Some>>();
             }
         }
     }
@@ -1217,13 +1206,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                 return ListOps::s_map_fn<T, T!IOptionT>(fl, fn(v: T): U => s_safeAs<T, T!IOptionT>(v));
             }
             else {
-                let sti = ListOps::s_list_single_indexof_true(mask);
-                if(sti != -1) {
-                    return List<T!IOptionT>{s_safeAs<T, T!IOptionT>(ListOps::s_list_get<T>(this, NumericOps::s_intToNat(idx)))};
-                }
-                else {
-                    return ListOps::s_blockingfailure<List<T!IOptionT>>();
-                }
+                return ListOps::s_blockingfailure<List<T!IOptionT>>();
             }
         }
     }
@@ -1241,13 +1224,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                 return ListOps::s_map_fn<T, T!IResultT>(fl, fn(v: T): U => s_safeAs<T, T!IResultT>(v));
             }
             else {
-                let sti = ListOps::s_list_single_indexof_true(mask);
-                if(sti != -1) {
-                    return List<T!IResultT>{s_safeAs<T, T!IResultT>(ListOps::s_list_get<T>(this, NumericOps::s_intToNat(idx)))};
-                }
-                else {
-                    return ListOps::s_blockingfailure<List<T!IResultT>>();
-                }
+                return ListOps::s_blockingfailure<List<T!IResultT>>();
             }
         }
     }
@@ -1265,13 +1242,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                 return ListOps::s_map_fn<T, T!IResultE>(fl, fn(v: T): U => s_safeAs<T, T!IResultE>(v));
             }
             else {
-                let sti = ListOps::s_list_single_indexof_true(mask);
-                if(sti != -1) {
-                    return List<T!IResultE>{s_safeAs<T, T!IResultE>(ListOps::s_list_get<T>(this, NumericOps::s_intToNat(idx)))};
-                }
-                else {
-                    return ListOps::s_blockingfailure<List<T!IResultE>>();
-                }
+                return ListOps::s_blockingfailure<List<T!IResultE>>();
             }
         }
     }

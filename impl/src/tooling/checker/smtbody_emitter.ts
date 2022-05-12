@@ -3180,20 +3180,6 @@ class SMTBodyEmitter {
                 }
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
             }
-            case "s_list_filter_mask": {
-                const argtype = this.typegen.getSMTTypeFor(this.typegen.getMIRType(idecl.binds.get("T") as MIRResolvedTypeKey));
-                const sval = this.typegen.generateListTypeGetData(this.typegen.getMIRType(idecl.params[0].type), new SMTVar(args[0].vname));
-                const mval = this.typegen.generateListTypeGetData(this.typegen.getMIRType(idecl.params[1].type), new SMTVar(args[1].vname));
-
-                const foldcall = new SMTCallSimple("seq.foldl", [
-                    new SMTConst(`(lambda ((@@acc (Seq ${argtype.smttypename})) (@@x ${argtype.smttypename}) (@@flag Bool)) (seq.++ @@acc (seq.unit @@x)))`),
-                    new SMTConst(`(as seq.empty (Seq ${argtype.smttypename}))`),
-                    sval,
-                    mval
-                ]);
-
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateListTypeConstructorSeq(mirrestype, foldcall));
-            }
             case "s_list_reduce": {
                 const lt = this.typegen.getMIRType(idecl.params[0].type);
                 const sval = this.typegen.generateListTypeGetData(lt, new SMTVar(args[0].vname));

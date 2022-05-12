@@ -545,8 +545,10 @@ class TypeChecker {
                 }
             }
             else {
+                this.raiseErrorIf(exp.sinfo, env.lookupVar(v) === null, `Could not resolve (captured?) variable "${v}"`);
+
                 const vinfo = env.lookupVar(v) as VarInfo;
-                this.raiseErrorIf(exp.sinfo, vinfo.declaredType instanceof ResolvedFunctionType, "Cannot capture function typed argument");
+                this.raiseErrorIf(exp.sinfo, vinfo.declaredType instanceof ResolvedFunctionType, `Cannot capture function typed argument "${v}"`);
                 cargs.set(v, vinfo);
             }
         });
