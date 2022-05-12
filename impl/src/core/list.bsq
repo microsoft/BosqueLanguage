@@ -705,13 +705,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return T::zero;
         }
         else {
-            if(ListOps::s_list_size<T>(this) == 1n) {
-                return ListOps::s_list_get_front<T>(this);
-            }
-            else {
-                return ListOps::s_blockingfailure<T>();
-                //reduce
-            }
+            return ListOps::s_list_reduce<T, T>(this, T::zero, fn(a: T, b: T): T => (a + b));
         }
     }
 
@@ -1152,7 +1146,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                     return List<T>{ListOps::s_list_get<T>(this, NumericOps::s_intToNat(sti))};
                 }
                 else {
-                    return ListOps::s_blockingfailure<List<T>>();
+                    return ListOps::s_list_filter_mask<T>(this, mask);
                 }
             }
         }
@@ -1790,7 +1784,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return init;
         }
         else {
-            return ListOps::s_blockingfailure<U>();
+            return ListOps::s_list_reduce<T, U>(this, init, f);
         }
     }
 
