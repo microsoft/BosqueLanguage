@@ -212,123 +212,116 @@ entity Rule32g9 provides NSRules::Rule {
     }
 }
 
+entity Rule32h3 provides NSRules::Rule {
+    field toCounterparty: Map<NSCounterParty::CounterpartyId, NSCounterParty::Counterparty>;
 
-isRule32h3 : (Flow -> Counterparty) -> Flow -> Bool
-isRule32h3 counterparty flow =
-    let
-        cpty : Counterparty
-        cpty =
-            counterparty flow
-    in
-    flow.ruleCode
-        == [ "O", "D", "4" ]
-        && List.member cpty.counterpartyType
-            [ NonFinancialCorporate
-            , Sovereign
-            , CentralBank
-            , GovernmentSponsoredEntity
-            , PublicSectorEntity
-            , MultilateralDevelopmentBank
-            , OtherSupranational
-            , Bank
-            , SupervisedNonBankFinancialEntity
-            , DebtIssuingSpecialPurposeEntity
-            , OtherFinancialEntity
-            , Other
-            ]
-        && flow.insured
-        == FDIC
+    const acceptedCounterParty: List<NSCounterParty::CounterpartyType> = List<NSCounterParty::CounterpartyType>{
+        NSCounterParty::CounterpartyType::nonFinancialCorporate,
+        NSCounterParty::CounterpartyType::sovereign,
+        NSCounterParty::CounterpartyType::centralBank,
+        NSCounterParty::CounterpartyType::governmentSponsoredEntity,
+        NSCounterParty::CounterpartyType::publicSectorEntity,
+        NSCounterParty::CounterpartyType::multilateralDevelopmentBank,
+        NSCounterParty::CounterpartyType::otherSupranational,
+        NSCounterParty::CounterpartyType::bank,
+        NSCounterParty::CounterpartyType::supervisedNonBankFinancialEntity,
+        NSCounterParty::CounterpartyType::debtIssuingSpecialPurposeEntity,
+        NSCounterParty::CounterpartyType::otherFinancialEntity,
+        NSCounterParty::CounterpartyType::other
+    };
 
+    override method applies(flow: NSFlows::Flow): Bool {
+        let cpty = this.toCounterparty.get(flow.counterpartyId);
 
-isRule32h4 : (Flow -> Counterparty) -> Flow -> Bool
-isRule32h4 counterparty flow =
-    let
-        cpty : Counterparty
-        cpty =
-            counterparty flow
-    in
-    flow.ruleCode
-        == [ "O", "D", "4" ]
-        && List.member cpty.counterpartyType
-            [ NonFinancialCorporate
-            , Sovereign
-            , CentralBank
-            , GovernmentSponsoredEntity
-            , PublicSectorEntity
-            , MultilateralDevelopmentBank
-            , OtherSupranational
-            , Bank
-            , SupervisedNonBankFinancialEntity
-            , DebtIssuingSpecialPurposeEntity
-            , OtherFinancialEntity
-            , Other
-            ]
-        && flow.insured
-        /= FDIC
+        return flow.ruleCode === "O.D.4"
+            && Rule32h3::acceptedCounterParty.contains(cpty.counterpartyType)
+            && flow.insured === InsuranceType::fdic;
+    }
+}
 
+entity Rule32h4 provides NSRules::Rule {
+    field toCounterparty: Map<NSCounterParty::CounterpartyId, NSCounterParty::Counterparty>;
 
-isRule32l : Flow -> Bool
-isRule32l flow =
-    flow.ruleCode == [ "O", "O", "22" ]
+    const acceptedCounterParty: List<NSCounterParty::CounterpartyType> = List<NSCounterParty::CounterpartyType>{
+        NSCounterParty::CounterpartyType::nonFinancialCorporate,
+        NSCounterParty::CounterpartyType::sovereign,
+        NSCounterParty::CounterpartyType::centralBank,
+        NSCounterParty::CounterpartyType::governmentSponsoredEntity,
+        NSCounterParty::CounterpartyType::publicSectorEntity,
+        NSCounterParty::CounterpartyType::multilateralDevelopmentBank,
+        NSCounterParty::CounterpartyType::otherSupranational,
+        NSCounterParty::CounterpartyType::bank,
+        NSCounterParty::CounterpartyType::supervisedNonBankFinancialEntity,
+        NSCounterParty::CounterpartyType::debtIssuingSpecialPurposeEntity,
+        NSCounterParty::CounterpartyType::otherFinancialEntity,
+        NSCounterParty::CounterpartyType::other
+    };
 
+    override method applies(flow: NSFlows::Flow): Bool {
+        let cpty = this.toCounterparty.get(flow.counterpartyId);
 
-isRule33f1iii : LocalDate -> Flow -> Bool
-isRule33f1iii t flow =
-    let
-        days : Int
-        days =
-            daysToMaturity t flow.effectiveMaturityDate
-    in
-    List.member flow.ruleCode [ [ "I", "S", "1" ], [ "I", "S", "2" ], [ "I", "S", "5" ], [ "I", "S", "6" ], [ "I", "S", "7" ] ]
-        && flow.assetType
-        == Level1Assets
-        && (0 < days && days <= 30)
+        return flow.ruleCode === "O.D.4"
+            && Rule32h3::acceptedCounterParty.contains(cpty.counterpartyType)
+            && flow.insured !== InsuranceType::fdic;
+    }
+}
 
+entity Rule32l provides NSRules::Rule {
+    override method applies(flow: NSFlows::Flow): Bool {
+        return flow.ruleCode === "O.O.22";
+    }
+}
 
-isRule33f1iv : LocalDate -> Flow -> Bool
-isRule33f1iv t flow =
-    let
-        days : Int
-        days =
-            daysToMaturity t flow.effectiveMaturityDate
-    in
-    List.member flow.ruleCode [ [ "I", "S", "1" ], [ "I", "S", "2" ], [ "I", "S", "5" ], [ "I", "S", "6" ], [ "I", "S", "7" ] ]
-        && flow.assetType
-        == Level2aAssets
-        && (0 < days && days <= 30)
+entity Rule33f1iii provides NSRules::Rule {
+    field t: DateTime;
 
+    override method applies(flow: NSFlows::Flow): Bool {
+        let days = daysToMaturity(t, flow.effectiveMaturityDate);
 
+        return (flow.ruleCode === "I.S.1" || flow.ruleCode === "I.S.2" || flow.ruleCode === "I.S.5" || flow.ruleCode === "I.S.6" || flow.ruleCode === "I.S.7")
+            && flow.assetType === NSBasics::AssetCategoryCodes::Level1Assets
+            && (0i < remainingDays && remainingDays <= 30i);
+    }
+}
 
+entity Rule33f1iv provides NSRules::Rule {
+    field t: DateTime;
 
-outflowRules : (Flow -> Counterparty) -> LocalDate -> List (Rule Flow)
-outflowRules counterparty t =
-    [ Rule "32(a)(1)" 0.03 isRule32a1
-    , Rule "32(a)(2)" 0.1 (isRule32a2 counterparty)
-    , Rule "32(a)(3)" 0.2 (isRule32a3 counterparty)
-    , Rule "32(a)(4)" 0.4 (isRule32a4 counterparty)
-    , Rule "32(a)(5)" 0.4 (isRule32a5 counterparty)
-    , Rule "32(b)" 1.0 isRule32b
-    , Rule "32(c)" 0.2 isRule32c
-    , Rule "32(d)" 0.1 isRule32d
-    , Rule "32(e)" 0.0 isRule32e
-    , Rule "32(f)" 0.0 isRule32f
-    , Rule "32(g)(1)" 0.0 (isRule32g1 counterparty t)
-    , Rule "32(g)(2)" 0.0 (isRule32g2 counterparty t)
-    , Rule "32(g)(3)" 0.0 (isRule32g3 counterparty t)
-    , Rule "32(g)(4)" 0.0 (isRule32g4 counterparty t)
-    , Rule "32(g)(5)" 0.0 (isRule32g5 counterparty)
-    , Rule "32(g)(6)" 0.0 (isRule32g6 counterparty)
-    , Rule "32(g)(7)" 0.0 (isRule32g7 counterparty)
-    , Rule "32(g)(8)" 0.0 (isRule32g8 counterparty)
-    , Rule "32(g)(9)" 0.0 (isRule32g9 counterparty)
-    , Rule "32(h)(3)" 0.05 (isRule32h3 counterparty)
-    , Rule "32(h)(4)" 0.25 (isRule32h4 counterparty)
-    , Rule "32(l)" 0.0 isRule32l
-    , Rule "33(f)(1)(iii)" 0.0 (isRule33f1iii t)
-    , Rule "33(f)(1)(iv)" 0.15 (isRule33f1iv t)
-    ]
+    override method applies(flow: NSFlows::Flow): Bool {
+        let days = daysToMaturity(t, flow.effectiveMaturityDate);
 
+        return (flow.ruleCode === "I.S.1" || flow.ruleCode === "I.S.2" || flow.ruleCode === "I.S.5" || flow.ruleCode === "I.S.6" || flow.ruleCode === "I.S.7")
+            && flow.assetType === NSBasics::AssetCategoryCodes::Level2Assets
+            && (0i < remainingDays && remainingDays <= 30i);
+    }
+}
 
-
--- Rules broken out for (eventual) unit testing
+function outflowRules(counterparty: Map<NSCounterParty::CounterpartyId, NSCounterParty::Counterparty>, t: DateTime): List<Rule> {
+    return List<Rule>{ 
+        Rule32a1{"32(a)(1)", 0.03f},
+        Rule32a2{"32(a)(2)", 0.1f, counterparty},
+        Rule32a3{"32(a)(3)", 0.2f, counterparty},
+        Rule32a4{"32(a)(4)", 0.4f, counterparty},
+        Rule32a5{"32(a)(5)", 0.4f, counterparty},
+        Rule32b{"32(b)", 1.0f},
+        Rule32c{"32(c)", 0.2f},
+        Rule32d{"32(d)", 0.1f},
+        Rule32e{"32(e)", 0.0f},
+        Rule32f{"32(f)", 0.0f},
+        Rule32g1{"32(g)(1)", 0.0f, counterparty, t},
+        Rule32g2{"32(g)(2)", 0.0f, counterparty, t},
+        Rule32g3{"32(g)(3)", 0.0f, counterparty, t},
+        Rule32g4{"32(g)(4)", 0.0f, counterparty, t},
+        Rule32g5{"32(g)(5)", 0.0f, counterparty},
+        Rule32g6{"32(g)(6)", 0.0f, counterparty},
+        Rule32g7{"32(g)(7)", 0.0f, counterparty},
+        Rule32g8{"32(g)(8)", 0.0f, counterparty},
+        Rule32g9{"32(g)(9)", 0.0f, counterparty},
+        Rule32h3{"32(h)(3)", 0.05f, counterparty},
+        Rule32h4{"32(h)(4)", 0.25f, counterparty},
+        Rule32l{"32(l)", 0.0f},
+        Rule33f1iii{"33(f)(1)(iii)", 0.0f, t},
+        Rulef1iv{s"33(f)(1)(iv)", 0.15f, t}
+    };
+}
 

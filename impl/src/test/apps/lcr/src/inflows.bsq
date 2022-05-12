@@ -1,120 +1,109 @@
 namespace NSInflows;
 
-/*
+import NSBasics;
+import NSCurrency;
+import NSCountry;
+import NSCounterParty;
+import NSFlows;
+import NSMaturityBucket;
+import NSRules;
 
-{-| The list of all rules pertaining to inflows.
--}
-inflowRules : (Flow -> Counterparty) -> LocalDate -> List (Rule Flow)
-inflowRules toCounterparty t =
-    [ Rule "20(a)(1)" 1.0 (isRule20a1 t)
-    , Rule "20(a)(3)-(6)" 1.0 isRule20a3dash6
-    , Rule "22(b)(3)L1" -1.0 isRule22b3L2a
-    , Rule "22(b)(3)L2a" -0.85 isRule22b3L2a
-    , Rule "22(b)(3)L2b" -0.5 isRule22b3L2b
-    , Rule "20(b)" 0.85 isRule20b
-    , Rule "20(c)" 0.5 isRule20c
-    , Rule "33(b)" 1.0 isRule33b
-    , Rule "33(c)" 0.5 (isRule33c toCounterparty t)
-    , Rule "33(d)(1)" 1.0 (isRule33d1 toCounterparty)
-    , Rule "33(d)(2)" 1.0 (isRule33d2 toCounterparty)
-    , Rule "33(e)" 1.0 isRule33e
-    , Rule "33(g)" 1.0 isRule33g
-    , Rule "33(h)" 0.0 isRule33h
-    ]
+entity Rule20a1 provides NSRules::Rule {
+    field t: DateTime;
 
+    override method applies(flow: NSFlows::Flow): Bool {
+        let remainingDays = daysToMaturity(t, flow.maturityDate);
 
+        return (flow.ruleCode === "I.A.3.1" || flow.ruleCode === "I.A.3.2" || flow.ruleCode === "I.A.3.3" || flow.ruleCode === "I.A.3.4" || flow.ruleCode === "I.A.3.5" || flow.ruleCode === "I.A.3.6" || flow.ruleCode === "I.A.3.7" || flow.ruleCode === "I.A.3.8")
+            && (cpty.counterpartyType === NSCounterParty::CounterpartyType::retail || cpty.counterpartyType === NSCounterParty::CounterpartyType::smallBusiness)
+            && remainingDays == 0i;
+    }
+}
 
--- Rule logic is below for (eventual) unit testability
+entity Rule20a3dash6 provides NSRules::Rule {
+    override method applies(flow: NSFlows::Flow): Bool {
+        let aopts = (flow.ruleCode === "I.A.1" || flow.ruleCode === "I.A.2")
+            && flow.collateralClass === NSBasics::AssetCategoryCodes::Level1Assets
+            && flow.isTreasuryControl;
 
+        let sopts = (flow.ruleCode === "I.S.1" || flow.ruleCode === "I.S.2" || flow.ruleCode === "I.S.4")
+            && flow.collateralClass === NSBasics::AssetCategoryCodes::Level1Assets
+            && flow.isTreasuryControl
+            && flow.isUnencumbered;
 
-isRule20a1 : LocalDate -> Flow -> Bool
-isRule20a1 t flow =
-    List.member flow.ruleCode [ [ "I", "A", "3", "1" ], [ "I", "A", "3", "2" ], [ "I", "A", "3", "3" ], [ "I", "A", "3", "4" ], [ "I", "A", "3", "5" ], [ "I", "A", "3", "6" ], [ "I", "A", "3", "7" ], [ "I", "A", "3", "8" ] ]
-        && daysToMaturity t flow.maturityDate
-        == 0
+        return aopts || sopts;
+    }
+}
 
+entity Rule20b3L2a provides NSRules::Rule {
+    override method applies(flow: NSFlows::Flow): Bool {
+        return flow.ruleCode === "S.I.19"
+            && flow.collateralClass === NSBasics::AssetCategoryCodes::Level2aAssets;
+    }
+}
 
-isRule20a3dash6 : Flow -> Bool
-isRule20a3dash6 flow =
-    (List.member flow.ruleCode [ [ "I", "A", "1" ], [ "I", "A", "2" ] ]
-        && flow.collateralClass
-        == Level1Assets
-        && flow.isTreasuryControl
-    )
-        || (List.member flow.ruleCode [ [ "I", "S", "1" ], [ "I", "S", "2" ], [ "I", "S", "4" ] ]
-                && flow.collateralClass
-                == Level1Assets
-                && flow.isTreasuryControl
-                && flow.isUnencumbered
-           )
+entity Rule20b3L2b provides NSRules::Rule {
+    override method applies(flow: NSFlows::Flow): Bool {
+        return flow.ruleCode === "S.I.19"
+            && flow.collateralClass === NSBasics::AssetCategoryCodes::Level2bAssets;
+    }
+}
 
+entity Rule20b provides NSRules::Rule {
+    override method applies(flow: NSFlows::Flow): Bool {
+        let aopts = (flow.ruleCode === "I.A.1" || flow.ruleCode === "I.A.2")
+            && flow.collateralClass === NSBasics::AssetCategoryCodes::Level2aAssets
+            && flow.isTreasuryControl;
 
-isRule22b3L2a : Flow -> Bool
-isRule22b3L2a flow =
-    flow.ruleCode == [ "S", "I", "19" ] && flow.collateralClass == Level2aAssets
+        let sopts = (flow.ruleCode === "I.S.1" || flow.ruleCode === "I.S.2" || flow.ruleCode === "I.S.4")
+            && flow.collateralClass === NSBasics::AssetCategoryCodes::Level2aAssets
+            && flow.isTreasuryControl
+            && flow.isUnencumbered;
 
+        return aopts || sopts;
+    }
+}
 
-isRule22b3L2b : Flow -> Bool
-isRule22b3L2b flow =
-    flow.ruleCode == [ "S", "I", "19" ] && flow.collateralClass == Level2bAssets
+entity Rule20c provides NSRules::Rule {
+    override method applies(flow: NSFlows::Flow): Bool {
+        let aopts = (flow.ruleCode === "I.A.1" || flow.ruleCode === "I.A.2")
+            && flow.collateralClass === NSBasics::AssetCategoryCodes::Level2bAssets
+            && flow.isTreasuryControl;
 
+        let sopts = (flow.ruleCode === "I.S.1" || flow.ruleCode === "I.S.2" || flow.ruleCode === "I.S.4")
+            && flow.collateralClass === NSBasics::AssetCategoryCodes::Level2bAssets
+            && flow.isTreasuryControl
+            && flow.isUnencumbered;
 
-isRule20b : Flow -> Bool
-isRule20b flow =
-    (List.member flow.ruleCode [ [ "I", "A", "1" ], [ "I", "A", "2" ] ]
-        && flow.collateralClass
-        == Level2aAssets
-        && flow.isTreasuryControl
-    )
-        || (List.member flow.ruleCode [ [ "I", "S", "1" ], [ "I", "S", "2" ], [ "I", "S", "4" ] ]
-                && flow.collateralClass
-                == Level2aAssets
-                && flow.isTreasuryControl
-                && flow.isUnencumbered
-           )
+        return aopts || sopts;
+    }
+}
 
+entity Rule33b provides NSRules::Rule {
+    override method applies(flow: NSFlows::Flow): Bool {
+        return flow.ruleCode === "I.O.7";
+    }
+}
 
-isRule20c : Flow -> Bool
-isRule20c flow =
-    (List.member flow.ruleCode [ [ "I", "A", "1" ], [ "I", "A", "2" ] ]
-        && flow.collateralClass
-        == Level2bAssets
-        && flow.isTreasuryControl
-    )
-        || (List.member flow.ruleCode [ [ "I", "S", "1" ], [ "I", "S", "2" ], [ "I", "S", "4" ] ]
-                && flow.collateralClass
-                == Level2bAssets
-                && flow.isTreasuryControl
-                && flow.isUnencumbered
-           )
+entity Rule33c provides NSRules::Rule {
+    field toCounterparty: Map<NSCounterParty::CounterpartyId, NSCounterParty::Counterparty>;
+    field t: DateTime;
 
+    override method applies(flow: NSFlows::Flow): Bool {
+        let cpty = this.toCounterparty.get(flow.counterpartyId);
+        let rdays = daysToMaturity(t, flow.maturityDate);
 
-isRule33b : { a | ruleCode : RuleCode } -> Bool
-isRule33b cashflow =
-    cashflow.ruleCode == [ "I", "O", "7" ]
+        let uopts = (flow.ruleCode === "I.U.5" || flow.ruleCode === "I.U.6")
+            && (cpty.counterpartyType === NSCounterParty::CounterpartyType::retail || cpty.counterpartyType === NSCounterParty::CounterpartyType::smallBusiness)
+            && (0i < days && days <= 30i);
 
+        let sopts = (flow.ruleCode === "I.S.1" || flow.ruleCode === "I.S.2" || flow.ruleCode === "I.S.4" || flow.ruleCode === "I.S.5" || flow.ruleCode === "I.S.6" || flow.ruleCode === "I.S.7")
+            && cpty.counterpartyType === NSCounterParty::CounterpartyType::retail
+            && (0i < days && days <= 30i);
 
-isRule33c : (Flow -> Counterparty) -> LocalDate -> Flow -> Bool
-isRule33c toCounterparty t flow =
-    let
-        cpty : Counterparty
-        cpty =
-            toCounterparty flow
-
-        days : Int
-        days =
-            daysToMaturity t flow.maturityDate
-    in
-    (List.member flow.ruleCode [ [ "I", "U", "5" ], [ "I", "U", "6" ] ]
-        && List.member cpty.counterpartyType [ Retail, SmallBusiness ]
-        && (0 < days && days <= 30)
-    )
-        || (List.member flow.ruleCode [ [ "I", "S", "1" ], [ "I", "S", "2" ], [ "I", "S", "4" ], [ "I", "S", "5" ], [ "I", "S", "6" ], [ "I", "S", "7" ] ]
-                && cpty.counterpartyType
-                == Retail
-                && (0 < days && days <= 30)
-           )
-
+        return uopts || sopts;
+    }
+}
 
 isRule33d1 : (Flow -> Counterparty) -> Flow -> Bool
 isRule33d1 toCounterparty flow =
@@ -158,19 +147,35 @@ isRule33e : Flow -> Bool
 isRule33e cashflow =
     cashflow.ruleCode == [ "I", "O", "6" ] || cashflow.ruleCode == [ "I", "O", "8" ]
 
-
-
--- isRule33f : a -> b
+- isRule33f : a -> b
 -- isRule33f flow =
 --     Debug.todo "Rule 33(f) is actually a bunch of rules. Too many to do for now..."
-
 
 isRule33g : { a | ruleCode : RuleCode, isTreasuryControl : Bool } -> Bool
 isRule33g cashflow =
     cashflow.ruleCode == [ "I", "O", "5" ] && cashflow.isTreasuryControl
 
-
 isRule33h : { a | ruleCode : RuleCode, isTreasuryControl : Bool } -> Bool
 isRule33h cashflow =
     cashflow.ruleCode == [ "I", "O", "9" ] && cashflow.isTreasuryControl
-*/
+
+{-| The list of all rules pertaining to inflows.
+-}
+inflowRules : (Flow -> Counterparty) -> LocalDate -> List (Rule Flow)
+inflowRules toCounterparty t =
+    [ Rule "20(a)(1)" 1.0 (isRule20a1 t)
+    , Rule "20(a)(3)-(6)" 1.0 isRule20a3dash6
+    , Rule "22(b)(3)L1" -1.0 isRule22b3L2a
+    , Rule "22(b)(3)L2a" -0.85 isRule22b3L2a
+    , Rule "22(b)(3)L2b" -0.5 isRule22b3L2b
+    , Rule "20(b)" 0.85 isRule20b
+    , Rule "20(c)" 0.5 isRule20c
+    , Rule "33(b)" 1.0 isRule33b
+    , Rule "33(c)" 0.5 (isRule33c toCounterparty t)
+    , Rule "33(d)(1)" 1.0 (isRule33d1 toCounterparty)
+    , Rule "33(d)(2)" 1.0 (isRule33d2 toCounterparty)
+    , Rule "33(e)" 1.0 isRule33e
+    , Rule "33(g)" 1.0 isRule33g
+    , Rule "33(h)" 0.0 isRule33h
+    ]
+
