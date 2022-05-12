@@ -5,13 +5,28 @@
 
 namespace Main;
 
+import NSBasics;
+import NSCountry;
+import NSCurrency;
+import NSCounterparty;
 import NSCentralBank;
 import NSFedCode;
+import NSFedCodeRules;
+import NSFlows;
+import NSInflows;
+import NSOutflows;
+import NSProduct;
+import NSRules;
+import NSCalculations;
 
-entrypoint function main(cashflow: Cashflow, centralBanks: Map<PartyID, CentralBank>): Bool
-    requires centralBanks.has(cashflow.partyId);
-    requires cashflow.tenQLevel6 !== "Segregated Cash";
-{
-    let fc = classify(cashflow, centralBanks);
-    return /\(fc !== FedCode::unclassified, fc !== FedCode::ia49);
+entrypoint function main(product: Map<NSProduct::ProductId, NSProduct::Product>, t0Flows: List<NSFlows::Flow>, reserveBalanceRequirement: NSBasics::Balance): NSBasics::Balance {
+    return NSCalculations::hqlaAmount(product, t0Flows, reserveBalanceRequirement);
+}
+
+entrypoint function lcr(toCounterparty: Map<NSCounterParty::CounterpartyId, NSCounterParty::Counterparty>, product: Map<NSProduct::ProductId, NSProduct::Product>, t: DateTime, flowsForDate: List<[DateTime, NSFlows::Flow]>, reserveBalanceRequirement: NSBasics::Balance): NSBasics::Ratio {
+    return NSCalculations::lcr(toCounterparty, product, t, flowsForDate, reserveBalanceRequirement);
+}
+
+entrypoint function hqlaAmount(product: Map<NSProduct::ProductId, NSProduct::Product>, t0Flows: List<NSFlows::Flow>, reserveBalanceRequirement: NSBasics::Balance): NSBasics::Balance {
+    return NSCalculations::hqlaAmount(product, t0Flows, reserveBalanceRequirement);
 }

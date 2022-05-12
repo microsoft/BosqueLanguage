@@ -151,66 +151,33 @@ function totalNetCashOutflowAmount(toCounterparty: Map<NSCounterParty::Counterpa
 
     let maturityInflowAmount = maturityInflows.sum();
 
-        -- Aggregate it all together
-        aggregatedOutflowAmount : Balance
-        aggregatedOutflowAmount =
-            nonMaturityOutflowAmount + maturityOutflowAmount
+    let aggregatedOutflowAmount = nonMaturityOutflowAmount + maturityOutflowAmount;
+    let aggregatedInflowAmount = nonMaturityInflowAmount + maturityInflowAmount;
 
-        aggregatedInflowAmount : Balance
-        aggregatedInflowAmount =
-            nonMaturityInflowAmount + maturityInflowAmount
+    let oaccum = accumulate(0.0f, maturityOutflows);
+    let iaccum = accumulate(0.0f, maturityInflows);
+    let netCumulativeMaturityOutflowAmountMaxOpt = oaccum.zip(iaccum).map(fn(acp: [Float, Float]) => acp.0 - acp.1).maxOrNone();
+    let netCumulativeMaturityOutflowAmount = netCumulativeMaturityOutflowAmountMaxOpt !== none ? netCumulativeMaturityOutflowAmountMaxOpt : 0.0f;
 
-        -- This add-on was added later
-        maturityMismatchAddOn : Balance
-        maturityMismatchAddOn =
-            let
-                netCumulativeMaturityOutflowAmount : Balance
-                netCumulativeMaturityOutflowAmount =
-                    List.map2 Tuple.pair (accumulate 0 maturityOutflows) (accumulate 0 maturityInflows)
-                        |> List.map (\( o, i ) -> o - i)
-                        |> List.maximum
-                        |> Maybe.withDefault 0
+    let netDay30CumulativeMaturityOutflowAmount = maturityOutflows.sum() - maturityInflows.sum();
+    let maxNext30DaysOfCumulativeMaturityOutflowAmountFloor = Float::max(0.0f, netCumulativeMaturityOutflowAmount);
+    let netDay30CumulativeMaturityOutflowAmountFloor = Float::max(0.0f, netDay30CumulativeMaturityOutflowAmount);
 
-                netDay30CumulativeMaturityOutflowAmount : Balance
-                netDay30CumulativeMaturityOutflowAmount =
-                    List.sum maturityOutflows - List.sum maturityInflows
-
-                maxNext30DaysOfCumulativeMaturityOutflowAmountFloor : Balance
-                maxNext30DaysOfCumulativeMaturityOutflowAmountFloor =
-                    max 0.0 netCumulativeMaturityOutflowAmount
-
-                netDay30CumulativeMaturityOutflowAmountFloor : Balance
-                netDay30CumulativeMaturityOutflowAmountFloor =
-                    max 0.0 netDay30CumulativeMaturityOutflowAmount
-            in
-            maxNext30DaysOfCumulativeMaturityOutflowAmountFloor - netDay30CumulativeMaturityOutflowAmountFloor
-
-        cappedInflows : Balance
-        cappedInflows =
-            min (0.75 * aggregatedOutflowAmount) aggregatedInflowAmount
-    in
-    aggregatedOutflowAmount - cappedInflows + maturityMismatchAddOn
+    let maturityMismatchAddOn = maxNext30DaysOfCumulativeMaturityOutflowAmountFloor - netDay30CumulativeMaturityOutflowAmountFloor;
+    let cappedInflows = Float::min(0.75f * aggregatedOutflowAmount, aggregatedInflowAmount);
+    
+    return aggregatedOutflowAmount - cappedInflows + maturityMismatchAddOn;
 }
 
-isMember : Maybe a -> List a -> Bool
-isMember ruleM rules =
-    ruleM
-        |> Maybe.map (\r -> List.member r rules)
-        |> Maybe.withDefault False
+function isHQLA(product: product: Map<NSProduct::ProductId, NSProduct::Product>, flow: NSFlows::Flow): Bool {
+    return product.get(flow.productId).isHQLA;
+}
 
-
-isHQLA : (ProductId -> Product) -> Flow -> Bool
-isHQLA product flow =
-    product flow.productId |> .isHQLA
-
-
-{-| Helper function to accumulated steps of a sum across a list. This is used in calculating the maturity mismatch add-on.
--}
-accumulate : number -> List number -> List number
-accumulate starter list =
-    let
-        ( sum, acc ) =
-            List.foldl (\y ( x, xs ) -> ( x + y, (x + y) :: xs )) ( starter, [] ) list
-    in
-    List.reverse acc
+function accumulate(starter: Float, list: List<Float>): List<Float> {
+    let sum, acc = list.transduce(starter, fn(x, xs) => {
+        return x + xs, x + xs;
+    });
+       
+    return acc.reverse();
+}
 
