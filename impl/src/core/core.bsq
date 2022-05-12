@@ -116,6 +116,9 @@ __internal __typedeclable entity Int provides Some, Algebraic, Orderable, KeyTyp
     method toFloat(): Float { return NumericOps::s_bigIntToFloat(NumericOps::s_intToBigInt(this)); }
     method toDecimal(): Decimal { return NumericOps::s_bigIntToDecimal(NumericOps::s_intToBigInt(this)); }
     method toRational(): Decimal { return NumericOps::s_bigIntToRational(NumericOps::s_intToBigInt(this)); }
+
+    function min(a: Int, b: Int): Int {if(a < b) { return a; } else { return b; }}
+    function max(a: Int, b: Int): Int {if(a > b) { return a; } else { return b; }}
 }
 __safe __primitive inline prefix operator +(a: Int): Int = default;
 __safe __primitive inline prefix operator -(a: Int): Int = default;
@@ -142,6 +145,9 @@ __internal __typedeclable entity Nat provides Some, Algebraic, Orderable, KeyTyp
     method toFloat(): Float { return NumericOps::s_bigNatToFloat(NumericOps::s_natToBigNat(this)); }
     method toDecimal(): Decimal { return NumericOps::s_bigNatToDecimal(NumericOps::s_natToBigNat(this)); }
     method toRational(): Decimal { return NumericOps::s_bigNatToRational(NumericOps::s_natToBigNat(this)); }
+
+    function min(a: Nat, b: Nat): Nat {if(a < b) { return a; } else { return b; }}
+    function max(a: Nat, b: Nat): Nat {if(a > b) { return a; } else { return b; }}
 }
 __safe __primitive inline prefix operator +(a: Nat): Nat = default;
 __safe __primitive inline infix operator *(a: Nat, b: Nat): Nat = default;
@@ -167,6 +173,9 @@ __internal __typedeclable entity BigInt provides Some, Algebraic, Orderable, Key
     method toFloat(): Float { return NumericOps::s_bigIntToFloat(this); }
     method toDecimal(): Decimal { return NumericOps::s_bigIntToDecimal(this); }
     method toRational(): Decimal { return NumericOps::s_bigIntToRational(this); }
+
+    function min(a: BigInt, b: BigInt): BigInt {if(a < b) { return a; } else { return b; }}
+    function max(a: BigInt, b: BigInt): BigInt {if(a > b) { return a; } else { return b; }}
 }
 __safe __primitive inline prefix operator +(a: BigInt): BigInt = default;
 __safe __primitive inline prefix operator -(a: BigInt): BigInt = default;
@@ -193,6 +202,9 @@ __internal __typedeclable entity BigNat provides Some, Algebraic, Orderable, Key
     method toFloat(): Float { return NumericOps::s_bigNatToFloat(this); }
     method toDecimal(): Decimal { return NumericOps::s_bigNatToDecimal(this); }
     method toRational(): Decimal { return NumericOps::s_bigNatToRational(this); }
+
+    function min(a: BigNat, b: BigNat): BigNat {if(a < b) { return a; } else { return b; }}
+    function max(a: BigNat, b: BigNat): BigNat {if(a > b) { return a; } else { return b; }}
 }
 __safe __primitive inline prefix operator +(a: BigNat): BigNat = default;
 __safe __primitive inline infix operator *(a: BigNat, b: BigNat): BigNat = default;
@@ -218,6 +230,9 @@ __internal __typedeclable entity Rational provides Some, Algebraic, Orderable, A
     method toBigInt(): BigInt { return NumericOps::s_rationalToBigInt(this); }
     method toFloat(): Float { return NumericOps::s_rationalToFloat(this); }
     method toDecimal(): Decimal { return NumericOps::s_rationalToDecimal(this); }
+
+    function min(a: Rational, b: Rational): Rational {if(a < b) { return a; } else { return b; }}
+    function max(a: Rational, b: Rational): Rational {if(a > b) { return a; } else { return b; }}
 }
 __safe __primitive inline prefix operator +(a: Rational): Rational = default;
 __safe __primitive inline prefix operator -(a: Rational): Rational = default;
@@ -247,6 +262,9 @@ __internal __typedeclable entity Float provides Some, Algebraic, Orderable, APIT
     method toBigInt(): BigInt { return NumericOps::s_floatToBigInt(this); }
     method toDecimal(): Decimal { return NumericOps::s_floatToDecimal(this); }
     method toRational(): Rational { return NumericOps::s_floatToRational(this); }
+
+    function min(a: Float, b: Float): Float {if(a < b) { return a; } else { return b; }}
+    function max(a: Float, b: Float): Float {if(a > b) { return a; } else { return b; }}
 
     method floor(): Float { return NumericOps::s_floatFloor(this); }
     method ceiling(): Float { return NumericOps::s_floatCeil(this); }
@@ -292,6 +310,9 @@ __internal __typedeclable entity Decimal provides Some, Algebraic, Orderable, AP
     method toBigInt(): BigInt { return NumericOps::s_decimalToBigInt(this); }
     method toFloat(): Float { return NumericOps::s_decimalToFloat(this); }
     method toRational(): Rational { return NumericOps::s_decimalToRational(this); }
+
+    function min(a: Decimal, b: Decimal): Decimal {if(a < b) { return a; } else { return b; }}
+    function max(a: Decimal, b: Decimal): Decimal {if(a > b) { return a; } else { return b; }}
 
     method floor(): Decimal { return NumericOps::s_decimalFloor(this); }
     method ceiling(): Decimal { return NumericOps::s_decimalCeil(this); }

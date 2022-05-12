@@ -12,18 +12,18 @@ concept Rule provides TestType {
     abstract method applies(flow: NSFlows::Flow): Bool;
 }
 
-function findApplicable(flow: NSFlows::Flow, rules: List<Rule>) Rule? {
+function findApplicable(flow: NSFlows::Flow, rules: List<Rule>): Rule? {
     return rules.findOrNone(pred(rr) => rr.applies(flow));
 }
 
-function isAnyApplicable(flow: NSFlows::Flow, rules: List<Rule>) Bool {
+function isAnyApplicable(flow: NSFlows::Flow, rules: List<Rule>): Bool {
     return rules.someOf(pred(rr) => rr.applies(flow));
 }
 
-function find(name: String, rules: List<Rule>) Rule? {
+function find(name: String, rules: List<Rule>): Rule? {
     return rules.findOrNone(pred(rr) => rr.name === name);
 }
 
-function findAll(names: List<String>, rules: List<Rule>) List<Rule> {
+function findAll(names: List<String>, rules: List<Rule>): List<Rule> {
     return rules.filter(pred(rr) => names.contains(rr.name));
 }

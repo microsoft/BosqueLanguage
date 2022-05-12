@@ -23,11 +23,11 @@ entity Rule20a1 provides NSRules::Rule {
 entity Rule20a3dash6 provides NSRules::Rule {
     override method applies(flow: NSFlows::Flow): Bool {
         let aopts = (flow.ruleCode === "I.A.1" || flow.ruleCode === "I.A.2")
-            && flow.collateralClass === NSBasics::AssetCategoryCodes::Level1Assets
+            && flow.collateralClass === NSBasics::AssetCategoryCodes::level1Assets
             && flow.isTreasuryControl;
 
         let sopts = (flow.ruleCode === "I.S.1" || flow.ruleCode === "I.S.2" || flow.ruleCode === "I.S.4")
-            && flow.collateralClass === NSBasics::AssetCategoryCodes::Level1Assets
+            && flow.collateralClass === NSBasics::AssetCategoryCodes::level1Assets
             && flow.isTreasuryControl
             && flow.isUnencumbered;
 
@@ -38,25 +38,25 @@ entity Rule20a3dash6 provides NSRules::Rule {
 entity Rule22b3L2a provides NSRules::Rule {
     override method applies(flow: NSFlows::Flow): Bool {
         return flow.ruleCode === "S.I.19"
-            && flow.collateralClass === NSBasics::AssetCategoryCodes::Level2aAssets;
+            && flow.collateralClass === NSBasics::AssetCategoryCodes::level2aAssets;
     }
 }
 
 entity Rule22b3L2b provides NSRules::Rule {
     override method applies(flow: NSFlows::Flow): Bool {
         return flow.ruleCode === "S.I.19"
-            && flow.collateralClass === NSBasics::AssetCategoryCodes::Level2bAssets;
+            && flow.collateralClass === NSBasics::AssetCategoryCodes::level2bAssets;
     }
 }
 
 entity Rule20b provides NSRules::Rule {
     override method applies(flow: NSFlows::Flow): Bool {
         let aopts = (flow.ruleCode === "I.A.1" || flow.ruleCode === "I.A.2")
-            && flow.collateralClass === NSBasics::AssetCategoryCodes::Level2aAssets
+            && flow.collateralClass === NSBasics::AssetCategoryCodes::level2aAssets
             && flow.isTreasuryControl;
 
         let sopts = (flow.ruleCode === "I.S.1" || flow.ruleCode === "I.S.2" || flow.ruleCode === "I.S.4")
-            && flow.collateralClass === NSBasics::AssetCategoryCodes::Level2aAssets
+            && flow.collateralClass === NSBasics::AssetCategoryCodes::level2aAssets
             && flow.isTreasuryControl
             && flow.isUnencumbered;
 
@@ -67,11 +67,11 @@ entity Rule20b provides NSRules::Rule {
 entity Rule20c provides NSRules::Rule {
     override method applies(flow: NSFlows::Flow): Bool {
         let aopts = (flow.ruleCode === "I.A.1" || flow.ruleCode === "I.A.2")
-            && flow.collateralClass === NSBasics::AssetCategoryCodes::Level2bAssets
+            && flow.collateralClass === NSBasics::AssetCategoryCodes::level2bAssets
             && flow.isTreasuryControl;
 
         let sopts = (flow.ruleCode === "I.S.1" || flow.ruleCode === "I.S.2" || flow.ruleCode === "I.S.4")
-            && flow.collateralClass === NSBasics::AssetCategoryCodes::Level2bAssets
+            && flow.collateralClass === NSBasics::AssetCategoryCodes::level2bAssets
             && flow.isTreasuryControl
             && flow.isUnencumbered;
 
@@ -167,7 +167,7 @@ entity Rule33h provides NSRules::Rule {
     }
 }
 
-function(counterparty: Map<NSCounterParty::CounterpartyId, NSCounterParty::Counterparty>, t: DateTime): List<Rule> {
+function inflowRules(counterparty: Map<NSCounterParty::CounterpartyId, NSCounterParty::Counterparty>, t: DateTime): List<Rule> {
     return List<Rule>{ 
         Rule21a1{"20(a)(1)", 1.0f, t},
         Rule20a3dash6{"20(a)(3)-(6)", 1.0f},

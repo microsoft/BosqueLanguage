@@ -1336,8 +1336,8 @@ class MIREmitter {
                 });
 
                 if(nsopts.length === 0) {
-                    //TODO: should hunt down the cycle
-                    return { masm: undefined, errors: ["Cyclic dependency in namespaces"] };
+                    //TODO: should hunt down the cycle -- or misspelled module name
+                    return { masm: undefined, errors: ["Cyclic dependency in namespaces or misspelled import namespace"] };
                 }
 
                 const nns = nsopts[0];

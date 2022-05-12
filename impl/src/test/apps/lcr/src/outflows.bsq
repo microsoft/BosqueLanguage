@@ -279,7 +279,7 @@ entity Rule33f1iii provides NSRules::Rule {
         let days = daysToMaturity(t, flow.effectiveMaturityDate);
 
         return (flow.ruleCode === "I.S.1" || flow.ruleCode === "I.S.2" || flow.ruleCode === "I.S.5" || flow.ruleCode === "I.S.6" || flow.ruleCode === "I.S.7")
-            && flow.assetType === NSBasics::AssetCategoryCodes::Level1Assets
+            && flow.assetType === NSBasics::AssetCategoryCodes::level1Assets
             && (0i < remainingDays && remainingDays <= 30i);
     }
 }
@@ -291,7 +291,7 @@ entity Rule33f1iv provides NSRules::Rule {
         let days = daysToMaturity(t, flow.effectiveMaturityDate);
 
         return (flow.ruleCode === "I.S.1" || flow.ruleCode === "I.S.2" || flow.ruleCode === "I.S.5" || flow.ruleCode === "I.S.6" || flow.ruleCode === "I.S.7")
-            && flow.assetType === NSBasics::AssetCategoryCodes::Level2Assets
+            && flow.assetType === NSBasics::AssetCategoryCodes::level2Assets
             && (0i < remainingDays && remainingDays <= 30i);
     }
 }
@@ -321,7 +321,7 @@ function outflowRules(counterparty: Map<NSCounterParty::CounterpartyId, NSCounte
         Rule32h4{"32(h)(4)", 0.25f, counterparty},
         Rule32l{"32(l)", 0.0f},
         Rule33f1iii{"33(f)(1)(iii)", 0.0f, t},
-        Rulef1iv{s"33(f)(1)(iv)", 0.15f, t}
+        Rulef1iv{"33(f)(1)(iv)", 0.15f, t}
     };
 }
 

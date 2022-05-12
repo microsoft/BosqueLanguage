@@ -8,7 +8,7 @@ namespace Main;
 import NSBasics;
 import NSCountry;
 import NSCurrency;
-import NSCounterparty;
+import NSCounterParty;
 import NSCentralBank;
 import NSFedCode;
 import NSFedCodeRules;

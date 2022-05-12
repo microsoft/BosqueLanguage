@@ -3,7 +3,7 @@ namespace NSCalculations;
 import NSBasics;
 import NSCountry;
 import NSCurrency;
-import NSCounterparty;
+import NSCounterParty;
 import NSFlows;
 import NSInflows;
 import NSOutflows;
@@ -20,21 +20,21 @@ function lcr(toCounterparty: Map<NSCounterParty::CounterpartyId, NSCounterParty:
 
 function hqlaAmount(product: Map<NSProduct::ProductId, NSProduct::Product>, t0Flows: List<NSFlows::Flow>, reserveBalanceRequirement: NSBasics::Balance): NSBasics::Balance {
     let level1LiquidAssetsThatAreEligibleHQLA = t0Flows
-            .filter(pred(flow) => flow.assetType === NSBasics::AssetCategoryCodes::Level1Assets && isHQLA(product, flow))
+            .filter(pred(flow) => flow.assetType === NSBasics::AssetCategoryCodes::level1Assets && isHQLA(product, flow))
             .map(fn(flow) => flow.amount)
             .sum();
 
     let level1LiquidAssetAmount = level1LiquidAssetsThatAreEligibleHQLA - reserveBalanceRequirement;
 
     let level2aLiquidAssetsThatAreEligibleHQLA = t0Flows
-            .filter(pred(flow) => flow.assetType === NSBasics::AssetCategoryCodes::Level2aAssets && isHQLA(product, flow))
+            .filter(pred(flow) => flow.assetType === NSBasics::AssetCategoryCodes::level2aAssets && isHQLA(product, flow))
             .map(fn(flow) => flow.amount)
             .sum();
 
     let level2aLiquidAssetAmount = 0.85f * level2aLiquidAssetsThatAreEligibleHQLA;
 
     let level2bLiquidAssetsThatAreEligibleHQLA = t0Flows
-            .filter(pred(flow) => flow.assetType === NSBasics::AssetCategoryCodes::Level2bAssets && isHQLA(product, flow))
+            .filter(pred(flow) => flow.assetType === NSBasics::AssetCategoryCodes::level2bAssets && isHQLA(product, flow))
             .map(fn(flow) => flow.amount)
             .sum();
 
@@ -52,7 +52,7 @@ function hqlaAmount(product: Map<NSProduct::ProductId, NSProduct::Product>, t0Fl
 
     let adjustedExcessHQLAAmount = adjustedLevel2CapExcessAmount + adjustedlevel2bCapExcessAmount;
     
-    return level1LiquidAssetAmount + level2aLiquidAssetAmount + level2bLiquidAssetAmount - max(unadjustedExcessHQLAAmount, adjustedExcessHQLAAmount);
+    return level1LiquidAssetAmount + level2aLiquidAssetAmount + level2bLiquidAssetAmount - Float::max(unadjustedExcessHQLAAmount, adjustedExcessHQLAAmount);
 }
 
 function spanDates(dates: List<DateTime>, flowsForDate: List<[DateTime, NSFlows::Flow]>, flowFilter: pred(flow: NSFlows::Flow) -> Bool): List<NSBasics::Balance> {
@@ -98,7 +98,7 @@ function nonMaturityInflowRules(toCounterparty: Map<NSCounterParty::Counterparty
 
 function maturityMismatchOutflowRules(toCounterparty: Map<NSCounterParty::CounterpartyId, NSCounterParty::Counterparty>, t: DateTime): List<NSRules::Rule> {
     let rrules = List<String>{
-        "32(g)(1)"
+        "32(g)(1)",
         "32(g)(2)",
         "32(g)(3)",
         "32(g)(4)",
@@ -137,7 +137,7 @@ function totalNetCashOutflowAmount(toCounterparty: Map<NSCounterParty::Counterpa
     let nonMaturityInflowAmount = aggregateSpan(NSRules::isAnyApplicable((nonMaturityInflowRules(toCounterparty, t))));
 
     let mmorules = maturityMismatchOutflowRules(toCounterparty, t);
-    let maturityOutflows = spanDates(dates, flowsForDate, flowFilter: pred(flow: NSFlows::Flow) => {
+    let maturityOutflows = spanDates(dates, flowsForDate, pred(flow: NSFlows::Flow) => {
         return Rules::isAnyApplicable(flow, mmorules);
     });
 
@@ -145,7 +145,7 @@ function totalNetCashOutflowAmount(toCounterparty: Map<NSCounterParty::Counterpa
 
     
     let mmirules = maturityMismatchInflowRules(toCounterparty, t);
-    let maturityInflows = spanDates(dates, flowsForDate, flowFilter: pred(flow: NSFlows::Flow) => {
+    let maturityInflows = spanDates(dates, flowsForDate, pred(flow: NSFlows::Flow) => {
         return Rules::isAnyApplicable(flow, mmorules);
     });
 
@@ -156,7 +156,7 @@ function totalNetCashOutflowAmount(toCounterparty: Map<NSCounterParty::Counterpa
 
     let oaccum = accumulate(0.0f, maturityOutflows);
     let iaccum = accumulate(0.0f, maturityInflows);
-    let netCumulativeMaturityOutflowAmountMaxOpt = oaccum.zip(iaccum).map(fn(acp: [Float, Float]) => acp.0 - acp.1).maxOrNone();
+    let netCumulativeMaturityOutflowAmountMaxOpt = oaccum.zip(iaccum).map(fn(acp) => acp.0 - acp.1).maxOrNone();
     let netCumulativeMaturityOutflowAmount = netCumulativeMaturityOutflowAmountMaxOpt !== none ? netCumulativeMaturityOutflowAmountMaxOpt : 0.0f;
 
     let netDay30CumulativeMaturityOutflowAmount = maturityOutflows.sum() - maturityInflows.sum();
@@ -169,7 +169,7 @@ function totalNetCashOutflowAmount(toCounterparty: Map<NSCounterParty::Counterpa
     return aggregatedOutflowAmount - cappedInflows + maturityMismatchAddOn;
 }
 
-function isHQLA(product: product: Map<NSProduct::ProductId, NSProduct::Product>, flow: NSFlows::Flow): Bool {
+function isHQLA(product: Map<NSProduct::ProductId, NSProduct::Product>, flow: NSFlows::Flow): Bool {
     return product.get(flow.productId).isHQLA;
 }
 

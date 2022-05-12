@@ -1148,8 +1148,8 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             }
             else {
                 let sti = ListOps::s_list_single_indexof_true(mask);
-                if(sti != -1) {
-                    return List<T>{ListOps::s_list_get<T>(this, NumericOps::s_intToNat(idx))};
+                if(sti != -1i) {
+                    return List<T>{ListOps::s_list_get<T>(this, NumericOps::s_intToNat(sti))};
                 }
                 else {
                     return ListOps::s_blockingfailure<List<T>>();

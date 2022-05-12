@@ -13,9 +13,9 @@ typedef Amount = Float;
 entity Flow provides APIType
 { 
     field amount: Amount;
-    field assetType: AssetCategoryCodes::AssetCategoryCodes;
+    field assetType: NSBasics::AssetCategoryCodes;
     field businessDate : BusinessDate;
-    field collateralClass : AssetCategoryCodes::AssetCategoryCodes;
+    field collateralClass : NSBasics::AssetCategoryCodes;
     field counterpartyId : NSCounterParty::CounterpartyId;
     field currency : NSCurrency::Currency;
     field ruleCode : NSFedCodeRules::RuleCode;
