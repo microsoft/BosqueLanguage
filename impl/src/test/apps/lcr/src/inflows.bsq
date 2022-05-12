@@ -35,14 +35,14 @@ entity Rule20a3dash6 provides NSRules::Rule {
     }
 }
 
-entity Rule20b3L2a provides NSRules::Rule {
+entity Rule22b3L2a provides NSRules::Rule {
     override method applies(flow: NSFlows::Flow): Bool {
         return flow.ruleCode === "S.I.19"
             && flow.collateralClass === NSBasics::AssetCategoryCodes::Level2aAssets;
     }
 }
 
-entity Rule20b3L2b provides NSRules::Rule {
+entity Rule22b3L2b provides NSRules::Rule {
     override method applies(flow: NSFlows::Flow): Bool {
         return flow.ruleCode === "S.I.19"
             && flow.collateralClass === NSBasics::AssetCategoryCodes::Level2bAssets;
@@ -105,77 +105,84 @@ entity Rule33c provides NSRules::Rule {
     }
 }
 
-isRule33d1 : (Flow -> Counterparty) -> Flow -> Bool
-isRule33d1 toCounterparty flow =
-    let
-        cpty : Counterparty
-        cpty =
-            toCounterparty flow
-    in
-    List.member flow.ruleCode [ [ "I", "U", "1" ], [ "I", "U", "2" ], [ "I", "U", "4" ] ]
-        || (List.member flow.ruleCode [ [ "I", "U", "5" ], [ "I", "U", "6" ] ]
-                && List.member cpty.counterpartyType
-                    [ CentralBank
-                    , Bank
-                    , SupervisedNonBankFinancialEntity
-                    , DebtIssuingSpecialPurposeEntity
-                    , OtherFinancialEntity
-                    ]
-           )
+entity Rule33d1 provides NSRules::Rule {
+    field toCounterparty: Map<NSCounterParty::CounterpartyId, NSCounterParty::Counterparty>;
+    
+    const acceptedCounterParty: List<NSCounterParty::CounterpartyType> = List<NSCounterParty::CounterpartyType>{
+        NSCounterParty::CounterpartyType::centralBank,
+        NSCounterParty::CounterpartyType::bank,
+        NSCounterParty::CounterpartyType::supervisedNonBankFinancialEntity,
+        NSCounterParty::CounterpartyType::debtIssuingSpecialPurposeEntity,
+        NSCounterParty::CounterpartyType::otherFinancialEntity
+    };
 
+    override method applies(flow: NSFlows::Flow): Bool {
+        let cpty = this.toCounterparty.get(flow.counterpartyId);
+        
+        let uopts = (flow.ruleCode === "I.U.1" || flow.ruleCode === "I.U.2" || flow.ruleCode === "I.U.4");
 
-isRule33d2 : (Flow -> Counterparty) -> Flow -> Bool
-isRule33d2 toCounterparty flow =
-    let
-        cpty : Counterparty
-        cpty =
-            toCounterparty flow
-    in
-    List.member flow.ruleCode [ [ "I", "U", "5" ], [ "I", "U", "6" ] ]
-        && List.member cpty.counterpartyType
-            [ NonFinancialCorporate
-            , Sovereign
-            , GovernmentSponsoredEntity
-            , PublicSectorEntity
-            , MultilateralDevelopmentBank
-            , OtherSupranational
-            , Other
-            ]
+        let uoptscp = (flow.ruleCode === "I.U.5" || flow.ruleCode === "I.U.6")
+            && Rule33d1::acceptedCounterParty.contains(cpty.counterpartyType);
 
+        return uopts || uoptscp;
+    }
+}
 
-isRule33e : Flow -> Bool
-isRule33e cashflow =
-    cashflow.ruleCode == [ "I", "O", "6" ] || cashflow.ruleCode == [ "I", "O", "8" ]
+entity Rule33d2 provides NSRules::Rule {
+    field toCounterparty: Map<NSCounterParty::CounterpartyId, NSCounterParty::Counterparty>;
+    
+    const acceptedCounterParty: List<NSCounterParty::CounterpartyType> = List<NSCounterParty::CounterpartyType>{
+        NSCounterParty::CounterpartyType::nonFinancialCorporate,
+        NSCounterParty::CounterpartyType::sovereign,
+        NSCounterParty::CounterpartyType::governmentSponsoredEntity,
+        NSCounterParty::CounterpartyType::publicSectorEntity,
+        NSCounterParty::CounterpartyType::multilateralDevelopmentBank,
+        NSCounterParty::CounterpartyType::otherSupranational,
+        NSCounterParty::CounterpartyType::other
+    };
 
-- isRule33f : a -> b
--- isRule33f flow =
---     Debug.todo "Rule 33(f) is actually a bunch of rules. Too many to do for now..."
+    override method applies(flow: NSFlows::Flow): Bool {
+        let cpty = this.toCounterparty.get(flow.counterpartyId);
+        
+        return (flow.ruleCode === "I.U.5" || flow.ruleCode === "I.U.6")
+            && Rule33d2::acceptedCounterParty.contains(cpty.counterpartyType);
+    }
+}
 
-isRule33g : { a | ruleCode : RuleCode, isTreasuryControl : Bool } -> Bool
-isRule33g cashflow =
-    cashflow.ruleCode == [ "I", "O", "5" ] && cashflow.isTreasuryControl
+entity Rule33e provides NSRules::Rule {
+    override method applies(flow: NSFlows::Flow): Bool {
+        return flow.ruleCode === "I.O.6" || flow.ruleCode === "I.O.8";
+    }
+}
 
-isRule33h : { a | ruleCode : RuleCode, isTreasuryControl : Bool } -> Bool
-isRule33h cashflow =
-    cashflow.ruleCode == [ "I", "O", "9" ] && cashflow.isTreasuryControl
+entity Rule33g provides NSRules::Rule {
+    override method applies(flow: NSFlows::Flow): Bool {
+        return flow.ruleCode === "I.O.5" || flow.cashflow.isTreasuryControl;
+    }
+}
 
-{-| The list of all rules pertaining to inflows.
--}
-inflowRules : (Flow -> Counterparty) -> LocalDate -> List (Rule Flow)
-inflowRules toCounterparty t =
-    [ Rule "20(a)(1)" 1.0 (isRule20a1 t)
-    , Rule "20(a)(3)-(6)" 1.0 isRule20a3dash6
-    , Rule "22(b)(3)L1" -1.0 isRule22b3L2a
-    , Rule "22(b)(3)L2a" -0.85 isRule22b3L2a
-    , Rule "22(b)(3)L2b" -0.5 isRule22b3L2b
-    , Rule "20(b)" 0.85 isRule20b
-    , Rule "20(c)" 0.5 isRule20c
-    , Rule "33(b)" 1.0 isRule33b
-    , Rule "33(c)" 0.5 (isRule33c toCounterparty t)
-    , Rule "33(d)(1)" 1.0 (isRule33d1 toCounterparty)
-    , Rule "33(d)(2)" 1.0 (isRule33d2 toCounterparty)
-    , Rule "33(e)" 1.0 isRule33e
-    , Rule "33(g)" 1.0 isRule33g
-    , Rule "33(h)" 0.0 isRule33h
-    ]
+entity Rule33h provides NSRules::Rule {
+    override method applies(flow: NSFlows::Flow): Bool {
+        return flow.ruleCode === "I.O.9" || flow.cashflow.isTreasuryControl;
+    }
+}
+
+function(counterparty: Map<NSCounterParty::CounterpartyId, NSCounterParty::Counterparty>, t: DateTime): List<Rule> {
+    return List<Rule>{ 
+        Rule21a1{"20(a)(1)", 1.0f, t},
+        Rule20a3dash6{"20(a)(3)-(6)", 1.0f},
+        Rule22b3L2a{"22(b)(3)L1", -1.0f},
+        Rule22b3L2a{"22(b)(3)L2a", -0.85f},
+        Rule22b3L2b{"22(b)(3)L2b", -0.5f},
+        Rule20b{"20(b)", 0.85f},
+        Rule20c{"20(c)", 0.5f},
+        Rule33b{"33(b)", 1.0f},
+        Rule33c{"33(c)", 0.5f, counterparty, t},
+        Rule33d1{"33(d)(1)", 1.0f, counterparty},
+        Rule33d2{"33(d)(2)", 1.0f, counterparty},
+        Rule33e{"33(e)", 1.0f},
+        Rule33g{"33(g)", 1.0f},
+        Rule33h{"33(h)", 0.0f}
+    };
+}
 

@@ -261,7 +261,7 @@ entity Rule32h4 provides NSRules::Rule {
         let cpty = this.toCounterparty.get(flow.counterpartyId);
 
         return flow.ruleCode === "O.D.4"
-            && Rule32h3::acceptedCounterParty.contains(cpty.counterpartyType)
+            && Rule32h4::acceptedCounterParty.contains(cpty.counterpartyType)
             && flow.insured !== InsuranceType::fdic;
     }
 }

@@ -1,153 +1,101 @@
 namespace NSCalculations;
 
-/*
-lcr : (Flow -> Counterparty) -> (ProductId -> Product) -> LocalDate -> (LocalDate -> List Flow) -> Balance -> Ratio
-lcr toCounterparty product t flowsForDate reserveBalanceRequirement =
-    let
-        hqla : Balance
-        hqla =
-            hqlaAmount product (flowsForDate t) reserveBalanceRequirement
+import NSBasics;
+import NSCountry;
+import NSCurrency;
+import NSCounterparty;
+import NSFlows;
+import NSInflows;
+import NSOutflows;
+import NSProduct;
+import NSRules;
 
-        totalNetCashOutflow : Balance
-        totalNetCashOutflow =
-            totalNetCashOutflowAmount toCounterparty t flowsForDate
-    in
-    hqla / totalNetCashOutflow
+function lcr(toCounterparty: Map<NSCounterParty::CounterpartyId, NSCounterParty::Counterparty>, product: Map<NSProduct::ProductId, NSProduct::Product>, t: DateTime, flowsForDate: List<[DateTime, NSFlows::Flow]>, reserveBalanceRequirement: NSBasics::Balance): NSBasics::Ratio {
+    let relevantFlows = flowsForDate.filter(pred(fdp) => datesEqual(fdp.0, t)).map(fn(pdp) => fdp.1);
+    let hqla = hqlaAmount(product, relevantFlows, reserveBalanceRequirement);
 
+    let totalNetCashOutflow = totalNetCashOutflowAmount(toCounterparty, t, flowsForDate);
+    return hqla / totalNetCashOutflow;
+}
 
-{-| HQLA Amount is the LCR numerator. It has several components, which are specified as nested functions.
--}
-hqlaAmount : (ProductId -> Product) -> List Flow -> Balance -> Balance
-hqlaAmount product t0Flows reserveBalanceRequirement =
-    let
-        level1LiquidAssetsThatAreEligibleHQLA : Balance
-        level1LiquidAssetsThatAreEligibleHQLA =
-            t0Flows
-                |> List.filter (\flow -> flow.assetType == Level1Assets && isHQLA product flow)
-                |> List.map .amount
-                |> List.sum
+function hqlaAmount(product: Map<NSProduct::ProductId, NSProduct::Product>, t0Flows: List<NSFlows::Flow>, reserveBalanceRequirement: NSBasics::Balance): NSBasics::Balance {
+    let level1LiquidAssetsThatAreEligibleHQLA = t0Flows
+            .filter(pred(flow) => flow.assetType === NSBasics::AssetCategoryCodes::Level1Assets && isHQLA(product, flow))
+            .map(fn(flow) => flow.amount)
+            .sum();
 
-        level1LiquidAssetAmount : Balance
-        level1LiquidAssetAmount =
-            level1LiquidAssetsThatAreEligibleHQLA - reserveBalanceRequirement
+    let level1LiquidAssetAmount = level1LiquidAssetsThatAreEligibleHQLA - reserveBalanceRequirement;
 
-        level2aLiquidAssetsThatAreEligibleHQLA : Balance
-        level2aLiquidAssetsThatAreEligibleHQLA =
-            t0Flows
-                |> List.filter (\flow -> flow.assetType == Level2aAssets && isHQLA product flow)
-                |> List.map .amount
-                |> List.sum
+    let level2aLiquidAssetsThatAreEligibleHQLA = t0Flows
+            .filter(pred(flow) => flow.assetType === NSBasics::AssetCategoryCodes::Level2aAssets && isHQLA(product, flow))
+            .map(fn(flow) => flow.amount)
+            .sum();
 
-        level2aLiquidAssetAmount : Balance
-        level2aLiquidAssetAmount =
-            0.85 * level2aLiquidAssetsThatAreEligibleHQLA
+    let level2aLiquidAssetAmount = 0.85f * level2aLiquidAssetsThatAreEligibleHQLA;
 
-        level2bLiquidAssetsThatAreEligibleHQLA : Balance
-        level2bLiquidAssetsThatAreEligibleHQLA =
-            t0Flows
-                |> List.filter (\flow -> flow.assetType == Level2bAssets && isHQLA product flow)
-                |> List.map .amount
-                |> List.sum
+    let level2bLiquidAssetsThatAreEligibleHQLA = t0Flows
+            .filter(pred(flow) => flow.assetType === NSBasics::AssetCategoryCodes::Level2bAssets && isHQLA(product, flow))
+            .map(fn(flow) => flow.amount)
+            .sum();
 
-        level2bLiquidAssetAmount : Balance
-        level2bLiquidAssetAmount =
-            0.5 * level2bLiquidAssetsThatAreEligibleHQLA
+    let level2bLiquidAssetAmount = 0.5f * level2bLiquidAssetsThatAreEligibleHQLA;
 
-        unadjustedExcessHQLAAmount : Balance
-        unadjustedExcessHQLAAmount =
-            let
-                level2CapExcessAmount : Balance
-                level2CapExcessAmount =
-                    max (level2aLiquidAssetAmount + level2bLiquidAssetAmount - 0.6667 * level1LiquidAssetAmount) 0.0
+    let level2CapExcessAmount = Float::max(level2aLiquidAssetAmount + level2bLiquidAssetAmount - 0.6667f * level1LiquidAssetAmount, 0.0f);
+    let level2bCapExcessAmount = Float::max(level2bLiquidAssetAmount - level2CapExcessAmount - 0.1765f * (level1LiquidAssetAmount + level2aLiquidAssetAmount), 0.0f);
+    let unadjustedExcessHQLAAmount = level2CapExcessAmount + level2bCapExcessAmount;
 
-                level2bCapExcessAmount : Balance
-                level2bCapExcessAmount =
-                    max (level2bLiquidAssetAmount - level2CapExcessAmount - 0.1765 * (level1LiquidAssetAmount + level2aLiquidAssetAmount)) 0.0
-            in
-            level2CapExcessAmount + level2bCapExcessAmount
+    let adjustedLevel1LiquidAssetAmount = level1LiquidAssetAmount;
+    let adjustedlevel2aLiquidAssetAmount = level2aLiquidAssetAmount * 0.85f;
+    let adjustedlevel2bLiquidAssetAmount = level2bLiquidAssetAmount * 0.5f;
+    let adjustedLevel2CapExcessAmount = Float::max(adjustedlevel2aLiquidAssetAmount + adjustedlevel2bLiquidAssetAmount - 0.6667f * adjustedLevel1LiquidAssetAmount, 0.0f);
+    let adjustedlevel2bCapExcessAmount = Float::max(adjustedlevel2bLiquidAssetAmount - adjustedLevel2CapExcessAmount - 0.1765f * (adjustedLevel1LiquidAssetAmount + adjustedlevel2aLiquidAssetAmount), 0.0f);
 
-        adjustedExcessHQLAAmount : Balance
-        adjustedExcessHQLAAmount =
-            let
-                adjustedLevel1LiquidAssetAmount : Balance
-                adjustedLevel1LiquidAssetAmount =
-                    level1LiquidAssetAmount
+    let adjustedExcessHQLAAmount = adjustedLevel2CapExcessAmount + adjustedlevel2bCapExcessAmount;
+    
+    return level1LiquidAssetAmount + level2aLiquidAssetAmount + level2bLiquidAssetAmount - max(unadjustedExcessHQLAAmount, adjustedExcessHQLAAmount);
+}
 
-                adjustedlevel2aLiquidAssetAmount : Balance
-                adjustedlevel2aLiquidAssetAmount =
-                    level2aLiquidAssetAmount * 0.85
+function spanDates(dates: List<DateTime>, flowsForDate: List<[DateTime, NSFlows::Flow]>, flowFilter: pred(flow: NSFlows::Flow) -> Bool): List<NSBasics::Balance> {
+    return dates
+        .map(fn(t) => flowsForDate.filter(pred(fdp) => datesEqual(fdp.0, t)).map(fn(pdp) => fdp.1)
+        .map(fn(flows) => aggregateDaily(flows, flowFilter));
+}
 
-                adjustedlevel2bLiquidAssetAmount : Balance
-                adjustedlevel2bLiquidAssetAmount =
-                    level2bLiquidAssetAmount * 0.5
+function aggregateSpan(dates: List<DateTime>, flowsForDate: List<[DateTime, NSFlows::Flow]>, flowFilter: pred(flow: NSFlows::Flow) -> Bool): NSBasics::Balance {
+    return spanDates(dates, flowsForDate, flowFilter).sum();
+}
 
-                adjustedLevel2CapExcessAmount : Balance
-                adjustedLevel2CapExcessAmount =
-                    max (adjustedlevel2aLiquidAssetAmount + adjustedlevel2bLiquidAssetAmount - 0.6667 * adjustedLevel1LiquidAssetAmount) 0.0
+function aggregateDaily(flows: List<NSFlows::Flow>, flowFilter: pred(flow: NSFlows::Flow) -> Bool): NSBasics::Balance {
+    return flows.filter(flowFilter).map(fn(flow) => flow.amount).sum();
+}
 
-                adjustedlevel2bCapExcessAmount : Balance
-                adjustedlevel2bCapExcessAmount =
-                    max (adjustedlevel2bLiquidAssetAmount - adjustedLevel2CapExcessAmount - 0.1765 * (adjustedLevel1LiquidAssetAmount + adjustedlevel2aLiquidAssetAmount)) 0.0
-            in
-            adjustedLevel2CapExcessAmount + adjustedlevel2bCapExcessAmount
-    in
-    level1LiquidAssetAmount + level2aLiquidAssetAmount + level2bLiquidAssetAmount - max unadjustedExcessHQLAAmount adjustedExcessHQLAAmount
+function nonMaturityOutflowRules(toCounterparty: Map<NSCounterParty::CounterpartyId, NSCounterParty::Counterparty>, t: DateTime): NSRules::Rule {
+    let rrules = List<String>{
+        "32(a)(1)",
+        "32(a)(2)",
+        "32(a)(3)",
+        "32(a)(4)",
+        "32(a)(5)",
+        "32(b)",
+        "32(c)",
+        "32(d)",
+        "32(e)",
+        "32(f)",
+        "32(i)"
+    };
+    
+    return NSRules::findAll(rrules, NSOutflows::outflowRules(toCounterparty, date));
+}
 
-
-{-| Total Net Cash Outflow Amount is the LCR denominator. It has several components, which are specified as nested functions.
-The function takes a function to lookup the counterparty for a flow.
-the LocalDate (t) from which to calculate the remaining days until the flows maturity
-and a function takes a function to lookup flows for a given date,
--}
-totalNetCashOutflowAmount : (Flow -> Counterparty) -> LocalDate -> (LocalDate -> List Flow) -> Balance
-totalNetCashOutflowAmount toCounterparty t flowsForDate =
-    let
-        -- List of the next 30 days from t
-        dates : List LocalDate
-        dates =
-            List.range 1 30 |> List.map (\i -> addDays i t)
-
-        -- Aggregating helpers
-        spanDates : (Flow -> Bool) -> List Balance
-        spanDates filter =
-            dates
-                |> List.map flowsForDate
-                |> List.map (\flows -> flows |> aggregateDaily filter)
-
-        aggregateSpan : (Flow -> Bool) -> Balance
-        aggregateSpan flowFilter =
-            spanDates flowFilter |> List.sum
-
-        aggregateDaily : (Flow -> Bool) -> List Flow -> Balance
-        aggregateDaily flowFilter flows =
-            flows
-                |> List.filter flowFilter
-                |> List.map .amount
-                |> List.sum
-
-        -- Non maturity
-        nonMaturityOutflowRules : LocalDate -> List (Rules.Rule Flow)
-        nonMaturityOutflowRules date =
-            Rules.findAll
-                [ "32(a)(1)"
-                , "32(a)(2)"
-                , "32(a)(3)"
-                , "32(a)(4)"
-                , "32(a)(5)"
-                , "32(b)"
-                , "32(c)"
-                , "32(d)"
-                , "32(e)"
-                , "32(f)"
-                , "32(i)"
-                ]
-                (Outflows.outflowRules toCounterparty date)
-
-        nonMaturityInflowRules : LocalDate -> List (Rules.Rule Flow)
+function nonMaturityInflowRules : LocalDate -> List (Rules.Rule Flow)
         nonMaturityInflowRules date =
             Rules.findAll
                 [ "33(b)", "33(g)" ]
                 (Inflows.inflowRules toCounterparty date)
+
+function totalNetCashOutflowAmount(toCounterparty: Map<NSCounterParty::CounterpartyId, NSCounterParty::Counterparty>, t: DateTime, flowsForDate: List<[DateTime, Flow]>): Balance {
+    let dates = List<Int>{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30}
+        .map(fn(i) => addDays(i, t));
 
         nonMaturityOutflowAmount : Balance
         nonMaturityOutflowAmount =
@@ -240,7 +188,7 @@ totalNetCashOutflowAmount toCounterparty t flowsForDate =
             min (0.75 * aggregatedOutflowAmount) aggregatedInflowAmount
     in
     aggregatedOutflowAmount - cappedInflows + maturityMismatchAddOn
-
+}
 
 isMember : Maybe a -> List a -> Bool
 isMember ruleM rules =
@@ -263,4 +211,4 @@ accumulate starter list =
             List.foldl (\y ( x, xs ) -> ( x + y, (x + y) :: xs )) ( starter, [] ) list
     in
     List.reverse acc
-*/
+
