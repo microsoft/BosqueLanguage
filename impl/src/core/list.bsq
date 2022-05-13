@@ -15,18 +15,18 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return List<Int>{};
         }
         else {
-            return ListOps::s_blockingfailure<List<Int>>();
+            return ListOps::s_list_index_int(start, end, end - start);
         }
     }
 
-    function rangeNat(start: Int, end: Int): List<Nat>
+    function rangeNat(start: Nat, end: Nat): List<Nat>
         requires start <= end;
     {
         if(start == end) {
             return List<Nat>{};
         }
         else {
-            return ListOps::s_blockingfailure<List<Nat>>();
+            return ListOps::s_list_index_nat(start, end, end - start);
         }
     }
 
@@ -35,8 +35,12 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return List<[Nat, T]>{};
         }
         else {
-            return ListOps::s_blockingfailure<List<[Nat, T]>>();
-            //mapi with i, elem
+            let len = ListOps::s_list_size<T>(this);
+            let ilist = ListOps::s_list_index_nat(0, len, len);
+
+            return ListOps::s_list_map_fn<Nat, [Nat, T]>(ilist, fn(n: Nat): [Nat, T] => {
+                return [n, ListOps::s_list_get<T>(this, n)];
+            });
         }
     }
 
@@ -47,7 +51,12 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return List<[T, U]>{};
         }
         else {
-            return ListOps::s_blockingfailure<List<[T, U]>>();
+            let len = ListOps::s_list_size<T>(this);
+            let ilist = ListOps::s_list_index_nat(0, len, len);
+
+            return ListOps::s_list_map_fn<Nat, [T, U]>(ilist, fn(n: Nat): [T, U] => {
+                return [ListOps::s_list_get<T>(this, n), ListOps::s_list_get<U>(l, n)];
+            });
         }
     }
 

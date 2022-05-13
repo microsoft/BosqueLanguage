@@ -2741,6 +2741,22 @@ class SMTBodyEmitter {
                 const dd = new SMTCallSimple("BDateTime@cons", args.map((arg) => new SMTVar(arg.vname)));
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);
             }
+            case "s_list_index": {
+                const genlist = new SMTCallSimple("@@SortedIntSeq@@Create", args.map((arg) => new SMTVar(arg.vname)));
+                const chklist = SMTCallSimple.makeAndOf(
+                    new SMTCallSimple("@@CheckIntSeqLen", [new SMTVar("seq"), new SMTVar(args[2].vname)]),
+                    new SMTCallSimple("@@CheckIntSeqSorted", [new SMTVar("seq"), new SMTVar(args[0].vname), new SMTVar(args[2].vname)])
+                );
+
+                const cbody = new SMTLet("seq", genlist, 
+                    new SMTIf(chklist,
+                        this.typegen.generateResultTypeConstructorSuccess(mirrestype, this.typegen.generateListTypeConstructorSeq(mirrestype, new SMTVar("seq"))),
+                        this.typegen.generateErrorResultAssert(mirrestype)
+                    )
+                );
+
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+            }
             case "s_list_empty": {
                 const lt = this.typegen.getMIRType(idecl.params[0].type);
                 const emptyconst = this.typegen.getSMTTypeFor(lt).smttypename + "@@empty";
