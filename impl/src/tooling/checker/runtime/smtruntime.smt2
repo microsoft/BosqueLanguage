@@ -469,6 +469,16 @@
   ($Result_BContentHash@success (BContentHash@UFCons_API ctx))
 )
 
+(declare-fun @@SortedIntSeq@@Create (Int) (Seq Int))
+
+(define-fun @@CheckIntSeqLen ((s (Seq Int)) (len Int)) Bool
+  (= (seq.len s) len)
+)
+
+(define-fun @@CheckIntSeqSorted ((s (Seq Int)) (len Int)) Bool
+  (forall ((i Int)) (=> (and (<= 0 i) (< i len)) (= (seq.nth s i) i)))
+)
+
 ;;GLOBAL_DECLS;;
 
 ;;UF_DECLS;;

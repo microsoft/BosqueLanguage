@@ -1,0 +1,19 @@
+namespace NSDates;
+
+function datesEqual(t1: DateTime, t2: DateTime): Bool {
+    //TODO: actually do something
+    return true;
+}
+
+function addDays(dcount: Int, t: DateTime): DateTime {
+    //TODO: actually do something
+    return t;
+}
+
+function diffInDays(fromdate: DateTime, maturityDate: DateTime): Int {
+    return 30i;
+}
+
+function diffInYears(fromdate: DateTime, maturityDate: DateTime): Int {
+    return 0i;
+}

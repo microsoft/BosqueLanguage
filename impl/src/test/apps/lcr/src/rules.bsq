@@ -5,7 +5,7 @@ import NSFlows;
 
 typedef Weight = Float;
 
-concept Rule provides TestType {
+concept Rule provides TestableType {
     field name: String;
     field weight: Weight;
 

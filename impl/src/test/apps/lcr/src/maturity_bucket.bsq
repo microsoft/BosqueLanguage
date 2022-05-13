@@ -1,5 +1,7 @@
 namespace NSMaturityBucket;
 
+import NSDates;
+
 typedecl MaturityBucket provides APIType
 of
 Daily { days: Int }
@@ -9,15 +11,15 @@ Daily { days: Int }
 | Residual
 ;
 
-function daysToMaturity(fromdate: DateTime, maturityDate: DateTime): Int {
-    return DateTime::diffInDays(maturityDate, fromDate);
+function daysToMaturity(fromDate: DateTime, maturityDate: DateTime): Int {
+    return NSDates::diffInDays(maturityDate, fromDate);
 }
 
-function yearssToMaturity(fromdate: DateTime, maturityDate: DateTime): Int {
-    return DateTime::diffInYears(maturityDate, fromDate);
+function yearsToMaturity(fromDate: DateTime, maturityDate: DateTime): Int {
+    return NSDates::diffInYears(maturityDate, fromDate);
 }
 
-function bucket(fromdate: DateTime, maturityDate: DateTime): MaturityBucket {
+function bucket(fromDate: DateTime, maturityDate: DateTime): MaturityBucket {
     let days = daysToMaturity(fromDate, maturityDate);
     assert(days >= 0);
 

@@ -100,7 +100,7 @@ entity Rule32g1 provides NSRules::Rule {
 
     override method applies(flow: NSFlows::Flow): Bool {
         let cpty = this.toCounterparty.get(flow.counterpartyId);
-        let remainingDays = daysToMaturity(t, flow.maturityDate);
+        let remainingDays = daysToMaturity(this.t, flow.maturityDate);
 
         return flow.ruleCode === "O.D.7"
             && (cpty.counterpartyType === NSCounterParty::CounterpartyType::retail || cpty.counterpartyType === NSCounterParty::CounterpartyType::smallBusiness)
@@ -114,7 +114,7 @@ entity Rule32g2 provides NSRules::Rule {
 
     override method applies(flow: NSFlows::Flow): Bool {
         let cpty = this.toCounterparty.get(flow.counterpartyId);
-        let remainingDays = daysToMaturity(t, flow.maturityDate);
+        let remainingDays = daysToMaturity(this.t, flow.maturityDate);
 
         return flow.ruleCode === "O.D.7"
             && (cpty.counterpartyType === NSCounterParty::CounterpartyType::retail || cpty.counterpartyType === NSCounterParty::CounterpartyType::smallBusiness)
@@ -128,7 +128,7 @@ entity Rule32g3 provides NSRules::Rule {
 
     override method applies(flow: NSFlows::Flow): Bool {
         let cpty = this.toCounterparty.get(flow.counterpartyId);
-        let remainingDays = daysToMaturity(t, flow.maturityDate);
+        let remainingDays = daysToMaturity(this.t, flow.maturityDate);
 
         return flow.ruleCode === "O.D.7"
             && (cpty.counterpartyType === NSCounterParty::CounterpartyType::retail || cpty.counterpartyType === NSCounterParty::CounterpartyType::smallBusiness)
@@ -143,7 +143,7 @@ entity Rule32g4 provides NSRules::Rule {
 
     override method applies(flow: NSFlows::Flow): Bool {
         let cpty = this.toCounterparty.get(flow.counterpartyId);
-        let remainingDays = daysToMaturity(t, flow.maturityDate);
+        let remainingDays = daysToMaturity(this.t, flow.maturityDate);
 
         return flow.ruleCode === "O.D.7"
             && (cpty.counterpartyType === NSCounterParty::CounterpartyType::retail || cpty.counterpartyType === NSCounterParty::CounterpartyType::smallBusiness)
@@ -276,11 +276,11 @@ entity Rule33f1iii provides NSRules::Rule {
     field t: DateTime;
 
     override method applies(flow: NSFlows::Flow): Bool {
-        let days = daysToMaturity(t, flow.effectiveMaturityDate);
+        let days = daysToMaturity(this.t, flow.effectiveMaturityDate);
 
         return (flow.ruleCode === "I.S.1" || flow.ruleCode === "I.S.2" || flow.ruleCode === "I.S.5" || flow.ruleCode === "I.S.6" || flow.ruleCode === "I.S.7")
             && flow.assetType === NSBasics::AssetCategoryCodes::level1Assets
-            && (0i < remainingDays && remainingDays <= 30i);
+            && (0i < days && days <= 30i);
     }
 }
 
@@ -288,11 +288,11 @@ entity Rule33f1iv provides NSRules::Rule {
     field t: DateTime;
 
     override method applies(flow: NSFlows::Flow): Bool {
-        let days = daysToMaturity(t, flow.effectiveMaturityDate);
+        let days = daysToMaturity(this.t, flow.effectiveMaturityDate);
 
         return (flow.ruleCode === "I.S.1" || flow.ruleCode === "I.S.2" || flow.ruleCode === "I.S.5" || flow.ruleCode === "I.S.6" || flow.ruleCode === "I.S.7")
-            && flow.assetType === NSBasics::AssetCategoryCodes::level2Assets
-            && (0i < remainingDays && remainingDays <= 30i);
+            && flow.assetType === NSBasics::AssetCategoryCodes::level2aAssets
+            && (0i < days && days <= 30i);
     }
 }
 
@@ -321,7 +321,7 @@ function outflowRules(counterparty: Map<NSCounterParty::CounterpartyId, NSCounte
         Rule32h4{"32(h)(4)", 0.25f, counterparty},
         Rule32l{"32(l)", 0.0f},
         Rule33f1iii{"33(f)(1)(iii)", 0.0f, t},
-        Rulef1iv{"33(f)(1)(iv)", 0.15f, t}
+        Rule33f1iv{"33(f)(1)(iv)", 0.15f, t}
     };
 }
 

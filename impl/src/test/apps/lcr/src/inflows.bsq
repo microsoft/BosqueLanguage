@@ -12,10 +12,9 @@ entity Rule20a1 provides NSRules::Rule {
     field t: DateTime;
 
     override method applies(flow: NSFlows::Flow): Bool {
-        let remainingDays = daysToMaturity(t, flow.maturityDate);
+        let remainingDays = daysToMaturity(this.t, flow.maturityDate);
 
         return (flow.ruleCode === "I.A.3.1" || flow.ruleCode === "I.A.3.2" || flow.ruleCode === "I.A.3.3" || flow.ruleCode === "I.A.3.4" || flow.ruleCode === "I.A.3.5" || flow.ruleCode === "I.A.3.6" || flow.ruleCode === "I.A.3.7" || flow.ruleCode === "I.A.3.8")
-            && (cpty.counterpartyType === NSCounterParty::CounterpartyType::retail || cpty.counterpartyType === NSCounterParty::CounterpartyType::smallBusiness)
             && remainingDays == 0i;
     }
 }
@@ -91,15 +90,15 @@ entity Rule33c provides NSRules::Rule {
 
     override method applies(flow: NSFlows::Flow): Bool {
         let cpty = this.toCounterparty.get(flow.counterpartyId);
-        let rdays = daysToMaturity(t, flow.maturityDate);
+        let rdays = daysToMaturity(this.t, flow.maturityDate);
 
         let uopts = (flow.ruleCode === "I.U.5" || flow.ruleCode === "I.U.6")
             && (cpty.counterpartyType === NSCounterParty::CounterpartyType::retail || cpty.counterpartyType === NSCounterParty::CounterpartyType::smallBusiness)
-            && (0i < days && days <= 30i);
+            && (0i < rdays && rdays <= 30i);
 
         let sopts = (flow.ruleCode === "I.S.1" || flow.ruleCode === "I.S.2" || flow.ruleCode === "I.S.4" || flow.ruleCode === "I.S.5" || flow.ruleCode === "I.S.6" || flow.ruleCode === "I.S.7")
             && cpty.counterpartyType === NSCounterParty::CounterpartyType::retail
-            && (0i < days && days <= 30i);
+            && (0i < rdays && rdays <= 30i);
 
         return uopts || sopts;
     }
@@ -155,21 +154,9 @@ entity Rule33e provides NSRules::Rule {
     }
 }
 
-entity Rule33g provides NSRules::Rule {
-    override method applies(flow: NSFlows::Flow): Bool {
-        return flow.ruleCode === "I.O.5" || flow.cashflow.isTreasuryControl;
-    }
-}
-
-entity Rule33h provides NSRules::Rule {
-    override method applies(flow: NSFlows::Flow): Bool {
-        return flow.ruleCode === "I.O.9" || flow.cashflow.isTreasuryControl;
-    }
-}
-
 function inflowRules(counterparty: Map<NSCounterParty::CounterpartyId, NSCounterParty::Counterparty>, t: DateTime): List<Rule> {
     return List<Rule>{ 
-        Rule21a1{"20(a)(1)", 1.0f, t},
+        Rule20a1{"20(a)(1)", 1.0f, t},
         Rule20a3dash6{"20(a)(3)-(6)", 1.0f},
         Rule22b3L2a{"22(b)(3)L1", -1.0f},
         Rule22b3L2a{"22(b)(3)L2a", -0.85f},
@@ -180,9 +167,7 @@ function inflowRules(counterparty: Map<NSCounterParty::CounterpartyId, NSCounter
         Rule33c{"33(c)", 0.5f, counterparty, t},
         Rule33d1{"33(d)(1)", 1.0f, counterparty},
         Rule33d2{"33(d)(2)", 1.0f, counterparty},
-        Rule33e{"33(e)", 1.0f},
-        Rule33g{"33(g)", 1.0f},
-        Rule33h{"33(h)", 0.0f}
+        Rule33e{"33(e)", 1.0f}
     };
 }
 

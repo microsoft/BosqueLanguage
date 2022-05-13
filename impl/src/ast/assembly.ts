@@ -2463,6 +2463,11 @@ class Assembly {
             }
         }
 
+        if(t1.options.length === 1 && t1.options[0] instanceof ResolvedEntityAtomType && t1.options[0].object.attributes.includes("__list_type")
+            && t2.options.length === 1 && t2.options[0] instanceof ResolvedEntityAtomType && t2.options[0].object.attributes.includes("__list_type")) {
+                this.typeUnify(t1.options[0].binds.get("T") as ResolvedType, t2.options[0].binds.get("T") as ResolvedType, umap);
+        }
+
         //otherwise we do nothing and will fail subtype check later 
     }
 

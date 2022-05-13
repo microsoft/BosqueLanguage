@@ -338,12 +338,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                 return ListOps::s_list_size<T>(this);
             }
             else {
-                if(ListOps::s_list_single_true(mask)) {
-                    return 1n;
-                }
-                else {
-                    return ListOps::s_blockingfailure<Nat>();
-                }
+                return ListOps::s_blockingfailure<Nat>();
             }
         }
     }
@@ -412,12 +407,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                 return ListOps::s_list_size<T>(this);
             }
             else {
-                if(ListOps::s_list_single_true(mask)) {
-                    return 1n;
-                }
-                else {
-                    return ListOps::s_blockingfailure<Nat>();
-                }
+                return ListOps::s_blockingfailure<Nat>();
             }
         }
     }
@@ -435,12 +425,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                 return ListOps::s_list_size<T>(this);
             }
             else {
-                if(ListOps::s_list_single_true(mask)) {
-                    return 1n;
-                }
-                else {
-                    return ListOps::s_blockingfailure<Nat>();
-                }
+                return ListOps::s_blockingfailure<Nat>();
             }
         }
     }
@@ -458,12 +443,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                 return ListOps::s_list_size<T>(this);
             }
             else {
-                if(ListOps::s_list_single_true(mask)) {
-                    return 1n;
-                }
-                else {
-                    return ListOps::s_blockingfailure<Nat>();
-                }
+                return ListOps::s_blockingfailure<Nat>();
             }
         }
     }
@@ -1146,7 +1126,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                         return accl;
                     }
                     else {
-                        return ListOps::s_push_back<T>(accl, x);
+                        return ListOps::s_list_push_back<T>(accl, x);
                     }
                 });
             }
@@ -1768,7 +1748,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
         }
     }
 
-    recursive? method transduce<E=?, U=?>(env: E, f: recursive? fn(_: T, _: E) -> (|E, U|)): (|E, List<U>|) {
+    recursive? method transduce<E, U>(env: E, f: recursive? fn(_: T, _: E) -> (|E, U|)): (|E, List<U>|) {
         if(ListOps::s_list_empty<T>(this)) {
             return (|env, List<U>{}|);
         }
@@ -1779,7 +1759,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
         }
     }
 
-    recursive? method transduce<E=?, U=?>(env: E, f: recursive? fn(_: T, _: E, _: Nat) -> (|E, U|)): (|E, List<U>|) {
+    recursive? method transduce<E, U>(env: E, f: recursive? fn(_: T, _: E, _: Nat) -> (|E, U|)): (|E, List<U>|) {
         if(ListOps::s_list_empty<T>(this)) {
             return (|env, List<U>{}|);
         }
