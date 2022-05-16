@@ -74,16 +74,16 @@
 #define BSQ_STACK_SPACE_ALLOC(SIZE) ((SIZE) == 0 ? nullptr : alloca(SIZE))
 #endif
 
-#define BSQ_BUMP_SPACE_ALLOC(SIZE) zxalloc(SIZE)
-#define BSQ_BUMP_SPACE_RELEASE(M) xfree(M)
-
-#define BSQ_FREE_LIST_ALLOC_SMALL(SIZE) xalloc(SIZE)
-#define BSQ_FREE_LIST_RELEASE(SIZE, M) xfree(M)
-
 #define GC_REF_LIST_BLOCK_SIZE_DEFAULT 256
 
-//Header word layout
-//high [RC - 40 bits] [MARK - 1 bit] [YOUNG - 1 bit] [UNUSED - 2 bits] [TYPEID - 20 bits]
+//Header layout and with immix style blocks
+//high [RC - 38 bits] [MARK 1 - bit] [ALLOCATED - 1 bit] [YOUNG - 1 bit] [TYPEID - 22 bits]
+//high [11] [RC value - 37 bits] | [10] [PAGE - 26 bits] [OBJ - 11 bits] | [01] [FORWARD_PAGE - 26 bits] [FORWARD_OBJ - 11 bits]
+//PageMap<PAGE, page_obj>
+//AllocMap<PAGE_MASK, page_obj>
+
+//Table layout with malloc to make heap corruption checking easy
+//Map<void*, layout word>
 
 #define GC_MARK_BIT 0x800000
 #define GC_YOUNG_BIT 0x400000
