@@ -1739,7 +1739,9 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
         return ListOps::s_list_remove<T>(this, i);
     }
 
-    recursive? method reduce<U=?>(init: U, f: recursive? fn(_: U, _: T) -> U): U {
+    //TODO: we can make this inferable later when we have a better infer procedure for lambdas 
+    //      (since the U is in the body and the return type this may fail in the checker if we run it today)
+    recursive? method reduce<U>(init: U, f: recursive? fn(_: U, _: T) -> U): U {
         if(ListOps::s_list_empty<T>(this)) {
             return init;
         }
@@ -1748,7 +1750,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
         }
     }
 
-    recursive? method reduce<U=?>(init: U, f: recursive? fn(_: U, _: T, _: Nat) -> U): U {
+    recursive? method reduce<U>(init: U, f: recursive? fn(_: U, _: T, _: Nat) -> U): U {
                 if(ListOps::s_list_empty<T>(this)) {
             return init;
         }

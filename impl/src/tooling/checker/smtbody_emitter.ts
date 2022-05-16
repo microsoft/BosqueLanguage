@@ -3216,7 +3216,7 @@ class SMTBodyEmitter {
                             sval
                         ]);
 
-                        return SMTFunction.createWithImplicitLambdas(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateListTypeConstructorSeq(mirrestype, foldcall), implicitlambdas);
+                        return SMTFunction.createWithImplicitLambdas(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, foldcall, implicitlambdas);
                     }
                     else {
                         const resultsmtu = this.typegen.generateResultType(mirrestype);

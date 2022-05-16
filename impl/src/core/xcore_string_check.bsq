@@ -13,7 +13,14 @@ internal entity StringOps provides Some {
             return "";
         }
         else {
-            return ListOps::s_blockingfailure<String>();
+            let istr = ListOps::s_list_get_front<String>(l);
+            let tl = ListOps::s_list_pop_front<String>(l);
+            if(ListOps::s_list_empty<String>(tl)) {
+                return istr;
+            }
+            else {
+                return ListOps::s_list_reduce<String, String>(tl, istr, fn(acc: String, s: String): String => acc.append(s));
+            }
         }
     }
 
@@ -22,7 +29,14 @@ internal entity StringOps provides Some {
             return "";
         }
         else {
-            return ListOps::s_blockingfailure<String>();
+            let istr = ListOps::s_list_get_front<String>(l);
+            let tl = ListOps::s_list_pop_front<String>(l);
+            if(ListOps::s_list_empty<String>(tl)) {
+                return istr;
+            }
+            else {
+                return ListOps::s_list_reduce<String, String>(tl, istr, fn(acc: String, s: String): String => acc.append(sep).append(s));
+            }
         }
     }
 }
