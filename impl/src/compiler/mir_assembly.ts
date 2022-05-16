@@ -526,34 +526,32 @@ class MIRHavocEntityTypeDecl extends MIRInternalEntityTypeDecl {
 }
 
 abstract class MIRPrimitiveCollectionEntityTypeDecl extends MIRInternalEntityTypeDecl {
-    readonly oftype: MIRResolvedTypeKey;
     readonly binds: Map<string, MIRType>;
 
-    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], oftype: MIRResolvedTypeKey, binds: Map<string, MIRType>) {
+    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], binds: Map<string, MIRType>) {
         super(srcInfo, srcFile, tkey, attributes, ns, name, terms, provides);
 
-        this.oftype = oftype;
         this.binds = binds;
     }
 
     jemitcollection(): object {
         const fbinds = [...this.binds].sort((a, b) => a[0].localeCompare(b[0])).map((v) => [v[0], v[1].jemit()]);
-        return { ...this.jemitbase(), oftype: this.oftype, binds: fbinds };
+        return { ...this.jemitbase(), binds: fbinds };
     }
 
-    static jparsecollection(jobj: any): [SourceInfo, string, MIRResolvedTypeKey, string[], string, string, Map<string, MIRType>, MIRResolvedTypeKey[], MIRResolvedTypeKey, Map<string, MIRType>]  {
+    static jparsecollection(jobj: any): [SourceInfo, string, MIRResolvedTypeKey, string[], string, string, Map<string, MIRType>, MIRResolvedTypeKey[], Map<string, MIRType>]  {
         const bbinds = new Map<string, MIRType>();
         jobj.binds.foreach((v: [string, any]) => {
             bbinds.set(v[0], MIRType.jparse(v[1]));
         });
 
-        return [...MIROOTypeDecl.jparsebase(jobj), jobj.oftype, bbinds];
+        return [...MIROOTypeDecl.jparsebase(jobj), bbinds];
     }
 }
 
 class MIRPrimitiveListEntityTypeDecl extends MIRPrimitiveCollectionEntityTypeDecl {
-    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], oftype: MIRResolvedTypeKey, binds: Map<string, MIRType>) {
-        super(srcInfo, srcFile, tkey, attributes, ns, name, terms, provides, oftype, binds);
+    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], binds: Map<string, MIRType>) {
+        super(srcInfo, srcFile, tkey, attributes, ns, name, terms, provides, binds);
     }
 
     getTypeT(): MIRType {
@@ -570,8 +568,8 @@ class MIRPrimitiveListEntityTypeDecl extends MIRPrimitiveCollectionEntityTypeDec
 }
 
 class MIRPrimitiveStackEntityTypeDecl extends MIRPrimitiveCollectionEntityTypeDecl {
-   constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], oftype: MIRResolvedTypeKey, binds: Map<string, MIRType>) {
-        super(srcInfo, srcFile, tkey, attributes, ns, name, terms, provides, oftype, binds);
+   constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], binds: Map<string, MIRType>) {
+        super(srcInfo, srcFile, tkey, attributes, ns, name, terms, provides, binds);
     }
 
     getTypeT(): MIRType {
@@ -588,8 +586,8 @@ class MIRPrimitiveStackEntityTypeDecl extends MIRPrimitiveCollectionEntityTypeDe
 }
 
 class MIRPrimitiveQueueEntityTypeDecl extends MIRPrimitiveCollectionEntityTypeDecl {
-   constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], oftype: MIRResolvedTypeKey, binds: Map<string, MIRType>) {
-        super(srcInfo, srcFile, tkey, attributes, ns, name, terms, provides, oftype, binds);
+   constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], binds: Map<string, MIRType>) {
+        super(srcInfo, srcFile, tkey, attributes, ns, name, terms, provides, binds);
     }
 
     getTypeT(): MIRType {
@@ -606,8 +604,8 @@ class MIRPrimitiveQueueEntityTypeDecl extends MIRPrimitiveCollectionEntityTypeDe
 }
 
 class MIRPrimitiveSetEntityTypeDecl extends MIRPrimitiveCollectionEntityTypeDecl {
-    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], oftype: MIRResolvedTypeKey, binds: Map<string, MIRType>) {
-        super(srcInfo, srcFile, tkey, attributes, ns, name, terms, provides, oftype, binds);
+    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], binds: Map<string, MIRType>) {
+        super(srcInfo, srcFile, tkey, attributes, ns, name, terms, provides, binds);
     }
 
     getTypeT(): MIRType {
@@ -626,8 +624,8 @@ class MIRPrimitiveSetEntityTypeDecl extends MIRPrimitiveCollectionEntityTypeDecl
 class MIRPrimitiveMapEntityTypeDecl extends MIRPrimitiveCollectionEntityTypeDecl {
     readonly tupentrytype: MIRResolvedTypeKey;
 
-    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], oftype: MIRResolvedTypeKey, binds: Map<string, MIRType>, tupentrytype: MIRResolvedTypeKey) {
-        super(srcInfo, srcFile, tkey, attributes, ns, name, terms, provides, oftype, binds);
+    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], binds: Map<string, MIRType>, tupentrytype: MIRResolvedTypeKey) {
+        super(srcInfo, srcFile, tkey, attributes, ns, name, terms, provides, binds);
 
         this.tupentrytype = tupentrytype;
     }

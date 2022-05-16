@@ -5,6 +5,136 @@
 
 //The core namespace implements the primitive concepts used in the bosque core language
 namespace Core;
+#if CHECK_LIBS
+__internal entity Map<K grounded KeyType, V> provides Some, Expandoable<[K, V]>, APIType when K grounded APIType && V grounded APIType, TestableType when K grounded TestableType && V grounded TestableType {
+    method empty(): Bool {
+        return MapOps::s_map_empty<K, V>(this);
+    }
+
+    method size(): Nat {
+        if(MapOps::s_map_empty<K, V>(this)) {
+            return 0n;
+        }
+        else {
+            return MapOps::s_map_size<K, V>(this);
+        }
+    }
+
+    method has(key: K): Bool {
+        if(MapOps::s_map_empty<K, V>(this)) {
+            return false;
+        }
+        else {
+            return MapOps::s_map_has<K, V>(this, key);
+        }
+    }
+
+    method get(key: K): V 
+        requires /\(!MapOps::s_map_empty<K, V>(this), MapOps::s_map_has<K, V>(this, key));
+    {
+        let e = MapOps::s_map_get<K, V>(this, key);
+        return e.1;
+    }
+
+    method getOrNone(key: K): V? {
+        if(\/(MapOps::s_map_empty<K, V>(this), !MapOps::s_map_has<K, V>(this, key))) {
+            return none;
+        }
+        else {
+            let e = MapOps::s_map_get<K, V>(this, key);
+            return e.1;
+        }
+    }
+
+    method getOption(key: K): Option<V> {
+        if(\/(MapOps::s_map_empty<K, V>(this), !MapOps::s_map_has<K, V>(this, key))) {
+            return nothing;
+        }
+        else {
+            let e = MapOps::s_map_get<K, V>(this, key);
+            return something(e.1);
+        }
+    }
+
+    method getTry(key: K, out? v: V): Bool {
+        if(\/(MapOps::s_map_empty<K, V>(this), !MapOps::s_map_has<K, V>(this, key))) {
+            return false;
+        }
+        else {
+            let e = MapOps::s_map_get<K, V>(this, key);
+            v = e.1;
+            return true;
+        }
+    }
+
+    //TODO: do we want a disjoint and/or submap check here?
+
+    method union(m: Map<K, V>): Map<K, V> {
+        if(/\(MapOps::s_map_empty<K, V>(this), MapOps::s_map_empty<K, V>(m))) {
+            return Map<K, V>{};
+        }
+        elif(MapOps::s_map_empty<K, V>(this)) {
+            return m;
+        }
+        elif(MapOps::s_map_empty<K, V>(m)) {
+            return this;
+        }
+        else {
+            assert MapOps::s_map_disjoint<K, V>(this, m);
+
+            return MapOps::s_map_union(this, m);
+        }
+    }
+
+    recursive? method submap(p: recursive? pred(k: K, v: V) -> Bool): Map<K, V> {
+        if(MapOps::s_map_empty<K, V>(this)) {
+            return Map<K, V>{};
+        }
+        else {
+            return MapOps::s_blockingfailure<Map<K, V>>();
+        }
+    }
+
+    recursive? method remap<U=?>(f: recursive? fn(k: K, v: V) -> U): Map<K, U> {
+        if(MapOps::s_map_empty<K, V>(this)) {
+            return Map<K, U>{};
+        }
+        else {
+            return MapOps::s_blockingfailure<Map<K, U>>();
+        }
+    }
+
+    method add(k: K, v: V): Map<K, V>
+        requires \/(MapOps::s_map_empty<K, V>(this), !MapOps::s_map_has<K, V>(this, k));
+    {
+        if(MapOps::s_map_empty<K, V>(this)) {
+            return Map<K, U>{[k, v]};
+        }
+        else {
+            return MapOps::s_map_add<K, V>(this, k, v);
+        }
+    }
+
+    method set(k: K, v: V): Map<K, V> 
+        requires /\(!MapOps::s_map_empty<K, V>(this), MapOps::s_map_has<K, V>(this, k));
+    {
+        return MapOps::s_map_set<K, V>(this, k, v);
+    }
+
+    method remove(k: K): Map<K, V> 
+        requires /\(!MapOps::s_map_empty<K, V>(this), MapOps::s_map_has<K, V>(this, k));
+    {
+        return MapOps::s_map_remove<K, V>(this, k);
+    }
+
+    //
+    //TODO: ref versions of the add/remove/set operators
+    //
+}
+
+//////////////////////////////////////////////////////////////////////////////////
+#else
+//////////////////////////////////////////////////////////////////////////////////
 
 __internal entity Map<K grounded KeyType, V> provides Some, Expandoable<[K, V]>, APIType when K grounded APIType && V grounded APIType, TestableType when K grounded TestableType && V grounded TestableType {
     private function s_into(m: MapRepr<K, V>): Map<K, V> = special_inject;
@@ -92,4 +222,6 @@ __internal entity Map<K grounded KeyType, V> provides Some, Expandoable<[K, V]>,
     //TODO: ref versions of the add/remove/set operators
     //
 }
+#endif
+
 

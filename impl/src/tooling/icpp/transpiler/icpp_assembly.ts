@@ -894,7 +894,6 @@ class ICPPAssembly
                 const ldcl = edcl as MIRPrimitiveListEntityTypeDecl;
                 return {
                     ltype: ldcl.tkey,
-                    reprtype: ldcl.oftype,
                     entrytype: ldcl.getTypeT().typeID,
                     pv4type: `PartialVector4<${ldcl.getTypeT().typeID}>`,
                     pv8type: `PartialVector8<${ldcl.getTypeT().typeID}>`,
@@ -911,7 +910,6 @@ class ICPPAssembly
                 const mdcl = edcl as MIRPrimitiveMapEntityTypeDecl;
                 return {
                     ltype: mdcl.tkey,
-                    reprtype: mdcl.oftype,
                     keytype: mdcl.getTypeK().typeID,
                     valuetype: mdcl.getTypeV().typeID,
                     tupletype: mdcl.tupentrytype,

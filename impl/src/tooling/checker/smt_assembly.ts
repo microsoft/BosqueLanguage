@@ -23,7 +23,6 @@ type SMT2FileInfo = {
     TUPLE_INFO: { decls: string[], constructors: string[], boxing: string[] },
     RECORD_INFO: { decls: string[], constructors: string[], boxing: string[] },
     TYPE_INFO: { decls: string[], constructors: string[], boxing: string[] }
-    COLLECTION_INFO: string[],
     EPHEMERAL_DECLS: { decls: string[], constructors: string[] },
     RESULT_INFO: { decls: string[], constructors: string[] },
     MASK_INFO: { decls: string[], constructors: string[] },
@@ -43,8 +42,9 @@ class SMTFunction {
     readonly result: SMTTypeInfo;
 
     readonly body: SMTExp;
+    readonly implicitlambdas: string[] | undefined;
 
-    constructor(fname: string, args: { vname: string, vtype: SMTTypeInfo }[], maskname: string | undefined, masksize: number, result: SMTTypeInfo, body: SMTExp) {
+    constructor(fname: string, args: { vname: string, vtype: SMTTypeInfo }[], maskname: string | undefined, masksize: number, result: SMTTypeInfo, body: SMTExp, implicitlambdas: string[] | undefined) {
         this.fname = fname;
         this.args = args;
         this.maskname = maskname;
@@ -52,14 +52,19 @@ class SMTFunction {
         this.result = result;
 
         this.body = body;
+        this.implicitlambdas = implicitlambdas;
     }
 
     static create(fname: string, args: { vname: string, vtype: SMTTypeInfo }[], result: SMTTypeInfo, body: SMTExp): SMTFunction {
-        return new SMTFunction(fname, args, undefined, 0, result, body);
+        return new SMTFunction(fname, args, undefined, 0, result, body, undefined);
+    }
+
+    static createWithImplicitLambdas(fname: string, args: { vname: string, vtype: SMTTypeInfo }[], result: SMTTypeInfo, body: SMTExp, implicitlambdas: string[]): SMTFunction {
+        return new SMTFunction(fname, args, undefined, 0, result, body, implicitlambdas);
     }
 
     static createWithMask(fname: string, args: { vname: string, vtype: SMTTypeInfo }[], maskname: string, masksize: number, result: SMTTypeInfo, body: SMTExp): SMTFunction {
-        return new SMTFunction(fname, args, maskname, masksize, result, body);
+        return new SMTFunction(fname, args, maskname, masksize, result, body, undefined);
     }
 
     emitSMT2(): string {
@@ -166,33 +171,8 @@ class SMTEntityInternalOfTypeDecl extends SMTEntityDecl {
     }
 }
 
-class SMTEntityCollectionTypeDecl extends SMTEntityDecl {
-    constructor(smtname: string, typetag: string, boxf: string, ubf: string) {
-        super(false, smtname, typetag, boxf, ubf);
-    }
-}
 
-class SMTEntityCollectionLargeListTypeDecl extends SMTEntityDecl {
-    readonly consf: { cname: string, cargs: { fname: string, ftype: string }[] };
-
-    constructor(smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: string }[] }, boxf: string, ubf: string) {
-        super(false, smtname, typetag, boxf, ubf);
-        this.consf = consf;
-    }
-}
-
-class SMTEntityCollectionLargeMapTypeDecl extends SMTEntityDecl {
-    readonly consf: { cname: string, cargs: { fname: string, ftype: string }[] };
-    readonly entryinfo: SMTEntityCollectionLargeMapEntryTypeDecl;
-
-    constructor(smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: string }[] }, boxf: string, ubf: string, entryinfo: SMTEntityCollectionLargeMapEntryTypeDecl) {
-        super(false, smtname, typetag, boxf, ubf);
-        this.consf = consf;
-        this.entryinfo = entryinfo;
-    }
-}
-
-class SMTEntityCollectionLargeMapEntryTypeDecl extends SMTEntityDecl {
+class SMTEntityCollectionEntryTypeDecl extends SMTEntityDecl {
     readonly consf: { cname: string, cargs: { fname: string, ftype: string }[] };
     readonly emptyf: string;
 
@@ -201,6 +181,20 @@ class SMTEntityCollectionLargeMapEntryTypeDecl extends SMTEntityDecl {
 
         this.consf = consf;
         this.emptyf = emptyf;
+    }
+}
+
+class SMTEntityCollectionTypeDecl extends SMTEntityDecl {
+    readonly consf: { cname: string, cargs: { fname: string, ftype: string }[] };
+    readonly emptyconst: {fkind: string, fname: string, fexp: string};
+    readonly entrydecl: SMTEntityCollectionEntryTypeDecl | undefined;
+
+    constructor(smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: string }[] }, boxf: string, ubf: string, emptyconst: {fkind: string, fname: string, fexp: string}, entrydecl: SMTEntityCollectionEntryTypeDecl | undefined) {
+        super(false, smtname, typetag, boxf, ubf);
+
+        this.consf = consf;
+        this.emptyconst = emptyconst;
+        this.entrydecl = entrydecl;
     }
 }
 
@@ -327,8 +321,6 @@ class SMTAssembly {
     recordDecls: SMTRecordDecl[] = [];
     ephemeralDecls: SMTEphemeralListDecl[] = [];
 
-    auxCollectionDecls: (SMTEntityCollectionLargeListTypeDecl | SMTEntityCollectionLargeMapTypeDecl)[] = [];
-
     typeTags: string[] = [
         "TypeTag_None",
         "TypeTag_Nothing",
@@ -433,7 +425,15 @@ class SMTAssembly {
 
         const okinv = new Set<string>(assembly.functions.map((f) => f.fname));
         assembly.functions.forEach((smtfun) => {
-            invokes.set(smtfun.fname, SMTAssembly.processBodyInfo(smtfun.fname, smtfun.body, okinv));
+            const cn = SMTAssembly.processBodyInfo(smtfun.fname, smtfun.body, okinv);
+            if(smtfun.implicitlambdas !== undefined) {
+                smtfun.implicitlambdas.forEach((cc) => {
+                    if(okinv.has(cc)) {
+                        cn.callees.add(cc);
+                    }
+                });
+            }
+            invokes.set(smtfun.fname, cn);
         });
 
         let roots: SMTCallGNode[] = [];
@@ -540,45 +540,33 @@ class SMTAssembly {
             });
 
         const collectiontypeinfo = this.entityDecls
-            .filter((et) => et instanceof SMTEntityCollectionTypeDecl)
+            .filter((et) => (et instanceof SMTEntityCollectionTypeDecl))
             .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
             .map((tt) => {
-                return {
-                    decl: `(define-sort ${tt.smtname} () BTerm)`,
-                    boxf: `(${tt.boxf} (${tt.ubf} BTerm))`
-                };
-            });
-
-
-        const collectionlargelisttypeinfo = this.auxCollectionDecls
-            .filter((et) => (et instanceof SMTEntityCollectionLargeListTypeDecl))
-            .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
-            .map((tt) => {
+                const ctype = tt as SMTEntityCollectionTypeDecl;
                 return {
                     decl: `(${tt.smtname} 0)`,
-                    consf: `( (${(tt as SMTEntityCollectionLargeListTypeDecl).consf.cname} ${(tt as SMTEntityCollectionLargeListTypeDecl).consf.cargs.map((te) => `(${te.fname} ${te.ftype})`).join(" ")}) )`,
+                    consf: `( (${ctype.consf.cname} ${ctype.consf.cargs.map((te) => `(${te.fname} ${te.ftype})`).join(" ")}) )`,
                     boxf: `(${tt.boxf} (${tt.ubf} ${tt.smtname}))`
                 };
             });
 
-        const collectionlargemapentrytypeinfo = this.auxCollectionDecls
-            .filter((et) => (et instanceof SMTEntityCollectionLargeMapTypeDecl))
+        const collectiontypeinfoconsts = this.entityDecls
+            .filter((et) => (et instanceof SMTEntityCollectionTypeDecl))
             .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
             .map((tt) => {
-                return {
-                    decl: `(${(tt as SMTEntityCollectionLargeMapTypeDecl).entryinfo.smtname} 0)`,
-                    consf: `( (${(tt as SMTEntityCollectionLargeMapTypeDecl).entryinfo.consf.cname} ${(tt as SMTEntityCollectionLargeMapTypeDecl).entryinfo.consf.cargs.map((te) => `(${te.fname} ${te.ftype})`).join(" ")}) (${(tt as SMTEntityCollectionLargeMapTypeDecl).entryinfo.emptyf}) )`
-                };
+                const ctype = tt as SMTEntityCollectionTypeDecl;
+                return `(declare-const ${ctype.emptyconst.fname} ${ctype.emptyconst.fkind}) (assert (= ${ctype.emptyconst.fname} ${ctype.emptyconst.fexp}))`;
             });
 
-        const collectionlargemaptypeinfo = this.auxCollectionDecls
-            .filter((et) => (et instanceof SMTEntityCollectionLargeMapTypeDecl))
+        const collectionentrytypeinfo = this.entityDecls
+            .filter((et) => (et instanceof SMTEntityCollectionTypeDecl) && (et as SMTEntityCollectionTypeDecl).entrydecl !== undefined)
             .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
             .map((tt) => {
+                const einfo = (tt as SMTEntityCollectionTypeDecl).entrydecl as SMTEntityCollectionEntryTypeDecl;
                 return {
-                    decl: `(${tt.smtname} 0)`,
-                    consf: `( (${(tt as SMTEntityCollectionLargeListTypeDecl).consf.cname} ${(tt as SMTEntityCollectionLargeListTypeDecl).consf.cargs.map((te) => `(${te.fname} ${te.ftype})`).join(" ")}) )`,
-                    boxf: `(${tt.boxf} (${tt.ubf} ${tt.smtname}))`
+                    decl: `(${einfo.smtname} 0)`,
+                    consf: `( (${einfo.consf.cname} ${einfo.consf.cargs.map((te) => `(${te.fname} ${te.ftype})`).join(" ")}) (${einfo.emptyf}) )`
                 };
             });
 
@@ -755,25 +743,20 @@ class SMTAssembly {
             TYPE_INFO: { 
                 decls: [
                     ...termtypeinfo.filter((tti) => tti.decl !== undefined).map((tti) => tti.decl as string),
-                    ...collectionlargelisttypeinfo.map((clti) => clti.decl),
-                    ...collectionlargemapentrytypeinfo.map((clti) => clti.decl),
-                    ...collectionlargemaptypeinfo.map((clti) => clti.decl),
+                    ...collectiontypeinfo.map((clti) => clti.decl),
+                    ...collectionentrytypeinfo.map((clti) => clti.decl)
                 ], 
                 constructors: [
                     ...termtypeinfo.filter((tti) => tti.consf !== undefined).map((tti) => tti.consf as string),
-                    ...collectionlargelisttypeinfo.map((clti) => clti.consf),
-                    ...collectionlargemapentrytypeinfo.map((clti) => clti.consf),
-                    ...collectionlargemaptypeinfo.map((clti) => clti.consf),
+                    ...collectiontypeinfo.map((clti) => clti.consf),
+                    ...collectionentrytypeinfo.map((clti) => clti.consf)
                 ], 
                 boxing: [
                     ...termtypeinfo.map((tti) => tti.boxf), 
                     ...ofinternaltypeinfo.map((ttofi) => ttofi.boxf), 
-                    ...collectiontypeinfo.map((cti) => cti.boxf),
-                    ...collectionlargelisttypeinfo.map((clti) => clti.boxf),
-                    ...collectionlargemaptypeinfo.map((clti) => clti.boxf),
+                    ...collectiontypeinfo.map((cti) => cti.boxf)
                 ] 
             },
-            COLLECTION_INFO: collectiontypeinfo.map((cti) => cti.decl),
             EPHEMERAL_DECLS: { 
                 decls: etypeinfo.map((kti) => kti.decl), 
                 constructors: etypeinfo.map((kti) => kti.consf) 
@@ -787,7 +770,10 @@ class SMTAssembly {
                 constructors: maskinfo.map((mi) => mi.consf) 
             },
             V_MIN_MAX: v_min_max,
-            GLOBAL_DECLS: gdecls,
+            GLOBAL_DECLS: [
+                ...collectiontypeinfoconsts,
+                ...gdecls
+            ],
             UF_DECLS: ufdecls,
             FUNCTION_DECLS: foutput.reverse(),
             GLOBAL_DEFINITIONS: gdefs,
@@ -828,7 +814,6 @@ class SMTAssembly {
             .replace(";;TUPLE_TYPE_BOXING;;", joinWithIndent(sfileinfo.TUPLE_INFO.boxing, "      "))
             .replace(";;RECORD_TYPE_BOXING;;", joinWithIndent(sfileinfo.RECORD_INFO.boxing, "      "))
             .replace(";;TYPE_BOXING;;", joinWithIndent(sfileinfo.TYPE_INFO.boxing, "      "))
-            .replace(";;COLLECTION_DECLS;;", joinWithIndent(sfileinfo.COLLECTION_INFO, ""))
             .replace(";;EPHEMERAL_DECLS;;", joinWithIndent(sfileinfo.EPHEMERAL_DECLS.decls, "      "))
             .replace(";;EPHEMERAL_CONSTRUCTORS;;", joinWithIndent(sfileinfo.EPHEMERAL_DECLS.constructors, "      "))
             .replace(";;RESULT_DECLS;;", joinWithIndent(sfileinfo.RESULT_INFO.decls, "      "))
@@ -847,7 +832,7 @@ class SMTAssembly {
 }
 
 export {
-    SMTEntityDecl, SMTEntityOfTypeDecl, SMTEntityInternalOfTypeDecl, SMTEntityCollectionTypeDecl, SMTEntityCollectionLargeListTypeDecl, SMTEntityCollectionLargeMapTypeDecl, SMTEntityCollectionLargeMapEntryTypeDecl,
+    SMTEntityDecl, SMTEntityOfTypeDecl, SMTEntityInternalOfTypeDecl, SMTEntityCollectionTypeDecl, SMTEntityCollectionEntryTypeDecl,
     SMTEntityStdDecl,
     SMTTupleDecl, SMTRecordDecl, SMTEphemeralListDecl,
     SMTConstantDecl,

@@ -11,22 +11,12 @@ internal entity StringOps provides Some {
     function s_strconcat_ne(l: ListRepr<String>): String = s_strconcat_ne;
     function s_strjoin_ne(l: ListRepr<String>, sep: String): Nat = s_strjoin_ne;
 
-    function s_strconcat(l: ListRepr<String>): String {
-       if(l === none) {
-            return "";
-        }
-        else {
-            return StringOps::s_strconcat_ne(l);
-        }
+    function s_strconcat(l: List<String>): String {
+        return "[UNIMPLEMENTED]";
     }
 
-    function s_strjoin(l: ListRepr<String>, sep: String): String {
-        if(l === none) {
-            return "";
-        }
-        else {
-            return StringOps::s_strjoin_ne(l, sep);
-        }
+    function s_strjoin(l: List<String>, sep: String): String {
+        return "[UNIMPLEMENTED]";
     }
 }
 #endif
