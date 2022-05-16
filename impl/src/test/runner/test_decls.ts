@@ -4,6 +4,7 @@
 //-------------------------------------------------------------------------------------------------------
 
 import {MIRFunctionParameter, MIRType, SymbolicActionMode} from "../../compiler/mir_assembly";
+import { VerifierOptions } from "../../tooling/checker/smt_exp";
 
 //EPIPE error on win with parallel runs
 const PARALLEL_COUNT_ICPP = process.platform !== "win32" ? 4 : 1;
@@ -18,10 +19,11 @@ const SMT_VOPTS_CHK = {
     SLEN_MAX: 48,
     BLEN_MAX: 32,
 
+    ARRAY_MODE: "Seq",
     CONTAINER_MAX: 3,
         
     ActionMode: SymbolicActionMode.ChkTestSymbolic
-};
+} as VerifierOptions;
 
 const SMT_VOPTS_ERR = {
     INT_MIN: -255,
@@ -29,10 +31,11 @@ const SMT_VOPTS_ERR = {
     SLEN_MAX: 48,
     BLEN_MAX: 32,
 
+    ARRAY_MODE: "Seq",
     CONTAINER_MAX: 3,
         
     ActionMode: SymbolicActionMode.ErrTestSymbolic
-};
+} as VerifierOptions;
 
 enum TestResultKind {
     ok,

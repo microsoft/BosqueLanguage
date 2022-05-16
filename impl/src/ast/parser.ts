@@ -2911,7 +2911,7 @@ class Parser {
 
             if (vars !== undefined) {
                 if (decls.has(name)) {
-                    this.raiseError(sinfo.line, "Variable is already defined in scope");
+                    this.raiseError(sinfo.line, `Variable "${name}" is already defined in scope`);
                 }
                 decls.add(name);
 
@@ -2919,11 +2919,11 @@ class Parser {
             }
             else {
                 if (!this.m_penv.getCurrentFunctionScope().isVarNameDefined(name)) {
-                    this.raiseError(sinfo.line, "Variable is not defined in scope");
+                    this.raiseError(sinfo.line, `Variable "${name}" is not defined in scope`);
                 }
 
                 if (!(itype instanceof AutoTypeSignature)) {
-                    this.raiseError(sinfo.line, "Cannot redeclare type of variable on assignment");
+                    this.raiseError(sinfo.line, `Cannot redeclare type of variable "${name}" on assignment`);
                 }
 
                 return new VariableAssignmentStructuredAssignment(name);
@@ -4161,21 +4161,6 @@ class Parser {
                 }
                 else if(ename === "MapTree") {
                     attributes.push("__map_tree_type");
-                }
-                else if(ename === "Vector1") {
-                    attributes.push("__vector1_type");
-                }
-                else if(ename === "Vector2") {
-                    attributes.push("__vector2_type");
-                }
-                else if(ename === "Vector3") {
-                    attributes.push("__vector3_type");
-                }
-                else if(ename === "LargeList") {
-                    attributes.push("__largelist_type");
-                }
-                else if(ename === "LargeMap") {
-                    attributes.push("__largemap_type");
                 }
                 else {
                     //not special

@@ -111,7 +111,7 @@ entity Board provides APIType {
     }
 
     method checkDraw(): Bool {
-        return !this.cells.containsNone();
+        return !this.cells.someOf(pred(cc: List<PlayerMark>) => cc.contains(PlayerMark::empty));
     }
 
     method checkAnyWinner(): PlayerMark? {

@@ -34,7 +34,7 @@ function doneop(iserror, msg) {
 
 exec("tsc -p tsconfig.json", {cwd: tscdir}, (err, stdout, stderr) => {
     donets = true;
-    doneop(err !== null, err !== null ? err : "done tsc..."); 
+    doneop(err !== null, err !== null ? err + stderr + stdout : "done tsc..."); 
 });
 
 exec("node ./resource_copy.js", {cwd: builddir}, (err, stdout, stderr) => {

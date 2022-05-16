@@ -5,10 +5,33 @@
 
 namespace Test;
 
+import NSBasics;
+import NSCountry;
+import NSCurrency;
+import NSCounterParty;
 import NSCentralBank;
 import NSFedCode;
+import NSFedCodeRules;
+import NSFlows;
+import NSInflows;
+import NSOutflows;
+import NSProduct;
+import NSRules;
+import NSCalculations;
 
-chktest function fedcode_classify_other(cashflow: NSFedCode::Cashflow): Bool {
+errtest function lcr_error(toCounterparty: Map<NSCounterParty::CounterpartyId, NSCounterParty::Counterparty>, product: Map<NSProduct::ProductId, NSProduct::Product>, t: DateTime, flowsForDate: List<[DateTime, NSFlows::Flow]>, reserveBalanceRequirement: NSBasics::Balance): NSBasics::Ratio {
+    return NSCalculations::lcf(toCounterparty, product, t, flowsForDate, reserveBalanceRequirement);
+}
+
+errtest function hqlaAmount_err(product: Map<NSProduct::ProductId, NSProduct::Product>, t0Flows: List<NSFlows::Flow>, reserveBalanceRequirement: NSBasics::Balance): NSBasics::Balance {
+    return NSCalculations::hqlaAmount(product, t0Flows, reserveBalanceRequirement);
+}
+
+errtest function classify_single_error(centralBanks: Map<NSFedCodeRules::PartyID, NSCentralBank::CentralBank>, cashflow: NSFedCodeRules::Cashflow): NSFedCodeRules::RuleCode? {
+    return NSFedCodeRules::classify(centralBanks, cashflow);
+}
+
+chktest function fedcode_classify_other_error(cashflow: NSFedCode::Cashflow): Bool {
     let fc = NSFedCode::classify(cashflow, Map<NSFedCode::PartyID, NSCentralBank::CentralBank>{});
 
     return \/(fc === FedCode::iu1, fc === FedCode::iu2, fc === FedCode::iu4, fc === FedCode::unclassified); 

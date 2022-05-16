@@ -1,8 +1,3 @@
-;;-------------------------------------------------------------------------------------------------------
-;; Copyright (C) Microsoft. All rights reserved.
-;; Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
-;;-------------------------------------------------------------------------------------------------------
-
 (set-logic ALL)
 
 ;;
@@ -286,8 +281,6 @@
 (declare-const BTerm@nothing BTerm)
 (assert (= BTerm@nothing (BTerm@termbox TypeTag_Nothing bsqobject_nothing@literal)))
 
-;;COLLECTION_DECLS;;
-
 ;;
 ;;Define utility functions
 ;;
@@ -474,6 +467,16 @@
 
 (define-fun _@@cons_ContentHash_entrypoint ((ctx HavocSequence)) $Result_BContentHash
   ($Result_BContentHash@success (BContentHash@UFCons_API ctx))
+)
+
+(declare-fun @@SortedIntSeq@@Create (Int Int Int) (Seq Int))
+
+(define-fun @@CheckIntSeqLen ((s (Seq Int)) (len Int)) Bool
+  (= (seq.len s) len)
+)
+
+(define-fun @@CheckIntSeqSorted ((s (Seq Int)) (start Int) (len Int)) Bool
+  (forall ((i Int)) (=> (and (<= 0 i) (< i len)) (= (seq.nth s i) (+ start i))))
 )
 
 ;;GLOBAL_DECLS;;

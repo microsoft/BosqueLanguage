@@ -12,6 +12,7 @@ type VerifierOptions = {
     SLEN_MAX: number,
     BLEN_MAX: number,
 
+    ARRAY_MODE: "Seq" | "Array";
     CONTAINER_MAX: number,
 
     ActionMode: SymbolicActionMode
