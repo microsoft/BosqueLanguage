@@ -933,7 +933,7 @@ class TypeChecker {
         const fsig = this.m_assembly.normalizeTypeFunction(invk.generateSig(), rrbinds);
         this.raiseErrorIf(sinfo, fsig === undefined, "Invalid function signature");
 
-        const eargs = this.checkArgumentsEvaluationWSig(sinfo, env, fsig as ResolvedFunctionType, rrbinds, args, optSelfValue, refallowed);
+        const eargs = this.checkArgumentsEvaluationWSig(sinfo, env, fsig as ResolvedFunctionType, implicitBinds, args, optSelfValue, refallowed);
 
         return [fsig as ResolvedFunctionType, rrbinds, eargs];
     }
