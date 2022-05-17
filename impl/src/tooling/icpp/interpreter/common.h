@@ -61,7 +61,8 @@
 #endif
 
 //Program should not contain any allocations larger than this in a single block 
-#define BSQ_ALLOC_MAX_BLOCK_SIZE 65536
+#define BSQ_ALLOC_MAX_BLOCK_SIZE (1024 + 16)
+#define BSQ_ALLOC_MAX_OBJ_SIZE 128
 
 //Min and max bump allocator size
 #define BSQ_MIN_NURSERY_SIZE 1048576
@@ -77,13 +78,13 @@
 #define GC_REF_LIST_BLOCK_SIZE_DEFAULT 256
 
 //Header layout and with immix style blocks
-//high [RC - 38 bits] [MARK 1 - bit] [ALLOCATED - 1 bit] [YOUNG - 1 bit] [TYPEID - 22 bits]
-//high [11] [RC value - 37 bits] | [10] [PAGE - 26 bits] [OBJ - 11 bits] | [01] [FORWARD_PAGE - 26 bits] [FORWARD_OBJ - 11 bits]
-//PageMap<PAGE, page_obj>
-//AllocMap<PAGE_MASK, page_obj>
+//high [RC - 40 bits] [MARK 1 - bit] [ALLOCATED - 1 bit] [YOUNG - 1 bit] [TYPEID - 21 bits]
+//high [11] [RC value - 38 bits] | [10] [PAGE1 - 19 bits] [PAGE2 - 19 bits] | [01] [FORWARD_PAGE - 19 bits] [FORWARD_OBJ - 12 bits]
+//PageMap<PAGE, page_obj> -- this should go away and we just allocate with mmap/VirtualAlloc in a range that is covered by 15 + 19 bits
+//ValidAddrMap<PAGE_MASK, page_obj> -- need to check if a stack value is a valid allocated location
 
 //Table layout with malloc to make heap corruption checking easy
-//Map<void*, layout word>
+//Map<void*, layout word> -- works as both page map and valid map
 
 #define GC_MARK_BIT 0x800000
 #define GC_YOUNG_BIT 0x400000
