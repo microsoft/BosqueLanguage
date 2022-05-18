@@ -7,26 +7,6 @@
 
 #include "../common.h"
 
-////////////////////////////////
-//Core Malloc
-inline void* xalloc(size_t alloc)
-{
-    return malloc(alloc);
-}
-
-inline void* zxalloc(size_t alloc)
-{
-    void* vv = malloc(alloc);
-    GC_MEM_ZERO(vv, alloc);
-
-    return vv;
-}
-
-inline void xfree(void* mem)
-{
-    free(mem);
-}
-
 ////
 //BSQType abstract base class
 class BSQType
@@ -71,25 +51,6 @@ public:
 ////////////////////////////////
 //Storage Operators
 
-template <bool isRoot>
-GCProcessOperatorFP getProcessFP(const BSQType* tt)
-{
-    BSQ_INTERNAL_ASSERT(false);
-    return nullptr;
-}
-
-template <>
-inline GCProcessOperatorFP getProcessFP<true>(const BSQType* tt)
-{
-    return tt->gcops.fpProcessObjRoot;
-}
-
-template <>
-inline GCProcessOperatorFP getProcessFP<false>(const BSQType* tt)
-{
-    return tt->gcops.fpProcessObjHeap;
-}
-
 class BSQCollectionIterator
 {
 public:
@@ -98,24 +59,6 @@ public:
 
     BSQCollectionIterator(): iterstack(), lcurr(nullptr) {;}
     virtual ~BSQCollectionIterator() {;}
-};
-
-class BSQCollectionGCReprNode
-{
-public:
-    void* repr;
-
-    BSQCollectionGCReprNode(): repr(nullptr) {;}
-    BSQCollectionGCReprNode(void* repr): repr(repr) {;}
-};
-
-class BSQTempRootNode
-{
-public:
-    const BSQType* rtype;
-    void* root;
-
-    BSQTempRootNode(const BSQType* rtype, void* root): rtype(rtype), root(root) {;}
 };
 
 struct GCStackEntry
@@ -436,10 +379,7 @@ class Allocator
 public:
     static Allocator GlobalAllocator;
 
-    static BSQCollectionGCReprNode* collectionnodesend;
-    static BSQCollectionGCReprNode collectionnodes[BSQ_MAX_STACK];
-    static std::list<BSQCollectionIterator*> collectioniters;
-    static std::vector<std::list<BSQTempRootNode>> alloctemps;
+    
 
 #ifdef BSQ_DEBUG_BUILD
     static std::map<size_t, std::pair<const BSQType*, void*>> dbg_idToObjMap;
@@ -469,7 +409,11 @@ public:
     }
 
 private:
+
     BumpSpaceAllocator bumpalloc;
+
+    bool gcEnabled; //can turn off collector for a bit if we want
+    bool compactionEnabled; //can turn off compaction for a bit if we want
 
     GCRefList maybeZeroCounts;
     GCRefList newMaybeZeroCounts;
@@ -521,6 +465,74 @@ private:
     }
 
 public:
+        inline void processIncHeapRC(GC_META_DATA_WORD* addr, GC_META_DATA_WORD meta, void* fromObj)
+    {
+        if(GC_RC_IS_COUNT(meta))
+        {
+            GC_STORE_META_DATA_WORD(addr, GC_INC_RC_COUNT(meta));
+        }
+        else
+        {
+            if(GC_RC_IS_PARENT_CLEAR(GC_RC_GET_PARENT1(meta)))
+            {
+                GC_STORE_META_DATA_WORD(addr, ((GC_PAGE_NUMBER_FOR_ADDR(fromObj) << GC_RC_PAGE1_SHIFT) | GC_ALLOCATED_BIT | GC_EXTRACT_TYPEID(meta)));
+            }
+            else if(GC_RC_IS_PARENT_CLEAR(GC_RC_GET_PARENT2(meta)))
+            {
+                GC_STORE_META_DATA_WORD(addr, ((GC_PAGE_NUMBER_FOR_ADDR(fromObj) << GC_RC_PAGE2_SHIFT) | meta));
+            }
+            else
+            {
+                GC_STORE_META_DATA_WORD(addr, (GC_RC_KIND_MASK | GC_RC_THREE | GC_ALLOCATED_BIT | GC_EXTRACT_TYPEID(meta)));
+            }
+        }
+    }
+
+    inline void processDecHeapRC(GC_META_DATA_WORD* addr, GC_META_DATA_WORD meta, void* fromObj) 
+    {
+        if(GC_RC_IS_COUNT(meta))
+        {
+            GC_STORE_META_DATA_WORD(addr, GC_DEC_RC_COUNT(meta));
+        }
+        else
+        {
+            auto parent = GC_PAGE_NUMBER_FOR_ADDR(fromObj);
+            if(GC_RC_GET_PARENT2(meta) == parent)
+            {
+                //delete parent 2
+                GC_STORE_META_DATA_WORD(addr, ((GC_PAGE_NUMBER_FOR_ADDR(fromObj) << GC_RC_PAGE1_SHIFT) | GC_ALLOCATED_BIT | GC_EXTRACT_TYPEID(meta)));
+            }
+            else
+            {
+                //That is really bad
+                assert(GC_RC_GET_PARENT1(meta) == parent);
+
+                //shift parent 2 to parent 1
+                GC_STORE_META_DATA_WORD(addr, (GC_RC_KIND_MASK | GC_RC_THREE | GC_ALLOCATED_BIT | GC_EXTRACT_TYPEID(meta)));
+            }
+        }
+    }
+
+    inline void processDecHeapRC_DuringCollection(GC_META_DATA_WORD* addr, GC_META_DATA_WORD meta, void* fromObj)
+    {
+        Allocator::processDecHeapRC(addr, meta, fromObj);
+
+        if(GC_TEST_IS_UNREACHABLE(GC_LOAD_META_DATA_WORD(addr)))
+        {
+            xxxx; //this goes on dealloc processing list
+        }
+    }
+
+    inline void processDecHeapRC_DuringCompaction(GC_META_DATA_WORD* addr, GC_META_DATA_WORD meta, void* fromObj)
+    {
+        Allocator::processDecHeapRC(addr, meta, fromObj);
+
+        if(GC_TEST_IS_UNREACHABLE(GC_LOAD_META_DATA_WORD(addr)))
+        {
+            xxxx; //this goes on maybe 0 list
+        }
+    }
+
     template <bool isRoot>
     inline static void gcProcessSlot(void** slot)
     {

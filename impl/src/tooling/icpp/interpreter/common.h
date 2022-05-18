@@ -165,33 +165,11 @@ struct PageInfo
 #define GC_INC_RC_COUNT(W) (W + GC_RC_ONE)
 #define GC_DEC_RC_COUNT(W) (W - GC_RC_ONE)
 
-#define GC_RC_IS_COUNT(W) (RC & GC_RC_KIND_MASK)
-#define GC_RC_GET_PARENT1(W) ((RC & GC_RC_PAGE1_MASK) >> GC_RC_PAGE1_SHIFT)
-#define GC_RC_GET_PARENT2(W) ((RC & GC_RC_PAGE1_MASK) >> GC_RC_PAGE2_SHIFT)
+#define GC_RC_IS_COUNT(W) (W & GC_RC_KIND_MASK)
+#define GC_RC_GET_PARENT1(W) ((W & GC_RC_PAGE1_MASK) >> GC_RC_PAGE1_SHIFT)
+#define GC_RC_GET_PARENT2(W) ((W & GC_RC_PAGE1_MASK) >> GC_RC_PAGE2_SHIFT)
 
 #define GC_RC_IS_PARENT_CLEAR(P) (P == 0ul)
-
-#define GC_PROCESS_HEAP_RC(ADDR, W, M) { \
-    if(GC_RC_IS_COUNT(W)) \
-    { \
-        GC_STORE_META_DATA_WORD(ADDR, GC_INC_RC_COUNT(W)); \
-    } \
-    else \
-    { \
-        if(GC_RC_IS_PARENT_CLEAR(GC_RC_GET_PARENT1(W))) \
-        { \
-            GC_STORE_META_DATA_WORD(ADDR, ((GC_PAGE_NUMBER_FOR_ADDR(M) << GC_RC_PAGE1_SHIFT) | GC_ALLOCATED_BIT | GC_EXTRACT_TYPEID(W))) \
-        } \
-        else if(GC_RC_IS_PARENT_CLEAR(GC_RC_GET_PARENT2(W))) \
-        { \
-            GC_STORE_META_DATA_WORD(ADDR, ((GC_PAGE_NUMBER_FOR_ADDR(M) << GC_RC_PAGE2_SHIFT) | W)) \
-        } \
-        else \
-        { \
-            GC_STORE_META_DATA_WORD(ADDR, (GC_RC_KIND_MASK | GC_RC_THREE | GC_ALLOCATED_BIT | GC_EXTRACT_TYPEID(W))) \
-        } \
-    } \
-}
 
 #define GC_INIT_YOUNG_ALLOC(ADDR, TID) GC_SET_META_DATA_WORD(ADDR, GC_YOUNG_BIT | GC_ALLOCATED_BIT | TID)
 
