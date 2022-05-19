@@ -7,6 +7,11 @@
 
 #include "../common.h"
 
+#ifdef _WIN32
+#include "memoryapi.h"
+#else
+#endif
+
 ////
 //BSQType abstract base class
 class BSQType
@@ -25,6 +30,9 @@ public:
 
     DisplayFP fpDisplay;
     const std::string name;
+
+    size_t allocpageCount;
+    PageInfo* allocpages;
 
     //Constructor that everyone delegates to
     BSQType(BSQTypeID tid, BSQTypeLayoutKind tkind, BSQTypeSizeInfo allocinfo, GCFunctorSet gcops, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyCmpFP fpkeycmp, DisplayFP fpDisplay, std::string name): 
@@ -49,6 +57,26 @@ public:
 };
 
 ////////////////////////////////
+//Core Malloc
+inline void* xalloc(size_t alloc)
+{
+    return malloc(alloc);
+}
+
+inline void* zxalloc(size_t alloc)
+{
+    void* vv = malloc(alloc);
+    GC_MEM_ZERO(vv, alloc);
+
+    return vv;
+}
+
+inline void xfree(void* mem)
+{
+    free(mem);
+}
+
+////////////////////////////////
 //Storage Operators
 
 class BSQCollectionIterator
@@ -61,16 +89,14 @@ public:
     virtual ~BSQCollectionIterator() {;}
 };
 
-struct GCStackEntry
-{
-    void** framep;
-    RefMask mask;
-};
-
+//
+//TODO: this should all end up using the actual call stack and walked via ASM (interpreter just stack allocs for data and C compiler frames are in there too)
+//      lets go look at chakra for this
+//
 class GCStack
 {
 public:
-    static GCStackEntry frames[BSQ_MAX_STACK];
+    static void** frames[BSQ_MAX_STACK];
     static uint32_t stackp;
 
     static void reset()
@@ -78,11 +104,11 @@ public:
         stackp = 1;
     }
 
-    inline static void pushFrame(void** framep, RefMask mask)
+    inline static void pushFrame(void** framep)
     {
         if (GCStack::stackp < BSQ_MAX_STACK)
         {
-            GCStack::frames[GCStack::stackp++] = { framep, mask };
+            GCStack::frames[GCStack::stackp++] = framep;
         }
         else
         {
@@ -262,7 +288,92 @@ public:
     }
 };
 
-//A class that implements our bump pointer nursery space
+//A class that implements our block allocator stuff
+class BlockAllocator
+{
+public:
+    //set of all pages that are currently allocated
+    std::set<PageInfo*> page_set;
+    std::list<PageInfo*> free_pages;
+
+#ifndef ALLOC_BLOCKS
+    //For malloc based debug implementation we keep explicit map from object to page it is in
+    std::map<void*, PageInfo*> page_map;
+#endif
+
+    inline bool isAddrAllocated(void* addr) const
+    {
+        auto pageiter = this->page_set.find(PAGE_MASK_EXTRACT(addr));
+        if(pageiter == this->page_set.cend() || !(*pageiter)->inuse)
+        {
+            return false;
+        }
+        else
+        {
+            auto ooidx = GC_PAGE_INDEX_FOR_ADDR(addr, *pageiter);
+            auto meta = GC_LOAD_META_DATA_WORD(GC_GET_META_DATA_ADDR_AND_PAGE(addr, *pageiter));
+            return GC_IS_ALLOCATED(meta);
+        }
+    }
+
+    inline void allocatePageForType(BSQType* btype)
+    {
+        PageInfo* pp = nullptr;
+        if(!this->free_pages.empty())
+        {
+            pp = this->free_pages.front();
+            this->free_pages.pop_front();
+        }
+        else
+        {
+#ifdef ALLOC_BLOCKS
+#ifdef _WIN32
+            //https://docs.microsoft.com/en-us/windows/win32/memory/reserving-and-committing-memory
+            pp = (PageInfo*)VirtualAlloc(nullptr, BSQ_BLOCK_ALLOCATION_SIZE, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+            assert(pp != nullptr); //failed for some reason
+            assert(((uintptr_t)pp) < MAX_ALLOCATED_ADDRESS);
+
+            pp->slots = (GC_META_DATA_WORD*)((uint8_t*)pp + sizeof(PageInfo));
+            pp->data = (GC_META_DATA_WORD*)((uint8_t*)pp + sizeof(PageInfo) + btype->tableEntryCount * sizeof(GC_META_DATA_WORD));
+#else
+            xxxx;
+#endif
+#else
+            pp = new PageInfo();
+            pp->slots = (GC_META_DATA_WORD*)zxalloc(btype->tableEntryCount * sizeof(GC_META_DATA_WORD));
+            pp->data = (void*)zxalloc(btype->tableEntryCount * sizeof(void*));
+#endif
+        }
+
+#ifndef ALLOC_BLOCKS
+        for(size_t i = 0; i < btype->tableEntryCount; ++i)
+        {
+            *((void**)(pp->data) + i) = (void*)zxalloc(btype->allocinfo.heapsize);
+        }
+#endif
+
+        pp->pageid = this->page_set.size();
+        pp->entry_size = btype->allocinfo.heapsize;
+        pp->entry_count = btype->tableEntryCount;
+        pp->entry_available_count = btype->tableEntryCount;
+
+        pp->tid = btype->tid;
+        pp->type = btype;
+        pp->idxshift = btype->tableEntryIndexShift;
+
+        pp->inuse = true;
+        pp->next = btype->allocpages;
+        pp->prev = nullptr;
+
+        btype->allocpages->prev = pp;
+        btype->allocpages = pp;
+        this->page_set.insert(pp);
+    }
+};
+
+
+
+
 class BumpSpaceAllocator
 {
 private:

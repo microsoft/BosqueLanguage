@@ -22,6 +22,11 @@
 #include "../../api_parse/decls.h"
 
 ////////////////////////////////
+//Forward decls for bosque types
+typedef uint32_t BSQTypeID;
+class BSQType;
+
+////////////////////////////////
 //Various sizes
 #define BSQ_MAX_STACK 2048
 
@@ -61,17 +66,19 @@
 #endif
 
 //All struct/tuple/recordd objects must be smaller than this (or compiler must split them)
-#define BSQ_ALLOC_MAX_OBJ_SIZE 128
+#define BSQ_ALLOC_MAX_OBJ_SIZE 496ul
 
 //List/Map nodes can contain multiple objects so largest allocation is a multiple (4, 8, 16)  of this + a count
-#define BSQ_ALLOC_MAX_BLOCK_SIZE ((BSQ_ALLOC_MAX_OBJ_SIZE * 16) + 16)
+#define BSQ_ALLOC_MAX_BLOCK_SIZE ((BSQ_ALLOC_MAX_OBJ_SIZE * 16ul) + 16ul)
 
 //Block allocation size
-#define BSQ_BLOCK_ALLOCATION_SIZE 32768
+#define BSQ_BLOCK_ALLOCATION_SIZE 8192ul
 
-//Min and max bump allocator size
-#define BSQ_MIN_NURSERY_SIZE 1048576
-#define BSQ_MAX_NURSERY_SIZE 16777216
+//Collection threshold
+#define BSQ_COLLECT_THRESHOLD 2097152ul
+
+//Make sure any allocated page is addressable by us -- less than 2^43
+#define MAX_ALLOCATED_ADDRESS 8796093022208ul
 
 //Allocation routines
 #ifdef _WIN32
@@ -83,74 +90,89 @@
 #define GC_REF_LIST_BLOCK_SIZE_DEFAULT 256
 
 //Header layout and with immix style blocks
-//high [RC - 41 bits] [MARK 1 - bit] [ALLOCATED - 1 bit] [YOUNG - 1 bit] [TYPEID - 20 bits]
-//high [1] [RC value - 40 bits] | [0] [PAGE1 - 20 bits] [PAGE2 - 20 bits]
-//PageMap<PAGE, page_obj> -- this should go away and we just allocate with mmap/VirtualAlloc in a range that is covered by 15 + 19 bits
-//ValidAddrMap<PAGE_MASK, page_obj> -- need to check if a stack value is a valid allocated location
-//Page number will just be mask low bits (and high bits since we force in range) and shift 
+//high [RC - 61 bits] [MARK 1 - bit] [YOUNG - 1 bit] [ALLOCATED - 1 bit]
+//high [1] [RC value - 60 bits] | [0] [PAGE1 - 30 bits] [PAGE2 - 30 bits]
 
-//Table layout with malloc to make heap corruption checking easy
-//Map<void*, layout word> -- works as both page map and valid map
+#define GC_MARK_BIT 0x4ul
+#define GC_YOUNG_BIT 0x2ul
+#define GC_ALLOCATED_BIT 0x1ul
 
-#define GC_MARK_BIT 0x400000ul
-#define GC_ALLOCATED_BIT 0x200000ul
-#define GC_YOUNG_BIT 0x100000ul
-
-#define GC_RC_KIND_MASK 0x1000000000000000ul
-#define GC_RC_DATA_MASK 0x7FFFFFFFFF800000ul
+#define GC_RC_KIND_MASK 0x8000000000000000ul
+#define GC_RC_DATA_MASK 0x7FFFFFFFFFFFFF8ul
 #define GC_RC_COUNT_MASK GC_RC_DATA_MASK
-#define GC_RC_PAGE1_MASK 0x7FFFF80000000000ul
-#define GC_RC_PAGE1_SHIFT 43u
-#define GC_RC_PAGE2_MASK 0x7FFFF800000
-#define GC_RC_PAGE2_SHIFT 23u
+#define GC_RC_PAGE1_MASK 0x7FFFFFFE00000000ul
+#define GC_RC_PAGE1_SHIFT 33u
+#define GC_RC_PAGE2_MASK 0x1FFFFFFF8ul
+#define GC_RC_PAGE2_SHIFT 3u
 
-#define GC_TYPE_ID_MASK 0xFFFFFul
 #define GC_REACHABLE_MASK (GC_RC_DATA_MASK | GC_MARK_BIT)
 
-//TODO: here is where we have a map to/from malloc objects for checking and an address masking version when we do the immix heap
+#define PAGE_ADDR_MASK 0xFFFFFFFFFFFFE000ul
+#define PAGE_INDEX_ADDR_MASK 0x1FFFul
+#define PAGE_MASK_EXTRACT(M) ((PageInfo*)(((uintptr_t)M) & PAGE_ADDR_MASK))
+#define PAGE_INDEX_EXTRACT(M, PI) ((size_t)((((uintptr_t)M) & PAGE_INDEX_ADDR_MASK) >> (PI)->idxshift)) xxxx
+
 typedef uint64_t GC_META_DATA_WORD;
+
 #ifdef ALLOC_BLOCKS
-struct PageInfo
+class PageInfo
 {
+public:
     size_t pageid;
     size_t entry_size;
     size_t entry_count;
     size_t entry_available_count;
     GC_META_DATA_WORD* slots;
     void* data;
+
+    BSQTypeID tid;
+    BSQType* type;
+    size_t idxshift;
+
+    bool inuse;
+    PageInfo* next;
+    PageInfo* prev;
 };
 
-#define GC_PAGE_FOR_ADDR(M) -- take the high order bits to get page start
-#define GC_PAGE_NUMBER_FOR_ADDR(M) -- take the high order bits to get page start then shift down
-#define GC_PAGE_INDEX_FOR_ADDR(M, PAGE) -- take the low order bits to get the index
-#define GC_IS_ADDR_ALLOCATED(M) -- is the page allocated and is the object allocated in hte page
+#define GC_PAGE_FOR_ADDR(M) PAGE_MASK_EXTRACT(M)
+#define GC_PAGE_NUMBER_FOR_ADDR(M) (PAGE_MASK_EXTRACT(M).pageid)
+#define GC_PAGE_INDEX_FOR_ADDR(M, PAGE) PAGE_INDEX_EXTRACT(M, PAGE)
 #else
-struct PageInfo
+class PageInfo
 {
+public:
     size_t pageid;
     size_t entry_size;
     size_t entry_count;
     size_t entry_available_count;
     GC_META_DATA_WORD* slots;
-    void** data;
+    void* data;
+
+    BSQTypeID tid;
+    BSQType* type;
+    size_t idxshift;
+
+    bool inuse;
+    PageInfo* next;
+    PageInfo* prev;
 
     std::map<void*, size_t> objslots;
 };
 
-#define GC_PAGE_FOR_ADDR(M) (&Allocator::GlobalAllocator::g_page_map.at((void*)M))
+#define GC_PAGE_FOR_ADDR(M) (&Allocator::GlobalBlockAllocator.page_map.at((void*)M))
 #define GC_PAGE_NUMBER_FOR_ADDR(M) (GC_PAGE_FOR_ADDR(M).pageid)
-#define GC_PAGE_INDEX_FOR_ADDR(M, PAGE) (PAGE.objslots.at((void*)M))
+#define GC_PAGE_INDEX_FOR_ADDR(M, PAGE) ((PAGE)->objslots.at((void*)M))
 #endif
 
-#define GC_GET_PAGE_SLOTS(PAGE) (PAGE.slots)
-#define GC_GET_META_DATA_ADDR(M) (GC_GET_PAGE_SLOTS(GC_PAGE_FOR_ADDR(M)) + GC_PAGE_INDEX_FOR_ADDR(M, GC_PAGE_FOR_ADDR(M)))
+#define GC_GET_META_DATA_ADDR(M) (GC_PAGE_FOR_ADDR(M).slots + GC_PAGE_INDEX_FOR_ADDR(M, GC_PAGE_FOR_ADDR(M)))
+#define GC_GET_META_DATA_ADDR_AND_PAGE(M, PAGE) ((PAGE)->slots + GC_PAGE_INDEX_FOR_ADDR(M, PAGE))
 
 #define GC_LOAD_META_DATA_WORD(ADDR) (*ADDR)
 #define GC_STORE_META_DATA_WORD(ADDR, W) (*ADDR = W)
 
-#define GC_EXTRACT_RC(W) (W & GC_RC_MASK)
-#define GC_EXTRACT_TYPEID(W) (W & GC_TYPE_ID_MASK)
+#define GC_IS_ALLOCATED(W) ((W & GC_ALLOCATED_BIT) == 0x0ul)
 
+#define GC_EXTRACT_RC(W) (W & GC_RC_MASK)
 #define GC_RC_ZERO ((GC_META_DATA_WORD)0x0)
 #define GC_RC_ONE ((GC_META_DATA_WORD)0x2000000)
 #define GC_RC_THREE ((GC_META_DATA_WORD)0x6000000)
@@ -159,7 +181,7 @@ struct PageInfo
 #define GC_TEST_IS_ZERO_RC(W) ((W & GC_RC_MASK) == GC_RC_ZERO)
 #define GC_TEST_IS_YOUNG(W) (W & GC_YOUNG_BIT)
 
-#define GC_CLEAR_MARK_BIT(W) (W & (GC_RC_MASK | GC_YOUNG_BIT | GC_TYPE_ID_MASK))
+#define GC_CLEAR_MARK_BIT(W) (W & (GC_RC_MASK | GC_ALLOCATED_BIT))
 #define GC_SET_MARK_BIT(W) (W | GC_MARK_BIT)
 
 #define GC_INC_RC_COUNT(W) (W + GC_RC_ONE)
@@ -169,14 +191,13 @@ struct PageInfo
 #define GC_RC_GET_PARENT1(W) ((W & GC_RC_PAGE1_MASK) >> GC_RC_PAGE1_SHIFT)
 #define GC_RC_GET_PARENT2(W) ((W & GC_RC_PAGE1_MASK) >> GC_RC_PAGE2_SHIFT)
 
-#define GC_RC_IS_PARENT_CLEAR(P) (P == 0ul)
+#define GC_RC_IS_PARENT1_CLEAR(W) ((W & GC_RC_PAGE1_MASK) == 0ul)
+#define GC_RC_IS_PARENT2_CLEAR(W) ((W & GC_RC_PAGE2_MASK) == 0ul)
 
-#define GC_INIT_YOUNG_ALLOC(ADDR, TID) GC_SET_META_DATA_WORD(ADDR, GC_YOUNG_BIT | GC_ALLOCATED_BIT | TID)
+#define GC_INIT_YOUNG_ALLOC(ADDR) GC_SET_META_DATA_WORD(ADDR, GC_YOUNG_BIT | GC_ALLOCATED_BIT)
 
 //Access type info
-#define GET_TYPE_META_DATA_FROM_WORD(W) (*(BSQType::g_typetable + GC_EXTRACT_TYPEID(W)))
-#define GET_TYPE_META_DATA_FROM_ADDR(ADDR) GET_TYPE_META_DATA_FROM_WORD(GC_LOAD_META_DATA_WORD(ADDR))
-#define GET_TYPE_META_DATA(M) GET_TYPE_META_DATA_FROM_ADDR(GC_GET_META_DATA_ADDR(M))
+#define GET_TYPE_META_DATA(M) (GC_PAGE_FOR_ADDR(W).type)
 #define GET_TYPE_META_DATA_AS(T, M) (dynamic_cast<const T*>(GET_TYPE_META_DATA(M)))
 
 //Misc operations
@@ -216,8 +237,6 @@ typedef void* StorageLocationPtr;
 
 ////////////////////////////////
 //Type and GC interaction decls
-
-class BSQType;
 
 enum class BSQTypeLayoutKind : uint32_t
 {
@@ -296,7 +315,6 @@ struct GCFunctorSet
 typedef int (*KeyCmpFP)(const BSQType* btype, StorageLocationPtr, StorageLocationPtr);
 constexpr KeyCmpFP EMPTY_KEY_CMP = nullptr;
 
-typedef uint32_t BSQTypeID;
 typedef uint32_t BSQTupleIndex;
 typedef uint32_t BSQRecordPropertyID;
 typedef uint32_t BSQFieldID;
