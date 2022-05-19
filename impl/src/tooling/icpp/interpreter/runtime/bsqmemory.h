@@ -36,11 +36,15 @@ public:
     size_t tableEntryCount;
     size_t tableEntryIndexShift;
     PageInfo* allocpages;
+    PageInfo* allocpagesend;
 
     //Constructor that everyone delegates to
     BSQType(BSQTypeID tid, BSQTypeLayoutKind tkind, BSQTypeSizeInfo allocinfo, GCFunctorSet gcops, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyCmpFP fpkeycmp, DisplayFP fpDisplay, std::string name): 
-        tid(tid), tkind(tkind), allocinfo(allocinfo), gcops(gcops), fpkeycmp(fpkeycmp), vtable(vtable), fpDisplay(fpDisplay), name(name)
-    {;}
+        tid(tid), tkind(tkind), allocinfo(allocinfo), gcops(gcops), fpkeycmp(fpkeycmp), vtable(vtable), fpDisplay(fpDisplay), name(name), allocpageCount(0), allocpages(nullptr), allocpagesend(nullptr)
+    {
+        this->tableEntryCount = xxxx;
+        this->tableEntryIndexShift = xxxx;
+    }
 
     virtual ~BSQType() {;}
 
@@ -336,7 +340,9 @@ public:
                 p->entry_available_count++;
                 *curr = *((void**)datacurr);
 
-                xxxx; //zero on debug
+#ifdef DEBUG_ALLOC_ZERO
+                GC_MEM_ZERO(datacurr, p->entry_size); //zero on debug
+#endif
             }
 
             metacurr++;
@@ -345,7 +351,29 @@ public:
 
         *curr = nullptr;
 #else
-        xxxx;
+        void** curr = &p->freelist;
+        GC_META_DATA_WORD* metacurr = p->slots;
+
+        p->entry_available_count = 0;
+        p->entry_release_count = 0;
+
+        for(uint64_t i = 0; i < p->entry_count; ++i)
+        {
+            if(!GC_IS_ALLOCATED(*metacurr))
+            {
+                p->entry_available_count++;
+                *curr = *((void**)p->data + i);
+
+#ifdef DEBUG_ALLOC_ZERO
+                GC_MEM_ZERO(*((void**)p->data + i), p->entry_size); //zero on debug
+#endif
+            }
+
+            metacurr++;
+            datacurr += p->entry_size;
+        }
+
+        *curr = nullptr;
 #endif
     }
 
@@ -404,6 +432,10 @@ public:
 
         btype->allocpages->prev = pp;
         btype->allocpages = pp;
+        if(btype->allocpagesend == nullptr)
+        {
+            btype->allocpagesend = pp;
+        }
         this->page_set.insert(pp);
     }
 
