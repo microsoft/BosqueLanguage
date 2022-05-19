@@ -10,6 +10,7 @@
 #ifdef _WIN32
 #include "memoryapi.h"
 #else
+#include <sys/mman.h>
 #endif
 
 ////
@@ -32,6 +33,8 @@ public:
     const std::string name;
 
     size_t allocpageCount;
+    size_t tableEntryCount;
+    size_t tableEntryIndexShift;
     PageInfo* allocpages;
 
     //Constructor that everyone delegates to
@@ -296,7 +299,7 @@ public:
     std::set<PageInfo*> page_set;
     std::list<PageInfo*> free_pages;
 
-#ifndef ALLOC_BLOCKS
+#ifdef DEBUG_ALLOC_BLOCKS
     //For malloc based debug implementation we keep explicit map from object to page it is in
     std::map<void*, PageInfo*> page_map;
 #endif
@@ -316,7 +319,37 @@ public:
         }
     }
 
-    inline void allocatePageForType(BSQType* btype)
+    void buildFreeListForPage(PageInfo* p)
+    {
+#ifndef DEBUG_ALLOC_BLOCKS
+        void** curr = &p->freelist;
+        GC_META_DATA_WORD* metacurr = p->slots;
+        uint8_t* datacurr = (uint8_t*)(p->data);
+
+        p->entry_available_count = 0;
+        p->entry_release_count = 0;
+
+        for(uint64_t i = 0; i < p->entry_count; ++i)
+        {
+            if(!GC_IS_ALLOCATED(*metacurr))
+            {
+                p->entry_available_count++;
+                *curr = *((void**)datacurr);
+
+                xxxx; //zero on debug
+            }
+
+            metacurr++;
+            datacurr += p->entry_size;
+        }
+
+        *curr = nullptr;
+#else
+        xxxx;
+#endif
+    }
+
+    void allocatePageForType(BSQType* btype)
     {
         PageInfo* pp = nullptr;
         if(!this->free_pages.empty())
@@ -326,18 +359,19 @@ public:
         }
         else
         {
-#ifdef ALLOC_BLOCKS
+#ifndef DEBUG_ALLOC_BLOCKS
 #ifdef _WIN32
             //https://docs.microsoft.com/en-us/windows/win32/memory/reserving-and-committing-memory
             pp = (PageInfo*)VirtualAlloc(nullptr, BSQ_BLOCK_ALLOCATION_SIZE, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
             assert(pp != nullptr); //failed for some reason
             assert(((uintptr_t)pp) < MAX_ALLOCATED_ADDRESS);
-
+#else
+            pp = (PageInfo*)mmap(nullptr, BSQ_BLOCK_ALLOCATION_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+            assert(pp != MAP_FAILED);
+            assert(((uintptr_t)pp) < MAX_ALLOCATED_ADDRESS);
+#endif
             pp->slots = (GC_META_DATA_WORD*)((uint8_t*)pp + sizeof(PageInfo));
             pp->data = (GC_META_DATA_WORD*)((uint8_t*)pp + sizeof(PageInfo) + btype->tableEntryCount * sizeof(GC_META_DATA_WORD));
-#else
-            xxxx;
-#endif
 #else
             pp = new PageInfo();
             pp->slots = (GC_META_DATA_WORD*)zxalloc(btype->tableEntryCount * sizeof(GC_META_DATA_WORD));
@@ -345,7 +379,7 @@ public:
 #endif
         }
 
-#ifndef ALLOC_BLOCKS
+#ifdef DEBUG_ALLOC_BLOCKS
         for(size_t i = 0; i < btype->tableEntryCount; ++i)
         {
             *((void**)(pp->data) + i) = (void*)zxalloc(btype->allocinfo.heapsize);
@@ -356,18 +390,35 @@ public:
         pp->entry_size = btype->allocinfo.heapsize;
         pp->entry_count = btype->tableEntryCount;
         pp->entry_available_count = btype->tableEntryCount;
+        pp->entry_release_count = 0;
+
+        this->buildFreeListForPage(pp);
 
         pp->tid = btype->tid;
         pp->type = btype;
         pp->idxshift = btype->tableEntryIndexShift;
 
-        pp->inuse = true;
+        pp->inuse = 1;
         pp->next = btype->allocpages;
         pp->prev = nullptr;
 
         btype->allocpages->prev = pp;
         btype->allocpages = pp;
         this->page_set.insert(pp);
+    }
+
+    void unlinkPageFromType(BSQType* btype, PageInfo* pp)
+    {
+        assert(pp->inuse != 0);
+
+        xxxx;
+    }
+
+    void releasePage(PageInfo* pp)
+    {
+        assert(pp->inuse == 0);
+
+        xxxx;
     }
 };
 

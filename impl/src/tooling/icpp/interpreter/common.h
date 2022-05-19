@@ -110,26 +110,29 @@ class BSQType;
 #define PAGE_ADDR_MASK 0xFFFFFFFFFFFFE000ul
 #define PAGE_INDEX_ADDR_MASK 0x1FFFul
 #define PAGE_MASK_EXTRACT(M) ((PageInfo*)(((uintptr_t)M) & PAGE_ADDR_MASK))
-#define PAGE_INDEX_EXTRACT(M, PI) ((size_t)((((uintptr_t)M) & PAGE_INDEX_ADDR_MASK) >> (PI)->idxshift)) xxxx
+#define PAGE_INDEX_EXTRACT(M, PI) ((((uintptr_t)M) - ((uintptr_t)(PI)->data)) >> (PI)->idxshift)
 
 typedef uint64_t GC_META_DATA_WORD;
 
-#ifdef ALLOC_BLOCKS
+#ifndef DEBUG_ALLOC_BLOCKS
 class PageInfo
 {
 public:
-    size_t pageid;
-    size_t entry_size;
-    size_t entry_count;
-    size_t entry_available_count;
+    void* freelist;
+
+    uint64_t pageid;
+    uint64_t entry_size;
+    uint64_t entry_count;
+    uint64_t entry_available_count;
+    uint64_t entry_release_count;
     GC_META_DATA_WORD* slots;
     void* data;
 
     BSQTypeID tid;
     BSQType* type;
-    size_t idxshift;
+    uint64_t idxshift;
 
-    bool inuse;
+    uint64_t inuse;
     PageInfo* next;
     PageInfo* prev;
 };
@@ -141,18 +144,21 @@ public:
 class PageInfo
 {
 public:
-    size_t pageid;
-    size_t entry_size;
-    size_t entry_count;
-    size_t entry_available_count;
+    void* freelist;
+
+    uint64_t pageid;
+    uint64_t entry_size;
+    uint64_t entry_count;
+    uint64_t entry_available_count;
+    uint64_t entry_release_count;
     GC_META_DATA_WORD* slots;
     void* data;
 
     BSQTypeID tid;
     BSQType* type;
-    size_t idxshift;
+    uint64_t idxshift;
 
-    bool inuse;
+    uint64_t inuse;
     PageInfo* next;
     PageInfo* prev;
 
