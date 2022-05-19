@@ -7,20 +7,10 @@
 
 const BSQType** BSQType::g_typetable = nullptr;
 
-GCStackEntry GCStack::frames[BSQ_MAX_STACK];
+void** GCStack::frames[BSQ_MAX_STACK];
 uint32_t GCStack::stackp = 0;
 
-void BumpSpaceAllocator::ensureSpace_slow()
-{
-    Allocator::GlobalAllocator.collect();
-}
-
 Allocator Allocator::GlobalAllocator;
-
-BSQCollectionGCReprNode* Allocator::collectionnodesend = Allocator::collectionnodes;
-BSQCollectionGCReprNode Allocator::collectionnodes[BSQ_MAX_STACK];
-std::list<BSQCollectionIterator*> Allocator::collectioniters;
-std::vector<std::list<BSQTempRootNode>> Allocator::alloctemps;
 
 #ifdef BSQ_DEBUG_BUILD
     std::map<size_t, std::pair<const BSQType*, void*>> Allocator::dbg_idToObjMap;

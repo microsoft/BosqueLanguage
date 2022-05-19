@@ -28,7 +28,7 @@ class BSQType;
 
 ////////////////////////////////
 //Various sizes
-#define BSQ_MAX_STACK 2048
+#define BSQ_MAX_STACK 65536
 
 ////////////////////////////////
 //Asserts
@@ -65,7 +65,8 @@ class BSQType;
 #define MEM_STATS_ARG(X)
 #endif
 
-//All struct/tuple/recordd objects must be smaller than this (or compiler must split them)
+//All struct/tuple/record objects must be smaller than this -- larger seems like a performance anti-pattern
+//If really needed we could try to always grab/release pages in chunks of 4. Large objects allocate into these and for small objs we just throw 3 pages in the spare list. Holes are a bit of a problem though.
 #define BSQ_ALLOC_MAX_OBJ_SIZE 496ul
 
 //List/Map nodes can contain multiple objects so largest allocation is a multiple (4, 8, 16)  of this + a count
@@ -77,15 +78,9 @@ class BSQType;
 //Collection threshold
 #define BSQ_COLLECT_THRESHOLD 2097152ul
 
-//Make sure any allocated page is addressable by us -- less than 2^43
+//Make sure any allocated page is addressable by us -- larger than 2^31 and less than 2^43
+#define MIN_ALLOCATED_ADDRESS 2147483648ul
 #define MAX_ALLOCATED_ADDRESS 8796093022208ul
-
-//Allocation routines
-#ifdef _WIN32
-#define BSQ_STACK_SPACE_ALLOC(SIZE) ((SIZE) == 0 ? nullptr : _alloca(SIZE))
-#else
-#define BSQ_STACK_SPACE_ALLOC(SIZE) ((SIZE) == 0 ? nullptr : alloca(SIZE))
-#endif
 
 #define GC_REF_LIST_BLOCK_SIZE_DEFAULT 256
 
@@ -109,7 +104,8 @@ class BSQType;
 
 #define PAGE_ADDR_MASK 0xFFFFFFFFFFFFE000ul
 #define PAGE_INDEX_ADDR_MASK 0x1FFFul
-#define PAGE_MASK_EXTRACT(M) ((PageInfo*)(((uintptr_t)M) & PAGE_ADDR_MASK))
+#define PAGE_MASK_EXTRACT_ID(M) (((uintptr_t)M) & PAGE_ADDR_MASK)
+#define PAGE_MASK_EXTRACT_ADDR(M) ((PageInfo*)PAGE_MASK_EXTRACT_ID(M))
 #define PAGE_INDEX_EXTRACT(M, PI) ((((uintptr_t)M) - ((uintptr_t)(PI)->data)) >> (PI)->idxshift)
 
 typedef uint64_t GC_META_DATA_WORD;
@@ -136,10 +132,8 @@ public:
     PageInfo* next;
     PageInfo* prev;
 };
-
-#define GC_PAGE_FOR_ADDR(M) PAGE_MASK_EXTRACT(M)
-#define GC_PAGE_NUMBER_FOR_ADDR(M) (PAGE_MASK_EXTRACT(M).pageid)
 #define GC_PAGE_INDEX_FOR_ADDR(M, PAGE) PAGE_INDEX_EXTRACT(M, PAGE)
+#define GC_GET_OBJ_AT_INDEX(PAGE, IDX) ((void*)((uint8_t*)(PAGE)->data + (IDX * (PAGE)->entry_size)))
 #else
 class PageInfo
 {
@@ -164,13 +158,11 @@ public:
 
     std::map<void*, size_t> objslots;
 };
-
-#define GC_PAGE_FOR_ADDR(M) (&Allocator::GlobalBlockAllocator.page_map.at((void*)M))
-#define GC_PAGE_NUMBER_FOR_ADDR(M) (GC_PAGE_FOR_ADDR(M).pageid)
 #define GC_PAGE_INDEX_FOR_ADDR(M, PAGE) ((PAGE)->objslots.at((void*)M))
+#define GC_GET_OBJ_AT_INDEX(PAGE, IDX) (((void**)(PAGE)->data)[IDX])
 #endif
 
-#define GC_GET_META_DATA_ADDR(M) (GC_PAGE_FOR_ADDR(M).slots + GC_PAGE_INDEX_FOR_ADDR(M, GC_PAGE_FOR_ADDR(M)))
+#define GC_GET_META_DATA_ADDR(M) (PAGE_MASK_EXTRACT_ADDR(M)->slots + GC_PAGE_INDEX_FOR_ADDR(M, PAGE_MASK_EXTRACT_ADDR(M)))
 #define GC_GET_META_DATA_ADDR_AND_PAGE(M, PAGE) ((PAGE)->slots + GC_PAGE_INDEX_FOR_ADDR(M, PAGE))
 
 #define GC_LOAD_META_DATA_WORD(ADDR) (*ADDR)
@@ -184,7 +176,7 @@ public:
 #define GC_RC_THREE ((GC_META_DATA_WORD)0x6000000)
 
 #define GC_TEST_IS_UNREACHABLE(W) ((W & GC_REACHABLE_MASK) == 0x0ul)
-#define GC_TEST_IS_ZERO_RC(W) ((W & GC_RC_MASK) == GC_RC_ZERO)
+#define GC_TEST_IS_ZERO_RC(W) ((W & GC_RC_DATA_MASK) == GC_RC_ZERO)
 #define GC_TEST_IS_YOUNG(W) (W & GC_YOUNG_BIT)
 
 #define GC_CLEAR_MARK_BIT(W) (W & (GC_RC_MASK | GC_ALLOCATED_BIT))
@@ -268,7 +260,8 @@ enum class BSQTypeLayoutKind : uint32_t
 
 typedef const char* RefMask;
 
-typedef void (*GCProcessOperatorFP)(const BSQType*, void**);
+typedef void (*GCProcessOperatorVisitFP)(const BSQType*, void**, void*);
+typedef void (*GCProcessOperatorDecFP)(const BSQType*, void**, void*);
 
 enum DisplayMode
 {
@@ -305,17 +298,16 @@ struct BSQTypeSizeInfo
     const RefMask inlinedmask; //The mask used to traverse this object as part of inline storage (on stack or inline in an object) -- must cover full size of data
 };
 
-#define UNION_UNIVERSAL_CONTENT_SIZE 32
-#define UNION_UNIVERSAL_SIZE 40
+#define ICPP_WORD_SIZE 8
+#define UNION_UNIVERSAL_CONTENT_SIZE (ICPP_WORD_SIZE * 4)
+#define UNION_UNIVERSAL_SIZE (ICPP_WORD_SIZE + UNION_UNIVERSAL_CONTENT_SIZE)
 #define UNION_UNIVERSAL_MASK "51111"
 
 struct GCFunctorSet
 {
-    GCProcessOperatorFP fpProcessObjRoot;
-    GCProcessOperatorFP fpProcessObjHeap;
-    GCProcessOperatorFP fpDecObj;
-    GCProcessOperatorFP fpClearObj;
-    GCProcessOperatorFP fpMakeImmortal;
+    GCProcessOperatorVisitFP fpProcessObjVisit;
+    GCProcessOperatorDecFP fpDecObjCollect;
+    GCProcessOperatorDecFP fpDecObjCompact;
 };
 
 typedef int (*KeyCmpFP)(const BSQType* btype, StorageLocationPtr, StorageLocationPtr);
