@@ -20,6 +20,8 @@ class BSQType
 public:
     static const BSQType** g_typetable;
 
+    PageInfo allocpage;
+
     const BSQTypeID tid;
     const BSQTypeLayoutKind tkind;
     
@@ -35,8 +37,10 @@ public:
     size_t allocpageCount;
     size_t tableEntryCount;
     size_t tableEntryIndexShift;
-    PageInfo* allocpages;
-    PageInfo* allocpagesend;
+
+    PageInfo filledPages;
+    PageInfo stuckPages[4]; //pages with stuck objects that are 1-25% full, 26-50% fulle, 56-75% full, and 76-100% full
+    PageInfo partialPages[4]; //pages without any stuck objects that are 1-25% full, 26-50% fulle, 56-75% full, and 76-100% full
 
     //Constructor that everyone delegates to
     BSQType(BSQTypeID tid, BSQTypeLayoutKind tkind, BSQTypeSizeInfo allocinfo, GCFunctorSet gcops, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyCmpFP fpkeycmp, DisplayFP fpDisplay, std::string name): 

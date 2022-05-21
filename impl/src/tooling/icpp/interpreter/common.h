@@ -78,26 +78,26 @@ class BSQType;
 //Collection threshold
 #define BSQ_COLLECT_THRESHOLD 4194304ul
 
-//Make sure any allocated page is addressable by us -- larger than 2^31 and less than 2^43
+//Make sure any allocated page is addressable by us -- larger than 2^31 and less than 2^42
 #define MIN_ALLOCATED_ADDRESS 2147483648ul
-#define MAX_ALLOCATED_ADDRESS 8796093022208ul
+#define MAX_ALLOCATED_ADDRESS 4398046511104ul
 
 #define GC_REF_LIST_BLOCK_SIZE_DEFAULT 256
 
 //Header layout and with immix style blocks
-//high [RC - 61 bits] [MARK 1 - bit] [YOUNG - 1 bit] [ALLOCATED - 1 bit]
-//high [1] [RC value - 60 bits] | [0] [PAGE1 - 30 bits] [PAGE2 - 30 bits]
+//high [RC - 59 bits] [MARK 1 - bit] [STUCK - 2 bits] [YOUNG - 1 bit] [ALLOCATED - 1 bit]
+//high [1] [RC value - 58 bits] | [0] [PAGE1 - 29 bits] [PAGE2 - 29 bits]
 
-#define GC_MARK_BIT 0x4ul
+#define GC_MARK_BIT 0x10ul
 #define GC_YOUNG_BIT 0x2ul
 #define GC_ALLOCATED_BIT 0x1ul
 
 #define GC_RC_KIND_MASK 0x8000000000000000ul
-#define GC_RC_DATA_MASK 0x7FFFFFFFFFFFFF8ul
+#define GC_RC_DATA_MASK 0x7FFFFFFFFFFFFE0ul
 #define GC_RC_COUNT_MASK GC_RC_DATA_MASK
 #define GC_RC_PAGE1_MASK 0x7FFFFFFE00000000ul
 #define GC_RC_PAGE1_SHIFT 33u
-#define GC_RC_PAGE2_MASK 0x1FFFFFFF8ul
+#define GC_RC_PAGE2_MASK 0x1FFFFFFE0ul
 #define GC_RC_PAGE2_SHIFT 3u
 
 #define GC_REACHABLE_MASK (GC_RC_DATA_MASK | GC_MARK_BIT)
@@ -112,29 +112,32 @@ typedef uint64_t GC_META_DATA_WORD;
 
 struct PageInfo
 {
-    void* freelist;
+    void* freelist; //allocate from here till nullptr
 
-    uint64_t pageid;
-    uint64_t entry_size;
-    uint64_t entry_count;
-    uint64_t entry_available_count;
-    uint64_t entry_release_count;
-    GC_META_DATA_WORD* slots;
-    void* data;
+    GC_META_DATA_WORD* slots; //ptr to the metadata slots -- null if this is a sentinal PageInfo
+    uint64_t entry_count; //max number of objects that can be allocated from this Page
 
-    BSQTypeID tid;
-    BSQType* type;
-    uint64_t idxshift;
+    uint64_t entry_size; //size of the entries in this page
+    uint64_t idxshift; //# of bits to shift to convert uint8_t distance into entry index
 
-    uint64_t inuse;
+    void* data; //pointer to the data segment in this page
+    
+    BSQType* type; //nullptr if this page is not in use anywhere
+    
+    uint16_t inUseLastProcessingCount; //number of elements in use at last processing pass
+    uint16_t releaseCount; //number of elements released in this block
+    uint32_t isMarkedForProcessing; //true if this has been marked for processing and added to the processing queue
+
     PageInfo* next;
     PageInfo* prev;
+
+    uint64_t pageid; //a useful id to keep track of which page is what
 };
 #ifndef DEBUG_ALLOC_BLOCKS
 #define GC_PAGE_INDEX_FOR_ADDR(M, PAGE) PAGE_INDEX_EXTRACT(M, PAGE)
 #define GC_GET_OBJ_AT_INDEX(PAGE, IDX) ((void*)((uint8_t*)(PAGE)->data + (IDX * (PAGE)->entry_size)))
 #else
-#define GC_PAGE_INDEX_FOR_ADDR(M, PAGE) ((PAGE)->objslots.at((void*)M)) //do a linear scan!!!!!
+#define GC_PAGE_INDEX_FOR_ADDR(M, PAGE) (std::distance((PAGE)->data, std::find((PAGE)->data, (PAGE)->data + (PAGE)->entry_count, M)))
 #define GC_GET_OBJ_AT_INDEX(PAGE, IDX) (((void**)(PAGE)->data)[IDX])
 #endif
 
@@ -148,8 +151,8 @@ struct PageInfo
 
 #define GC_EXTRACT_RC(W) (W & GC_RC_MASK)
 #define GC_RC_ZERO ((GC_META_DATA_WORD)0x0)
-#define GC_RC_ONE ((GC_META_DATA_WORD)0x2000000)
-#define GC_RC_THREE ((GC_META_DATA_WORD)0x6000000)
+#define GC_RC_ONE ((GC_META_DATA_WORD)0x8000000)
+#define GC_RC_THREE ((GC_META_DATA_WORD)0x18000000)
 
 #define GC_TEST_IS_UNREACHABLE(W) ((W & GC_REACHABLE_MASK) == 0x0ul)
 #define GC_TEST_IS_ZERO_RC(W) ((W & GC_RC_DATA_MASK) == GC_RC_ZERO)
