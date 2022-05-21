@@ -76,7 +76,7 @@ class BSQType;
 #define BSQ_BLOCK_ALLOCATION_SIZE 8192ul
 
 //Collection threshold
-#define BSQ_COLLECT_THRESHOLD 2097152ul
+#define BSQ_COLLECT_THRESHOLD 4194304ul
 
 //Make sure any allocated page is addressable by us -- larger than 2^31 and less than 2^43
 #define MIN_ALLOCATED_ADDRESS 2147483648ul
@@ -110,10 +110,8 @@ class BSQType;
 
 typedef uint64_t GC_META_DATA_WORD;
 
-#ifndef DEBUG_ALLOC_BLOCKS
-class PageInfo
+struct PageInfo
 {
-public:
     void* freelist;
 
     uint64_t pageid;
@@ -132,33 +130,11 @@ public:
     PageInfo* next;
     PageInfo* prev;
 };
+#ifndef DEBUG_ALLOC_BLOCKS
 #define GC_PAGE_INDEX_FOR_ADDR(M, PAGE) PAGE_INDEX_EXTRACT(M, PAGE)
 #define GC_GET_OBJ_AT_INDEX(PAGE, IDX) ((void*)((uint8_t*)(PAGE)->data + (IDX * (PAGE)->entry_size)))
 #else
-class PageInfo
-{
-public:
-    void* freelist;
-
-    uint64_t pageid;
-    uint64_t entry_size;
-    uint64_t entry_count;
-    uint64_t entry_available_count;
-    uint64_t entry_release_count;
-    GC_META_DATA_WORD* slots;
-    void* data;
-
-    BSQTypeID tid;
-    BSQType* type;
-    uint64_t idxshift;
-
-    uint64_t inuse;
-    PageInfo* next;
-    PageInfo* prev;
-
-    std::map<void*, size_t> objslots;
-};
-#define GC_PAGE_INDEX_FOR_ADDR(M, PAGE) ((PAGE)->objslots.at((void*)M))
+#define GC_PAGE_INDEX_FOR_ADDR(M, PAGE) ((PAGE)->objslots.at((void*)M)) //do a linear scan!!!!!
 #define GC_GET_OBJ_AT_INDEX(PAGE, IDX) (((void**)(PAGE)->data)[IDX])
 #endif
 
@@ -179,7 +155,7 @@ public:
 #define GC_TEST_IS_ZERO_RC(W) ((W & GC_RC_DATA_MASK) == GC_RC_ZERO)
 #define GC_TEST_IS_YOUNG(W) (W & GC_YOUNG_BIT)
 
-#define GC_CLEAR_MARK_BIT(W) (W & (GC_RC_MASK | GC_ALLOCATED_BIT))
+#define GC_CLEAR_MARK_BIT(W) (W & (GC_RC_KIND_MASK | GC_RC_DATA_MASK | GC_ALLOCATED_BIT))
 #define GC_SET_MARK_BIT(W) (W | GC_MARK_BIT)
 
 #define GC_INC_RC_COUNT(W) (W + GC_RC_ONE)

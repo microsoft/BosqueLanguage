@@ -7,8 +7,10 @@
 
 const BSQType** BSQType::g_typetable = nullptr;
 
-void** GCStack::frames[BSQ_MAX_STACK];
-uint32_t GCStack::stackp = 0;
+uint8_t GCStack::sdata[BSQ_MAX_STACK];
+uint8_t* GCStack::stackp = GCStack::stackp;
+
+PageInfo BlockAllocator::g_sential_page = {0};
 
 Allocator Allocator::GlobalAllocator;
 

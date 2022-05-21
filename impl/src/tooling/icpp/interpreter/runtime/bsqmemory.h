@@ -299,7 +299,9 @@ class BlockAllocator
 public:
     //set of all pages that are currently allocated
     std::set<PageInfo*> page_set;
-    std::list<PageInfo*> free_pages;
+    std::set<PageInfo*> free_pages;
+
+    static PageInfo g_sential_page;
 
 #ifdef DEBUG_ALLOC_BLOCKS
     //For malloc based debug implementation we keep explicit map from object to page it is in
@@ -382,8 +384,10 @@ public:
         PageInfo* pp = nullptr;
         if(!this->free_pages.empty())
         {
-            pp = this->free_pages.front();
-            this->free_pages.pop_front();
+            auto minpageiter = this->free_pages.begin();
+
+            pp = *minpageiter;
+            this->free_pages.erase(minpageiter);
         }
         else
         {
@@ -399,7 +403,7 @@ public:
             pp->slots = (GC_META_DATA_WORD*)((uint8_t*)pp + sizeof(PageInfo));
             pp->data = (GC_META_DATA_WORD*)((uint8_t*)pp + sizeof(PageInfo) + btype->tableEntryCount * sizeof(GC_META_DATA_WORD));
 #else
-            pp = new PageInfo();
+            pp = (PageInfo*)zxalloc(sizeof(PageInfo));
             pp->slots = (GC_META_DATA_WORD*)zxalloc(btype->tableEntryCount * sizeof(GC_META_DATA_WORD));
             pp->data = (void*)zxalloc(btype->tableEntryCount * sizeof(void*));
 #endif
@@ -447,7 +451,7 @@ public:
 
         if(pp == btype->allocpages && pp == btype->allocpagesend)
         {
-            btype->allocpages = nullptr;
+            btype->allocpages = &BlockAllocator::g_sential_page;
             btype->allocpagesend = nullptr;
         }
         else if(pp == btype->allocpages)
@@ -489,7 +493,7 @@ public:
         pp->next = nullptr;
         pp->prev = nullptr;
 
-        this->free_pages.push_front(pp);
+        this->free_pages.insert(pp);
     }
 
     void releasePage(PageInfo* pp)
@@ -505,6 +509,21 @@ public:
 #else
         delete pp;
 #endif
+    }
+
+    PageInfo* managePagesForType(BSQType* btype)
+    {
+        if(btype->allocpages == &BlockAllocator::g_sential_page)
+        {
+            this->allocatePageForType(btype);
+            return btype->allocpages;
+        }
+        else
+        {
+            //TODO: we want to try and find page with stuck references (need to add some stats) and then try and 
+            //      pack "partially" filled pages and let other pages move toward empty
+            xxxx;
+        }
     }
 };
 
@@ -616,6 +635,7 @@ public:
 
         if(GC_TEST_IS_UNREACHABLE(GC_LOAD_META_DATA_WORD(addr)))
         {
+            PAGE_MASK_EXTRACT_ADDR(obj)->entry_release_count++;
             this->releaselist.enque(obj);
         }
     }
@@ -908,7 +928,7 @@ private:
 
     void processRelease()
     {
-        size_t freelimit = (3 * this->bumpalloc.currentAllocatedSlabBytes()) / 2;
+        size_t freelimit = (3 * BSQ_COLLECT_THRESHOLD) / 2;
         size_t freecount = 0;
 
         while (!this->releaselist.empty())
@@ -919,18 +939,21 @@ private:
             } 
 
             void* obj = this->releaselist.deque();
+            PageInfo* pp = PAGE_MASK_EXTRACT_ADDR(obj);
 
-            const BSQType* umeta = GET_TYPE_META_DATA(obj);
+            BSQType* umeta = PAGE_MASK_EXTRACT_ADDR(obj)->type;
+            freecount += pp->entry_size;
+            pp->entry_release_count++;
+
             if (umeta->allocinfo.heapmask != nullptr)
             {
-                umeta->gcops.fpDecObj(umeta, (void**)obj);
+                umeta->gcops.fpDecObjCollect(umeta, (void**)obj, obj);
             }
 
-            size_t asize = umeta->allocinfo.heapsize + sizeof(GC_META_DATA_WORD);
-            freecount += asize;
-
-            this->liveoldspace -= asize;
-            BSQ_FREE_LIST_RELEASE(asize, GC_GET_META_DATA_ADDR(obj));
+            if(pp->entry_release_count + pp->entry_available_count == pp->entry_count)
+            {
+                this->blockalloc.unlinkPageFromType(umeta, pp);
+            }
         }
     }
 
@@ -941,7 +964,10 @@ private:
         while(this->rootlist.iterHasMore(rootiter))
         {
             void* robj = rootiter.get();
-            xxxx;
+            PageInfo* pp = PAGE_MASK_EXTRACT_ADDR(robj);
+
+            GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR_AND_PAGE(robj, pp);
+            GC_STORE_META_DATA_WORD(addr, GC_CLEAR_MARK_BIT(GC_LOAD_META_DATA_WORD(addr)));
 
             this->rootlist.iterAdvance(rootiter);
         }
@@ -965,31 +991,20 @@ public:
         ;
     }
 
-    inline uint8_t* allocateDynamic(const BSQType* mdata)
+    inline uint8_t* allocate(BSQType* mdata)
     {
-        size_t asize = mdata->allocinfo.heapsize;
-        uint8_t* alloc = this->bumpalloc.allocateDynamicSize(asize);
+        PageInfo* pp = mdata->allocpages;
+        if(pp->freelist == nullptr)
+        {
+            this->blockalloc.managePagesForType(mdata);
+        }
+        
+        uint8_t* alloc = (uint8_t*)pp->freelist;
 
-        GC_INIT_BUMP_SPACE_ALLOC(alloc, mdata->tid);
-        return (alloc + sizeof(GC_META_DATA_WORD));
-    }
+        pp->freelist = *((void**)pp->freelist);
+        pp->entry_available_count--;
 
-    inline void ensureSpace(size_t required)
-    {
-        this->bumpalloc.ensureSpace(required);
-    }
-
-    inline void ensureSpace(const BSQType* mdata)
-    {
-        this->bumpalloc.ensureSpace(mdata->allocinfo.heapsize + sizeof(GC_META_DATA_WORD));
-    }
-
-    inline uint8_t* allocateSafe(const BSQType* mdata)
-    {
-        uint8_t* alloc = this->bumpalloc.allocateSafe(mdata->allocinfo.heapsize);
-
-        GC_INIT_BUMP_SPACE_ALLOC(alloc, mdata->tid);
-        return (alloc + sizeof(GC_META_DATA_WORD));
+        return alloc;
     }
 
     void collect()
