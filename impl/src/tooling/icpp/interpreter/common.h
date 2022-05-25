@@ -76,7 +76,7 @@ class BSQType;
 #define BSQ_BLOCK_ALLOCATION_SIZE 8192ul
 
 //Collection threshold
-#define BSQ_COLLECT_THRESHOLD 4194304ul
+#define BSQ_COLLECT_THRESHOLD xxxx
 
 //Make sure any allocated page is addressable by us -- larger than 2^31 and less than 2^42
 #define MIN_ALLOCATED_ADDRESS 2147483648ul
@@ -92,13 +92,16 @@ class BSQType;
 #define GC_YOUNG_BIT 0x2ul
 #define GC_ALLOCATED_BIT 0x1ul
 
+#define GC_STUCK_BITS 0xCul
+#define GC_STUCK_ONE 0x4ul
+
 #define GC_RC_KIND_MASK 0x8000000000000000ul
 #define GC_RC_DATA_MASK 0x7FFFFFFFFFFFFE0ul
 #define GC_RC_COUNT_MASK GC_RC_DATA_MASK
 #define GC_RC_PAGE1_MASK 0x7FFFFFFE00000000ul
-#define GC_RC_PAGE1_SHIFT 33u
+#define GC_RC_PAGE1_SHIFT 35u
 #define GC_RC_PAGE2_MASK 0x1FFFFFFE0ul
-#define GC_RC_PAGE2_SHIFT 3u
+#define GC_RC_PAGE2_SHIFT 5u
 
 #define GC_REACHABLE_MASK (GC_RC_DATA_MASK | GC_MARK_BIT)
 
@@ -124,13 +127,10 @@ struct PageInfo
     
     BSQType* type; //nullptr if this page is not in use anywhere
     
-    uint16_t inUseLastProcessingCount; //number of elements in use at last processing pass
-    uint16_t releaseCount; //number of elements released in this block
-    uint32_t isMarkedForProcessing; //true if this has been marked for processing and added to the processing queue
-
     PageInfo* next;
     PageInfo* prev;
 
+    bool isMarkedForProcessing;
     uint64_t pageid; //a useful id to keep track of which page is what
 };
 #ifndef DEBUG_ALLOC_BLOCKS
@@ -160,6 +160,9 @@ struct PageInfo
 
 #define GC_CLEAR_MARK_BIT(W) (W & (GC_RC_KIND_MASK | GC_RC_DATA_MASK | GC_ALLOCATED_BIT))
 #define GC_SET_MARK_BIT(W) (W | GC_MARK_BIT)
+
+#define GC_INC_STUCK_COUNT(W) ((W & ~GC_STUCK_BITS) | ((W & GC_STUCK_BITS) + GC_STUCK_ONE) & GC_STUCK_BITS)
+#define GC_IS_STUCK(W) ((W & GC_STUCK_BITS) == GC_STUCK_BITS)
 
 #define GC_INC_RC_COUNT(W) (W + GC_RC_ONE)
 #define GC_DEC_RC_COUNT(W) (W - GC_RC_ONE)

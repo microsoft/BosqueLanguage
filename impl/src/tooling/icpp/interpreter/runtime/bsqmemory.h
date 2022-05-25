@@ -20,7 +20,7 @@ class BSQType
 public:
     static const BSQType** g_typetable;
 
-    PageInfo allocpage;
+    PageInfo* allocpage;
 
     const BSQTypeID tid;
     const BSQTypeLayoutKind tkind;
@@ -38,13 +38,20 @@ public:
     size_t tableEntryCount;
     size_t tableEntryIndexShift;
 
-    PageInfo filledPages;
-    PageInfo stuckPages[4]; //pages with stuck objects that are 1-25% full, 26-50% fulle, 56-75% full, and 76-100% full
-    PageInfo partialPages[4]; //pages without any stuck objects that are 1-25% full, 26-50% fulle, 56-75% full, and 76-100% full
+    PageInfo* fullPages; //pages with over 95% occupancy
+
+    PageInfo* freshAllocPages; //pages that only have young objects allocated into them
+    PageInfo* mixedAllocPages; //pages that we have young objects allocated into and they also have old objects
+    
+    PageInfo* processingPages; //pages that are pending processing
+
+    PageInfo* stuckAllocPages; //pages with stuck objects that we can allocate into -- sorted in memory order
+    PageInfo* partialAllocPages; //pages without any stuck objects that we can alloc into -- sorted in memory order
+    PageInfo* evacuatablePages; //pages with less than 5% occupancy and no stuck objects that we want to evacuate
 
     //Constructor that everyone delegates to
     BSQType(BSQTypeID tid, BSQTypeLayoutKind tkind, BSQTypeSizeInfo allocinfo, GCFunctorSet gcops, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyCmpFP fpkeycmp, DisplayFP fpDisplay, std::string name): 
-        tid(tid), tkind(tkind), allocinfo(allocinfo), gcops(gcops), fpkeycmp(fpkeycmp), vtable(vtable), fpDisplay(fpDisplay), name(name), allocpageCount(0), allocpages(nullptr), allocpagesend(nullptr)
+        tid(tid), tkind(tkind), allocinfo(allocinfo), gcops(gcops), fpkeycmp(fpkeycmp), vtable(vtable), fpDisplay(fpDisplay), name(name), allocpageCount(0), allocpage{0}, filledPages{0}, stuckAllocateablePages{0}, partialAllocatealbePages{0}
     {
         this->tableEntryCount = xxxx;
         this->tableEntryIndexShift = xxxx;
@@ -315,7 +322,7 @@ public:
     inline bool isAddrAllocated(void* addr, void*& realobj) const
     {
         auto pageiter = this->page_set.find(PAGE_MASK_EXTRACT_ADDR(addr));
-        if(pageiter == this->page_set.cend() || !(*pageiter)->inuse)
+        if(pageiter == this->page_set.cend() || (*pageiter)->type == nullptr)
         {
             return false;
         }
@@ -329,21 +336,68 @@ public:
         }
     }
 
-    void buildFreeListForPage(PageInfo* p)
+    void processFreePage(PageInfo* p)
     {
+        p->inUseLastProcessingCount = 0;
+        p->releaseCount = 0;
+        p->isMarkedForProcessing = 0;
+
 #ifndef DEBUG_ALLOC_BLOCKS
         void** curr = &p->freelist;
         GC_META_DATA_WORD* metacurr = p->slots;
         uint8_t* datacurr = (uint8_t*)(p->data);
 
-        p->entry_available_count = 0;
-        p->entry_release_count = 0;
+        for(uint64_t i = 0; i < p->entry_count; ++i)
+        {
+            *curr = *((void**)datacurr);
+
+#ifdef DEBUG_ALLOC_ZERO
+                GC_MEM_ZERO(datacurr, p->entry_size); //zero on debug
+#endif
+            metacurr++;
+            datacurr += p->entry_size;
+        }
+
+        *curr = nullptr;
+#else
+        void** curr = &p->freelist;
+        GC_META_DATA_WORD* metacurr = p->slots;
 
         for(uint64_t i = 0; i < p->entry_count; ++i)
         {
-            if(!GC_IS_ALLOCATED(*metacurr))
+            p->entry_available_count++;
+            *curr = *((void**)p->data + i);
+
+#ifdef DEBUG_ALLOC_ZERO
+                GC_MEM_ZERO(*((void**)p->data + i), p->entry_size); //zero on debug
+#endif
+            metacurr++;
+            datacurr += p->entry_size;
+        }
+
+        *curr = nullptr;
+#endif
+    }
+
+    void processPartialPage(PageInfo* p)
+    {
+        p->inUseLastProcessingCount = 0;
+        p->releaseCount = 0;
+        p->isMarkedForProcessing = 0;
+
+#ifndef DEBUG_ALLOC_BLOCKS
+        void** curr = &p->freelist;
+        GC_META_DATA_WORD* metacurr = p->slots;
+        uint8_t* datacurr = (uint8_t*)(p->data);
+
+        for(uint64_t i = 0; i < p->entry_count; ++i)
+        {
+            if(GC_IS_ALLOCATED(*metacurr))
             {
-                p->entry_available_count++;
+                p->inUseLastProcessingCount++;
+            }
+            else
+            {
                 *curr = *((void**)datacurr);
 
 #ifdef DEBUG_ALLOC_ZERO
@@ -360,14 +414,14 @@ public:
         void** curr = &p->freelist;
         GC_META_DATA_WORD* metacurr = p->slots;
 
-        p->entry_available_count = 0;
-        p->entry_release_count = 0;
-
         for(uint64_t i = 0; i < p->entry_count; ++i)
         {
-            if(!GC_IS_ALLOCATED(*metacurr))
+            if(GC_IS_ALLOCATED(*metacurr))
             {
-                p->entry_available_count++;
+                p->inUseLastProcessingCount++;
+            }
+            else
+            {
                 *curr = *((void**)p->data + i);
 
 #ifdef DEBUG_ALLOC_ZERO
@@ -383,7 +437,7 @@ public:
 #endif
     }
 
-    void allocatePageForType(BSQType* btype)
+    PageInfo* allocatePageForType(BSQType* btype)
     {
         PageInfo* pp = nullptr;
         if(!this->free_pages.empty())
@@ -424,29 +478,27 @@ public:
         }
 #endif
 
-        pp->pageid = PAGE_MASK_EXTRACT_ID(pp);
-        pp->entry_size = btype->allocinfo.heapsize;
         pp->entry_count = btype->tableEntryCount;
-        pp->entry_available_count = btype->tableEntryCount;
-        pp->entry_release_count = 0;
-
-        this->buildFreeListForPage(pp);
-
-        pp->tid = btype->tid;
-        pp->type = btype;
+        pp->entry_size = btype->allocinfo.heapsize;
         pp->idxshift = btype->tableEntryIndexShift;
 
-        pp->inuse = 1;
-        pp->next = btype->allocpages;
+        pp->type = btype;
+
+        this->processFreePage(pp);
+
+        pp->pageid = PAGE_MASK_EXTRACT_ID(pp);
+
+        pp->next = nullptr;
         pp->prev = nullptr;
 
-        btype->allocpages->prev = pp;
-        btype->allocpages = pp;
-        if(btype->allocpagesend == nullptr)
-        {
-            btype->allocpagesend = pp;
-        }
         this->page_set.insert(pp);
+
+        return pp;
+    }
+
+    void updatePageForAllocInto(BSQType* btype)
+    {
+        xxxx;
     }
 
     void unlinkPageFromType(BSQType* btype, PageInfo* pp)
