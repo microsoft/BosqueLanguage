@@ -34,26 +34,22 @@ public:
     DisplayFP fpDisplay;
     const std::string name;
 
-    size_t allocpageCount;
+    size_t thresholdCount;
     size_t tableEntryCount;
     size_t tableEntryIndexShift;
 
-    PageInfo* fullPages; //pages with over 95% occupancy
+    std::set<PageInfo*> freshAllocPages; //pages that only have young objects allocated into them
+    std::set<PageInfo*> mixedAllocPages; //pages that we have young objects allocated into and they also have old objects
 
-    PageInfo* freshAllocPages; //pages that only have young objects allocated into them
-    PageInfo* mixedAllocPages; //pages that we have young objects allocated into and they also have old objects
-    
-    PageInfo* processingPages; //pages that are pending processing
-
-    PageInfo* stuckAllocPages; //pages with stuck objects that we can allocate into -- sorted in memory order
-    PageInfo* partialAllocPages; //pages without any stuck objects that we can alloc into -- sorted in memory order
-    PageInfo* evacuatablePages; //pages with less than 5% occupancy and no stuck objects that we want to evacuate
+    std::set<PageInfo*> stuckAllocPages; //pages with stuck objects that we can allocate into -- sorted in memory order
+    std::set<PageInfo*> partialAllocPages; //pages without any stuck objects that we can alloc into -- sorted in memory order
 
     //Constructor that everyone delegates to
     BSQType(BSQTypeID tid, BSQTypeLayoutKind tkind, BSQTypeSizeInfo allocinfo, GCFunctorSet gcops, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyCmpFP fpkeycmp, DisplayFP fpDisplay, std::string name): 
-        tid(tid), tkind(tkind), allocinfo(allocinfo), gcops(gcops), fpkeycmp(fpkeycmp), vtable(vtable), fpDisplay(fpDisplay), name(name), allocpageCount(0), allocpage{0}, filledPages{0}, stuckAllocateablePages{0}, partialAllocatealbePages{0}
+        tid(tid), tkind(tkind), allocinfo(allocinfo), gcops(gcops), fpkeycmp(fpkeycmp), vtable(vtable), fpDisplay(fpDisplay), name(name), freshAllocPages(), mixedAllocPages(), stuckAllocPages(), partialAllocPages(), evacuatablePages()
     {
         this->tableEntryCount = xxxx;
+        this->thresholdCount = xxxx;
         this->tableEntryIndexShift = xxxx;
     }
 
@@ -310,7 +306,12 @@ class BlockAllocator
 public:
     //set of all pages that are currently allocated
     std::set<PageInfo*> page_set;
-    std::set<PageInfo*> free_pages;
+
+    std::set<PageInfo*> free_pages; //pages that are completely empty
+    std::set<PageInfo*> full_pages; //pages with over 95% occupancy
+    
+    std::set<PageInfo*> processing_pages; //pages that are pending processing
+    std::set<PageInfo*> evacuatablePages; //pages with less than 5% occupancy and no stuck objects that we want to evacuate
 
     static PageInfo g_sential_page;
 
@@ -321,6 +322,8 @@ public:
 
     inline bool isAddrAllocated(void* addr, void*& realobj) const
     {
+        //TODO: probably want some bitvector and/or semi-hierarchical structure here instead 
+
         auto pageiter = this->page_set.find(PAGE_MASK_EXTRACT_ADDR(addr));
         if(pageiter == this->page_set.cend() || (*pageiter)->type == nullptr)
         {
@@ -336,12 +339,8 @@ public:
         }
     }
 
-    void processFreePage(PageInfo* p)
+    PageInfo* initializePageForAllocation(PageInfo* p)
     {
-        p->inUseLastProcessingCount = 0;
-        p->releaseCount = 0;
-        p->isMarkedForProcessing = 0;
-
 #ifndef DEBUG_ALLOC_BLOCKS
         void** curr = &p->freelist;
         GC_META_DATA_WORD* metacurr = p->slots;
@@ -377,67 +376,100 @@ public:
 
         *curr = nullptr;
 #endif
+
+        p->current_threshold_count = p->type->thresholdCount;
+        p->state = PageInfoStateFlag_AllocPage;
+
+        return p;
+    }
+
+    void processFreePageInitial(PageInfo* p, BSQType* btype)
+    {
+        p->entry_count = btype->tableEntryCount;
+        p->entry_size = btype->allocinfo.heapsize;
+        p->idxshift = btype->tableEntryIndexShift;
+
+        p->type = btype;
+
+        p->pageid = PAGE_MASK_EXTRACT_ID(p);
+
+        this->page_set.insert(p);
+    }
+
+    void unlinkPageData(PageInfo* p)
+    {
+        p->entry_count = 0;
+        p->entry_size = 0;
+        p->idxshift = 0;
+
+        p->type = nullptr;
+
+        p->state = PageInfoStateFlag_Clear;
     }
 
     void processPartialPage(PageInfo* p)
     {
-        p->inUseLastProcessingCount = 0;
-        p->releaseCount = 0;
-        p->isMarkedForProcessing = 0;
+        uint64_t freesize = 0;
+        bool hasstuck = false;
 
-#ifndef DEBUG_ALLOC_BLOCKS
-        void** curr = &p->freelist;
         GC_META_DATA_WORD* metacurr = p->slots;
-        uint8_t* datacurr = (uint8_t*)(p->data);
-
         for(uint64_t i = 0; i < p->entry_count; ++i)
         {
-            if(GC_IS_ALLOCATED(*metacurr))
+            if(!GC_IS_ALLOCATED(*metacurr))
             {
-                p->inUseLastProcessingCount++;
+                freesize++;
             }
             else
             {
-                *curr = *((void**)datacurr);
+                auto w = *metacurr;
+                if(GC_TEST_MARK_BIT(w))
+                {
+                    w = GC_INC_STUCK_COUNT(w);
+                    hasstuck |= (GC_IS_STUCK(w));
+                }
 
-#ifdef DEBUG_ALLOC_ZERO
-                GC_MEM_ZERO(datacurr, p->entry_size); //zero on debug
-#endif
+                GC_CLEAR_YOUNG_AND_ALLOC(metacurr, w);
             }
 
             metacurr++;
-            datacurr += p->entry_size;
         }
 
-        *curr = nullptr;
-#else
-        void** curr = &p->freelist;
-        GC_META_DATA_WORD* metacurr = p->slots;
-
-        for(uint64_t i = 0; i < p->entry_count; ++i)
+        p->current_threshold_count = p->type->thresholdCount;
+        if(freesize == p->entry_count)
         {
-            if(GC_IS_ALLOCATED(*metacurr))
+            this->unlinkPageData(p);
+            this->free_pages.insert(p);
+        }
+        else if((float)freesize < (0.9f * (float)p->entry_count))
+        {
+            p->state = PageInfoStateFlag_Full;
+            this->full_pages.insert(p);
+        }
+        else
+        {
+            if(hasstuck)
             {
-                p->inUseLastProcessingCount++;
+                p->state = PageInfoStateFlag_StuckAvailable;
+                p->type->stuckAllocPages.insert(p);
             }
             else
             {
-                *curr = *((void**)p->data + i);
+                if((float)freesize > (0.05f * p->entry_count))
+                {
+                    p->state = PageInfoStateFlag_GeneralAvailable;
+                }
+                else
+                {
+                    p->state = PageInfoStateFlag_GeneralAvailable | PageInfoStateFlag_Evacuatable;
+                    this->evacuatablePages.insert(p);
+                }
 
-#ifdef DEBUG_ALLOC_ZERO
-                GC_MEM_ZERO(*((void**)p->data + i), p->entry_size); //zero on debug
-#endif
+                p->type->partialAllocPages.insert(p);
             }
-
-            metacurr++;
-            datacurr += p->entry_size;
         }
-
-        *curr = nullptr;
-#endif
     }
 
-    PageInfo* allocatePageForType(BSQType* btype)
+    void allocateEmptyPageForType(BSQType* btype)
     {
         PageInfo* pp = nullptr;
         if(!this->free_pages.empty())
@@ -478,22 +510,7 @@ public:
         }
 #endif
 
-        pp->entry_count = btype->tableEntryCount;
-        pp->entry_size = btype->allocinfo.heapsize;
-        pp->idxshift = btype->tableEntryIndexShift;
-
-        pp->type = btype;
-
-        this->processFreePage(pp);
-
-        pp->pageid = PAGE_MASK_EXTRACT_ID(pp);
-
-        pp->next = nullptr;
-        pp->prev = nullptr;
-
-        this->page_set.insert(pp);
-
-        return pp;
+        this->processFreePageInitial(pp, btype);
     }
 
     void updatePageForAllocInto(BSQType* btype)
@@ -654,7 +671,7 @@ public:
             }
             else
             {
-                GC_STORE_META_DATA_WORD(addr, (GC_RC_KIND_MASK | GC_RC_THREE) | ((GC_MARK_BIT | GC_YOUNG_BIT | GC_ALLOCATED_BIT) & meta));
+                GC_STORE_META_DATA_WORD(addr, (GC_RC_KIND_MASK | GC_RC_THREE) | (( GC_MARK_BIT | GC_STUCK_BITS | GC_YOUNG_BIT | GC_ALLOCATED_BIT) & meta));
             }
         }
     }
@@ -671,7 +688,7 @@ public:
             if(GC_RC_GET_PARENT1(meta) == fromPageId)
             {
                 //delete parent 1
-                GC_STORE_META_DATA_WORD(addr, (GC_RC_PAGE1_MASK | GC_MARK_BIT | GC_YOUNG_BIT | GC_ALLOCATED_BIT) & meta);
+                GC_STORE_META_DATA_WORD(addr, (GC_RC_PAGE1_MASK | GC_MARK_BIT | GC_STUCK_BITS | GC_YOUNG_BIT | GC_ALLOCATED_BIT) & meta);
             }
             else
             {
@@ -679,7 +696,7 @@ public:
                 assert(GC_RC_GET_PARENT2(meta) == fromPageId);
 
                 //delete parent 2
-                GC_STORE_META_DATA_WORD(addr, (GC_RC_PAGE2_MASK | GC_MARK_BIT | GC_YOUNG_BIT | GC_ALLOCATED_BIT) & meta);
+                GC_STORE_META_DATA_WORD(addr, (GC_RC_PAGE2_MASK | GC_MARK_BIT | GC_STUCK_BITS | GC_YOUNG_BIT | GC_ALLOCATED_BIT) & meta);
             }
         }
     }

@@ -113,9 +113,23 @@ class BSQType;
 
 typedef uint64_t GC_META_DATA_WORD;
 
+typedef uint64_t PageInfoStateFlag;
+#define PageInfoStateFlag_Clear 0x0
+#define PageInfoStateFlag_AllocPage 0x1
+#define PageInfoStateFlag_Full 0x2
+
+#define PageInfoStateFlag_FreshAlloc 0x10
+#define PageInfoStateFlag_MixedAlloc 0x20
+#define PageInfoStateFlag_StuckAvailable 0x40
+#define PageInfoStateFlag_GeneralAvailable 0x80
+
+#define PageInfoStateFlag_Evacuatable 0x100
+#define PageInfoStateFlag_ProcessingPending 0x200
+#define PageInfoStateFlag_ProcessingIncremental 0x400
+
 struct PageInfo
 {
-    void* freelist; //allocate from here till nullptr
+    void* freelist; //allocate from here until nullptr
 
     GC_META_DATA_WORD* slots; //ptr to the metadata slots -- null if this is a sentinal PageInfo
     uint64_t entry_count; //max number of objects that can be allocated from this Page
@@ -126,11 +140,11 @@ struct PageInfo
     void* data; //pointer to the data segment in this page
     
     BSQType* type; //nullptr if this page is not in use anywhere
-    
-    PageInfo* next;
-    PageInfo* prev;
 
-    bool isMarkedForProcessing;
+    uint64_t current_threshold_count; //the current value for this block relative to the threshold
+    uint64_t processing_threshold_count; //the threshold to process this block
+    PageInfoStateFlag state;
+
     uint64_t pageid; //a useful id to keep track of which page is what
 };
 #ifndef DEBUG_ALLOC_BLOCKS
@@ -158,7 +172,7 @@ struct PageInfo
 #define GC_TEST_IS_ZERO_RC(W) ((W & GC_RC_DATA_MASK) == GC_RC_ZERO)
 #define GC_TEST_IS_YOUNG(W) (W & GC_YOUNG_BIT)
 
-#define GC_CLEAR_MARK_BIT(W) (W & (GC_RC_KIND_MASK | GC_RC_DATA_MASK | GC_ALLOCATED_BIT))
+#define GC_TEST_MARK_BIT(W) ((W & GC_MARK_BIT) != 0x0ul)
 #define GC_SET_MARK_BIT(W) (W | GC_MARK_BIT)
 
 #define GC_INC_STUCK_COUNT(W) ((W & ~GC_STUCK_BITS) | ((W & GC_STUCK_BITS) + GC_STUCK_ONE) & GC_STUCK_BITS)
@@ -174,7 +188,11 @@ struct PageInfo
 #define GC_RC_IS_PARENT1_CLEAR(W) ((W & GC_RC_PAGE1_MASK) == 0ul)
 #define GC_RC_IS_PARENT2_CLEAR(W) ((W & GC_RC_PAGE2_MASK) == 0ul)
 
-#define GC_INIT_YOUNG_ALLOC(ADDR) GC_SET_META_DATA_WORD(ADDR, GC_YOUNG_BIT | GC_ALLOCATED_BIT)
+#define GC_HEADER_DEC_LIST_LOAD(W) ((void*)W)
+#define GC_HEADER_DEC_LIST_STORE(ADDR, W) (*ADDR = (uint64_t)W)
+
+#define GC_INIT_YOUNG_ALLOC(ADDR) GC_STORE_META_DATA_WORD(ADDR, GC_YOUNG_BIT | GC_ALLOCATED_BIT)
+#define GC_CLEAR_YOUNG_AND_ALLOC(ADDR, W) GC_STORE_META_DATA_WORD(ADDR, W & (GC_RC_KIND_MASK | GC_RC_DATA_MASK | GC_STUCK_BITS | GC_ALLOCATED_BIT))
 
 //Access type info
 #define GET_TYPE_META_DATA(M) (GC_PAGE_FOR_ADDR(W).type)
