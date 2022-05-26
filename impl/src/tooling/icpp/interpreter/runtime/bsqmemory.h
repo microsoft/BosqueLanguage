@@ -300,6 +300,15 @@ public:
     }
 };
 
+class EpochTypeQueueComp
+{
+public:
+    bool operator()(const std::pair<uint64_t, BSQType*>& a, const std::pair<uint64_t, BSQType*>& b)
+    {
+        return a.first > b.first;
+    }
+};
+
 //A class that implements our block allocator stuff
 class BlockAllocator
 {
@@ -313,7 +322,20 @@ public:
     std::set<PageInfo*> processing_pages; //pages that are pending processing
     std::set<PageInfo*> evacuatablePages; //pages with less than 5% occupancy and no stuck objects that we want to evacuate
 
+    uint64_t blockProcessingEpoch;
+    std::priority_queue<std::pair<uint64_t, BSQType*>, std::vector<std::pair<uint64_t, BSQType*>>, EpochTypeQueueComp> lastEpochsTypeQueue;
+
     static PageInfo g_sential_page;
+
+    BlockAllocator() : blockProcessingEpoch(0)
+    {
+        ;
+    }
+
+    ~BlockAllocator()
+    {
+        ;
+    }
 
 #ifdef DEBUG_ALLOC_BLOCKS
     //For malloc based debug implementation we keep explicit map from object to page it is in
@@ -398,6 +420,14 @@ public:
 
     void unlinkPageData(PageInfo* p)
     {
+#ifdef DEBUG_ALLOC_BLOCKS
+        for(size_t i = 0; i < p->btype->tableEntryCount; ++i)
+        {
+            xfree(*((void**)(p->data) + i));
+        }
+        p->objslots.clear();
+#endif
+
         p->entry_count = 0;
         p->entry_size = 0;
         p->idxshift = 0;
@@ -513,65 +543,9 @@ public:
         this->processFreePageInitial(pp, btype);
     }
 
-    void updatePageForAllocInto(BSQType* btype)
-    {
-        xxxx;
-    }
-
-    void unlinkPageFromType(BSQType* btype, PageInfo* pp)
-    {
-        assert(pp->inuse != 0);
-
-        if(pp == btype->allocpages && pp == btype->allocpagesend)
-        {
-            btype->allocpages = &BlockAllocator::g_sential_page;
-            btype->allocpagesend = nullptr;
-        }
-        else if(pp == btype->allocpages)
-        {
-            btype->allocpages = pp->next;
-        }
-        else if(pp == btype->allocpagesend)
-        {
-            btype->allocpagesend = pp->prev;
-        }
-        else
-        {
-            pp->prev->next = pp->next;
-            pp->next->prev = pp->prev;
-        }
-
-#ifdef DEBUG_ALLOC_BLOCKS
-        for(size_t i = 0; i < btype->tableEntryCount; ++i)
-        {
-            xfree(*((void**)(pp->data) + i));
-        }
-        pp->objslots.clear();
-#endif
-
-        pp->freelist = nullptr;
-        pp->pageid = 0;
-        pp->entry_size = 0;
-        pp->entry_count = 0;
-        pp->entry_available_count = 0;
-        pp->entry_release_count = 0;
-        pp->slots = nullptr;
-        pp->data = nullptr;
-
-        pp->tid = 0;
-        pp->type = nullptr;
-        pp->idxshift = 0;
-
-        pp->inuse = 0;
-        pp->next = nullptr;
-        pp->prev = nullptr;
-
-        this->free_pages.insert(pp);
-    }
-
     void releasePage(PageInfo* pp)
     {
-        assert(pp->inuse == 0);
+        assert(pp->state == PageInfoStateFlag_Clear);
 
 #ifndef DEBUG_ALLOC_BLOCKS
 #ifdef _WIN32
@@ -586,7 +560,7 @@ public:
 
     PageInfo* managePagesForType(BSQType* btype)
     {
-        if(btype->allocpages == &BlockAllocator::g_sential_page)
+        if(btype->allocpage == &BlockAllocator::g_sential_page)
         {
             this->allocatePageForType(btype);
             return btype->allocpages;
