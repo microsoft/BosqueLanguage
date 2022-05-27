@@ -13,6 +13,9 @@
 #include <sys/mman.h>
 #endif
 
+#define PAGE_FULL_FACTOR 0.90f
+#define PAGE_EVACUATABLE_FACTOR 0.05f
+
 ////
 //BSQType abstract base class
 class BSQType
@@ -43,6 +46,7 @@ public:
 
     std::set<PageInfo*> stuckAllocPages; //pages with stuck objects that we can allocate into -- sorted in memory order
     std::set<PageInfo*> partialAllocPages; //pages without any stuck objects that we can alloc into -- sorted in memory order
+    std::set<PageInfo*> evacuatablePages; //pages with less than PAGE_EVACUATABLE_FACTOR occupancy and no stuck objects that we want to evacuate
 
     //Constructor that everyone delegates to
     BSQType(BSQTypeID tid, BSQTypeLayoutKind tkind, BSQTypeSizeInfo allocinfo, GCFunctorSet gcops, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyCmpFP fpkeycmp, DisplayFP fpDisplay, std::string name): 
@@ -317,10 +321,9 @@ public:
     std::set<PageInfo*> page_set;
 
     std::set<PageInfo*> free_pages; //pages that are completely empty
-    std::set<PageInfo*> full_pages; //pages with over 95% occupancy
+    std::set<PageInfo*> full_pages; //pages with over PAGE_FULL_FACTOR occupancy
     
-    std::set<PageInfo*> processing_pages; //pages that are pending processing
-    std::set<PageInfo*> evacuatablePages; //pages with less than 5% occupancy and no stuck objects that we want to evacuate
+    std::list<PageInfo*> processing_pages; //pages that are pending processing
 
     uint64_t blockProcessingEpoch;
     std::priority_queue<std::pair<uint64_t, BSQType*>, std::vector<std::pair<uint64_t, BSQType*>>, EpochTypeQueueComp> lastEpochsTypeQueue;
@@ -373,7 +376,7 @@ public:
             *curr = *((void**)datacurr);
 
 #ifdef DEBUG_ALLOC_ZERO
-                GC_MEM_ZERO(datacurr, p->entry_size); //zero on debug
+            GC_MEM_ZERO(datacurr, p->entry_size); //zero on debug
 #endif
             metacurr++;
             datacurr += p->entry_size;
@@ -390,7 +393,7 @@ public:
             *curr = *((void**)p->data + i);
 
 #ifdef DEBUG_ALLOC_ZERO
-                GC_MEM_ZERO(*((void**)p->data + i), p->entry_size); //zero on debug
+            GC_MEM_ZERO(*((void**)p->data + i), p->entry_size); //zero on debug
 #endif
             metacurr++;
             datacurr += p->entry_size;
@@ -400,7 +403,7 @@ public:
 #endif
 
         p->current_threshold_count = p->type->thresholdCount;
-        p->state = PageInfoStateFlag_AllocPage;
+        p->state = PageInfoStateFlag_FreshPage | PageInfoStateFlag_AllocPage;
 
         return p;
     }
@@ -470,7 +473,7 @@ public:
             this->unlinkPageData(p);
             this->free_pages.insert(p);
         }
-        else if((float)freesize < (0.9f * (float)p->entry_count))
+        else if((float)freesize > (PAGE_FULL_FACTOR * (float)p->entry_count))
         {
             p->state = PageInfoStateFlag_Full;
             this->full_pages.insert(p);
@@ -484,14 +487,14 @@ public:
             }
             else
             {
-                if((float)freesize > (0.05f * p->entry_count))
+                if((float)freesize > (PAGE_EVACUATABLE_FACTOR * p->entry_count))
                 {
                     p->state = PageInfoStateFlag_GeneralAvailable;
                 }
                 else
                 {
-                    p->state = PageInfoStateFlag_GeneralAvailable | PageInfoStateFlag_Evacuatable;
-                    this->evacuatablePages.insert(p);
+                    p->state = PageInfoStateFlag_Evacuatable;
+                    p->type->evacuatablePages.insert(p);
                 }
 
                 p->type->partialAllocPages.insert(p);
@@ -558,18 +561,41 @@ public:
 #endif
     }
 
-    PageInfo* managePagesForType(BSQType* btype)
+    void getAllocPageForType(BSQType* btype)
     {
         if(btype->allocpage == &BlockAllocator::g_sential_page)
         {
-            this->allocatePageForType(btype);
-            return btype->allocpages;
+            this->allocateEmptyPageForType(btype);
+            return;
         }
         else
         {
-            //TODO: we want to try and find page with stuck references (need to add some stats) and then try and 
-            //      pack "partially" filled pages and let other pages move toward empty
-            xxxx;
+            auto stuckopt = btype->stuckAllocPages.begin();
+            if(stuckopt != btype->stuckAllocPages.end())
+            {
+                btype->allocpage = *stuckopt;
+                btype->stuckAllocPages.erase(stuckopt);
+                return;
+            }
+
+            auto partialopt = btype->partialAllocPages.begin(); 
+            if(partialopt != btype->partialAllocPages.end())
+            {
+                btype->allocpage = *partialopt;
+                btype->partialAllocPages.erase(partialopt);
+                return;
+            }
+
+            auto evacopt = btype->evacuatablePages.begin(); 
+            if(evacopt != btype->evacuatablePages.end())
+            {
+                btype->allocpage = *evacopt;
+                btype->evacuatablePages.erase(partialopt);
+                return;
+            }
+
+            this->allocateEmptyPageForType(btype);
+            return;
         }
     }
 };
@@ -621,7 +647,6 @@ private:
 
 #ifdef ENABLE_MEM_STATS
     size_t gccount;
-    size_t survivedbytes;
     size_t maxheap;
 #endif
 
@@ -675,6 +700,23 @@ public:
         }
     }
 
+    void processDecHeapRC_DuringCollection_Slow(void* obj)
+    {
+        this->releaselist.enque(obj);
+
+        PageInfo* pp = PAGE_MASK_EXTRACT_ADDR(obj);
+        if((pp->state & PageInfoStateFlag_ProcessingPending) != PageInfoStateFlag_Clear)
+        {
+            pp->current_threshold_count--;
+        
+            if(pp->current_threshold_count)
+            {
+                pp->state = pp->state & PageInfoStateFlag_ProcessingPending;
+                this->blockalloc.processing_pages.
+            }
+        }
+    }
+
     inline void processDecHeapRC_DuringCollection(void* obj, void* fromObj)
     {
         GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR(obj);
@@ -682,8 +724,7 @@ public:
 
         if(GC_TEST_IS_UNREACHABLE(GC_LOAD_META_DATA_WORD(addr)))
         {
-            PAGE_MASK_EXTRACT_ADDR(obj)->entry_release_count++;
-            this->releaselist.enque(obj);
+            this->processDecHeapRC_DuringCollection_Slow(obj);
         }
     }
 
@@ -694,7 +735,7 @@ public:
 
         if(GC_TEST_IS_UNREACHABLE(GC_LOAD_META_DATA_WORD(addr)))
         {
-            this->maybeZeroCounts.enque(obj);
+            PAGE_MASK_EXTRACT_ADDR(obj)->current_threshold_count--;
         }
     }
 
@@ -1043,7 +1084,7 @@ public:
         PageInfo* pp = mdata->allocpages;
         if(pp->freelist == nullptr)
         {
-            this->blockalloc.managePagesForType(mdata);
+            pp = this->blockalloc.managePagesForType(mdata);
         }
         
         uint8_t* alloc = (uint8_t*)pp->freelist;

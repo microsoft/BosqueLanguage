@@ -119,10 +119,9 @@ typedef uint64_t PageInfoStateFlag;
 #define PageInfoStateFlag_AllocPage 0x1
 #define PageInfoStateFlag_Full 0x2
 
-#define PageInfoStateFlag_FreshAlloc 0x10
-#define PageInfoStateFlag_MixedAlloc 0x20
-#define PageInfoStateFlag_StuckAvailable 0x40
-#define PageInfoStateFlag_GeneralAvailable 0x80
+#define PageInfoStateFlag_FreshPage 0x10
+#define PageInfoStateFlag_StuckAvailable 0x20
+#define PageInfoStateFlag_GeneralAvailable 0x40
 
 #define PageInfoStateFlag_Evacuatable 0x100
 #define PageInfoStateFlag_ProcessingPending 0x200
