@@ -122,10 +122,10 @@ typedef uint64_t PageInfoStateFlag;
 #define PageInfoStateFlag_FreshPage 0x10
 #define PageInfoStateFlag_StuckAvailable 0x20
 #define PageInfoStateFlag_GeneralAvailable 0x40
+#define PageInfoStateFlag_EvacuatableSimple 0x80
+#define PageInfoStateFlag_EvacuatableSweep 0x100
 
-#define PageInfoStateFlag_Evacuatable 0x100
-#define PageInfoStateFlag_ProcessingPending 0x200
-#define PageInfoStateFlag_ProcessingIncremental 0x400
+#define PageInfoStateFlag_ProcessingPending 0x1000
 
 struct PageInfo
 {

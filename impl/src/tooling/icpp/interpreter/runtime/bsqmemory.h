@@ -444,6 +444,7 @@ public:
     {
         uint64_t freesize = 0;
         bool hasstuck = false;
+        bool allrcsimple = true;
 
         GC_META_DATA_WORD* metacurr = p->slots;
         for(uint64_t i = 0; i < p->entry_count; ++i)
@@ -460,6 +461,9 @@ public:
                     w = GC_INC_STUCK_COUNT(w);
                     hasstuck |= (GC_IS_STUCK(w));
                 }
+                
+                //it is a count RC
+                allrcsimple &= (w & GC_RC_KIND_MASK);
 
                 GC_CLEAR_YOUNG_AND_ALLOC(metacurr, w);
             }
@@ -490,14 +494,22 @@ public:
                 if((float)freesize > (PAGE_EVACUATABLE_FACTOR * p->entry_count))
                 {
                     p->state = PageInfoStateFlag_GeneralAvailable;
+                    p->type->partialAllocPages.insert(p);
                 }
                 else
                 {
-                    p->state = PageInfoStateFlag_Evacuatable;
-                    p->type->evacuatablePages.insert(p);
+                    if(allrcsimple)
+                    {
+                        p->state = PageInfoStateFlag_EvacuatableSimple;
+                        p->type->evacuatablePages.insert(p);
+                    }
+                    else
+                    {
+                        //TODO: later maybe complex evacuatable but for now just make generally available
+                        p->state = PageInfoStateFlag_GeneralAvailable;
+                        p->type->partialAllocPages.insert(p);
+                    }
                 }
-
-                p->type->partialAllocPages.insert(p);
             }
         }
     }
@@ -633,14 +645,8 @@ private:
     bool gcEnabled; //can turn off collector for a bit if we want
     bool compactionEnabled; //can turn off compaction for a bit if we want
 
-    GCRefList maybeZeroCounts;
-    GCRefList newMaybeZeroCounts;
-
     GCRefList rootlist;
     GCRefList worklist;
-    GCRefList releaselist;
-
-    size_t liveoldspace;
 
     uint8_t* globals_mem;
     size_t globals_mem_size;
@@ -700,42 +706,40 @@ public:
         }
     }
 
-    void processDecHeapRC_DuringCollection_Slow(void* obj)
+    void processDecHeapRC_Slow(void* obj)
     {
+        PageInfo* pp = PAGE_MASK_EXTRACT_ADDR(obj);
         this->releaselist.enque(obj);
 
-        PageInfo* pp = PAGE_MASK_EXTRACT_ADDR(obj);
-        if((pp->state & PageInfoStateFlag_ProcessingPending) != PageInfoStateFlag_Clear)
+        if(pp->current_threshold_count > 1)
         {
             pp->current_threshold_count--;
-        
-            if(pp->current_threshold_count)
-            {
-                pp->state = pp->state & PageInfoStateFlag_ProcessingPending;
-                this->blockalloc.processing_pages.
-            }
+        }
+        else
+        {
+            pp->state = pp->state & PageInfoStateFlag_ProcessingPending;
+            this->blockalloc.processing_pages.push_back(pp);
+
+            if(pp->state & PageInfoStateFlag_AllocPage)
+                PageInfoStateFlag_StuckAvailable
+                PageInfoStateFlag_GeneralAvailable
+                PageInfoStateFlag_EvacuatableSimple
+
+                PageInfoStateFlag_Full
+
+                PageInfoStateFlag_FreshPage
+                //else it is in the mixed alloc set
         }
     }
 
-    inline void processDecHeapRC_DuringCollection(void* obj, void* fromObj)
+    inline void processDecHeapRC(void* obj, void* fromObj)
     {
         GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR(obj);
         Allocator::processDecHeapRC(addr, GC_LOAD_META_DATA_WORD(addr), fromObj);
 
         if(GC_TEST_IS_UNREACHABLE(GC_LOAD_META_DATA_WORD(addr)))
         {
-            this->processDecHeapRC_DuringCollection_Slow(obj);
-        }
-    }
-
-    inline void processDecHeapRC_DuringCompaction(void* obj, void* fromObj)
-    {
-        GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR(obj);
-        Allocator::processDecHeapRC(addr, GC_LOAD_META_DATA_WORD(addr), fromObj);
-
-        if(GC_TEST_IS_UNREACHABLE(GC_LOAD_META_DATA_WORD(addr)))
-        {
-            PAGE_MASK_EXTRACT_ADDR(obj)->current_threshold_count--;
+            this->processDecHeapRC_Slow(obj);
         }
     }
 
