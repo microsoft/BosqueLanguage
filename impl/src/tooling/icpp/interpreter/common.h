@@ -117,15 +117,16 @@ typedef uint64_t GC_META_DATA_WORD;
 typedef uint64_t PageInfoStateFlag;
 #define PageInfoStateFlag_Clear 0x0
 #define PageInfoStateFlag_AllocPage 0x1
-#define PageInfoStateFlag_Full 0x2
+#define PageInfoStateFlag_AllocFilledPage 0x2
+#define PageInfoStateFlag_FullPage 0x4
 
-#define PageInfoStateFlag_FreshPage 0x10
-#define PageInfoStateFlag_StuckAvailable 0x20
-#define PageInfoStateFlag_GeneralAvailable 0x40
-#define PageInfoStateFlag_EvacuatableSimple 0x80
-#define PageInfoStateFlag_EvacuatableSweep 0x100
+#define PageInfoStateFlag_StuckAvailable 0x10
+#define PageInfoStateFlag_GeneralAvailable 0x20
+#define PageInfoStateFlag_Evacuatable 0x40
 
-#define PageInfoStateFlag_ProcessingPending 0x1000
+#define PageInfoStateFlag_ProcessingPending 0x100
+
+#define PageInfoState_TransitionAvailableToAlloc(PSI) (PageInfoStateFlag_AllocPage | (PSI & PageInfoStateFlag_ProcessingPending))
 
 struct PageInfo
 {
@@ -141,8 +142,7 @@ struct PageInfo
     
     BSQType* type; //nullptr if this page is not in use anywhere
 
-    uint64_t current_threshold_count; //the current value for this block relative to the threshold
-    uint64_t processing_threshold_count; //the threshold to process this block
+    uint64_t release_count; //the current number of releases done on this block since it was last collected
     PageInfoStateFlag state;
 
     uint64_t pageid; //a useful id to keep track of which page is what

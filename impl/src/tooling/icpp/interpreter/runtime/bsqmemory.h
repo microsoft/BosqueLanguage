@@ -37,23 +37,20 @@ public:
     DisplayFP fpDisplay;
     const std::string name;
 
-    size_t thresholdCount;
     size_t tableEntryCount;
     size_t tableEntryIndexShift;
 
-    std::set<PageInfo*> freshAllocPages; //pages that only have young objects allocated into them
-    std::set<PageInfo*> mixedAllocPages; //pages that we have young objects allocated into and they also have old objects
+    std::list<std::pair<uint32_t, PageInfo*>> filledPages; //pages that have been filled and the GC epoch they were filled on
 
-    std::set<PageInfo*> stuckAllocPages; //pages with stuck objects that we can allocate into -- sorted in memory order
+    std::set<PageInfo*> stuckAllocPages; //pages with stuck objects or high ref-count objects that we can allocate into -- sorted in memory order
     std::set<PageInfo*> partialAllocPages; //pages without any stuck objects that we can alloc into -- sorted in memory order
     std::set<PageInfo*> evacuatablePages; //pages with less than PAGE_EVACUATABLE_FACTOR occupancy and no stuck objects that we want to evacuate
 
     //Constructor that everyone delegates to
     BSQType(BSQTypeID tid, BSQTypeLayoutKind tkind, BSQTypeSizeInfo allocinfo, GCFunctorSet gcops, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyCmpFP fpkeycmp, DisplayFP fpDisplay, std::string name): 
-        tid(tid), tkind(tkind), allocinfo(allocinfo), gcops(gcops), fpkeycmp(fpkeycmp), vtable(vtable), fpDisplay(fpDisplay), name(name), freshAllocPages(), mixedAllocPages(), stuckAllocPages(), partialAllocPages(), evacuatablePages()
+        tid(tid), tkind(tkind), allocinfo(allocinfo), gcops(gcops), fpkeycmp(fpkeycmp), vtable(vtable), fpDisplay(fpDisplay), name(name)
     {
         this->tableEntryCount = xxxx;
-        this->thresholdCount = xxxx;
         this->tableEntryIndexShift = xxxx;
     }
 
@@ -304,41 +301,21 @@ public:
     }
 };
 
-class EpochTypeQueueComp
-{
-public:
-    bool operator()(const std::pair<uint64_t, BSQType*>& a, const std::pair<uint64_t, BSQType*>& b)
-    {
-        return a.first > b.first;
-    }
-};
-
 //A class that implements our block allocator stuff
 class BlockAllocator
 {
 public:
     //set of all pages that are currently allocated
     std::set<PageInfo*> page_set;
-
+    std::set<PageInfo*> full_pages; //pages that are full
     std::set<PageInfo*> free_pages; //pages that are completely empty
-    std::set<PageInfo*> full_pages; //pages with over PAGE_FULL_FACTOR occupancy
-    
-    std::list<PageInfo*> processing_pages; //pages that are pending processing
 
-    uint64_t blockProcessingEpoch;
-    std::priority_queue<std::pair<uint64_t, BSQType*>, std::vector<std::pair<uint64_t, BSQType*>>, EpochTypeQueueComp> lastEpochsTypeQueue;
+    uint32_t gc_epoch = 0;
+    std::set<std::pair<uint32_t, BSQType*>> types_with_filled_pages; //types that have pages filled and the GC epoch it happened
+    std::list<PageInfo*> processing_pages; //pages that are pending processing
 
     static PageInfo g_sential_page;
 
-    BlockAllocator() : blockProcessingEpoch(0)
-    {
-        ;
-    }
-
-    ~BlockAllocator()
-    {
-        ;
-    }
 
 #ifdef DEBUG_ALLOC_BLOCKS
     //For malloc based debug implementation we keep explicit map from object to page it is in
@@ -402,9 +379,7 @@ public:
         *curr = nullptr;
 #endif
 
-        p->current_threshold_count = p->type->thresholdCount;
-        p->state = PageInfoStateFlag_FreshPage | PageInfoStateFlag_AllocPage;
-
+        p->state = PageInfoStateFlag_AllocPage;
         return p;
     }
 
@@ -471,7 +446,6 @@ public:
             metacurr++;
         }
 
-        p->current_threshold_count = p->type->thresholdCount;
         if(freesize == p->entry_count)
         {
             this->unlinkPageData(p);
@@ -479,7 +453,7 @@ public:
         }
         else if((float)freesize > (PAGE_FULL_FACTOR * (float)p->entry_count))
         {
-            p->state = PageInfoStateFlag_Full;
+            p->state = PageInfoStateFlag_FullPage;
             this->full_pages.insert(p);
         }
         else
@@ -491,24 +465,15 @@ public:
             }
             else
             {
-                if((float)freesize > (PAGE_EVACUATABLE_FACTOR * p->entry_count))
+                if(allrcsimple & ((float)freesize <= (PAGE_EVACUATABLE_FACTOR * p->entry_count)))
                 {
-                    p->state = PageInfoStateFlag_GeneralAvailable;
-                    p->type->partialAllocPages.insert(p);
+                    p->state = PageInfoStateFlag_Evacuatable;
+                    p->type->evacuatablePages.insert(p);
                 }
                 else
                 {
-                    if(allrcsimple)
-                    {
-                        p->state = PageInfoStateFlag_EvacuatableSimple;
-                        p->type->evacuatablePages.insert(p);
-                    }
-                    else
-                    {
-                        //TODO: later maybe complex evacuatable but for now just make generally available
-                        p->state = PageInfoStateFlag_GeneralAvailable;
-                        p->type->partialAllocPages.insert(p);
-                    }
+                    p->state = PageInfoStateFlag_GeneralAvailable;
+                    p->type->partialAllocPages.insert(p);
                 }
             }
         }
@@ -586,6 +551,7 @@ public:
             if(stuckopt != btype->stuckAllocPages.end())
             {
                 btype->allocpage = *stuckopt;
+                btype->allocpage->state = PageInfoState_TransitionAvailableToAlloc(btype->allocpage->state);
                 btype->stuckAllocPages.erase(stuckopt);
                 return;
             }
@@ -594,6 +560,7 @@ public:
             if(partialopt != btype->partialAllocPages.end())
             {
                 btype->allocpage = *partialopt;
+                btype->allocpage->state = PageInfoState_TransitionAvailableToAlloc(btype->allocpage->state);
                 btype->partialAllocPages.erase(partialopt);
                 return;
             }
@@ -602,6 +569,7 @@ public:
             if(evacopt != btype->evacuatablePages.end())
             {
                 btype->allocpage = *evacopt;
+                btype->allocpage->state = PageInfoState_TransitionAvailableToAlloc(btype->allocpage->state);
                 btype->evacuatablePages.erase(partialopt);
                 return;
             }
@@ -709,6 +677,7 @@ public:
     void processDecHeapRC_Slow(void* obj)
     {
         PageInfo* pp = PAGE_MASK_EXTRACT_ADDR(obj);
+        pp->release_count++;
         this->releaselist.enque(obj);
 
         if(pp->current_threshold_count > 1)
