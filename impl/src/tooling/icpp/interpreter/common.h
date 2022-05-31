@@ -77,34 +77,34 @@ class BSQType;
 #define BSQ_BLOCK_ALLOCATION_SIZE 8192ul
 
 //Collection threshold
-#define BSQ_COLLECT_THRESHOLD xxxx
+#define BSQ_COLLECT_THRESHOLD 8388608ul
 
 //Make sure any allocated page is addressable by us -- larger than 2^31 and less than 2^42
 #define MIN_ALLOCATED_ADDRESS 2147483648ul
-#define MAX_ALLOCATED_ADDRESS 4398046511104ul
+#define MAX_ALLOCATED_ADDRESS 2199023255552ul
 
 #define GC_REF_LIST_BLOCK_SIZE_DEFAULT 256
 
 //Header layout and with immix style blocks
-//high [RC - 59 bits] [MARK 1 - bit] [STUCK - 2 bits] [YOUNG - 1 bit] [ALLOCATED - 1 bit]
-//high [1] [RC value - 58 bits] | [0] [PAGE1 - 29 bits] [PAGE2 - 29 bits]
+//high [RC - 57 bits] [MARK 1 - bit] [FWDPTR - 1 bit] [STUCK - 2 bits] [YOUNG - 1 bit] [DEC_PENDING - 1 bit] [ALLOCATED - 1 bit]
+//high [1] [RC value - 56 bits] | [0] [PAGE1 - 28 bits] [PAGE2 - 28 bits]
 
-#define GC_MARK_BIT 0x10ul
-#define GC_YOUNG_BIT 0x2ul
+#define GC_YOUNG_BIT 0x4ul
+#define GC_DEC_PENDING_BIT 0x2ul
 #define GC_ALLOCATED_BIT 0x1ul
 
-#define GC_STUCK_BITS 0xCul
-#define GC_STUCK_ONE 0x4ul
+#define GC_STUCK_BITS 0x18ul
+#define GC_STUCK_ONE 0x8ul
+
+#define GC_IS_FWD_PTR_BIT 0x20ul
+#define GC_MARK_BIT 0x40ul
 
 #define GC_RC_KIND_MASK 0x8000000000000000ul
-#define GC_RC_DATA_MASK 0x7FFFFFFFFFFFFE0ul
-#define GC_RC_COUNT_MASK GC_RC_DATA_MASK
-#define GC_RC_PAGE1_MASK 0x7FFFFFFE00000000ul
+#define GC_RC_COUNT_MASK 0x7FFFFFFFFFFFFF80ul
+#define GC_RC_PAGE1_MASK 0xFFFF800000000000ul
 #define GC_RC_PAGE1_SHIFT 35u
-#define GC_RC_PAGE2_MASK 0x1FFFFFFE0ul
-#define GC_RC_PAGE2_SHIFT 5u
-
-#define GC_REACHABLE_MASK (GC_RC_DATA_MASK | GC_MARK_BIT)
+#define GC_RC_PAGE2_MASK 0x3FFFFFF80ul
+#define GC_RC_PAGE2_SHIFT 7u
 
 #define PAGE_ADDR_MASK 0xFFFFFFFFFFFFE000ul
 #define PAGE_INDEX_ADDR_MASK 0x1FFFul
@@ -115,18 +115,16 @@ class BSQType;
 typedef uint64_t GC_META_DATA_WORD;
 
 typedef uint64_t PageInfoStateFlag;
-#define PageInfoStateFlag_Clear 0x0
-#define PageInfoStateFlag_AllocPage 0x1
-#define PageInfoStateFlag_AllocFilledPage 0x2
-#define PageInfoStateFlag_FullPage 0x4
+#define PageInfoStateFlag_Clear 0x0ul
+#define PageInfoStateFlag_AllocPage 0x1ul
+#define PageInfoStateFlag_AllocFilledPage 0x2ul
+#define PageInfoStateFlag_FullPage 0x4ul
 
-#define PageInfoStateFlag_StuckAvailable 0x10
-#define PageInfoStateFlag_GeneralAvailable 0x20
-#define PageInfoStateFlag_Evacuatable 0x40
+#define PageInfoStateFlag_StuckAvailable 0x10ul
+#define PageInfoStateFlag_GeneralAvailable 0x20ul
+#define PageInfoStateFlag_Evacuatable 0x40ul
 
-#define PageInfoStateFlag_ProcessingPending 0x100
-
-#define PageInfoState_TransitionAvailableToAlloc(PSI) (PageInfoStateFlag_AllocPage | (PSI & PageInfoStateFlag_ProcessingPending))
+#define PageInfoStateFlag_ProcessingPending 0x100ul
 
 struct PageInfo
 {
@@ -142,7 +140,6 @@ struct PageInfo
     
     BSQType* type; //nullptr if this page is not in use anywhere
 
-    uint64_t release_count; //the current number of releases done on this block since it was last collected
     PageInfoStateFlag state;
 
     uint64_t pageid; //a useful id to keep track of which page is what
@@ -161,15 +158,16 @@ struct PageInfo
 #define GC_LOAD_META_DATA_WORD(ADDR) (*ADDR)
 #define GC_STORE_META_DATA_WORD(ADDR, W) (*ADDR = W)
 
-#define GC_IS_ALLOCATED(W) ((W & GC_ALLOCATED_BIT) == 0x0ul)
+#define GC_IS_ALLOCATED(W) ((W & GC_ALLOCATED_BIT) != 0x0ul)
+#define GC_IS_DEC_PENDING(W) ((W & GC_DEC_PENDING_BIT) != 0x0ul)
 
-#define GC_EXTRACT_RC(W) (W & GC_RC_MASK)
+#define GC_EXTRACT_RC(W) (W & GC_RC_COUNT_MASK)
 #define GC_RC_ZERO ((GC_META_DATA_WORD)0x0)
 #define GC_RC_ONE ((GC_META_DATA_WORD)0x8000000)
 #define GC_RC_THREE ((GC_META_DATA_WORD)0x18000000)
 
-#define GC_TEST_IS_UNREACHABLE(W) ((W & GC_REACHABLE_MASK) == 0x0ul)
-#define GC_TEST_IS_ZERO_RC(W) ((W & GC_RC_DATA_MASK) == GC_RC_ZERO)
+#define GC_TEST_IS_UNREACHABLE(W) ((W & (GC_RC_COUNT_MASK | GC_MARK_BIT)) == 0x0ul)
+#define GC_TEST_IS_ZERO_RC(W) ((W & GC_RC_COUNT_MASK) == GC_RC_ZERO)
 #define GC_TEST_IS_YOUNG(W) (W & GC_YOUNG_BIT)
 
 #define GC_TEST_MARK_BIT(W) ((W & GC_MARK_BIT) != 0x0ul)
@@ -192,7 +190,6 @@ struct PageInfo
 #define GC_HEADER_DEC_LIST_STORE(ADDR, W) (*ADDR = (uint64_t)W)
 
 #define GC_INIT_YOUNG_ALLOC(ADDR) GC_STORE_META_DATA_WORD(ADDR, GC_YOUNG_BIT | GC_ALLOCATED_BIT)
-#define GC_CLEAR_YOUNG_AND_ALLOC(ADDR, W) GC_STORE_META_DATA_WORD(ADDR, W & (GC_RC_KIND_MASK | GC_RC_DATA_MASK | GC_STUCK_BITS | GC_ALLOCATED_BIT))
 
 //Access type info
 #define GET_TYPE_META_DATA(M) (GC_PAGE_FOR_ADDR(W).type)
