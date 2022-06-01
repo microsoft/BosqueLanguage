@@ -86,13 +86,16 @@ class BSQType;
 #define GC_REF_LIST_BLOCK_SIZE_DEFAULT 256
 
 //Header layout and with immix style blocks
-//high [RC - 57 bits] [MARK 1 - bit] [STUCK - 2 bits] [DEC_PENDING - 1 bit] [FWDPTR - 1 bit] [YOUNG - 1 bit] [ALLOCATED - 1 bit]
-//high [1] [RC value - 56 bits] | [0] [PAGE1 - 28 bits] [PAGE2 - 28 bits]
+//high [RC - 45 bits] [MARK 1 - bit] [TYPE - 15 bits] [YOUNG - 1 bit] [DEC_PENDING - 1 bit] [FWDPTR - 1 bit]
+//high [1] [RC value - 44 bits] | [0] [PAGE1 - 22 bits] [PAGE2 - 22 bits]
+
+//high [RC - 60 bits] [MARK 1 - bit] [YOUNG - 1 bit] [DEC_PENDING - 1 bit] [FWDPTR - 1 bit]
+//high [1] [RC value - 59 bits] | [0] [PTR - 59 bits]
 
 #define GC_ALLOCATED_BIT 0x1ul
-#define GC_YOUNG_BIT 0x2ul
-#define GC_IS_FWD_PTR_BIT 0x4ul
-#define GC_DEC_PENDING_BIT 0x8ul
+#define GC_IS_FWD_PTR_BIT 0x2ul
+#define GC_DEC_PENDING_BIT 0x4ul
+#define GC_YOUNG_BIT 0x8ul
 
 #define GC_STUCK_BITS 0x30ul
 #define GC_STUCK_ONE 0x10ul
@@ -112,38 +115,27 @@ class BSQType;
 #define PAGE_MASK_EXTRACT_ADDR(M) ((PageInfo*)PAGE_MASK_EXTRACT_ID(M))
 #define PAGE_INDEX_EXTRACT(M, PI) ((((uintptr_t)M) - ((uintptr_t)(PI)->data)) >> (PI)->idxshift)
 
-#define GC_FORWARD_PTR_MASK 0x
-
 typedef uint64_t GC_META_DATA_WORD;
 
-typedef uint32_t PageInfoStateFlag;
-#define PageInfoStateFlag_Clear 0x0u
-#define PageInfoStateFlag_AllocPage 0x1u
-#define PageInfoStateFlag_AllocFilledPage 0x2u
-#define PageInfoStateFlag_FullPage 0x4u
-
-#define PageInfoStateFlag_StuckAvailable 0x10u
-#define PageInfoStateFlag_GeneralAvailable 0x20u
-#define PageInfoStateFlag_Evacuatable 0x40u
-
-#define PageInfoStateFlag_ProcessingPending 0x100u
+typedef uint8_t ActiveAllocInfo;
+#define ActiveAlloc_Alloc 0x1
+#define ActiveAlloc_Ex 0x2
 
 struct PageInfo
 {
     void* freelist; //allocate from here until nullptr
 
     GC_META_DATA_WORD* slots; //ptr to the metadata slots -- null if this is a sentinal PageInfo
-    uint64_t entry_count; //max number of objects that can be allocated from this Page
-
-    uint64_t entry_size; //size of the entries in this page
-    uint64_t idxshift; //# of bits to shift to convert uint8_t distance into entry index
-
     void* data; //pointer to the data segment in this page
-    
-    BSQType* type; //nullptr if this page is not in use anywhere
+    BSQType* btype;
 
-    PageInfoStateFlag state;
-    int32_t lru_gc_epoch;
+    uint16_t entry_size; //size of the entries in this page
+    uint16_t entry_count; //max number of objects that can be allocated from this Page
+
+    uint16_t free_count;
+
+    uint8_t idxshift; //# of bits to shift to convert uint8_t distance into entry index
+    ActiveAllocInfo active_alloc;
 };
 #ifndef DEBUG_ALLOC_BLOCKS
 #define GC_PAGE_INDEX_FOR_ADDR(M, PAGE) PAGE_INDEX_EXTRACT(M, PAGE)
