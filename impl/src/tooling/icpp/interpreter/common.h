@@ -114,17 +114,17 @@ class BSQType;
 
 typedef uint64_t GC_META_DATA_WORD;
 
-typedef uint64_t PageInfoStateFlag;
-#define PageInfoStateFlag_Clear 0x0ul
-#define PageInfoStateFlag_AllocPage 0x1ul
-#define PageInfoStateFlag_AllocFilledPage 0x2ul
-#define PageInfoStateFlag_FullPage 0x4ul
+typedef uint32_t PageInfoStateFlag;
+#define PageInfoStateFlag_Clear 0x0u
+#define PageInfoStateFlag_AllocPage 0x1u
+#define PageInfoStateFlag_AllocFilledPage 0x2u
+#define PageInfoStateFlag_FullPage 0x4u
 
-#define PageInfoStateFlag_StuckAvailable 0x10ul
-#define PageInfoStateFlag_GeneralAvailable 0x20ul
-#define PageInfoStateFlag_Evacuatable 0x40ul
+#define PageInfoStateFlag_StuckAvailable 0x10u
+#define PageInfoStateFlag_GeneralAvailable 0x20u
+#define PageInfoStateFlag_Evacuatable 0x40u
 
-#define PageInfoStateFlag_ProcessingPending 0x100ul
+#define PageInfoStateFlag_ProcessingPending 0x100u
 
 struct PageInfo
 {
@@ -141,8 +141,7 @@ struct PageInfo
     BSQType* type; //nullptr if this page is not in use anywhere
 
     PageInfoStateFlag state;
-
-    uint64_t pageid; //a useful id to keep track of which page is what
+    int32_t lru_gc_epoch;
 };
 #ifndef DEBUG_ALLOC_BLOCKS
 #define GC_PAGE_INDEX_FOR_ADDR(M, PAGE) PAGE_INDEX_EXTRACT(M, PAGE)
@@ -160,6 +159,7 @@ struct PageInfo
 
 #define GC_IS_ALLOCATED(W) ((W & GC_ALLOCATED_BIT) != 0x0ul)
 #define GC_IS_DEC_PENDING(W) ((W & GC_DEC_PENDING_BIT) != 0x0ul)
+#define GC_IS_FWD_PTR(W) ((W & GC_IS_FWD_PTR_BIT) != 0x0ul)
 
 #define GC_EXTRACT_RC(W) (W & GC_RC_COUNT_MASK)
 #define GC_RC_ZERO ((GC_META_DATA_WORD)0x0)
@@ -190,6 +190,7 @@ struct PageInfo
 #define GC_HEADER_DEC_LIST_STORE(ADDR, W) (*ADDR = (uint64_t)W)
 
 #define GC_INIT_YOUNG_ALLOC(ADDR) GC_STORE_META_DATA_WORD(ADDR, GC_YOUNG_BIT | GC_ALLOCATED_BIT)
+#define GC_RESET_YOUNG_AND_MARK(ADDR, W) GC_STORE_META_DATA_WORD(ADDR, W & ~(GC_YOUNG_BIT | GC_MARK_BIT))
 
 //Access type info
 #define GET_TYPE_META_DATA(M) (GC_PAGE_FOR_ADDR(W).type)

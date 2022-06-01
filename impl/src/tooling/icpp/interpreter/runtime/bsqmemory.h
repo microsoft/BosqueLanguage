@@ -40,7 +40,7 @@ public:
     size_t tableEntryCount;
     size_t tableEntryIndexShift;
 
-    std::list<std::pair<uint32_t, PageInfo*>> filledPages; //pages that have been filled and the GC epoch they were filled on
+    std::set<PageInfo*> filledPages; //pages that have been filled by the allocator and are pending collection
 
     std::set<PageInfo*> stuckAllocPages; //pages with stuck objects or high ref-count objects that we can allocate into -- sorted in memory order
     std::set<PageInfo*> partialAllocPages; //pages without any stuck objects that we can alloc into -- sorted in memory order
@@ -305,14 +305,14 @@ public:
 class BlockAllocator
 {
 public:
-    //set of all pages that are currently allocated
+    //set of all pages that are currently allocated -- TODO: probably want some bitvector and/or semi-hierarchical structure here instead
     std::set<PageInfo*> page_set;
     std::set<PageInfo*> full_pages; //pages that are full
     std::set<PageInfo*> free_pages; //pages that are completely empty
 
-    uint32_t gc_epoch = 0;
-    std::set<std::pair<uint32_t, BSQType*>> types_with_filled_pages; //types that have pages filled and the GC epoch it happened
+    int32_t gc_epoch = 0;
     std::list<PageInfo*> processing_pages; //pages that are pending processing
+    std::list<PageInfo*> next_epoch_processing_pages; //pages that were processed but we want to process again or that were alloc into and have refs -- stick here and we will get them next epoch
 
     static PageInfo g_sential_page;
 
@@ -341,7 +341,7 @@ public:
         }
     }
 
-    PageInfo* initializePageForAllocation(PageInfo* p)
+    void initializePageFreelist(PageInfo* p)
     {
 #ifndef DEBUG_ALLOC_BLOCKS
         void** curr = &p->freelist;
@@ -378,12 +378,9 @@ public:
 
         *curr = nullptr;
 #endif
-
-        p->state = PageInfoStateFlag_AllocPage;
-        return p;
     }
 
-    void processFreePageInitial(PageInfo* p, BSQType* btype)
+    void initializeFreshPageForType(PageInfo* p, BSQType* btype)
     {
         p->entry_count = btype->tableEntryCount;
         p->entry_size = btype->allocinfo.heapsize;
@@ -391,12 +388,13 @@ public:
 
         p->type = btype;
 
-        p->pageid = PAGE_MASK_EXTRACT_ID(p);
+        p->state = PageInfoStateFlag_Clear;
+        p->lru_gc_epoch = -1;
 
         this->page_set.insert(p);
     }
 
-    void unlinkPageData(PageInfo* p)
+    void unlinkPageFromType(PageInfo* p)
     {
 #ifdef DEBUG_ALLOC_BLOCKS
         for(size_t i = 0; i < p->btype->tableEntryCount; ++i)
@@ -413,73 +411,152 @@ public:
         p->type = nullptr;
 
         p->state = PageInfoStateFlag_Clear;
+        p->lru_gc_epoch = -1;
     }
 
-    void processPartialPage(PageInfo* p)
+    void processPage(PageInfo* p)
     {
         uint64_t freesize = 0;
+        bool hasrefs = false;
         bool hasstuck = false;
         bool allrcsimple = true;
 
         GC_META_DATA_WORD* metacurr = p->slots;
         for(uint64_t i = 0; i < p->entry_count; ++i)
         {
-            if(!GC_IS_ALLOCATED(*metacurr))
+            auto w = *metacurr;
+            if(!GC_IS_ALLOCATED(w))
             {
                 freesize++;
             }
             else
             {
-                auto w = *metacurr;
-                if(GC_TEST_MARK_BIT(w))
+                if(GC_IS_FWD_PTR(w))
                 {
-                    w = GC_INC_STUCK_COUNT(w);
-                    hasstuck |= (GC_IS_STUCK(w));
+                    GC_STORE_META_DATA_WORD(metacurr, 0x0ul);
+                    freesize++;
                 }
+                else if(GC_IS_DEC_PENDING(w))
+                {
+                    ;
+                }
+                else
+                {
+                    if(GC_TEST_MARK_BIT(w))
+                    {
+                        w = GC_INC_STUCK_COUNT(w);
+                        hasrefs = true;
+                        hasstuck |= (GC_IS_STUCK(w));
+                    }
                 
-                //it is a count RC
-                allrcsimple &= (w & GC_RC_KIND_MASK);
+                    //it is a count RC
+                    allrcsimple &= (w & GC_RC_KIND_MASK);
 
-                GC_CLEAR_YOUNG_AND_ALLOC(metacurr, w);
+                    GC_RESET_YOUNG_AND_MARK(metacurr, w);
+                }
             }
 
             metacurr++;
         }
 
+        p->lru_gc_epoch = this->gc_epoch;
+
+        auto oldpagestate = (p->state & ~PageInfoStateFlag_ProcessingPending);
         if(freesize == p->entry_count)
         {
-            this->unlinkPageData(p);
-            this->free_pages.insert(p);
+            this->unlinkPageFromType(p);
         }
         else if((float)freesize > (PAGE_FULL_FACTOR * (float)p->entry_count))
         {
             p->state = PageInfoStateFlag_FullPage;
-            this->full_pages.insert(p);
         }
         else
         {
             if(hasstuck)
             {
                 p->state = PageInfoStateFlag_StuckAvailable;
-                p->type->stuckAllocPages.insert(p);
             }
             else
             {
                 if(allrcsimple & ((float)freesize <= (PAGE_EVACUATABLE_FACTOR * p->entry_count)))
                 {
                     p->state = PageInfoStateFlag_Evacuatable;
-                    p->type->evacuatablePages.insert(p);
                 }
                 else
                 {
                     p->state = PageInfoStateFlag_GeneralAvailable;
-                    p->type->partialAllocPages.insert(p);
                 }
             }
         }
+
+        if(oldpagestate != p->state)
+        {
+            assert(oldpagestate != PageInfoStateFlag_Clear);
+
+            if(oldpagestate == PageInfoStateFlag_AllocPage)
+            {
+                p->type->allocpage = &BlockAllocator::g_sential_page;
+            }
+            else if(oldpagestate == PageInfoStateFlag_AllocFilledPage)
+            {
+                p->type->filledPages.erase(p);
+            }
+            else if(oldpagestate == PageInfoStateFlag_FullPage)
+            {
+                this->full_pages.erase(p);
+            }
+            else if(oldpagestate == PageInfoStateFlag_StuckAvailable)
+            {
+                p->type->stuckAllocPages.erase(p);
+            }
+            else if(oldpagestate == PageInfoStateFlag_GeneralAvailable)
+            {
+                p->type->partialAllocPages.erase(p);
+            }
+            else if(oldpagestate == PageInfoStateFlag_Evacuatable)
+            {
+                p->type->evacuatablePages.erase(p);
+            }
+            else
+            {
+                assert(false); //lost page?
+            }
+
+            if(p->state == PageInfoStateFlag_Clear)
+            {
+                this->free_pages.insert(p);
+            }
+            else if(p->state == PageInfoStateFlag_FullPage)
+            {
+                this->full_pages.insert(p);
+            }
+            else if(p->state == PageInfoStateFlag_StuckAvailable)
+            {
+                p->type->stuckAllocPages.insert(p);
+            }
+            else if(p->state == PageInfoStateFlag_GeneralAvailable)
+            {
+                p->type->partialAllocPages.insert(p);
+            }
+            else if(p->state == PageInfoStateFlag_Evacuatable)
+            {
+                p->type->evacuatablePages.insert(p);
+            }
+            else
+            {
+                assert(false); //lost page?
+            }
+        }
+
+        if(hasrefs && (oldpagestate == PageInfoStateFlag_AllocPage || oldpagestate == PageInfoStateFlag_AllocFilledPage))
+        {
+            //put into next epoch queue cause some of these will certainly die
+            p->state = p->state | PageInfoStateFlag_ProcessingPending;
+            this->next_epoch_processing_pages.push_back(p);
+        }
     }
 
-    void allocateEmptyPageForType(BSQType* btype)
+    PageInfo* allocateFreePage(BSQType* btype)
     {
         PageInfo* pp = nullptr;
         if(!this->free_pages.empty())
@@ -520,7 +597,7 @@ public:
         }
 #endif
 
-        this->processFreePageInitial(pp, btype);
+        return pp;
     }
 
     void releasePage(PageInfo* pp)
@@ -542,7 +619,11 @@ public:
     {
         if(btype->allocpage == &BlockAllocator::g_sential_page)
         {
-            this->allocateEmptyPageForType(btype);
+            btype->allocpage = this->allocateFreePage(btype);
+            this->initializeFreshPageForType(btype->allocpage, btype);
+
+            this->initializePageFreelist(btype->allocpage);
+            btype->allocpage->state = PageInfoStateFlag_AllocPage;
             return;
         }
         else
@@ -551,8 +632,10 @@ public:
             if(stuckopt != btype->stuckAllocPages.end())
             {
                 btype->allocpage = *stuckopt;
-                btype->allocpage->state = PageInfoState_TransitionAvailableToAlloc(btype->allocpage->state);
                 btype->stuckAllocPages.erase(stuckopt);
+
+                this->initializePageFreelist(btype->allocpage);
+                btype->allocpage->state = PageInfoStateFlag_AllocPage | (btype->allocpage->state & PageInfoStateFlag_ProcessingPending);
                 return;
             }
 
@@ -560,8 +643,10 @@ public:
             if(partialopt != btype->partialAllocPages.end())
             {
                 btype->allocpage = *partialopt;
-                btype->allocpage->state = PageInfoState_TransitionAvailableToAlloc(btype->allocpage->state);
                 btype->partialAllocPages.erase(partialopt);
+
+                this->initializePageFreelist(btype->allocpage);
+                btype->allocpage->state = PageInfoStateFlag_AllocPage | (btype->allocpage->state & PageInfoStateFlag_ProcessingPending);
                 return;
             }
 
@@ -569,12 +654,18 @@ public:
             if(evacopt != btype->evacuatablePages.end())
             {
                 btype->allocpage = *evacopt;
-                btype->allocpage->state = PageInfoState_TransitionAvailableToAlloc(btype->allocpage->state);
                 btype->evacuatablePages.erase(partialopt);
+
+                this->initializePageFreelist(btype->allocpage);
+                btype->allocpage->state = PageInfoStateFlag_AllocPage | (btype->allocpage->state & PageInfoStateFlag_ProcessingPending);
                 return;
             }
 
-            this->allocateEmptyPageForType(btype);
+            btype->allocpage = this->allocateFreePage(btype);
+            this->initializeFreshPageForType(btype->allocpage, btype);
+
+            this->initializePageFreelist(btype->allocpage);
+            btype->allocpage->state = PageInfoStateFlag_AllocPage;
             return;
         }
     }
