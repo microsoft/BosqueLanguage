@@ -86,17 +86,17 @@ class BSQType;
 #define GC_REF_LIST_BLOCK_SIZE_DEFAULT 256
 
 //Header layout and with immix style blocks
-//high [RC - 57 bits] [MARK 1 - bit] [FWDPTR - 1 bit] [STUCK - 2 bits] [YOUNG - 1 bit] [DEC_PENDING - 1 bit] [ALLOCATED - 1 bit]
+//high [RC - 57 bits] [MARK 1 - bit] [STUCK - 2 bits] [DEC_PENDING - 1 bit] [FWDPTR - 1 bit] [YOUNG - 1 bit] [ALLOCATED - 1 bit]
 //high [1] [RC value - 56 bits] | [0] [PAGE1 - 28 bits] [PAGE2 - 28 bits]
 
-#define GC_YOUNG_BIT 0x4ul
-#define GC_DEC_PENDING_BIT 0x2ul
 #define GC_ALLOCATED_BIT 0x1ul
+#define GC_YOUNG_BIT 0x2ul
+#define GC_IS_FWD_PTR_BIT 0x4ul
+#define GC_DEC_PENDING_BIT 0x8ul
 
-#define GC_STUCK_BITS 0x18ul
-#define GC_STUCK_ONE 0x8ul
+#define GC_STUCK_BITS 0x30ul
+#define GC_STUCK_ONE 0x10ul
 
-#define GC_IS_FWD_PTR_BIT 0x20ul
 #define GC_MARK_BIT 0x40ul
 
 #define GC_RC_KIND_MASK 0x8000000000000000ul
@@ -111,6 +111,8 @@ class BSQType;
 #define PAGE_MASK_EXTRACT_ID(M) (((uintptr_t)M) & PAGE_ADDR_MASK)
 #define PAGE_MASK_EXTRACT_ADDR(M) ((PageInfo*)PAGE_MASK_EXTRACT_ID(M))
 #define PAGE_INDEX_EXTRACT(M, PI) ((((uintptr_t)M) - ((uintptr_t)(PI)->data)) >> (PI)->idxshift)
+
+#define GC_FORWARD_PTR_MASK 0x
 
 typedef uint64_t GC_META_DATA_WORD;
 
@@ -304,8 +306,7 @@ struct BSQTypeSizeInfo
 struct GCFunctorSet
 {
     GCProcessOperatorVisitFP fpProcessObjVisit;
-    GCProcessOperatorDecFP fpDecObjCollect;
-    GCProcessOperatorDecFP fpDecObjCompact;
+    GCProcessOperatorDecFP fpDecObj;
 };
 
 typedef int (*KeyCmpFP)(const BSQType* btype, StorageLocationPtr, StorageLocationPtr);
