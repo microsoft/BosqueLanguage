@@ -81,9 +81,9 @@ class BSQType;
 
 //Make sure any allocated page is addressable by us -- larger than 2^31 and less than 2^42
 #define MIN_ALLOCATED_ADDRESS 2147483648ul
-#define MAX_ALLOCATED_ADDRESS 2199023255552ul
+#define MAX_ALLOCATED_ADDRESS 281474976710656ul
 
-#define GC_REF_LIST_BLOCK_SIZE_DEFAULT 256
+#define GC_REF_LIST_BLOCK_SIZE_DEFAULT 512
 
 //Header layout and with immix style blocks
 //high [DEC_PENDING - 1 bit] [FWDPTR - 1 bit] [RC - 60 bits] [MARK 1 - bit] [YOUNG - 1 bit] 
@@ -109,10 +109,9 @@ typedef uint64_t GC_META_DATA_WORD;
 
 typedef uint8_t AllocPageInfo;
 #define AllocPageInfo_Alloc 0x1
-#define AllocPageInfo_Ex 0x2
+#define AllocPageInfo_Ev 0x2
 
 #define AllocPageInfo_Pending 0x4
-#define AllocPageInfo_LowOldPercentage 0x8
 
 struct PageInfo
 {
@@ -154,25 +153,26 @@ struct PageInfo
 #define GC_EXTRACT_RC(W) (W & GC_RC_COUNT_MASK)
 #define GC_RC_ZERO 0x0ul
 #define GC_RC_ONE 0x4ul
+#define GC_RC_TWO 0x8ul
 
-#define GC_IS_UNREACHABLE(W) ((W & (GC_RC_COUNT_MASK | GC_MARK_BIT)) == 0x0ul)
-#define GC_IS_ZERO_RC(W) ((W & GC_RC_COUNT_MASK) == GC_RC_ZERO)
+#define GC_IS_UNREACHABLE(W) ((W & (GC_RC_DATA_MASK | GC_MARK_BIT)) == 0x0ul)
+#define GC_IS_ZERO_RC(W) ((W & GC_RC_DATA_MASK) == GC_RC_ZERO)
 
 #define GC_SET_MARK_BIT(W) (W | GC_MARK_BIT)
 
 #define GC_INC_RC_COUNT(W) (W + GC_RC_ONE)
 #define GC_DEC_RC_COUNT(W) (W - GC_RC_ONE)
 
-xxxxxx;
-
 #define GC_RC_IS_COUNT(W) (W & GC_RC_KIND_MASK)
-#define GC_RC_GET_PARENT1(W) ((W & GC_RC_PAGE1_MASK) >> GC_RC_PAGE1_SHIFT)
+#define GC_RC_GET_PARENT(W) ((void*)((W & GC_RC_DATA_MASK) >> GC_RC_PTR_SHIFT))
+#define GC_RC_SET_PARENT(W, P) (W | (((uintptr_t)P) << GC_RC_PTR_SHIFT))
+#define GC_RC_INITIALIZE_PARENT(P) (((uintptr_t)P) << GC_RC_PTR_SHIFT)
 
-#define GC_RC_IS_PARENT1_CLEAR(W) ((W & GC_RC_PAGE1_MASK) == 0ul)
-#define GC_RC_IS_PARENT2_CLEAR(W) ((W & GC_RC_PAGE2_MASK) == 0ul)
+#define GC_GET_DEC_LIST(W) ((void*)((W & GC_RC_DATA_MASK) >> GC_RC_PTR_SHIFT))
+#define GC_SET_DEC_LIST(DL) (GC_DEC_PENDING_BIT | (((uintptr_t)DL) << GC_RC_PTR_SHIFT))
 
-#define GC_HEADER_DEC_LIST_LOAD(W) ((void*)W)
-#define GC_HEADER_DEC_LIST_STORE(ADDR, W) (*ADDR = (uint64_t)W)
+#define GC_GET_FWD_PTR(W) ((void*)((W & GC_RC_DATA_MASK) >> GC_RC_PTR_SHIFT))
+#define GC_SET_FWD_PTR(FP) (GC_IS_FWD_PTR_BIT | (((uintptr_t)FP) << GC_RC_PTR_SHIFT))
 
 #define GC_INIT_YOUNG_ALLOC(ADDR) GC_STORE_META_DATA_WORD(ADDR, GC_YOUNG_BIT | GC_ALLOCATED_BIT)
 #define GC_RESET_YOUNG_AND_MARK(ADDR, W) GC_STORE_META_DATA_WORD(ADDR, W & ~(GC_YOUNG_BIT | GC_MARK_BIT))
@@ -244,7 +244,8 @@ enum class BSQTypeLayoutKind : uint32_t
 typedef const char* RefMask;
 
 typedef void (*GCProcessOperatorVisitFP)(const BSQType*, void**, void*);
-typedef void (*GCProcessOperatorDecFP)(const BSQType*, void**, void*);
+typedef void (*GCProcessOperatorDecFP)(const BSQType*, void*);
+typedef void (*GCProcessOperatorUpdateEvacuateMoveFP)(const BSQType*, void**, void*);
 
 enum DisplayMode
 {
@@ -290,6 +291,7 @@ struct GCFunctorSet
 {
     GCProcessOperatorVisitFP fpProcessObjVisit;
     GCProcessOperatorDecFP fpDecObj;
+    GCProcessOperatorUpdateEvacuateMoveFP fpProcessMoveObj;
 };
 
 typedef int (*KeyCmpFP)(const BSQType* btype, StorageLocationPtr, StorageLocationPtr);
