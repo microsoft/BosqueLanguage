@@ -86,28 +86,18 @@ class BSQType;
 #define GC_REF_LIST_BLOCK_SIZE_DEFAULT 256
 
 //Header layout and with immix style blocks
-//high [RC - 45 bits] [MARK 1 - bit] [TYPE - 15 bits] [YOUNG - 1 bit] [DEC_PENDING - 1 bit] [FWDPTR - 1 bit]
-//high [1] [RC value - 44 bits] | [0] [PAGE1 - 22 bits] [PAGE2 - 22 bits]
-
-//high [RC - 60 bits] [MARK 1 - bit] [YOUNG - 1 bit] [DEC_PENDING - 1 bit] [FWDPTR - 1 bit]
+//high [DEC_PENDING - 1 bit] [FWDPTR - 1 bit] [RC - 60 bits] [MARK 1 - bit] [YOUNG - 1 bit] 
 //high [1] [RC value - 59 bits] | [0] [PTR - 59 bits]
 
-#define GC_ALLOCATED_BIT 0x1ul
-#define GC_IS_FWD_PTR_BIT 0x2ul
-#define GC_DEC_PENDING_BIT 0x4ul
-#define GC_YOUNG_BIT 0x8ul
+#define GC_DEC_PENDING_BIT 0x8000000000000000ul
+#define GC_IS_FWD_PTR_BIT 0x4000000000000000ul
 
-#define GC_STUCK_BITS 0x30ul
-#define GC_STUCK_ONE 0x10ul
+#define GC_RC_KIND_MASK 0x2000000000000000ul
+#define GC_RC_DATA_MASK 0x1FFFFFFFFFFFFFFCul
+#define GC_RC_PTR_SHIFT 0x2
 
-#define GC_MARK_BIT 0x40ul
-
-#define GC_RC_KIND_MASK 0x8000000000000000ul
-#define GC_RC_COUNT_MASK 0x7FFFFFFFFFFFFF80ul
-#define GC_RC_PAGE1_MASK 0xFFFF800000000000ul
-#define GC_RC_PAGE1_SHIFT 35u
-#define GC_RC_PAGE2_MASK 0x3FFFFFF80ul
-#define GC_RC_PAGE2_SHIFT 7u
+#define GC_MARK_BIT 0x2ul
+#define GC_YOUNG_BIT 0x1ul
 
 #define PAGE_ADDR_MASK 0xFFFFFFFFFFFFE000ul
 #define PAGE_INDEX_ADDR_MASK 0x1FFFul
@@ -117,9 +107,12 @@ class BSQType;
 
 typedef uint64_t GC_META_DATA_WORD;
 
-typedef uint8_t ActiveAllocInfo;
-#define ActiveAlloc_Alloc 0x1
-#define ActiveAlloc_Ex 0x2
+typedef uint8_t AllocPageInfo;
+#define AllocPageInfo_Alloc 0x1
+#define AllocPageInfo_Ex 0x2
+
+#define AllocPageInfo_Pending 0x4
+#define AllocPageInfo_LowOldPercentage 0x8
 
 struct PageInfo
 {
@@ -132,10 +125,10 @@ struct PageInfo
     uint16_t entry_size; //size of the entries in this page
     uint16_t entry_count; //max number of objects that can be allocated from this Page
 
-    uint16_t free_count;
+    uint16_t freelist_count;
 
     uint8_t idxshift; //# of bits to shift to convert uint8_t distance into entry index
-    ActiveAllocInfo active_alloc;
+    AllocPageInfo allocinfo;
 };
 #ifndef DEBUG_ALLOC_BLOCKS
 #define GC_PAGE_INDEX_FOR_ADDR(M, PAGE) PAGE_INDEX_EXTRACT(M, PAGE)
@@ -151,31 +144,29 @@ struct PageInfo
 #define GC_LOAD_META_DATA_WORD(ADDR) (*ADDR)
 #define GC_STORE_META_DATA_WORD(ADDR, W) (*ADDR = W)
 
-#define GC_IS_ALLOCATED(W) ((W & GC_ALLOCATED_BIT) != 0x0ul)
 #define GC_IS_DEC_PENDING(W) ((W & GC_DEC_PENDING_BIT) != 0x0ul)
 #define GC_IS_FWD_PTR(W) ((W & GC_IS_FWD_PTR_BIT) != 0x0ul)
+#define GC_IS_MARKED(W) ((W & GC_MARK_BIT) != 0x0ul)
+#define GC_IS_YOUNG(W) ((W & GC_YOUNG_BIT) != 0x0ul)
+
+#define GC_IS_ALLOCATED(W) ((W & (GC_RC_DATA_MASK | GC_MARK_BIT)) != 0x0ul)
 
 #define GC_EXTRACT_RC(W) (W & GC_RC_COUNT_MASK)
-#define GC_RC_ZERO ((GC_META_DATA_WORD)0x0)
-#define GC_RC_ONE ((GC_META_DATA_WORD)0x8000000)
-#define GC_RC_THREE ((GC_META_DATA_WORD)0x18000000)
+#define GC_RC_ZERO 0x0ul
+#define GC_RC_ONE 0x4ul
 
-#define GC_TEST_IS_UNREACHABLE(W) ((W & (GC_RC_COUNT_MASK | GC_MARK_BIT)) == 0x0ul)
-#define GC_TEST_IS_ZERO_RC(W) ((W & GC_RC_COUNT_MASK) == GC_RC_ZERO)
-#define GC_TEST_IS_YOUNG(W) (W & GC_YOUNG_BIT)
+#define GC_IS_UNREACHABLE(W) ((W & (GC_RC_COUNT_MASK | GC_MARK_BIT)) == 0x0ul)
+#define GC_IS_ZERO_RC(W) ((W & GC_RC_COUNT_MASK) == GC_RC_ZERO)
 
-#define GC_TEST_MARK_BIT(W) ((W & GC_MARK_BIT) != 0x0ul)
 #define GC_SET_MARK_BIT(W) (W | GC_MARK_BIT)
-
-#define GC_INC_STUCK_COUNT(W) ((W & ~GC_STUCK_BITS) | ((W & GC_STUCK_BITS) + GC_STUCK_ONE) & GC_STUCK_BITS)
-#define GC_IS_STUCK(W) ((W & GC_STUCK_BITS) == GC_STUCK_BITS)
 
 #define GC_INC_RC_COUNT(W) (W + GC_RC_ONE)
 #define GC_DEC_RC_COUNT(W) (W - GC_RC_ONE)
 
+xxxxxx;
+
 #define GC_RC_IS_COUNT(W) (W & GC_RC_KIND_MASK)
 #define GC_RC_GET_PARENT1(W) ((W & GC_RC_PAGE1_MASK) >> GC_RC_PAGE1_SHIFT)
-#define GC_RC_GET_PARENT2(W) ((W & GC_RC_PAGE1_MASK) >> GC_RC_PAGE2_SHIFT)
 
 #define GC_RC_IS_PARENT1_CLEAR(W) ((W & GC_RC_PAGE1_MASK) == 0ul)
 #define GC_RC_IS_PARENT2_CLEAR(W) ((W & GC_RC_PAGE2_MASK) == 0ul)
