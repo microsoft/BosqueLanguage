@@ -17,7 +17,7 @@
 #define DEFAULT_DEC_OPS_COUNT 256
 
 #define OCCUPANCY_LOW_MID_BREAK 0.30f
-#define OCCUPANCY_MID_HIGH_BREAK 0.90f
+#define OCCUPANCY_MID_HIGH_BREAK 0.85f
 
 ////
 //Alloc page grouping
@@ -27,7 +27,7 @@ public:
     //(1-30%, 31-85%, 86-100%) -- this is fuzzy, based on the utilization when we put them in the list but dec ops may change it over time
     std::set<PageInfo*> low_utilization; //keep in memory order
     std::list<PageInfo*> mid_utilization;
-    std::list<PageInfo*> high_utilization;
+    std::set<PageInfo*> high_utilization;
 };
 
 ////
@@ -337,7 +337,7 @@ public:
         //TODO: probably want some bitvector and/or semi-hierarchical structure here instead 
 
         auto pageiter = this->page_set.find(PAGE_MASK_EXTRACT_ADDR(addr));
-        if(pageiter == this->page_set.cend() || (*pageiter)->type == nullptr)
+        if(pageiter == this->page_set.cend() || (*pageiter)->btype == nullptr)
         {
             return false;
         }
@@ -398,6 +398,8 @@ public:
         p->entry_count = btype->tableEntryCount;
         p->idxshift = btype->tableEntryIndexShift;
 
+        p->btype = btype;
+
         p->allocinfo = 0x0;
     }
 
@@ -415,13 +417,9 @@ public:
         p->entry_size = 0;
         p->idxshift = 0;
 
-        p->type = nullptr;
+        p->btype = nullptr;
 
-        p->free_count = 0;
-        p->stuck_count = 0;
-
-        p->active_alloc = 0;
-        p->allocatable_category = AllocationListInfo_Empty;
+        p->allocinfo = 0x0;
     }
 
     void processPage(PageInfo* p)
@@ -564,61 +562,28 @@ public:
         if(btype->evacuatepage == &BlockAllocator::g_sential_page)
         {
             btype->evacuatepage = this->allocateFreePage(btype);
-            btype->evacuatepage->allocinfo = AllocPageInfo_Ev;
-            return;
         }
         else
         {
-            btype->evacuatepage->allocinfo = 0x0;
-            btype->allocatedPages.high_utilization.push_back(btype->evacuatepage);
+            btype->allocatedPages.high_utilization.insert(btype->evacuatepage);
             
             if(!btype->allocatedPages.mid_utilization.empty())
             {
-                btype->evallocpage = *stuckopt;
-                btype->stuckAllocPages.erase(stuckopt);
-
-                this->initializePageFreelist(btype->evallocpage);
-                btype->evallocpage->state = PageInfoStateFlag_AllocPage | (btype->evallocpage->state & PageInfoStateFlag_ProcessingPending);
-                return;
+                btype->evacuatepage = btype->allocatedPages.mid_utilization.back();
+                btype->allocatedPages.mid_utilization.pop_back();
             }
             else if(!btype->allocatedPages.low_utilization.empty())
             {
-                xxxx;
+                btype->evacuatepage = *(btype->allocatedPages.low_utilization.begin());
+                btype->allocatedPages.low_utilization.erase(btype->evacuatepage);
             }
             else
             {
-                xxxx;
+                btype->evacuatepage = this->allocateFreePage(btype);
             }
-
-            auto partialopt = btype->partialAllocPages.begin(); 
-            if(partialopt != btype->partialAllocPages.end())
-            {
-                btype->evallocpage = *partialopt;
-                btype->partialAllocPages.erase(partialopt);
-
-                this->initializePageFreelist(btype->evallocpage);
-                btype->evallocpage->state = PageInfoStateFlag_AllocPage | (btype->evallocpage->state & PageInfoStateFlag_ProcessingPending);
-                return;
-            }
-
-            auto evacopt = btype->evacuatablePages.begin(); 
-            if(evacopt != btype->evacuatablePages.end())
-            {
-                btype->evallocpage = *evacopt;
-                btype->evacuatablePages.erase(partialopt);
-
-                this->initializePageFreelist(btype->evallocpage);
-                btype->evallocpage->state = PageInfoStateFlag_AllocPage | (btype->evallocpage->state & PageInfoStateFlag_ProcessingPending);
-                return;
-            }
-
-            btype->evallocpage = this->allocateFreePage(btype);
-            this->initializeFreshPageForType(btype->evallocpage, btype);
-
-            this->initializePageFreelist(btype->evallocpage);
-            btype->evallocpage->state = PageInfoStateFlag_AllocPage;
-            return;
         }
+            
+        btype->evacuatepage->allocinfo = AllocPageInfo_Ev;
     }
     
     PageInfo* processAndGetNewPageForAllocation(BSQType* btype)
@@ -631,48 +596,25 @@ public:
         }
         else
         {
-            btype->allocpage->allocinfo = 0x0;
+            btype->allocpage->allocinfo = btype->allocpage->allocinfo & AllocPageInfo_EvCandidate;
             this->filled_pages.insert(btype->allocpage);
 
-            auto lowopt = btype->allocatedPages.low_utilization.begin();
-            if(lowopt != btype->allocatedPages.low_utilization.end())
+            if(!btype->allocatedPages.low_utilization.empty())
             {
-                btype->evallocpage = *stuckopt;
-                btype->stuckAllocPages.erase(stuckopt);
-
-                this->initializePageFreelist(btype->evallocpage);
-                btype->evallocpage->state = PageInfoStateFlag_AllocPage | (btype->evallocpage->state & PageInfoStateFlag_ProcessingPending);
-                return;
+                btype->evacuatepage = *(btype->allocatedPages.low_utilization.begin());
+                btype->allocatedPages.low_utilization.erase(btype->evacuatepage);
+            }
+            else if(!btype->allocatedPages.mid_utilization.empty())
+            {
+                btype->evacuatepage = btype->allocatedPages.mid_utilization.front();
+                btype->allocatedPages.mid_utilization.pop_front();
+            }
+            else
+            {
+                btype->evacuatepage = this->allocateFreePage(btype);
             }
 
-            auto partialopt = btype->partialAllocPages.begin(); 
-            if(partialopt != btype->partialAllocPages.end())
-            {
-                btype->evallocpage = *partialopt;
-                btype->partialAllocPages.erase(partialopt);
-
-                this->initializePageFreelist(btype->evallocpage);
-                btype->evallocpage->state = PageInfoStateFlag_AllocPage | (btype->evallocpage->state & PageInfoStateFlag_ProcessingPending);
-                return;
-            }
-
-            auto evacopt = btype->evacuatablePages.begin(); 
-            if(evacopt != btype->evacuatablePages.end())
-            {
-                btype->evallocpage = *evacopt;
-                btype->evacuatablePages.erase(partialopt);
-
-                this->initializePageFreelist(btype->evallocpage);
-                btype->evallocpage->state = PageInfoStateFlag_AllocPage | (btype->evallocpage->state & PageInfoStateFlag_ProcessingPending);
-                return;
-            }
-
-            btype->evallocpage = this->allocateFreePage(btype);
-            this->initializeFreshPageForType(btype->evallocpage, btype);
-
-            this->initializePageFreelist(btype->evallocpage);
-            btype->evallocpage->state = PageInfoStateFlag_AllocPage;
-            return;
+            btype->evacuatepage->allocinfo = btype->evacuatepage->allocinfo | AllocPageInfo_Alloc;
         }
     }
 };
@@ -1153,6 +1095,14 @@ private:
         }
     }
 
+    inline static bool dropped_out_of_high_util(PageInfo* pp)
+    {
+        float prevoccupancy = 1.0f - ((float)pp->entry_count - (float)(pp->freelist_count - 1)) / (float)pp->entry_count;
+        float occupancy = 1.0f - ((float)pp->entry_count - (float)pp->freelist_count) / (float)pp->entry_count;
+
+        return (prevoccupancy > OCCUPANCY_MID_HIGH_BREAK) & (occupancy <= OCCUPANCY_MID_HIGH_BREAK);
+    }
+
     PageInfo* allocate_slow(BSQType* mdata)
     {
         uint32_t credits = this->page_cost;
@@ -1175,7 +1125,16 @@ private:
 
                 if(pp->freelist_count == pp->entry_count)
                 {
-                    xxxx;
+                    this->blockalloc.unlinkPageFromType(pp);
+                    this->blockalloc.free_pages.insert(pp);
+                }
+
+                if(Allocator::dropped_out_of_high_util(pp))
+                {
+                    assert(pp->btype->allocatedPages.low_utilization.find(pp) == pp->btype->allocatedPages.low_utilization.cend());
+
+                    pp->btype->allocatedPages.high_utilization.erase(pp);
+                    pp->btype->allocatedPages.mid_utilization.push_back(pp);
                 }
             }
 

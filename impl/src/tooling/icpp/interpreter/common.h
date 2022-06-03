@@ -112,6 +112,7 @@ typedef uint8_t AllocPageInfo;
 #define AllocPageInfo_Ev 0x2
 
 #define AllocPageInfo_Pending 0x4
+#define AllocPageInfo_EvCandidate 0x8
 
 struct PageInfo
 {
