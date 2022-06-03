@@ -166,6 +166,8 @@ struct PageInfo
 #define GC_INC_RC_COUNT(W) (W + GC_RC_ONE)
 #define GC_DEC_RC_COUNT(W) (W - GC_RC_ONE)
 
+#define GC_HAS_RC_DATA(W) ((W & GC_RC_DATA_MASK) != 0x0)
+
 #define GC_RC_IS_COUNT(W) ((W & GC_RC_KIND_MASK) != 0x0)
 #define GC_RC_IS_PARENT(W) ((W & GC_RC_KIND_MASK) == 0x0)
 #define GC_RC_GET_PARENT(W) ((void*)((W & GC_RC_DATA_MASK) >> GC_RC_PTR_SHIFT))

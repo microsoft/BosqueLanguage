@@ -356,6 +356,8 @@ public:
         p->freelist = nullptr;
         p->freelist_count = p->entry_count;
 
+        GC_MEM_ZERO(p->slots, p->entry_count * sizeof(GC_META_DATA_WORD));
+
 #ifndef DEBUG_ALLOC_BLOCKS
         void** curr = &p->freelist;
         GC_META_DATA_WORD* metacurr = p->slots;
@@ -363,11 +365,11 @@ public:
 
         for(uint64_t i = 0; i < p->entry_count; ++i)
         {
+            *((void**)datacurr) = *curr;
+            *((void**)datacurr + 1) = metacurr;
+
             *curr = *((void**)datacurr);
 
-#ifdef DEBUG_ALLOC_ZERO
-            GC_MEM_ZERO(datacurr, p->entry_size); //zero on debug
-#endif
             metacurr++;
             datacurr += p->entry_size;
         }
@@ -379,13 +381,12 @@ public:
 
         for(uint64_t i = 0; i < p->entry_count; ++i)
         {
+            **((void***)p->data + i) = *curr;
+            *(*((void***)p->data + i) + 1) = metacurr;
+
             *curr = *((void**)p->data + i);
 
-#ifdef DEBUG_ALLOC_ZERO
-            GC_MEM_ZERO(*((void**)p->data + i), p->entry_size); //zero on debug
-#endif
             metacurr++;
-            datacurr += p->entry_size;
         }
 
         *curr = nullptr;
@@ -620,7 +621,15 @@ public:
     {
         if(GC_RC_IS_COUNT(meta))
         {
-            GC_STORE_META_DATA_WORD(addr, GC_DEC_RC_COUNT(meta));
+            auto w = GC_DEC_RC_COUNT(meta);
+            if(GC_IS_ZERO_RC(w))
+            {
+                GC_STORE_META_DATA_WORD(addr, w & ~GC_RC_KIND_MASK);
+            }
+            else
+            {
+                GC_STORE_META_DATA_WORD(addr, w);
+            }
         }
         else
         {
@@ -693,6 +702,7 @@ public:
         }
         
         uint8_t* alloc = (uint8_t*)pp->freelist;
+        *((GC_META_DATA_WORD*)(*((void**)pp->freelist + 1))) = GC_ALLOCATED_BIT;
 
         pp->freelist = *((void**)pp->freelist);
         pp->freelist_count--;
@@ -908,40 +918,100 @@ public:
         }
     }
 
+    void postsweep_processing(PageInfo* pp, bool allrcsimple)
+    {
+        if(pp->freelist_count == pp->entry_count)
+        {
+            //don't put on free list if we are allocating from it
+            if((pp->allocinfo & (AllocPageInfo_Alloc | AllocPageInfo_Ev)) != 0x0)
+            {
+                return;
+            }
+                        
+            this->blockalloc.unlinkPageFromType(pp);
+            this->blockalloc.free_pages.insert(pp);
+        }
+        
+        auto utilization = (1.0f - (float)pp->freelist_count) / (float)pp->entry_count;
+        pp->allocinfo = 0x0;
+
+        if(utilization > OCCUPANCY_MID_HIGH_BREAK)
+        {
+            pp->btype->allocatedPages.high_utilization.insert(pp);
+        }
+        else if(utilization > OCCUPANCY_LOW_MID_BREAK)
+        {
+            auto ipos = std::find_if(pp->btype->allocatedPages.mid_utilization.begin(), pp->btype->allocatedPages.mid_utilization.end(), [pp](PageInfo* p) {
+                return p->freelist_count >= pp->freelist_count;
+            });
+
+            pp->btype->allocatedPages.mid_utilization.insert(ipos, pp);
+        }
+        else
+        {
+            if(allrcsimple)
+            {
+                pp->allocinfo = AllocPageInfo_EvCandidate;
+            }
+            pp->btype->allocatedPages.low_utilization.insert(pp);
+        }
+    }
+
+    template <bool evacrc>
     void processFilledPage(const BSQType* btype, PageInfo* pp)
     {
         GC_META_DATA_WORD* metacurr = pp->slots;
-        uint8_t* datacurr = (uint8_t*)(pp->data);
 
+#ifndef DEBUG_ALLOC_BLOCKS
+        uint8_t* datacurr = (uint8_t*)(pp->data);
+#endif
+
+        bool allrcsimple = !evacrc;
         for(uint64_t i = 0; i < pp->entry_count; ++i)
         {
             GC_META_DATA_WORD w = *metacurr;
             if(GC_IS_FWD_PTR(w) | GC_IS_UNREACHABLE(w))
             {
+#ifndef DEBUG_ALLOC_BLOCKS
                 *((void**)datacurr) = pp->freelist;
+                *((void**)datacurr + 1) = metacurr;
+
                 pp->freelist = (void*)datacurr;
 
                 pp->freelist_count++;
                 *metacurr = 0x0;
+#else
+                **((void***)p->data + i) = pp->freelist;
+                *(*((void***)p->data + i) + 1) = metacurr;
+
+                pp->freelist = *((void**)p->data + i);
+#endif
             }
             
-            if(GC_IS_LIVE(w) & GC_RC_IS_PARENT(w))
+            if constexpr (evacrc)
             {
-                btype->gcops.fpProcessMoveObj(btype, (void**)GC_RC_GET_PARENT(w), (void*)datacurr);
-                GC_STORE_META_DATA_WORD(metacurr, GC_RC_SET_PARENT(w, nullptr));
-                
-                if(!GC_IS_MARKED(w))
+                if(GC_IS_LIVE(w) & GC_RC_IS_PARENT(w))
                 {
-                    this->evacobjs.enque((void*)datacurr);
+                    void* parent = GC_RC_GET_PARENT(w);
+                    BSQType* ptype = PAGE_MASK_EXTRACT_ADDR(parent)->btype;
+                    ptype->gcops.fpProcessMoveObj(ptype, (void**)parent, (void*)datacurr);
+                
+                    if(!GC_IS_MARKED(w))
+                    {
+                        this->evacobjs.enque((void*)datacurr);
+                    }
                 }
+            }
+            else
+            {
+                allrcsimple = allrcsimple & GC_HAS_RC_DATA(w) & GC_RC_IS_PARENT(w);
             }
 
             metacurr++;
             datacurr += pp->entry_size;
         }
 
-
-        xxxx;
+        this->postsweep_processing(pp, allrcsimple);
     }
 
 private:
@@ -1147,7 +1217,15 @@ private:
                     pp = *(this->blockalloc.filled_pages.begin());
                 }
 
-                this->processFilledPage(mdata, pp);
+                if((pp->allocinfo & AllocPageInfo_EvCandidate) != 0x0)
+                { 
+                    this->processFilledPage<true>(mdata, pp);
+                }
+                else
+                {
+                    this->processFilledPage<false>(mdata, pp);
+                }
+
                 pp->btype->filledPages.erase(pp);
                 this->blockalloc.filled_pages.erase(pp);
 
@@ -1179,8 +1257,7 @@ public:
         }
         
         uint8_t* alloc = (uint8_t*)pp->freelist;
-
-xxxx;
+        *((GC_META_DATA_WORD*)(*((void**)pp->freelist + 1))) = GC_ALLOCATED_BIT;
 
         pp->freelist = *((void**)pp->freelist);
         pp->freelist_count--;
