@@ -422,79 +422,6 @@ public:
         p->allocinfo = 0x0;
     }
 
-    void processPage(PageInfo* p)
-    {
-        uint16_t freesize = 0;
-        uint16_t stuckcount = 0;
-        bool allrcsimple = true;
-
-        GC_META_DATA_WORD* metacurr = p->slots;
-        for(uint64_t i = 0; i < p->entry_count; ++i)
-        {
-            auto w = *metacurr;
-            if(!GC_IS_DEC_PENDING(w))
-            {
-                if(GC_IS_FWD_PTR(w))
-                {
-                    GC_STORE_META_DATA_WORD(metacurr, 0x0ul);
-                    w = 0x0ul;
-                }
-                
-                if(!GC_IS_ALLOCATED(w))
-                {
-                    freesize++;
-                }
-                else
-                {
-                    if(GC_IS_STUCK(w))
-                    {
-                        stuckcount++;
-                    }
-                
-                    //it is a count RC
-                    allrcsimple &= (w & GC_RC_KIND_MASK);
-
-                    GC_RESET_YOUNG_AND_MARK(metacurr, w);
-                }
-            }
-
-            metacurr++;
-        }
-
-        p->free_count = freesize;
-        p->stuck_count = stuckcount;
-
-        if(freesize == p->entry_count)
-        {
-            this->unlinkPageFromType(p);
-            this->free_pages.insert(p);
-        }
-        else if((float)freesize > (PAGE_FULL_FACTOR * (float)p->entry_count))
-        {
-            p->allocatable_category = AllocationListInfo_Full;
-            this->full_pages.insert(p);
-        }
-        else
-        {
-            if(stuckcount != 0)
-            {
-                p->allocatable_category = AllocationListInfo_Stuck;
-                p->type->
-            }
-            else
-            {
-                if(allrcsimple & ((float)freesize <= (PAGE_EVACUATABLE_FACTOR * p->entry_count)))
-                {
-                    p->allocatable_category = AllocationListInfo_Evacuatable;
-                }
-                else
-                {
-                    p->allocatable_category = AllocationListInfo_General;
-                }
-            }
-        }
-    }
-
     PageInfo* allocateFreePage(BSQType* btype)
     {
         PageInfo* pp = nullptr;
@@ -684,7 +611,7 @@ public:
             }
             else
             {
-                GC_STORE_META_DATA_WORD(addr, (GC_RC_KIND_MASK | GC_RC_TWO) | meta);
+                GC_STORE_META_DATA_WORD(addr, (GC_ALLOCATED_BIT | GC_RC_KIND_MASK | GC_RC_TWO) | meta);
             }
         }
     }
@@ -751,7 +678,7 @@ public:
             GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR(resolvedobj);
             GC_META_DATA_WORD w = GC_LOAD_META_DATA_WORD(addr);
             
-            GC_STORE_META_DATA_WORD(addr, GC_MARK_BIT);
+            GC_STORE_META_DATA_WORD(addr, GC_SET_MARK_BIT(w));
 
             this->roots.enque(resolvedobj);
         }
@@ -779,7 +706,7 @@ public:
         GC_MEM_COPY(nobj, obj, ometa->allocinfo.heapsize);
         
         GC_META_DATA_WORD* naddr = GC_GET_META_DATA_ADDR(nobj);
-        GC_STORE_META_DATA_WORD(naddr, GC_RC_INITIALIZE_PARENT(fromObj));
+        GC_STORE_META_DATA_WORD(naddr, GC_RC_SET_PARENT(GC_ALLOCATED_BIT, fromObj));
 
         return nobj;
     }
@@ -917,13 +844,13 @@ public:
                     Allocator::GlobalAllocator.processDecHeapRC(*cslot);
                     break;
                 case PTR_FIELD_MASK_STRING:
-                    Allocator::GlobalAllocator.gcDecrementString(*cslot);
+                    Allocator::gcDecrementString(*cslot);
                     break;
                 case PTR_FIELD_MASK_BIGNUM:
-                    Allocator::GlobalAllocator.gcDecrementBigNum(*cslot);
+                    Allocator::gcDecrementBigNum(*cslot);
                     break;
                 default:
-                    Allocator::GlobalAllocator.gcDecrementSlotsWithUnion(cslot);
+                    Allocator::gcDecrementSlotsWithUnion(cslot);
                     break;
             }
             cslot++;
@@ -938,7 +865,7 @@ public:
         }
     }
 
-    inline void gcEvacuateBigNum(void** slot, void* obj)
+    inline static void gcEvacuateBigNum(void** slot, void* obj)
     {
         if (!IS_INLINE_BIGNUM(*slot))
         {
@@ -946,13 +873,13 @@ public:
         }
     }
 
-    inline void gcEvacuateWithUnion(void** slots, void* obj)
+    inline static void gcEvacuateWithUnion(void** slots, void* obj)
     {
         const BSQType* umeta = ((const BSQType*)(*slots));
         return umeta->gcops.fpProcessMoveObj(umeta, slots + 1, obj);
     }
 
-    inline void gcEvacuateWithMask(void** slots, void* obj, RefMask mask)
+    inline static void gcEvacuateWithMask(void** slots, void* obj, RefMask mask)
     {
         void** cslot = slots;
 
@@ -968,13 +895,13 @@ public:
                     Allocator::GlobalAllocator.processDecHeapEvacuate(obj, cslot);
                     break;
                 case PTR_FIELD_MASK_STRING:
-                    Allocator::GlobalAllocator.gcEvacuateString(cslot, obj);
+                    Allocator::gcEvacuateString(cslot, obj);
                     break;
                 case PTR_FIELD_MASK_BIGNUM:
-                    Allocator::GlobalAllocator.gcEvacuateBigNum(cslot, obj);
+                    Allocator::gcEvacuateBigNum(cslot, obj);
                     break;
                 default:
-                    Allocator::GlobalAllocator.gcEvacuateWithUnion(cslot, obj);
+                    Allocator::gcEvacuateWithUnion(cslot, obj);
                     break;
             }
             cslot++;
@@ -983,6 +910,37 @@ public:
 
     void processFilledPage(const BSQType* btype, PageInfo* pp)
     {
+        GC_META_DATA_WORD* metacurr = pp->slots;
+        uint8_t* datacurr = (uint8_t*)(pp->data);
+
+        for(uint64_t i = 0; i < pp->entry_count; ++i)
+        {
+            GC_META_DATA_WORD w = *metacurr;
+            if(GC_IS_FWD_PTR(w) | GC_IS_UNREACHABLE(w))
+            {
+                *((void**)datacurr) = pp->freelist;
+                pp->freelist = (void*)datacurr;
+
+                pp->freelist_count++;
+                *metacurr = 0x0;
+            }
+            
+            if(GC_IS_LIVE(w) & GC_RC_IS_PARENT(w))
+            {
+                btype->gcops.fpProcessMoveObj(btype, (void**)GC_RC_GET_PARENT(w), (void*)datacurr);
+                GC_STORE_META_DATA_WORD(metacurr, GC_RC_SET_PARENT(w, nullptr));
+                
+                if(!GC_IS_MARKED(w))
+                {
+                    this->evacobjs.enque((void*)datacurr);
+                }
+            }
+
+            metacurr++;
+            datacurr += pp->entry_size;
+        }
+
+
         xxxx;
     }
 
@@ -1103,6 +1061,52 @@ private:
         return (prevoccupancy > OCCUPANCY_MID_HIGH_BREAK) & (occupancy <= OCCUPANCY_MID_HIGH_BREAK);
     }
 
+    void postdec_processing(PageInfo* pp)
+    {
+        if(pp->freelist_count == pp->entry_count)
+        {
+            //don't put on free list if we are allocating from it
+            if((pp->allocinfo & (AllocPageInfo_Alloc | AllocPageInfo_Ev)) != 0x0)
+            {
+                return;
+            }
+
+            //it is a filled page so just let it get taken care of when we sweep it
+            if(pp->btype->filledPages.find(pp) != pp->btype->filledPages.cend())
+            {
+                return;
+            }
+
+            auto luiter = pp->btype->allocatedPages.low_utilization.find(pp);
+            auto huiter = pp->btype->allocatedPages.high_utilization.find(pp);
+
+            if(luiter != pp->btype->allocatedPages.low_utilization.cend())
+            {
+                pp->btype->allocatedPages.low_utilization.erase(luiter);
+            }
+            else if(huiter != pp->btype->allocatedPages.high_utilization.cend())
+            {
+                pp->btype->allocatedPages.high_utilization.erase(huiter);
+            }
+            else
+            {
+                auto muiter = std::find(pp->btype->allocatedPages.mid_utilization.begin(), pp->btype->allocatedPages.mid_utilization.end(), pp);
+                pp->btype->allocatedPages.mid_utilization.erase(muiter);
+            }
+                        
+            this->blockalloc.unlinkPageFromType(pp);
+            this->blockalloc.free_pages.insert(pp);
+        }
+        
+        if(Allocator::dropped_out_of_high_util(pp))
+        {
+            assert(pp->btype->allocatedPages.low_utilization.find(pp) == pp->btype->allocatedPages.low_utilization.cend());
+
+            pp->btype->allocatedPages.high_utilization.erase(pp);
+            pp->btype->allocatedPages.mid_utilization.push_back(pp);
+        }
+    }
+
     PageInfo* allocate_slow(BSQType* mdata)
     {
         uint32_t credits = this->page_cost;
@@ -1123,19 +1127,7 @@ private:
                 pp->freelist = decobj;
                 pp->freelist_count++;
 
-                if(pp->freelist_count == pp->entry_count)
-                {
-                    this->blockalloc.unlinkPageFromType(pp);
-                    this->blockalloc.free_pages.insert(pp);
-                }
-
-                if(Allocator::dropped_out_of_high_util(pp))
-                {
-                    assert(pp->btype->allocatedPages.low_utilization.find(pp) == pp->btype->allocatedPages.low_utilization.cend());
-
-                    pp->btype->allocatedPages.high_utilization.erase(pp);
-                    pp->btype->allocatedPages.mid_utilization.push_back(pp);
-                }
+                this->postdec_processing(pp);
             }
 
             credits--;
@@ -1187,6 +1179,8 @@ public:
         }
         
         uint8_t* alloc = (uint8_t*)pp->freelist;
+
+xxxx;
 
         pp->freelist = *((void**)pp->freelist);
         pp->freelist_count--;

@@ -86,14 +86,15 @@ class BSQType;
 #define GC_REF_LIST_BLOCK_SIZE_DEFAULT 512
 
 //Header layout and with immix style blocks
-//high [DEC_PENDING - 1 bit] [FWDPTR - 1 bit] [RC - 60 bits] [MARK 1 - bit] [YOUNG - 1 bit] 
-//high [1] [RC value - 59 bits] | [0] [PTR - 59 bits]
+//high [ALLOCATED - 1 bit] [DEC_PENDING - 1 bit] [FWDPTR - 1 bit] [RC - 59 bits] [MARK 1 - bit] [YOUNG - 1 bit]
+//high [1] [RC value - 58 bits] | [0] [PTR - 58 bits]
 
-#define GC_DEC_PENDING_BIT 0x8000000000000000ul
-#define GC_IS_FWD_PTR_BIT 0x4000000000000000ul
+#define GC_ALLOCATED_BIT 0x8000000000000000ul
+#define GC_DEC_PENDING_BIT 0x4000000000000000ul
+#define GC_IS_FWD_PTR_BIT 0x2000000000000000ul
 
-#define GC_RC_KIND_MASK 0x2000000000000000ul
-#define GC_RC_DATA_MASK 0x1FFFFFFFFFFFFFFCul
+#define GC_RC_KIND_MASK 0x1000000000000000ul
+#define GC_RC_DATA_MASK 0xFFFFFFFFFFFFFFCul
 #define GC_RC_PTR_SHIFT 0x2
 
 #define GC_MARK_BIT 0x2ul
@@ -149,13 +150,14 @@ struct PageInfo
 #define GC_IS_MARKED(W) ((W & GC_MARK_BIT) != 0x0ul)
 #define GC_IS_YOUNG(W) ((W & GC_YOUNG_BIT) != 0x0ul)
 
-#define GC_IS_ALLOCATED(W) ((W & (GC_RC_DATA_MASK | GC_MARK_BIT)) != 0x0ul)
+#define GC_IS_ALLOCATED(W) ((W & GC_ALLOCATED_BIT) != 0x0ul)
 
 #define GC_EXTRACT_RC(W) (W & GC_RC_COUNT_MASK)
 #define GC_RC_ZERO 0x0ul
 #define GC_RC_ONE 0x4ul
 #define GC_RC_TWO 0x8ul
 
+#define GC_IS_LIVE(W) ((W & (GC_RC_DATA_MASK | GC_MARK_BIT)) != 0x0ul)
 #define GC_IS_UNREACHABLE(W) ((W & (GC_RC_DATA_MASK | GC_MARK_BIT)) == 0x0ul)
 #define GC_IS_ZERO_RC(W) ((W & GC_RC_DATA_MASK) == GC_RC_ZERO)
 
@@ -164,10 +166,10 @@ struct PageInfo
 #define GC_INC_RC_COUNT(W) (W + GC_RC_ONE)
 #define GC_DEC_RC_COUNT(W) (W - GC_RC_ONE)
 
-#define GC_RC_IS_COUNT(W) (W & GC_RC_KIND_MASK)
+#define GC_RC_IS_COUNT(W) ((W & GC_RC_KIND_MASK) != 0x0)
+#define GC_RC_IS_PARENT(W) ((W & GC_RC_KIND_MASK) == 0x0)
 #define GC_RC_GET_PARENT(W) ((void*)((W & GC_RC_DATA_MASK) >> GC_RC_PTR_SHIFT))
-#define GC_RC_SET_PARENT(W, P) (W | (((uintptr_t)P) << GC_RC_PTR_SHIFT))
-#define GC_RC_INITIALIZE_PARENT(P) (((uintptr_t)P) << GC_RC_PTR_SHIFT)
+#define GC_RC_SET_PARENT(W, P) (GC_ALLOCATED_BIT | (((uintptr_t)P) << GC_RC_PTR_SHIFT) | (W & GC_MARK_BIT))
 
 #define GC_GET_DEC_LIST(W) ((void*)((W & GC_RC_DATA_MASK) >> GC_RC_PTR_SHIFT))
 #define GC_SET_DEC_LIST(DL) (GC_DEC_PENDING_BIT | (((uintptr_t)DL) << GC_RC_PTR_SHIFT))
@@ -176,7 +178,6 @@ struct PageInfo
 #define GC_SET_FWD_PTR(FP) (GC_IS_FWD_PTR_BIT | (((uintptr_t)FP) << GC_RC_PTR_SHIFT))
 
 #define GC_INIT_YOUNG_ALLOC(ADDR) GC_STORE_META_DATA_WORD(ADDR, GC_YOUNG_BIT | GC_ALLOCATED_BIT)
-#define GC_RESET_YOUNG_AND_MARK(ADDR, W) GC_STORE_META_DATA_WORD(ADDR, W & ~(GC_YOUNG_BIT | GC_MARK_BIT))
 
 //Access type info
 #define GET_TYPE_META_DATA(M) (GC_PAGE_FOR_ADDR(W).type)
