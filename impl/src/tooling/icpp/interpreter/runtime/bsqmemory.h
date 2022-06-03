@@ -14,6 +14,7 @@
 #endif
 
 #define DEFAULT_PAGE_COST 2
+#define COLLECT_ALL_PAGE_COST 4294967296
 #define DEFAULT_DEC_OPS_COUNT 256
 
 #define OCCUPANCY_LOW_MID_BREAK 0.30f
@@ -28,6 +29,15 @@ public:
     std::set<PageInfo*> low_utilization; //keep in memory order
     std::list<PageInfo*> mid_utilization;
     std::set<PageInfo*> high_utilization;
+};
+
+class GeneralMemoryStats
+{
+public:
+    uint64_t total_pages;
+    uint64_t empty_pages;
+
+    uint64_t live_bytes;
 };
 
 ////
@@ -588,13 +598,14 @@ private:
     //    can adjust to make sure we keep up with alloc/free -- but start out with a cost of 2
     size_t page_cost;
     size_t dec_ops_count;
+    size_t current_allocated_bytes;
 
     uint8_t* globals_mem;
     size_t globals_mem_size;
 
 #ifdef ENABLE_MEM_STATS
     size_t gccount;
-    size_t maxheap;
+    std::list<GeneralMemoryStats> heap_stats;
 #endif
 
 public:
@@ -1031,16 +1042,6 @@ private:
                 this->gcCopyRoots(*((uintptr_t*)gcurr));
             }
         }
-
-        GCRefListIterator rootiter; 
-        this->rootlist.iterBegin(rootiter);
-        while(this->rootlist.iterHasMore(rootiter))
-        {
-            void* robj = rootiter.get();
-            this->gcProcessSlotRoot(robj);
-
-            this->rootlist.iterAdvance(rootiter);
-        }
     }
 
     void processHeap()
@@ -1177,9 +1178,98 @@ private:
         }
     }
 
+    GeneralMemoryStats compute_mem_stats()
+    {
+//#ifdef GC_SANITY_CHECK
+        for(auto piter = this->blockalloc.page_set.cbegin(); piter != this->blockalloc.page_set.cend(); piter++)
+        {
+            GC_META_DATA_WORD* metacurr = (*piter)->slots;
+
+            uint64_t freecount = 0;
+            for(uint64_t i = 0; i < (*piter)->entry_count; ++i)
+            {
+                if(*metacurr == 0x0)
+                {
+                    freecount++;
+                }
+                else
+                {
+                    assert(GC_IS_ALLOCATED(*metacurr));
+                }
+
+                metacurr++;
+            }
+
+            assert(freecount == (*piter)->freelist_count);
+
+            if(freecount == 0)
+            {
+                assert((*piter)->freelist == nullptr);
+            }
+            else
+            {
+                assert((*piter)->freelist != nullptr);
+            }
+        }
+//#endif
+
+        uint64_t live_bytes = std::accumulate(this->blockalloc.page_set.cbegin(), this->blockalloc.page_set.cend(), 0, [](uint64_t acc, PageInfo* p) {
+            return acc + (p->entry_size - p->freelist_count);
+        });
+
+        return GeneralMemoryStats{this->blockalloc.page_set.size(), this->blockalloc.free_pages.size(), live_bytes};
+    }
+
+    void collect()
+    {
+        MEM_STATS_OP(this->gccount++);
+        MEM_STATS_OP(this->heap_stats.push_back(this->compute_mem_stats()));
+
+        //clear all the old marks and rotate roots
+        GCRefListIterator oriter;
+        this->roots.iterBegin(oriter);
+
+        this->oldroots.clear();
+        while(this->roots.iterHasMore(oriter))
+        {
+            void* robj = oriter.get();
+
+            GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR(robj);
+            GC_STORE_META_DATA_WORD(addr, (*addr) & ~GC_MARK_BIT);
+
+            oldroots.insert(robj);
+
+            this->roots.iterAdvance(oriter);
+        }
+        this->roots.reset();
+
+        //mark and move all live objects out of new space
+        this->processRoots();
+        this->processHeap();
+
+        //Look at diff in old and new roots + evac operations as starts for dec operations
+        this->checkMaybeZeroCountList();
+
+        //Process release of RC space objects as needed
+        this->processRelease();
+
+        //Clear any marks
+        this->clearAllMarkRoots();
+
+        //Adjust the new space size if needed and reset/free the newspace allocators
+        this->bumpalloc.postGCProcess(this->liveoldspace);
+    }
+
     PageInfo* allocate_slow(BSQType* mdata)
     {
         uint32_t credits = this->page_cost;
+        bool docollect = false;
+
+        if(this->current_allocated_bytes > BSQ_COLLECT_THRESHOLD)
+        {
+            credits = COLLECT_ALL_PAGE_COST;
+            docollect = true;
+        }
 
         if(this->pendingdecs != nullptr)
         {
@@ -1233,6 +1323,11 @@ private:
             }
         }
 
+        if(docollect)
+        {
+            this->collect();
+        }
+
         return this->blockalloc.processAndGetNewPageForAllocation(mdata);
     }
 
@@ -1263,28 +1358,6 @@ public:
         pp->freelist_count--;
 
         return alloc;
-    }
-
-    void collect()
-    {
-        MEM_STATS_OP(this->gccount++);
-        MEM_STATS_OP(this->maxheap = std::max(this->maxheap, this->bumpalloc.currentAllocatedSlabBytes() + this->rcalloc + this->liveoldspace));
-
-        //mark and move all live objects out of new space
-        this->processRoots();
-        this->processHeap();
-
-        //Sweep young roots and look possible unreachable old roots in the old with collect them as needed -- new zero counts are rotated in
-        this->checkMaybeZeroCountList();
-
-        //Process release of RC space objects as needed
-        this->processRelease();
-
-        //Clear any marks
-        this->clearAllMarkRoots();
-
-        //Adjust the new space size if needed and reset/free the newspace allocators
-        this->bumpalloc.postGCProcess(this->liveoldspace);
     }
 
     void setGlobalsMemory(void* globals, size_t bytes)
