@@ -1046,82 +1046,47 @@ private:
 
     void processHeap()
     {
-        GCRefListIterator rootiter; 
-        this->rootlist.iterBegin(rootiter);
-        while(this->rootlist.iterHasMore(rootiter))
-        {
-            void* robj = rootiter.get();
-            this->worklist.enque(robj);
-
-            this->rootlist.iterAdvance(rootiter);
-        }
-
         while (!this->worklist.empty())
         {
             void* obj = this->worklist.deque();
 
-            const BSQType* umeta = PAGE_MASK_EXTRACT_ADDR(obj)->type;
+            const BSQType* umeta = PAGE_MASK_EXTRACT_ADDR(obj)->btype;
             assert(umeta->allocinfo.heapmask != nullptr);
 
             Allocator::gcProcessSlotsWithMask((void**)obj, obj, umeta->allocinfo.heapmask);
         }
     }
 
-    void checkMaybeZeroCountList()
+    void checkMaybeZeroCounts()
     {
+        for(auto iter = this->oldroots.cbegin(); iter != this->oldroots.cend(); iter++)
+        {
+            GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR(*iter);
+            GC_META_DATA_WORD w = GC_LOAD_META_DATA_WORD(addr);
+
+            if (GC_IS_UNREACHABLE(w))
+            {
+                GC_STORE_META_DATA_WORD(addr, GC_SET_DEC_LIST(this->pendingdecs));
+                this->pendingdecs = *iter;
+            }
+        }
+        this->oldroots.clear();
+
         GCRefListIterator iter;
-        this->maybeZeroCounts.iterBegin(iter);
-        while(this->maybeZeroCounts.iterHasMore(iter))
+        this->evacobjs.iterBegin(iter);
+        while(this->evacobjs.iterHasMore(iter))
         {
             auto obj = iter.get();
             GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR(obj);
             GC_META_DATA_WORD w = GC_LOAD_META_DATA_WORD(addr);
 
-            if (GC_TEST_IS_UNREACHABLE(w))
+            if (!GC_IS_UNREACHABLE(w))
             {
-                this->releaselist.enque(obj);
-            }
-            else
-            {
-                if(GC_TEST_IS_ZERO_RC(w))
-                {
-                    this->newMaybeZeroCounts.enque(obj);
-                }
+                GC_STORE_META_DATA_WORD(addr, GC_SET_DEC_LIST(this->pendingdecs));
+                this->pendingdecs = obj;
             }
         }
-
-        this->maybeZeroCounts.assignFrom(this->newMaybeZeroCounts);
-    }
-
-    void processRelease()
-    {
-        size_t freelimit = (3 * BSQ_COLLECT_THRESHOLD) / 2;
-        size_t freecount = 0;
-
-        while (!this->releaselist.empty())
-        {
-            if(freelimit <= freecount)
-            {
-                break;
-            } 
-
-            void* obj = this->releaselist.deque();
-            PageInfo* pp = PAGE_MASK_EXTRACT_ADDR(obj);
-
-            BSQType* umeta = PAGE_MASK_EXTRACT_ADDR(obj)->type;
-            freecount += pp->entry_size;
-            pp->entry_release_count++;
-
-            if (umeta->allocinfo.heapmask != nullptr)
-            {
-                umeta->gcops.fpDecObjCollect(umeta, (void**)obj, obj);
-            }
-
-            if(pp->entry_release_count + pp->entry_available_count == pp->entry_count)
-            {
-                this->blockalloc.unlinkPageFromType(umeta, pp);
-            }
-        }
+        this->evacobjs.reset();
     }
 
     inline static bool dropped_out_of_high_util(PageInfo* pp)
@@ -1220,10 +1185,71 @@ private:
         return GeneralMemoryStats{this->blockalloc.page_set.size(), this->blockalloc.free_pages.size(), live_bytes};
     }
 
+    void processPendingDecs(uint32_t& credits, uint32_t maxcredits)
+    {
+        for(uint32_t i = 0; i < maxcredits && credits > 0 && this->pendingdecs != nullptr; ++i)
+        {
+            for(size_t i = 0; i < this->dec_ops_count && this->pendingdecs != nullptr; ++i)
+            {
+                void* decobj = this->pendingdecs;
+                PageInfo* pp = PAGE_MASK_EXTRACT_ADDR(decobj);
+                GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR_AND_PAGE(decobj, pp);
+
+                this->pendingdecs = GC_GET_DEC_LIST(*addr);
+                pp->btype->gcops.fpDecObj(pp->btype, decobj);
+
+                GC_STORE_META_DATA_WORD(addr, 0x0);
+                *((void**)decobj) = pp->freelist;
+                *((void**)decobj + 1) = addr;
+                pp->freelist = decobj;
+                pp->freelist_count++;
+
+                this->postdec_processing(pp);
+            }
+
+            credits--;
+        }
+    }
+
+    void processBlocks(uint32_t credits, BSQType* mdata)
+    {
+        while(credits > 0 && !this->blockalloc.filled_pages.empty())
+        {
+            PageInfo* pp = nullptr;
+            if(mdata != nullptr && !mdata->filledPages.empty())
+            {
+                pp = *(mdata->filledPages.begin());
+            }
+            else
+            {
+                pp = *(this->blockalloc.filled_pages.begin());
+            }
+
+            if((pp->allocinfo & AllocPageInfo_EvCandidate) != 0x0)
+            { 
+                this->processFilledPage<true>(pp->btype, pp);
+            }
+            else
+            {
+                this->processFilledPage<false>(pp->btype, pp);
+            }
+
+            pp->btype->filledPages.erase(pp);
+            this->blockalloc.filled_pages.erase(pp);
+
+            credits--;
+        }
+    }
+
     void collect()
     {
         MEM_STATS_OP(this->gccount++);
         MEM_STATS_OP(this->heap_stats.push_back(this->compute_mem_stats()));
+
+        if(this->blockalloc.free_pages)
+        {
+            xxxx; //release excess free pages 
+        }
 
         //clear all the old marks and rotate roots
         GCRefListIterator oriter;
@@ -1248,16 +1274,11 @@ private:
         this->processHeap();
 
         //Look at diff in old and new roots + evac operations as starts for dec operations
-        this->checkMaybeZeroCountList();
+        this->checkMaybeZeroCounts();
 
-        //Process release of RC space objects as needed
-        this->processRelease();
-
-        //Clear any marks
-        this->clearAllMarkRoots();
-
-        //Adjust the new space size if needed and reset/free the newspace allocators
-        this->bumpalloc.postGCProcess(this->liveoldspace);
+        xxxx; //need to have default values for this
+        this->processPendingDecs(credits, credits / 2);
+        this->processBlocks(credits, nullptr);
     }
 
     PageInfo* allocate_slow(BSQType* mdata)
@@ -1270,58 +1291,10 @@ private:
             credits = COLLECT_ALL_PAGE_COST;
             docollect = true;
         }
+        xxxx; //adjust credits if we have leftover work or not
 
-        if(this->pendingdecs != nullptr)
-        {
-            for(size_t i = 0; i < this->dec_ops_count && this->pendingdecs != nullptr; ++i)
-            {
-                void* decobj = this->pendingdecs;
-                PageInfo* pp = PAGE_MASK_EXTRACT_ADDR(decobj);
-                GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR_AND_PAGE(decobj, pp);
-
-                this->pendingdecs = GC_GET_DEC_LIST(*addr);
-                pp->btype->gcops.fpDecObj(pp->btype, decobj);
-
-                GC_STORE_META_DATA_WORD(addr, 0x0);
-                *((void**)decobj) = pp->freelist;
-                pp->freelist = decobj;
-                pp->freelist_count++;
-
-                this->postdec_processing(pp);
-            }
-
-            credits--;
-        }
-
-        if(!this->blockalloc.filled_pages.empty())
-        {
-            while(credits != 0)
-            {
-                PageInfo* pp = nullptr;
-                if(!mdata->filledPages.empty())
-                {
-                    pp = *(mdata->filledPages.begin());
-                }
-                else
-                {
-                    pp = *(this->blockalloc.filled_pages.begin());
-                }
-
-                if((pp->allocinfo & AllocPageInfo_EvCandidate) != 0x0)
-                { 
-                    this->processFilledPage<true>(mdata, pp);
-                }
-                else
-                {
-                    this->processFilledPage<false>(mdata, pp);
-                }
-
-                pp->btype->filledPages.erase(pp);
-                this->blockalloc.filled_pages.erase(pp);
-
-                credits--;
-            }
-        }
+        this->processPendingDecs(credits, credits / 2);
+        this->processBlocks(credits, mdata);
 
         if(docollect)
         {
