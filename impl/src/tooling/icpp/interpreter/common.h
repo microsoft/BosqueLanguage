@@ -104,11 +104,11 @@ class BSQType;
 #define PAGE_INDEX_ADDR_MASK 0x1FFFul
 #define PAGE_MASK_EXTRACT_ID(M) (((uintptr_t)M) & PAGE_ADDR_MASK)
 #define PAGE_MASK_EXTRACT_ADDR(M) ((PageInfo*)PAGE_MASK_EXTRACT_ID(M))
-#define PAGE_INDEX_EXTRACT(M, PI) ((((uintptr_t)M) - ((uintptr_t)(PI)->data)) >> (PI)->idxshift)
+#define PAGE_INDEX_EXTRACT(M, PI) ((((uintptr_t)M) - ((uintptr_t)(PI)->data)) / (PI)->entry_size)
 
 typedef uint64_t GC_META_DATA_WORD;
 
-typedef uint8_t AllocPageInfo;
+typedef uint16_t AllocPageInfo;
 #define AllocPageInfo_Alloc 0x1
 #define AllocPageInfo_Ev 0x2
 
@@ -128,7 +128,6 @@ struct PageInfo
 
     uint16_t freelist_count;
 
-    uint8_t idxshift; //# of bits to shift to convert uint8_t distance into entry index
     AllocPageInfo allocinfo;
 };
 #ifndef DEBUG_ALLOC_BLOCKS
@@ -248,8 +247,9 @@ enum class BSQTypeLayoutKind : uint32_t
 typedef const char* RefMask;
 
 typedef void (*GCProcessOperatorVisitFP)(const BSQType*, void**, void*);
-typedef void (*GCProcessOperatorDecFP)(const BSQType*, void*);
+typedef void (*GCProcessOperatorDecFP)(const BSQType*, void**);
 typedef void (*GCProcessOperatorUpdateEvacuateMoveFP)(const BSQType*, void**, void*);
+typedef void (*GCProcessOperatorImortalFP)(const BSQType*, void**);
 
 enum DisplayMode
 {
@@ -296,6 +296,7 @@ struct GCFunctorSet
     GCProcessOperatorVisitFP fpProcessObjVisit;
     GCProcessOperatorDecFP fpDecObj;
     GCProcessOperatorUpdateEvacuateMoveFP fpProcessMoveObj;
+    GCProcessOperatorImortalFP fpMakeImmortal;
 };
 
 typedef int (*KeyCmpFP)(const BSQType* btype, StorageLocationPtr, StorageLocationPtr);
