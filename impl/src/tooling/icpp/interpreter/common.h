@@ -181,7 +181,7 @@ struct PageInfo
 #define GC_INIT_YOUNG_ALLOC(ADDR) GC_STORE_META_DATA_WORD(ADDR, GC_YOUNG_BIT | GC_ALLOCATED_BIT)
 
 //Access type info
-#define GET_TYPE_META_DATA(M) (GC_PAGE_FOR_ADDR(W).type)
+#define GET_TYPE_META_DATA(M) (PAGE_MASK_EXTRACT_ADDR(M)->btype)
 #define GET_TYPE_META_DATA_AS(T, M) (dynamic_cast<const T*>(GET_TYPE_META_DATA(M)))
 
 //Misc operations
@@ -249,7 +249,6 @@ typedef const char* RefMask;
 typedef void (*GCProcessOperatorVisitFP)(const BSQType*, void**, void*);
 typedef void (*GCProcessOperatorDecFP)(const BSQType*, void**);
 typedef void (*GCProcessOperatorUpdateEvacuateMoveFP)(const BSQType*, void**, void*);
-typedef void (*GCProcessOperatorImortalFP)(const BSQType*, void**);
 
 enum DisplayMode
 {
@@ -296,7 +295,6 @@ struct GCFunctorSet
     GCProcessOperatorVisitFP fpProcessObjVisit;
     GCProcessOperatorDecFP fpDecObj;
     GCProcessOperatorUpdateEvacuateMoveFP fpProcessMoveObj;
-    GCProcessOperatorImortalFP fpMakeImmortal;
 };
 
 typedef int (*KeyCmpFP)(const BSQType* btype, StorageLocationPtr, StorageLocationPtr);

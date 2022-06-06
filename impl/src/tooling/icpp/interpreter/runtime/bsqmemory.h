@@ -35,6 +35,8 @@ public:
     std::set<PageInfo*> low_utilization; //keep in memory order
     std::list<PageInfo*> mid_utilization;
     std::set<PageInfo*> high_utilization;
+
+    static PageInfo g_sential_page;
 };
 
 class GeneralMemoryStats
@@ -74,8 +76,8 @@ public:
     std::set<PageInfo*> filledPages; //pages that have been filled by the allocator and are pending collection -- this overlaps with the one in the block allocator but we have it here to so we can process pages of this type when needed
 
     //Constructor that everyone delegates to
-    BSQType(BSQTypeID tid, BSQTypeLayoutKind tkind, BSQTypeSizeInfo allocinfo, GCFunctorSet gcops, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyCmpFP fpkeycmp, DisplayFP fpDisplay, std::string name, PageInfo* spage): 
-        allocpage(spage), evacuatepage(spage), tid(tid), tkind(tkind), allocinfo(allocinfo), gcops(gcops), fpkeycmp(fpkeycmp), vtable(vtable), fpDisplay(fpDisplay), name(name)
+    BSQType(BSQTypeID tid, BSQTypeLayoutKind tkind, BSQTypeSizeInfo allocinfo, GCFunctorSet gcops, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyCmpFP fpkeycmp, DisplayFP fpDisplay, std::string name): 
+        allocpage(&AllocPages::g_sential_page), evacuatepage(&AllocPages::g_sential_page), tid(tid), tkind(tkind), allocinfo(allocinfo), gcops(gcops), fpkeycmp(fpkeycmp), vtable(vtable), fpDisplay(fpDisplay), name(name)
     {
         static_assert(sizeof(PageInfo) % 8 == 0);
 
@@ -141,6 +143,12 @@ class GCStack
 public:
     static uint8_t* stackp;
     static uint8_t sdata[BSQ_MAX_STACK];
+
+    static bool global_init_complete;
+    static PageInfo* global_memory;
+    static BSQType* global_type;
+
+    //TODO: eventually want a list of these as they must broken up into page size
 
     static void reset()
     {
@@ -339,8 +347,6 @@ public:
 
     std::set<PageInfo*> filled_pages; //pages that have been filled by the allocator and are pending collection
 
-    static PageInfo g_sential_page;
-
 #ifdef DEBUG_ALLOC_BLOCKS
     //For malloc based debug implementation we keep explicit map from object to page it is in
     std::map<void*, PageInfo*> page_map;
@@ -499,7 +505,7 @@ public:
 
     PageInfo* processAndGetNewPageForEvacuation(BSQType* btype)
     {
-        if(btype->evacuatepage == &BlockAllocator::g_sential_page)
+        if(btype->evacuatepage == &AllocPages::g_sential_page)
         {
             btype->evacuatepage = this->allocateFreePage(btype);
         }
@@ -528,7 +534,7 @@ public:
     
     PageInfo* processAndGetNewPageForAllocation(BSQType* btype)
     {
-        if(btype->allocpage == &BlockAllocator::g_sential_page)
+        if(btype->allocpage == &AllocPages::g_sential_page)
         {
             btype->allocpage = this->allocateFreePage(btype);
             btype->allocpage->allocinfo = AllocPageInfo_Alloc;
@@ -602,9 +608,6 @@ private:
     size_t dec_ops_count;
     size_t post_release_dec_ops_count;
     size_t current_allocated_bytes;
-
-    uint8_t* globals_mem;
-    RefMask globals_mask;
 
 #ifdef ENABLE_MEM_STATS
     size_t gccount;
@@ -932,70 +935,6 @@ public:
         }
     }
 
-    ////////
-    //Operations Make Immortal
-    inline static void gcMakeImmortal(void* v)
-    {
-        GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR(v);
-        GC_META_DATA_WORD waddr = GC_LOAD_META_DATA_WORD(addr);
-
-        GC_STORE_META_DATA_WORD(addr, GC_INC_RC_COUNT(waddr));
-    }
-
-    inline static void gcMakeImmortalString(void* v)
-    {
-        if (!IS_INLINE_STRING(v))
-        {
-            Allocator::gcMakeImmortal(v);
-        }
-    }
-
-    inline static void gcMakeImmortalBigNum(void* v)
-    {
-        if (!IS_INLINE_BIGNUM(v))
-        {
-            Allocator::gcMakeImmortal(v);
-        }
-    }
-
-    inline static void gcMakeImmortalSlotsWithUnion(void** slots)
-    {
-        if(*slots != nullptr)
-        {
-            const BSQType* umeta = ((const BSQType*)(*slots));
-            return umeta->gcops.fpMakeImmortal(umeta, slots + 1);
-        }
-    }
-
-    inline static void gcMakeImmortalSlotsWithMask(void** slots, RefMask mask)
-    {
-        void** cslot = slots;
-
-        RefMask cmaskop = mask;
-        while (*cmaskop)
-        {
-            char op = *cmaskop++;
-            switch(op)
-            {
-                case PTR_FIELD_MASK_NOP:
-                    break;
-                case PTR_FIELD_MASK_PTR:
-                    Allocator::gcMakeImmortal(*cslot);
-                    break;
-                case PTR_FIELD_MASK_STRING:
-                    Allocator::gcMakeImmortalString(*cslot);
-                    break;
-                case PTR_FIELD_MASK_BIGNUM:
-                    Allocator::gcMakeImmortalBigNum(*cslot);
-                    break;
-                default:
-                    Allocator::gcMakeImmortalSlotsWithUnion(cslot);
-                    break;
-            }
-            cslot++;
-        }
-    }
-
     void postsweep_processing(PageInfo* pp, bool allrcsimple)
     {
         if(pp->freelist_count == pp->entry_count)
@@ -1102,9 +1041,20 @@ private:
             this->gcCopyRoots(*((uintptr_t*)curr));
         }
 
-        if(this->globals_mem != nullptr)
+        void* groot = GCStack::global_memory->data;
+        if(GCStack::global_init_complete)
         {
-            Allocator::gcProcessSlotsWithMask((void**)this->globals_mem, nullptr, this->globals_mask);
+            //treat it like a single root to the globals object
+            this->gcCopyRoots(*((uintptr_t*)groot));
+        }
+        else
+        {
+            //treat it like a stack frame thing
+            uint8_t* gend = ((uint8_t*)groot + (GCStack::global_type->allocinfo.heapsize));
+            for(uint8_t* curr = (uint8_t*)groot; curr < gend; curr += ICPP_WORD_SIZE)
+            {
+                this->gcCopyRoots(*((uintptr_t*)curr));
+            }
         }
     }
 
@@ -1397,7 +1347,7 @@ private:
     }
 
 public:
-    Allocator() : blockalloc(), worklist(), pendingdecs(nullptr), oldroots(), roots(), evacobjs(), activeallocprocessing(), page_cost(DEFAULT_PAGE_COST), dec_ops_count(DEFAULT_DEC_OPS_COUNT), post_release_dec_ops_count(DEFAULT_POST_COLLECT_RUN_DECS_COST), globals_mem(nullptr), globals_mask(nullptr)
+    Allocator() : blockalloc(), worklist(), pendingdecs(nullptr), oldroots(), roots(), evacobjs(), activeallocprocessing(), page_cost(DEFAULT_PAGE_COST), dec_ops_count(DEFAULT_DEC_OPS_COUNT), post_release_dec_ops_count(DEFAULT_POST_COLLECT_RUN_DECS_COST)
     {
         MEM_STATS_OP(this->gccount = 0);
         MEM_STATS_OP(this->maxheap = 0);
@@ -1408,12 +1358,12 @@ public:
         ;
     }
 
-    inline uint8_t* allocate(BSQType* mdata)
+    inline uint8_t* allocateDynamic(const BSQType* mdata)
     {
         PageInfo* pp = mdata->allocpage;
         if(pp->freelist == nullptr)
         {
-            this->allocate_slow(mdata);
+            this->allocate_slow(const_cast<BSQType*>(mdata));
         }
         
         uint8_t* alloc = (uint8_t*)pp->freelist;
@@ -1425,20 +1375,19 @@ public:
         return alloc;
     }
 
-    void setGlobalsMemory(void* globals, RefMask mask)
+    void setGlobalsMemory(const BSQType* global_type)
     {
-        this->globals_mem = (uint8_t*)globals;
-        this->globals_mask = mask;
+        GCStack::global_memory = this->blockalloc.allocateFreePage(const_cast<BSQType*>(global_type));
+        GCStack::global_type = const_cast<BSQType*>(global_type);
+        GCStack::global_init_complete = false;
     }
 
     void completeGlobalInitialization()
     {
-        this->collect();
+        GCStack::global_init_complete = true;
 
-        Allocator::gcMakeImmortalSlotsWithMask((void**)this->globals_mem, this->globals_mask);
-
-        xfree(this->globals_mem);
-        this->globals_mem = nullptr;
+        //Maybe we want to force a collect here or even a very aggressive compact
+        //this->collect();
     }
 };
 
@@ -1460,14 +1409,8 @@ void gcEvacuateOperator_refImpl(const BSQType* btype, void** data, void* obj);
 void gcEvacuateOperator_stringImpl(const BSQType* btype, void** data, void* obj);
 void gcEvacuateOperator_bignumImpl(const BSQType* btype, void** data, void* obj);
 
-void gcMakeImmortalOperator_nopImpl(const BSQType* btype, void** data);
-void gcMakeImmortalOperator_inlineImpl(const BSQType* btype, void** data);
-void gcMakeImmortalOperator_refImpl(const BSQType* btype, void** data);
-void gcMakeImmortalOperator_stringImpl(const BSQType* btype, void** data);
-void gcMakeImmortalOperator_bignumImpl(const BSQType* btype, void** data);
-
-constexpr GCFunctorSet REF_GC_FUNCTOR_SET{ gcProcessHeapOperator_refImpl, gcDecOperator_refImpl, gcEvacuateOperator_refImpl, gcMakeImmortalOperator_refImpl };
-constexpr GCFunctorSet STRUCT_LEAF_GC_FUNCTOR_SET{ gcProcessHeapOperator_nopImpl, gcDecOperator_nopImpl, gcEvacuateOperator_nopImpl, gcMakeImmortalOperator_nopImpl };
-constexpr GCFunctorSet STRUCT_STD_GC_FUNCTOR_SET{ gcProcessHeapOperator_inlineImpl, gcDecOperator_inlineImpl, gcEvacuateOperator_inlineImpl, gcMakeImmortalOperator_inlineImpl };
-constexpr GCFunctorSet REGISTER_GC_FUNCTOR_SET{ gcProcessHeapOperator_nopImpl, gcDecOperator_nopImpl, gcEvacuateOperator_nopImpl, gcMakeImmortalOperator_nopImpl };
+constexpr GCFunctorSet REF_GC_FUNCTOR_SET{ gcProcessHeapOperator_refImpl, gcDecOperator_refImpl, gcEvacuateOperator_refImpl };
+constexpr GCFunctorSet STRUCT_LEAF_GC_FUNCTOR_SET{ gcProcessHeapOperator_nopImpl, gcDecOperator_nopImpl, gcEvacuateOperator_nopImpl };
+constexpr GCFunctorSet STRUCT_STD_GC_FUNCTOR_SET{ gcProcessHeapOperator_inlineImpl, gcDecOperator_inlineImpl, gcEvacuateOperator_inlineImpl };
+constexpr GCFunctorSet REGISTER_GC_FUNCTOR_SET{ gcProcessHeapOperator_nopImpl, gcDecOperator_nopImpl, gcEvacuateOperator_nopImpl };
 

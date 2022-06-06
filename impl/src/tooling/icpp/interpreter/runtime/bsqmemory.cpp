@@ -10,7 +10,11 @@ const BSQType** BSQType::g_typetable = nullptr;
 uint8_t GCStack::sdata[BSQ_MAX_STACK];
 uint8_t* GCStack::stackp = GCStack::stackp;
 
-PageInfo BlockAllocator::g_sential_page = {0};
+bool GCStack::global_init_complete = false;
+PageInfo* GCStack::global_memory = nullptr;
+BSQType* GCStack::global_type = nullptr;
+
+PageInfo AllocPages::g_sential_page = {0};
 
 Allocator Allocator::GlobalAllocator;
 
@@ -91,29 +95,4 @@ void gcEvacuateOperator_stringImpl(const BSQType* btype, void** data, void* obj)
 void gcEvacuateOperator_bignumImpl(const BSQType* btype, void** data, void* obj)
 {
     Allocator::gcEvacuateBigNum(data, obj);
-}
-
-void gcMakeImmortalOperator_nopImpl(const BSQType* btype, void** data)
-{
-    return;
-}
-
-void gcMakeImmortalOperator_inlineImpl(const BSQType* btype, void** data)
-{
-    Allocator::gcMakeImmortalSlotsWithMask(data, btype->allocinfo.inlinedmask);
-}
-
-void gcMakeImmortalOperator_refImpl(const BSQType* btype, void** data)
-{
-    Allocator::gcMakeImmortal(*data);
-}
-
-void gcMakeImmortalOperator_stringImpl(const BSQType* btype, void** data)
-{
-    Allocator::gcMakeImmortalString(*data);
-}
-
-void gcMakeImmortalOperator_bignumImpl(const BSQType* btype, void** data)
-{
-    Allocator::gcMakeImmortalBigNum(*data);
 }

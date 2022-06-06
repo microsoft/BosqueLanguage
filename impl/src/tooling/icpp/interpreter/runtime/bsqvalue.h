@@ -1194,7 +1194,7 @@ private:
 
 public:
     BSQStringImplType(BSQTypeID tid, std::string name) 
-    : BSQType(tid, BSQTypeLayoutKind::String, {sizeof(BSQString), sizeof(BSQString), sizeof(BSQString), "31", "31"}, { gcDecOperator_stringImpl, gcClearOperator_stringImpl, gcProcessRootOperator_stringImpl, gcProcessHeapOperator_stringImpl }, {}, entityStringKeyCmp_impl, entityStringDisplay_impl, name)
+    : BSQType(tid, BSQTypeLayoutKind::String, {sizeof(BSQString), sizeof(BSQString), sizeof(BSQString), "31", "31"}, { gcProcessHeapOperator_stringImpl, gcDecOperator_stringImpl, gcEvacuateOperator_stringImpl  }, {}, entityStringKeyCmp_impl, entityStringDisplay_impl, name)
     {
         static_assert(sizeof(BSQString) == 16);
     }
