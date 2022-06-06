@@ -4150,18 +4150,6 @@ class Parser {
                 else if(ename === "Map") {
                     attributes.push("__map_type");
                 }
-                else if(ename === "PartialVector4") {
-                    attributes.push("__partial_vector4_type");
-                }
-                else if(ename === "PartialVector8") {
-                    attributes.push("__partial_vector8_type");
-                }
-                else if(ename === "ListTree") {
-                    attributes.push("__list_tree_type");
-                }
-                else if(ename === "MapTree") {
-                    attributes.push("__map_tree_type");
-                }
                 else {
                     //not special
                 }

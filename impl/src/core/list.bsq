@@ -1795,9 +1795,6 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
 //////////////////////////////////////////////////////////////////////////////////
 
 __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded APIType, TestableType when T grounded TestableType {
-    private function s_into(l: ListRepr<T>): List<T> = special_inject;
-    method value(): ListRepr<T> = special_extract;
-
     function rangeInt(start: Int, end: Int): List<Int>
         requires start <= end;
     {

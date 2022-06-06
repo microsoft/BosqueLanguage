@@ -59,7 +59,6 @@ __universal concept Parsable provides Any {
 __universal concept BufferParsable provides Any {
 }
 
-
 //<summary>Type for indicating that a datatype can be use as an input on a test method.</summary>
 __universal concept TestableType provides Any {
 }
@@ -344,7 +343,7 @@ __safe __primitive inline infix operator <=(a: Decimal, b: Decimal): Bool = defa
 __safe __primitive inline infix operator >=(a: Decimal, b: Decimal): Bool = default;
 
 //<summary>Primitive string value.</summary>
-__internal entity String provides Some, KeyType, APIType {
+__internal __typedeclable entity String provides Some, KeyType, APIType {
     __safe private function s_empty(s: String): Bool = string_empty;
     __assume_safe private function s_concat2(s1: String, s2: String): String = string_append;
 
@@ -400,7 +399,7 @@ __internal entity String provides Some, KeyType, APIType {
 }
 
 //<summary>Primitive safe string value.</summary>
-__internal __constructable entity StringOf<T unique Validator> provides Some, KeyType, APIType {
+__internal __constructable __typedeclable entity StringOf<T unique Validator> provides Some, KeyType, APIType {
     private function s_into(s: String): StringOf<T> = special_inject;
     method value(): String = special_extract;
 
@@ -420,7 +419,7 @@ __internal __constructable entity StringOf<T unique Validator> provides Some, Ke
 }
 
 //<summary>Primitive DataString value.</summary>
-__internal __constructable entity DataString<T unique Parsable> provides Some, KeyType, APIType when T grounded APIType, TestableType when T grounded TestableType {
+__internal __constructable __typedeclable entity DataString<T unique Parsable> provides Some, KeyType, APIType when T grounded APIType, TestableType when T grounded TestableType {
     private function s_into(s: String): DataString<T> = special_inject;
     method value(): String = special_extract;
 
@@ -437,6 +436,102 @@ __internal __constructable entity DataString<T unique Parsable> provides Some, K
             return DataString<T>::s_into(s);
         }
     }
+}
+
+//<summary>
+//A structured string representing a RELATIVE logical directory path value.
+//L is the relative root, S, T are the path step and seperators 
+//</summary>
+_internal __constructable __typedeclable entity RelativeLogicalDirectoryPath<L unique Validator, S unique Validator, T unique Validator> provides Some, KeyType, APIType {
+    private function s_into(s: String): RelativeLogicalDirectoryPath<L, S, T> = special_inject;
+    method value(): String = special_extract;
+
+    //TODO: isValid, fromString, tryFromString
+
+    //TODO: join and extract operations
+}
+
+//<summary>
+//A structured string representing a logical directory path value.
+//A, B are the root and root seperator validators, K, L are the base and base separators, S, T are the path step and seperators 
+//</summary>
+_internal __constructable __typedeclable entity LogicalDirectoryPath<A unique Validator, B unique Validator, K unique Validator, L unique Validator, S unique Validator, T unique Validator> provides Some, KeyType, APIType {
+    private function s_into(s: String): LogicalDirectoryPath<A, B, K, L, S, T> = special_inject;
+    method value(): String = special_extract;
+
+    //TODO: isValid, fromString, tryFromString
+
+    //TODO: extend and extract operations
+}
+
+
+//<summary>
+//A structured string representing a RELATIVE logical glob path value. Any step, resource, or ext component in the Glob may be a {...} enclosed regex or, *, or ** instead
+//L is the relative root, S, T are the path step and seperators, E, X are the entry and 
+//</summary>
+_internal __constructable __typedeclable entity RelativeLogicalGlob<L unique Validator, S unique Validator, T unique Validator, E unique Validator, X unique Validator> provides Some {
+    private function s_into(s: String): RelativeLogicalGlob<S, T, E, X> = special_inject;
+    method value(): String = special_extract;
+
+    //TODO: isValid, fromString, tryFromString
+
+    //TODO: join and extract operations
+
+    //TODO: match operations
+}
+
+//<summary>
+//A structured string representing a logical glob path value. Any step, resource, or ext component in the Glob may be a {...} enclosed regex or, *, or ** instead
+//A, B are the root and root seperator validators, K, L are the base and base separators, S, T are the path step and seperators, E, X are the entry and 
+//</summary>
+_internal __constructable __typedeclable entity LogicalGlob<A unique Validator, B unique Validator, K unique Validator, L unique Validator, S unique Validator, T unique Validator, E unique Validator, X unique Validator> provides Some {
+    private function s_into(s: String): LogicalGlob<A, B, K, L, S, T, E, X> = special_inject;
+    method value(): String = special_extract;
+
+    //TODO: isValid, fromString, tryFromString
+
+    //TODO: extend and extract operations
+
+    //TODO: match operations
+}
+
+//<summary>
+//A structured string representing a RELATIVE logical resource path value.
+//L is the relative root, S, T are the path step and seperators, E, X are the entry and 
+//</summary>
+_internal __constructable __typedeclable entity RelativeLogicalResourcePath<L unique Validator, S unique Validator, T unique Validator, E unique Validator, X unique Validator> provides Some, KeyType, APIType {
+    private function s_into(s: String): RelativeLogicalResourcePath<L, S, T, E, X> = special_inject;
+    method value(): String = special_extract;
+
+    //TODO: isValid, fromString, tryFromString
+
+    //TODO: join and extract operations
+}
+
+//<summary>
+//A structured string representing a RELATIVE logical resource path value.
+//A, B are the root and root seperator validators, K, L are the base and base separators, S, T are the path step and seperators, E, X are the entry and 
+//</summary>
+_internal __constructable __typedeclable entity LogicalResourcePath<A unique Validator, B unique Validator, K unique Validator, L unique Validator, S unique Validator, T unique Validator, E unique Validator, X unique Validator> provides Some, KeyType, APIType {
+    private function s_into(s: String): LogicalResourcePath<A, B, K, L, S, T, E, X> = special_inject;
+    method value(): String = special_extract;
+
+    //TODO: isValid, fromString, tryFromString
+
+    //TODO: extend and extract operations
+}
+
+//<summary>
+//A structured string representing a scoped identity (email, login, userid, etc.).
+//A, B are the root and root seperator validators, K, L are the base and base separators, S, T are the path step and seperators, E, X are the entry and 
+//</summary>
+_internal __constructable __typedeclable entity ScopedIdentity<I unique Validator, A unique Validator, B unique Validator, K unique Validator, L unique Validator, S unique Validator, T unique Validator, E unique Validator, X unique Validator> provides Some, KeyType, APIType {
+    private function s_into(s: String): ScopedIdentity<I, A, B, K, L, S, T, E, X> = special_inject;
+    method value(): String = special_extract;
+
+    //TODO: isValid, fromString, tryFromString
+
+    //TODO: extend and extract operations
 }
 
 enum BufferFormat {
@@ -470,11 +565,15 @@ __internal __constructable entity DataBuffer<T unique BufferParsable> provides S
     method value(): ByteBuffer = special_extract;
 }
 
-//<summary>Primitive DateTime value.</summary>
-__internal __typedeclable entity DateTime provides Some, APIType {
-    __assume_safe internal function s_create(year: Nat, month: Nat, day: Nat, hour: Nat, min: Nat, tzdata: String): DateTime = datetime_create;
+//<summary>Validator for TimeZone</summary>
+typedecl ValidTimeZoneName = /[A-Z]{2, 5}/;
+typedecl TimeZoneCode = StringOf<ValidTimeZoneName>;
 
-    function create(year: Nat, month?: Nat=0n, day?: Nat=1n, hour?: Nat=0n, min?: Nat=0n, tzdata?: String="UTC"): DateTime
+//<summary>Primitive DateTime value.</summary>
+__internal __typedeclable entity DateTime provides Some, APIType, KeyType {
+    __assume_safe internal function s_create(year: Nat, month: Nat, day: Nat, hour: Nat, min: Nat, tzdata: TimeZoneCode): DateTime = datetime_create;
+
+    function create(year: Nat, month?: Nat=0n, day?: Nat=1n, hour?: Nat=0n, min?: Nat=0n, tzdata?: TimeZoneCode='UTC'_TimeZoneCode): DateTime
         requires year >= 1900n;
         requires month < 12n;
         requires day != 0n && day <= 31n;
@@ -484,10 +583,49 @@ __internal __typedeclable entity DateTime provides Some, APIType {
         return DateTime::s_create(year, month, day, hour, min, tzdata);
     }
 }
-//TODO: operators for orderable -- maybe Year, Month, Day, TZ, Hour, Min order ??
 
-//<summary>Primitive DateTime value.</summary>
-__internal __typedeclable entity TickTime provides Some, Orderable, APIType {
+__internal __typedeclable entity UTCDateTime provides Some, Orderable, APIType, KeyType {
+    __assume_safe internal function s_create(year: Nat, month: Nat, day: Nat, hour: Nat, min: Nat): DateTime = utcdatetime_create;
+
+    function create(year: Nat, month?: Nat=0n, day?: Nat=1n, hour?: Nat=0n, min?: Nat=0n): UTCDateTime
+        requires year >= 1900n;
+        requires month < 12n;
+        requires day != 0n && day <= 31n;
+        requires hour < 24n;
+        requires min < 60n;
+    {
+        return UTCDateTime::s_create(year, month, day, hour, min);
+    }
+}
+//TODO: operators for orderable
+
+__internal __typedeclable entity CalendarDate provides Some, Orderable, APIType, KeyType {
+    __assume_safe internal function s_create(year: Nat, month: Nat, day: Nat, hour: Nat, min: Nat): CalendarDate = calendardate_create;
+
+    function create(year: Nat, month?: Nat=0n, day?: Nat=1n): CalendarDate
+        requires year >= 1900n;
+        requires month < 12n;
+        requires day != 0n && day <= 31n;
+    {
+        return CalendarDate::s_create(year, month, day);
+    }
+}
+//TODO: operators for orderable
+
+__internal __typedeclable entity RelativeLocalTime provides Some, Orderable, APIType, KeyType {
+    __assume_safe internal function s_create(hour: Nat, min: Nat): RelativeLocalTime = relativelocaltime_create;
+
+    function create(year: Nat, month?: Nat=0n, day?: Nat=1n): RelativeLocalTime
+        requires hour < 24n;
+        requires min < 60n;
+    {
+        return RelativeLocalTime::s_create(hour, min);
+    }
+}
+//TODO: operators for orderable
+
+//<summary>Primitive TickTime value.</summary>
+__internal __typedeclable entity TickTime provides Some, Orderable, KeyType APIType {
 }
 //TODO: operators for orderable
 
@@ -496,6 +634,27 @@ __internal __typedeclable entity LogicalTime provides Some, Orderable, KeyType, 
 }
 //TODO: operators for orderable and make key type compliant
 
+
+__internal __typedeclable entity ISOTimeStamp provides Some, Orderable, APIType, KeyType {
+    __assume_safe internal function s_create(year: Nat, month: Nat, day: Nat, hour: Nat, min: Nat): DateTime = utcdatetime_create;
+
+    function create(year: Nat, month?: Nat=0n, day?: Nat=1n, hour?: Nat=0n, min?: Nat=0n): UTCDateTime
+        requires year >= 1900n;
+        requires month < 12n;
+        requires day != 0n && day <= 31n;
+        requires hour < 24n;
+        requires min < 60n;
+    {
+        return UTCDateTime::s_create(year, month, day, hour, min);
+    }
+
+    /*
+    We want to keep original LOCAL time but also a stashed UTC time to allow for comparison
+    https://en.cppreference.com/w/cpp/chrono/zoned_time for way to extract this
+    */
+}
+//TODO: operators for orderable
+
 //<summary>Primitive UUID value.</summary>
 __internal __typedeclable entity UUID provides Some, KeyType, APIType {
 }
@@ -503,6 +662,11 @@ __internal __typedeclable entity UUID provides Some, KeyType, APIType {
 //<summary>Primitive hash value suitable for content addressable operations or crypto secure digests.</summary>
 __internal __typedeclable entity ContentHash provides Some, KeyType, APIType {
 }
+
+//<summary>Primitive Lat/Long</summary>
+__internal __typedeclable entity GeoCoordinate provides Some, Orderable, KeyType, APIType {
+}
+//TODO: operators for orderable
 
 //<summary>Primitive regex value.</summary>
 __internal entity Regex provides Some {

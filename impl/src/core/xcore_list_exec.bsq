@@ -418,18 +418,4 @@ internal entity ListOps provides Some {
     }
 }
 
-__internal entity PartialVector4<T> provides Some {
-    //Dummy placeholder
-}
-
-__internal entity PartialVector8<T> provides Some {
-    //Dummy placeholder
-}
-
-__internal entity ListTree<T> provides Some {
-    //Dummy placeholder
-}
-
-internal typedef ListRepr<T> = None | PartialVector4<T> | PartialVector8<T> | ListTree<T>;
-
 #endif
