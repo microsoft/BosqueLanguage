@@ -4426,16 +4426,7 @@ class Parser {
 
                     staticMembers.push(sfdecl);
                 });
-
-                if(attributes.includes("algebraic")) {
-                    const ttype = new NominalTypeSignature("Core", ["AlgebraicOpStability"], []);
-
-                    const cexp = new AccessStaticFieldExpression(sinfo, idval, "stability")
-                    const sfdecl = new StaticMemberDecl(sinfo, this.m_penv.getCurrentFile(), [], "stability", ttype, new ConstantExpressionValue(cexp, new Set<string>())); 
-
-                    staticMembers.push(sfdecl);
-                }
-
+                
                 if (this.testAndConsumeTokenIf("&")) {
                     this.setRecover(this.scanCodeParens());
                     this.ensureAndConsumeToken("{");
