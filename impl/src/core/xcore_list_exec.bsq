@@ -22,6 +22,15 @@ internal entity ListOps provides Some {
     function s_back<T>(l: List<T>): T = s_list_safe_back;
     function s_front<T>(l: List<T>): T = s_list_safe_front;
 
+    function s_set<T>(l: List<T>, i: Nat, v: T): List<T> = s_list_set;
+    function s_remove<T>(l: List<T>, i: Nat): List<T> = s_list_remove;
+
+    function s_pop_back<T>(l: List<T>): List<T> = s_list_pop_back;
+    function s_pop_front<T>(l: List<T>): List<T> = s_list_pop_front;
+
+    function s_push_back<T>(l: List<T>, v: T): List<T> = s_list_push_back;
+    function s_push_front<T>(l: List<T>, v: T): List<T> = s_list_push_front;
+
     recursive? function s_has_pred<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): Bool = s_list_has_pred;
     recursive? function s_has_pred_idx<T>(l: List<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Bool = s_list_find_has_idx;
 
@@ -34,242 +43,28 @@ internal entity ListOps provides Some {
     internal function s_indexof<T>(l: List<T>, v: T): Int = s_list_indexof; 
     internal function s_last_indexof<T>(l: List<T>, v: T): Int = s_list_last_indexof; 
 
+    recursive? function s_filter_pred<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): List<T> = s_list_filter_pred;
+    recursive? function s_filter_pred_idx<T>(l: List<T>, p: recursive? pred(_: T, _: Nat) -> Bool): List<T> = s_list_filter_pred_idx;
+
     recursive? function s_map<T, U>(l: List<T>, f: recursive? fn(_: T) -> U): List<U> = s_list_map;
     recursive? function s_map_idx<T, U>(l: List<T>, f: recursive? fn(_: T, _: Nat) -> U): List<U> = s_list_map_idx;
     recursive? function s_map_sync<T, U, V>(l1: List<T>, l2: List<U>, count: Nat, f: recursive? fn(_: T, _: U) -> V): List<V> = s_list_map_sync;
+
+    function s_slice_front<T>(l: List<T>, start: Nat): ListRepr<T> = s_list_slice_start;
+    function s_slice_end<T>(l: List<T>, end: Nat): ListRepr<T> = s_list_slice_end;
+
+    function s_append<T>(ll: List<T>, rr: List<T>): List<T> = s_list_append;
+
+    function s_reverse<T>(ll: ListRepr<T>): ListRepr<T> = s_list_reverse_ne;
+
+    recursive? function s_sort<T>(l: List<T>, cmp: recursive? pred(_: T, _: T) -> Bool): List<T> = s_list_sort;
+    recursive? function s_unique_from_sorted<T>(l: List<T>, eq: recursive? pred(_: T, _: T) -> Bool): List<T> = s_list_unique_from_sorted;
 
     recursive? function s_reduce<T, U>(l: List<T>, iv: U, f: recursive? fn(_: U, _: T) -> U): U = s_list_reduce_ne;
     recursive? function s_reduce_idx<T, U>(l: List<T>, iv: U, f: recursive? fn(_: U, _: T, _: Nat) -> U): U = s_list_reduce_idx_ne;
 
     recursive? function s_transduce<T, E, U>(l: List<T>, env: E, op: recursive? fn(_: E, _: T) -> (|E, U|)): (|E, List<U>|) = s_list_transduce_ne;
     recursive? function s_transduce_idx<T, E, U>(l: List<T>, env: E, op: recursive? fn(_: E, _: T, _: Nat) -> (|E, U|)): (|E, List<U>|) = s_list_transduce_idx_ne;
-
-    //////////////
-
-    function s_set_ne<T>(l: ListRepr<T>, i: Nat, v: T): ListRepr<T> = s_list_set_ne;
-    function s_remove_ne<T>(l: ListRepr<T>, i: Nat): ListRepr<T> = s_list_remove_ne;
-
-    function s_pop_back_ne<T>(l: ListRepr<T>): ListRepr<T> = s_list_pop_back_ne;
-    function s_pop_front_ne<T>(l: ListRepr<T>): ListRepr<T> = s_list_pop_front_ne;
-
-    function s_push_back_ne<T>(l: ListRepr<T>, v: T): ListRepr<T> = s_list_push_back_ne;
-    function s_push_front_ne<T>(l: ListRepr<T>, v: T): ListRepr<T> = s_list_push_front_ne;
-
-    
-
-    function s_reverse_ne<T>(ll: ListRepr<T>): ListRepr<T> = s_list_reverse_ne;
-
-    function s_append_ne<T>(ll: ListRepr<T>, rr: ListRepr<T>): ListRepr<T> = s_list_append_ne;
-
-    function s_slice_start_ne<T>(l: ListRepr<T>, start: Nat): ListRepr<T> = s_list_slice_start;
-    function s_slice_end_ne<T>(l: ListRepr<T>, end: Nat): ListRepr<T> = s_list_slice_end;
-
-    
-
-   
-
-    recursive? function s_filter_pred_ne<T>(l: ListRepr<T>, p: recursive? pred(_: T) -> Bool): ListRepr<T> = s_list_filter_pred_ne;
-    recursive? function s_filter_pred_idx_ne<T>(l: ListRepr<T>, p: recursive? pred(_: T, _: Nat) -> Bool): ListRepr<T> = s_list_filter_pred_idx_ne;
-
-
-    recursive? function s_sort_ne<T>(l: ListRepr<T>, cmp: recursive? pred(_: T, _: T) -> Bool): ListRepr<T> = s_list_sort_ne;
-    recursive? function s_unique_from_sorted_ne<T>(l: ListRepr<T>, eq: recursive? pred(_: T, _: T) -> Bool): ListRepr<T> = s_list_unique_from_sorted_ne;
-
-    
-
-    function s_append<T>(l: ListRepr<T>, r: ListRepr<T>): ListRepr<T> {
-        if(/\(l === none, r === none)) {
-            return none;
-        }
-        elif(l === none) {
-            return r;
-        }
-        elif(r === none) {
-            return l;
-        }
-        else {
-            return ListOps::s_append_ne<T>(l, r);
-        }
-    }
-
-    recursive function s_concatrec<T>(ll: List<List<T>>, start: Nat, end: Nat): List<T> {
-        let count = end - start;
-        if(count == 1) {
-            return ListOps::s_safe_get<List<T>>(ll, start);
-        }
-        else {
-            let split = count / 2n;
-            let la = List<T>::s_concat(ll, start, start + split);
-            let ra = List<T>::s_concat(lr, start + split, end);
-
-            return ListOps::s_append<T>(la, ra);
-        }
-    }
-
-    function s_concat(ll: List<List<T>>): List<T> {
-        let count = ListOps::s_size<List<T>>(ll);
-        if(count == 0) {
-            return List<T>{};
-        }
-        elif(count == 1) {
-            return ListOps::s_safe_get<List<T>>(ll, start);
-        }
-        else {
-            let split = count / 2n;
-            let la = List<T>::s_concat(ll, 0, split);
-            let ra = List<T>::s_concat(lr, split, end);
-
-            return ListOps::s_append<T>(la, ra);
-        }
-    }
-
-    function s_slice_start(l: ListRepr<T>, start: Nat): ListRepr<T> {
-        if(l === none) {
-            return none;
-        }
-        elif(start == 0) {
-            return l;
-        }
-        else {
-            return ListOps::s_slice_start_ne<T>(l, start);
-        }
-    }
-
-    function s_slice_end(l: ListRepr<T>, end: Nat): ListRepr<T> {
-        if(l === none) {
-            return none;
-        }
-        elif(end == 0) {
-            return l;
-        }
-        else {
-            return ListOps::s_slice_end_ne<T>(l, end);
-        }
-    }
-
-
-    recursive? function s_filter_pred<T>(l: ListRepr<T>, p: recursive? pred(_: T) -> Bool): ListRepr<T> {
-         if(l === none) {
-            return none;
-        }
-        else {
-            return ListOps::s_filter_pred_ne<T>[recursive?](l, p);
-        }
-    }
-
-    recursive? function s_filter_pred_idx<T>(l: ListRepr<T>, p: recursive? pred(_: T, _: Nat) -> Bool): ListRepr<T> {
-        if(l === none) {
-            return none;
-        }
-        else {
-            return ListOps::s_filter_pred_idx_ne<T>[recursive?](l, p);
-        }
-    }
-
-
-    recursive? function s_sort<T>(l: ListRepr<T>, cmp: recursive? pred(_: T, _: T) -> Bool): ListRepr<T> {
-        if(l === none) {
-            return none;
-        }
-        else {
-            return ListOps::s_sort_ne<T>(l, cmp);
-        }
-    }
-
-    recursive? function s_unique_from_sorted<T>(l: ListRepr<T>, eq: recursive? pred(_: T, _: T) -> Bool): ListRepr<T> {
-        if(l === none) {
-            return none;
-        }
-        else {
-            return ListOps::s_unique_from_sorted_ne<T>(l, cmp);
-        }
-    }
-    
-    function s_reverse(l: ListRepr<T>): ListRepr<T> {
-        if(l === none) {
-            return none;
-        }
-        else {
-            return ListOps::s_reverse_ne(l);
-        }
-    }
-
-    function s_set<T>(l: ListRepr<T>, i: Nat, v: T): ListRepr<T> {
-        return ListOps::s_set_ne<T>(l, i, v);
-    }
-
-    function s_push_back<T>(l: ListRepr<T>, v: T): ListRepr<T> {
-        return ListOps::s_push_back_ne<T>(l, v);
-    }
-
-    function s_push_front<T>(l: ListRepr<T>, v: T): ListRepr<T> {
-        return ListOps::s_push_front_ne<T>(l, v);
-    }
-
-    function s_remove<T>(l: ListRepr<T>, i: Nat): ListRepr<T> {
-        if(ListOps::s_size<T>(l) == 1n) {
-            return none;
-        }
-        else {
-            return ListOps::s_remove_ne<T>(l, i);
-        }
-    }
-
-    function s_safe_pop_back<T>(l: ListRepr<T>, i: Nat): ListRepr<T> {
-        if(ListOps::s_size<T>(l) == 1n) {
-            return none;
-        }
-        else {
-            return ListOps::s_pop_back_ne<T>(l);
-        }
-    }
-
-    function s_safe_pop_front<T>(l: ListRepr<T>, i: Nat): ListRepr<T> {
-        if(ListOps::s_size<T>(l) == 1n) {
-            return none;
-        }
-        else {
-            return ListOps::s_pop_front_ne<T>(l);
-        }
-    }
-
-    recursive? function s_reduce<T, U>(l: ListRepr<T>, init: U, op: recursive? fn(_: U, _: T) -> U): U {
-        if(l === none) {
-            return init;
-        }
-        else {
-            let acc = op[recursive?](init, ListOps::s_safe_get_ne<T>(l, 0));
-            let rr = ListOps::s_reduce_ne<T, U>(l, acc, op);
-        }
-    }
-
-    recursive? function s_reduce_idx<T, U>(l: ListRepr<T>, init: U, op: recursive? fn(_: U, _: T, _: Nat) -> U): U {
-        if(l === none) {
-            return init;
-        }
-        else {
-            let acc = op[recursive?](init, ListOps::s_safe_get_ne<T>(l, 0), 0n);
-            let rr = ListOps::s_reduce_idx_ne<T, U>(l, acc, op);
-        }
-    }
-
-    recursive? function s_transduce<T, E, U>(env: E, op: recursive? fn(_: E, _: T) -> (|E, U|)): (|E, ListRepr<U>|) {
-        if(l === none) {
-            return (|env, none|);
-        }
-        else {
-            return ListOps::s_transduce_ne<T, E, U>(l, env, op);
-        }
-    }
-
-    recursive? function s_transduce_idx<T, E, U>(env: E, op: recursive? fn(_: E, _: T, _: Nat) -> (|E, U|)): (|ListRepr<U>, E|) {
-        if(l === none) {
-            return (|none, env|);
-        }
-        else {
-            return ListOps::s_transduce_idx_ne<T, E, U>(l, env, op);
-        }
-    }
 }
 
 #endif
