@@ -196,6 +196,7 @@ typedef void* StorageLocationPtr;
 
 #define IS_INLINE_STRING(S) (*(((uint8_t*)(S)) + 15) != 0)
 #define IS_INLINE_BIGNUM(N) false
+#define IS_EMPTY_COLLECTION(C) (C == nullptr)
 
 #define SLPTR_LOAD_CONTENTS_AS(T, L) (*((T*)L))
 #define SLPTR_STORE_CONTENTS_AS(T, L, V) *((T*)L) = V
@@ -241,7 +242,8 @@ enum class BSQTypeLayoutKind : uint32_t
 #define PTR_FIELD_MASK_PTR '2'
 #define PTR_FIELD_MASK_STRING '3'
 #define PTR_FIELD_MASK_BIGNUM '4'
-#define PTR_FIELD_MASK_UNION '5'
+#define PTR_FIELD_MASK_COLLECTION '5'
+#define PTR_FIELD_MASK_UNION '6'
 #define PTR_FIELD_MASK_END (char)0
 
 typedef const char* RefMask;
