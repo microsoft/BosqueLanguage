@@ -1,4 +1,4 @@
-namepace WeatherForecast;
+namespace WeatherForecast;
 
 import Numerics;
 import ImperialUnits;
