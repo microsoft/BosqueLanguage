@@ -131,7 +131,7 @@ NamedGreeting{"bob"}.sayHello()      //"hello bob"
 
 **(Algebraic Data Types)++ and Union Types**
 ```
-typedecl BoolOp provides APIType using {
+datatype BoolOp provides APIType using {
     line: Nat
 } of
 LConst { val: Bool }
