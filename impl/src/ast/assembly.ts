@@ -399,10 +399,6 @@ class OOPTypeDecl {
         return this.attributes.includes("__universal"); 
     }
 
-    isUsableAsTypeDeclBase(): boolean {
-        return this.attributes.includes("__typedeclable"); 
-    }
-
     isSpecialConstructableEntity(): boolean {
         return this.attributes.includes("__constructable"); 
     }

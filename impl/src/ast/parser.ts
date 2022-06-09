@@ -60,6 +60,7 @@ const KeywordStrings = [
     "type",
     "typedef",
     "typedecl",
+    "datatype",
     "using",
     "validate",
     "var",
@@ -4247,7 +4248,7 @@ class Parser {
                 this.raiseError(line, "Cannot have invariant function on Enum types");
             }
 
-            attributes.push("__enum_type", "__constructable");
+            attributes.push("__enum_type", "__constructable", "__typedeclable");
 
             this.clearRecover();
             currentDecl.objects.set(ename, new EntityTypeDecl(sinfo, this.m_penv.getCurrentFile(), attributes, currentDecl.ns, ename, [], provides, invariants, validates, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods, new Map<string, EntityTypeDecl>()));
@@ -4259,6 +4260,298 @@ class Parser {
     }
 
     private parseTypeDecl(currentDecl: NamespaceDeclaration) {
+        const line = this.getCurrentLine();
+        const attributes = this.parseAttributes();
+
+        const sinfo = this.getCurrentSrcInfo();
+       
+        this.ensureAndConsumeToken("typedecl");
+
+        const iname = this.consumeTokenAndGetValue();
+        const terms = this.parseTermDeclarations();
+        if (currentDecl.checkDeclNameClash(currentDecl.ns, iname)) {
+            this.raiseError(line, "Collision between object and other names");
+        }
+
+        const sfpos = this.sortedSrcFiles.findIndex((entry) => entry.fullname === this.m_penv.getCurrentFile());
+        if(sfpos === -1) {
+            this.raiseError(sinfo.line, "Source name not registered");
+        }
+        
+        const bodyid = `k${sfpos}#${this.sortedSrcFiles[sfpos].shortname}::${sinfo.line}@${sinfo.pos}`;
+
+        if (this.testToken(TokenStrings.Regex)) {
+            //[attr] typedecl NAME = regex;
+            if (terms.length !== 0) {
+                this.raiseError(line, "Cannot have template terms on Validator type");
+            }
+
+            const vregex = this.consumeTokenAndGetValue();
+            this.consumeToken();
+
+            const re = BSQRegex.parse(this.m_penv.getCurrentNamespace(), vregex);
+            if (typeof (re) === "string") {
+                this.raiseError(this.getCurrentLine(), re);
+            }
+
+            const validator = new StaticMemberDecl(sinfo, this.m_penv.getCurrentFile(), [], "vregex", new NominalTypeSignature("Core", ["Regex"]), new ConstantExpressionValue(new LiteralRegexExpression(sinfo, re as BSQRegex), new Set<string>()));
+            const param = new FunctionParameter("arg", new NominalTypeSignature("Core", ["String"]), false, undefined, undefined, undefined);
+
+            const acceptsid = this.generateBodyID(sinfo, this.m_penv.getCurrentFile(), "accepts");
+            const acceptsbody = new BodyImplementation(`${this.m_penv.getCurrentFile()}::${sinfo.pos}`, this.m_penv.getCurrentFile(), "validator_accepts");
+            const acceptsinvoke = new InvokeDecl("Core", sinfo, sinfo, acceptsid, this.m_penv.getCurrentFile(), ["__safe"], "no", [], undefined, [param], undefined, undefined, new NominalTypeSignature("Core", ["Bool"]), [], [], false, false, new Set<string>(), acceptsbody);
+            const accepts = new StaticFunctionDecl(sinfo, this.m_penv.getCurrentFile(), "accepts", acceptsinvoke);
+            const provides = [[new NominalTypeSignature("Core", ["Some"]), undefined], [new NominalTypeSignature("Core", ["Validator"]), undefined]] as [TypeSignature, TypeConditionRestriction | undefined][];
+            const validatortype = new EntityTypeDecl(sinfo, this.m_penv.getCurrentFile(), ["__validator_type", ...attributes], currentDecl.ns, iname, [], provides, [], [], [validator], [accepts], [], [], [], new Map<string, EntityTypeDecl>());
+
+            currentDecl.objects.set(iname, validatortype);
+            this.m_penv.assembly.addObjectDecl((currentDecl.ns !== "Core" ? (currentDecl.ns + "::") : "") + iname, currentDecl.objects.get(iname) as EntityTypeDecl);
+            this.m_penv.assembly.addValidatorRegex((currentDecl.ns !== "Core" ? (currentDecl.ns + "::") : "") + iname, re as BSQRegex);
+        }
+        else {
+            //[attr] typedecl NAME = PRIMITIVE [& {...}];
+
+            if (terms.length !== 0) {
+                this.raiseError(line, "Cannot have template terms on Typed Primitive type");
+            }
+            const idval = this.parseNominalType() as NominalTypeSignature;
+
+            let provides = [[new NominalTypeSignature("Core", ["Some"]), undefined], [new NominalTypeSignature("Core", ["APIType"]), undefined]] as [TypeSignature, TypeConditionRestriction | undefined][];
+            provides.push([new NominalTypeSignature("Core", ["KeyType"]), new TypeConditionRestriction([new TemplateTypeRestriction(idval, false, false, new NominalTypeSignature("Core", ["KeyType"]))])]);
+
+            const invariants: InvariantDecl[] = [];
+            const validates: ValidateDecl[] = [];
+            const staticMembers: StaticMemberDecl[] = [];
+            const staticFunctions: StaticFunctionDecl[] = [];
+            const staticOperators: StaticOperatorDecl[] = [];
+            const memberFields: MemberFieldDecl[] = [];
+            const memberMethods: MemberMethodDecl[] = [];
+
+            let implicitops: string[][] = [];
+
+            const ttname = idval.tnames[0];
+            if(ttname === "Int" || ttname === "Nat" || ttname === "BigInt" || ttname === "BigNat" || ttname === "Float" || ttname === "Decimal" || ttname === "Rational") {
+                implicitops = [["t", "==", "t", "Bool"], ["t", "!=", "t", "Bool"]];
+
+                if (attributes.includes("orderable")) {
+                    provides.push([new NominalTypeSignature("Core", ["Orderable"]), undefined]);
+
+                    implicitops = [...implicitops, ["t", "<", "t", "Bool"], ["t", ">", "t", "Bool"], ["t", "<=", "t", "Bool"], ["t", ">=", "t", "Bool"]];
+                }
+
+                if (attributes.includes("algebraic")) {
+                    provides.push([new NominalTypeSignature("Core", ["Algebraic"]), undefined]);
+
+                    implicitops = [...implicitops, ["+", "t", "t"], ["t", "+", "t", "t"], ["-", "t", "t"], ["t", "-", "t", "t"], ["t", "*", "u", "t"], ["u", "*", "t", "t"], ["t", "/", "t", "u"]];
+                }
+
+                ["zero", "one"].forEach((sf) => {
+                    const ttype = new NominalTypeSignature(currentDecl.ns, [iname], []);
+
+                    const cexp = new ConstructorPrimaryExpression(sinfo, ttype, new Arguments([new PositionalArgument(undefined, false, new AccessStaticFieldExpression(sinfo, idval, sf))]));
+                    const sfdecl = new StaticMemberDecl(sinfo, this.m_penv.getCurrentFile(), [], sf, ttype, new ConstantExpressionValue(cexp, new Set<string>()));
+
+                    staticMembers.push(sfdecl);
+                });
+            }
+            else if(ttname === "StringOf") {
+                //TODO: what operations do we want to forward by default (or config)
+            }
+            else if(ttname === "DataString") {
+                //TODO: what operations do we want to forward by default (or config)
+            }
+            else if(ttname === "RelativeLogicalDirectoryPath" || ttname === "RelativeLogicalResourcePath") {
+                //TODO: what operations do we want to forward by default (or config)
+            }
+            else if(ttname === "LogicalDirectoryPath" || ttname === "LogicalResourcePath") {
+                //TODO: what operations do we want to forward by default (or config)
+            }
+            else if(ttname === "RelativeLogicalGlob" || ttname === "LogicalGlob") {
+                //TODO: what operations do we want to forward by default (or config)
+            }
+            else if(ttname === "ScopedIdentity") {
+                //TODO: what operations do we want to forward by default (or config)
+            }
+            else if(ttname === "DateTime") {
+                //TODO: what operations do we want to forward by default (or config)
+            }
+            else if(ttname === "UTCDateTime") {
+                let implicitops = [["t", "==", "t", "Bool"], ["t", "!=", "t", "Bool"]];
+
+                provides.push([new NominalTypeSignature("Core", ["Orderable"]), undefined]);
+                implicitops = [...implicitops, ["t", "<", "t", "Bool"], ["t", ">", "t", "Bool"], ["t", "<=", "t", "Bool"], ["t", ">=", "t", "Bool"]];
+                //TODO: what operations do we want to forward by default (or config)
+            }
+            else if(ttname === "CalendarDate") {
+                let implicitops = [["t", "==", "t", "Bool"], ["t", "!=", "t", "Bool"]];
+
+                provides.push([new NominalTypeSignature("Core", ["Orderable"]), undefined]);
+                implicitops = [...implicitops, ["t", "<", "t", "Bool"], ["t", ">", "t", "Bool"], ["t", "<=", "t", "Bool"], ["t", ">=", "t", "Bool"]];
+                //TODO: what operations do we want to forward by default (or config)
+            }
+            else if(ttname === "RelativeLocalTime") {
+                //TODO: what operations do we want to forward by default (or config)
+            }
+            else if(ttname === "TickTime") {
+                let implicitops = [["t", "==", "t", "Bool"], ["t", "!=", "t", "Bool"]];
+
+                provides.push([new NominalTypeSignature("Core", ["Orderable"]), undefined]);
+                implicitops = [...implicitops, ["t", "<", "t", "Bool"], ["t", ">", "t", "Bool"], ["t", "<=", "t", "Bool"], ["t", ">=", "t", "Bool"]];
+
+                provides.push([new NominalTypeSignature("Core", ["Algebraic"]), undefined]);
+                implicitops = [...implicitops, ["t", "+", "t", "t"], ["t", "-", "t", "t"]];
+                //TODO: allow *, / by scalar
+            }
+            else if(ttname === "LogicalTime") {
+                let implicitops = [["t", "==", "t", "Bool"], ["t", "!=", "t", "Bool"]];
+
+                provides.push([new NominalTypeSignature("Core", ["Orderable"]), undefined]);
+                implicitops = [...implicitops, ["t", "<", "t", "Bool"], ["t", ">", "t", "Bool"], ["t", "<=", "t", "Bool"], ["t", ">=", "t", "Bool"]];
+
+                provides.push([new NominalTypeSignature("Core", ["Algebraic"]), undefined]);
+                implicitops = [...implicitops, ["t", "+", "t", "t"], ["t", "-", "t", "t"]];
+                //TODO: allow *, / by scalar
+
+                ["zero", "one"].forEach((sf) => {
+                    const ttype = new NominalTypeSignature(currentDecl.ns, [iname], []);
+
+                    const cexp = new ConstructorPrimaryExpression(sinfo, ttype, new Arguments([new PositionalArgument(undefined, false, new AccessStaticFieldExpression(sinfo, idval, sf))]));
+                    const sfdecl = new StaticMemberDecl(sinfo, this.m_penv.getCurrentFile(), [], sf, ttype, new ConstantExpressionValue(cexp, new Set<string>()));
+
+                    staticMembers.push(sfdecl);
+                });
+            }
+            else if(ttname === "ISOTimeStamp") {
+                let implicitops = [["t", "==", "t", "Bool"], ["t", "!=", "t", "Bool"]];
+
+                provides.push([new NominalTypeSignature("Core", ["Orderable"]), undefined]);
+                implicitops = [...implicitops, ["t", "<", "t", "Bool"], ["t", ">", "t", "Bool"], ["t", "<=", "t", "Bool"], ["t", ">=", "t", "Bool"]];
+            }
+            else if(ttname === "UUID") {
+                //TODO: what operations do we want to forward by default (or config)
+            }
+            else if(ttname === "ContentHash") {
+                //TODO: what operations do we want to forward by default (or config)
+            }
+            else {
+                //must be geo-coordinate
+                //TODO: what operations do we want to forward by default (or config)
+            }
+
+            implicitops.forEach((op) => {
+                const ns = this.m_penv.assembly.getNamespace("Core");
+
+                const isprefix = op[0] !== "t" && op[0] !== "u";
+                const opstr = isprefix ? op[0] : op[1];
+
+                const ttype = new NominalTypeSignature(currentDecl.ns, [iname], []);
+
+                let params: FunctionParameter[] = [];
+                let bexp: Expression = new LiteralNoneExpression(sinfo);
+
+                if (isprefix) {
+                    const ptype = op[1] === "t" ? ttype : idval;
+                    params = [new FunctionParameter("l", ptype, false, undefined, undefined, undefined)];
+                    const laccess = new AccessVariableExpression(sinfo, "l");
+                    const aexp = (op[1] === "t") ?
+                        new PostfixOp(sinfo, laccess, [new PostfixInvoke(sinfo, false, undefined, "value", new TemplateArguments([]), "no", new Arguments([]))])
+                        : laccess;
+
+                    bexp = new CallNamespaceFunctionOrOperatorExpression(sinfo, "Core", op[0], new TemplateArguments([]), "no", new Arguments([new PositionalArgument(undefined, false, aexp)]), "prefix");
+                }
+                else {
+                    const lptype = op[0] === "t" ? ttype : idval;
+                    const rptype = op[2] === "t" ? ttype : idval;
+                    params = [new FunctionParameter("l", lptype, false, undefined, undefined, undefined), new FunctionParameter("r", rptype, false, undefined, undefined, undefined)];
+
+                    const laccess = new AccessVariableExpression(sinfo, "l");
+                    const lexp = (op[0] === "t") ?
+                        new PostfixOp(sinfo, laccess, [new PostfixInvoke(sinfo, false, undefined, "value", new TemplateArguments([]), "no", new Arguments([]))])
+                        : laccess;
+
+                    const raccess = new AccessVariableExpression(sinfo, "r");
+                    const rexp = (op[2] === "t") ?
+                        new PostfixOp(sinfo, raccess, [new PostfixInvoke(sinfo, false, undefined, "value", new TemplateArguments([]), "no", new Arguments([]))])
+                        : raccess;
+
+                    bexp = new CallNamespaceFunctionOrOperatorExpression(sinfo, "Core", op[1], new TemplateArguments([]), "no", new Arguments([new PositionalArgument(undefined, false, lexp), new PositionalArgument(undefined, false, rexp)]), "infix");
+                }
+
+                let resultType: TypeSignature = new NominalTypeSignature("Core", ["Bool"]);
+                const resstr = op[op.length - 1];
+                if (resstr === "t") {
+                    resultType = ttype;
+                }
+                else if (resstr === "u") {
+                    resultType = idval;
+                }
+                else {
+                    //already set to bool
+                }
+
+                if (resstr === "t") {
+                    bexp = new ConstructorPrimaryExpression(sinfo, ttype, new Arguments([new PositionalArgument(undefined, false, bexp)]));
+                }
+
+                const bodyid = this.generateBodyID(sinfo, this.m_penv.getCurrentFile(), opstr);
+                const body = new BodyImplementation(bodyid, this.m_penv.getCurrentFile(), new BlockStatement(sinfo, [new ReturnStatement(sinfo, [bexp])]));
+                const sig = InvokeDecl.createStandardInvokeDecl("Core", sinfo, sinfo, bodyid, this.m_penv.getCurrentFile(), [isprefix ? "prefix" : "infix"], "no", [], undefined, params, undefined, undefined, resultType, [], [], body);
+
+                let level = -1;
+                if (opstr === "+" || opstr === "-") {
+                    level = isprefix ? 1 : 3;
+                }
+                else if (opstr === "*" || opstr === "/") {
+                    level = 2;
+                }
+                else {
+                    level = 4;
+                }
+
+                if (!ns.operators.has(opstr)) {
+                    ns.operators.set(opstr, []);
+                }
+                (ns.operators.get(opstr) as NamespaceOperatorDecl[]).push(new NamespaceOperatorDecl(sinfo, this.m_penv.getCurrentFile(), "Core", opstr, sig, level));
+            });
+
+            if (this.testAndConsumeTokenIf("&")) {
+                this.setRecover(this.scanCodeParens());
+                this.ensureAndConsumeToken("{");
+
+                const thisType = new NominalTypeSignature(currentDecl.ns, [iname], []);
+
+                const nestedEntities = new Map<string, EntityTypeDecl>();
+                this.parseOOPMembersCommon(thisType, currentDecl, [iname], [], nestedEntities, invariants, validates, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods);
+
+                this.ensureAndConsumeToken("}");
+
+                if (currentDecl.checkDeclNameClash(currentDecl.ns, iname)) {
+                    this.raiseError(line, "Collision between concept and other names");
+                }
+
+                this.clearRecover();
+            }
+            else {
+                this.ensureAndConsumeToken(";");
+            }
+
+            const vparam = new FunctionParameter("v", idval, false, undefined, undefined, undefined);
+
+            const valueid = this.generateBodyID(sinfo, this.m_penv.getCurrentFile(), "value");
+            const valuebody = new BodyImplementation(`${bodyid}_value`, this.m_penv.getCurrentFile(), "special_extract");
+            const valuedecl = new InvokeDecl("Core", sinfo, sinfo, valueid, this.m_penv.getCurrentFile(), ["__safe"], "no", [], undefined, [vparam], undefined, undefined, idval, [], [], false, false, new Set<string>(), valuebody);
+            const value = new MemberMethodDecl(sinfo, this.m_penv.getCurrentFile(), "value", false, valuedecl);
+
+            memberMethods.push(value);
+
+            attributes.push("__typedprimitive", "__constructable");
+
+            currentDecl.objects.set(iname, new EntityTypeDecl(sinfo, this.m_penv.getCurrentFile(), attributes, currentDecl.ns, iname, [], provides, invariants, validates, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods, new Map<string, EntityTypeDecl>()));
+            this.m_penv.assembly.addObjectDecl((currentDecl.ns !== "Core" ? (currentDecl.ns + "::") : "") + iname, currentDecl.objects.get(iname) as EntityTypeDecl);
+        }
+    }
+
+    private parseDataTypeDecl(currentDecl: NamespaceDeclaration) {
         const line = this.getCurrentLine();
         const attributes = this.parseAttributes();
 
@@ -4464,6 +4757,7 @@ class Parser {
             }
         }
         else {
+            xxxx;
             //[attr] typedecl NAME<...> [provides ... ] [using {...}] of
             // Foo {...}
             // | ...
@@ -4869,6 +5163,7 @@ class Parser {
                         }
                     }
                     else {
+                        xxxx;
                         //[attr] typedecl NAME<...> [provides ... ] [using {...}] of
                         // Foo {...}
                         // | ...
@@ -5023,6 +5318,7 @@ class Parser {
                 else if (tk === "typedecl") {
                     this.parseTypeDecl(nsdecl);
                 }
+                xxxx;
                 else if (tk === TokenStrings.EndOfStream) {
                     this.parseEndOfStream();
                 }
