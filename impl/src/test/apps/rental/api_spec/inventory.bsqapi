@@ -1,0 +1,11 @@
+namespace Inventory;
+
+typedecl ValidSurfBoardID = /SurfBoardInventory/;
+
+typedef SurfBoardInventory = {
+    id: StringOf<ValidSurfBoardID>,
+    inventory: Nat,
+    reservations: Nat, 
+    returns: Nat
+};
+

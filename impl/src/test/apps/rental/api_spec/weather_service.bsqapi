@@ -1,0 +1,34 @@
+namepace WeatherForecast;
+
+import Numerics;
+import ImperialUnits;
+
+enum WindDirection {
+    north,
+    south,
+    east,
+    west
+}
+
+const shortForcastOption: Regex = /Sun|Snow|Wind|Thunderstorms/
+typedecl ShortForecastDetail = /${shortForcastOption}( and ${shortForcastOption})?/;
+
+entity Forecast provides APIType {
+    field temp: {low: ImperialUnits::Fahrenheit, high: ImperialUnits::Fahrenheit};
+    field windSpeed: {min: ImperialUnits::MPH, max: ImperialUnits::MPH};
+    field windDirection: WindDirection;
+    field shortForecast: StringOf<ShortForecastDetail>;
+    field forecastPercentage: Numerics::Percentage;
+
+    invariant $temp.low <= $temp.high;
+    invariant 0_ImperialUnits::MPH <= $windSpeed.min && $windSpeed.min <= $windSpeed.max; 
+}
+
+enum ForecastError {
+    unknownCity,
+    internalError
+}
+
+typedecl USCityName = /([A-Z][a-z]+)[.]?( [A-Z][a-z]+[.]?)*/
+
+entrypoint function getForecast(name: USCityName): Result<Forecast, ForecastError>;
