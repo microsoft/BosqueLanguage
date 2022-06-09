@@ -608,22 +608,22 @@ __safe __primitive inline infix operator >(a: CalendarDate, b: CalendarDate): Bo
 __safe __primitive inline infix operator <=(a: CalendarDate, b: CalendarDate): Bool = default;
 __safe __primitive inline infix operator >=(a: CalendarDate, b: CalendarDate): Bool = default;
 
-__internal __typedeclable entity RelativeLocalTime provides Some, Orderable, APIType, KeyType {
-    __assume_safe internal function s_create(hour: Nat, min: Nat): RelativeLocalTime = relativelocaltime_create;
+__internal __typedeclable entity RelativeTime provides Some, Orderable, APIType, KeyType {
+    __assume_safe internal function s_create(hour: Nat, min: Nat): RelativeTime = relativetime_create;
 
-    function create(year: Nat, month?: Nat=0n, day?: Nat=1n): RelativeLocalTime
+    function create(year: Nat, month?: Nat=0n, day?: Nat=1n): RelativeTime
         requires hour < 24n;
         requires min < 60n;
     {
-        return RelativeLocalTime::s_create(hour, min);
+        return RelativeLTime::s_create(hour, min);
     }
 }
-__safe __primitive inline infix operator ==(a: RelativeLocalTime, b: RelativeLocalTime): Bool = default;
-__safe __primitive inline infix operator !=(a: RelativeLocalTime, b: RelativeLocalTime): Bool = default;
-__safe __primitive inline infix operator <(a: RelativeLocalTime, b: RelativeLocalTime): Bool = default;
-__safe __primitive inline infix operator >(a: RelativeLocalTime, b: RelativeLocalTime): Bool = default;
-__safe __primitive inline infix operator <=(a: RelativeLocalTime, b: RelativeLocalTime): Bool = default;
-__safe __primitive inline infix operator >=(a: RelativeLocalTime, b: RelativeLocalTime): Bool = default;
+__safe __primitive inline infix operator ==(a: RelativeTime, b: RelativeTime): Bool = default;
+__safe __primitive inline infix operator !=(a: RelativeTime, b: RelativeTime): Bool = default;
+__safe __primitive inline infix operator <(a: RelativeTime, b: RelativeTime): Bool = default;
+__safe __primitive inline infix operator >(a: RelativeTime, b: RelativeTime): Bool = default;
+__safe __primitive inline infix operator <=(a: RelativeTime, b: RelativeTime): Bool = default;
+__safe __primitive inline infix operator >=(a: RelativeTime, b: RelativeTime): Bool = default;
 
 //<summary>Primitive TickTime value.</summary>
 __internal __typedeclable entity TickTime provides Some, Orderable, KeyType APIType {

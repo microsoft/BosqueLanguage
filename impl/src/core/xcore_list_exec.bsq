@@ -50,12 +50,12 @@ internal entity ListOps provides Some {
     internal recursive? function s_map_idx<T, U>(l: List<T>, f: recursive? fn(_: T, _: Nat) -> U): List<U> = s_list_map_idx;
     internal recursive? function s_map_sync<T, U, V>(l1: List<T>, l2: List<U>, count: Nat, f: recursive? fn(_: T, _: U) -> V): List<V> = s_list_map_sync;
 
-    internal function s_slice_front<T>(l: List<T>, start: Nat): ListRepr<T> = s_list_slice_start;
-    internal function s_slice_end<T>(l: List<T>, end: Nat): ListRepr<T> = s_list_slice_end;
+    internal function s_slice_front<T>(l: List<T>, start: Nat): List<T> = s_list_slice_start;
+    internal function s_slice_end<T>(l: List<T>, end: Nat): List<T> = s_list_slice_end;
 
     internal function s_append<T>(ll: List<T>, rr: List<T>): List<T> = s_list_append;
 
-    internal function s_reverse<T>(ll: ListRepr<T>): ListRepr<T> = s_list_reverse_ne;
+    internal function s_reverse<T>(ll: List<T>): List<T> = s_list_reverse_ne;
 
     internal recursive? function s_sort<T>(l: List<T>, cmp: recursive? pred(_: T, _: T) -> Bool): List<T> = s_list_sort;
     internal recursive? function s_unique_from_sorted<T>(l: List<T>, eq: recursive? pred(_: T, _: T) -> Bool): List<T> = s_list_unique_from_sorted;

@@ -4390,7 +4390,7 @@ class Parser {
                 implicitops = [...implicitops, ["t", "<", "t", "Bool"], ["t", ">", "t", "Bool"], ["t", "<=", "t", "Bool"], ["t", ">=", "t", "Bool"]];
                 //TODO: what operations do we want to forward by default (or config)
             }
-            else if(ttname === "RelativeLocalTime") {
+            else if(ttname === "RelativeTime") {
                 let implicitops = [["t", "==", "t", "Bool"], ["t", "!=", "t", "Bool"]];
 
                 provides.push([new NominalTypeSignature("Core", ["Orderable"]), undefined]);
