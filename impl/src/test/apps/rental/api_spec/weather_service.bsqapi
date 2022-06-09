@@ -29,6 +29,7 @@ enum ForecastError {
     internalError
 }
 
-typedecl USCityName = /([A-Z][a-z]+)[.]?( [A-Z][a-z]+[.]?)*/
+//typedecl ZipcodeUS = /[0-9]{5}(-[0-9]{4})?/;
+typedecl CityNameUS = /([A-Z][a-z]+)[.]?( [A-Z][a-z]+[.]?)*/
 
-entrypoint function getForecast(name: USCityName): Result<Forecast, ForecastError>;
+entrypoint function getForecast(name: CityNameUS): Result<Forecast, ForecastError>;
