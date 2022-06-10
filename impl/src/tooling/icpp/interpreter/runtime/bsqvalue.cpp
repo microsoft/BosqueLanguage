@@ -764,6 +764,10 @@ BSQString BSQStringImplType::concat2(StorageLocationPtr s1, StorageLocationPtr s
             }
             else
             {
+                //
+                //TODO: want to rebalance here later
+                //
+
                 auto crepr = (BSQStringTreeRepr*)Allocator::GlobalAllocator.allocateDynamic(BSQWellKnownType::g_typeStringTreeRepr);
                 crepr->size = (uint64_t)(len1 + len2);
                 crepr->srepr1 = IS_INLINE_STRING(s1) ? BSQStringImplType::boxInlineString(stck[0].u_inlineString) : stck[0].u_data;
@@ -780,13 +784,10 @@ BSQString BSQStringImplType::concat2(StorageLocationPtr s1, StorageLocationPtr s
 
 BSQString BSQStringImplType::slice(StorageLocationPtr str, int64_t startpos, int64_t endpos)
 {
-    //
-    //TODO: want to rebalance here later
-    //
-
-    Allocator::GlobalAllocator.ensureSpace(sizeof(BSQStringKReprType<32>));
-
-    auto rstr = SLPTR_LOAD_CONTENTS_AS(BSQString, str);
+    BSQString res;
+    BSQString* stck = (BSQString*)GCStack::allocFrame(sizeof(BSQString));
+    
+    stck[0] = SLPTR_LOAD_CONTENTS_AS(BSQString, str);
 
     if(startpos >= endpos)
     {
@@ -797,9 +798,9 @@ BSQString BSQStringImplType::slice(StorageLocationPtr str, int64_t startpos, int
         int64_t dist = endpos - startpos;
 
         BSQString res = {0};
-        if(IS_INLINE_STRING(&rstr))
+        if(IS_INLINE_STRING(&stck[0]))
         {
-            res.u_inlineString = BSQInlineString::create(BSQInlineString::utf8Bytes(rstr.u_inlineString) + startpos, (uint64_t)dist);
+            res.u_inlineString = BSQInlineString::create(BSQInlineString::utf8Bytes(stck[0].u_inlineString) + startpos, (uint64_t)dist);
         }
         else
         {
@@ -808,7 +809,7 @@ BSQString BSQStringImplType::slice(StorageLocationPtr str, int64_t startpos, int
                 BSQInlineString::utf8ByteCount_Initialize(res.u_inlineString, (uint64_t)dist);
                 uint8_t* curr = BSQInlineString::utf8Bytes(res.u_inlineString);
 
-                BSQStringForwardIterator iter(&rstr, startpos);
+                BSQStringForwardIterator iter(&stck[0], startpos);
                 while(startpos < endpos)
                 {
                     *curr = iter.get_byte();
@@ -817,10 +818,10 @@ BSQString BSQStringImplType::slice(StorageLocationPtr str, int64_t startpos, int
             }
             else if(dist < 32)
             {
-                res.u_data = Allocator::GlobalAllocator.allocateSafe(BSQWellKnownType::g_typeStringKRepr32);
+                res.u_data = Allocator::GlobalAllocator.allocateDynamic(BSQWellKnownType::g_typeStringKRepr32);
                 uint8_t* curr = BSQStringKReprTypeAbstract::getUTF8Bytes(res.u_data);
                
-                BSQStringForwardIterator iter(&rstr, startpos);
+                BSQStringForwardIterator iter(&stck[0], startpos);
                 while(startpos < endpos)
                 {
                     *curr = iter.get_byte();
@@ -829,11 +830,16 @@ BSQString BSQStringImplType::slice(StorageLocationPtr str, int64_t startpos, int
             }
             else
             {
-                auto reprtype = GET_TYPE_META_DATA_AS(BSQStringReprType, rstr.u_data);
-                res.u_data = reprtype->slice(rstr.u_data, startpos, endpos);
+                //
+                //TODO: want to rebalance here later
+                //
+
+                auto reprtype = GET_TYPE_META_DATA_AS(BSQStringReprType, stck[0].u_data);
+                res.u_data = reprtype->slice(stck[0].u_data, startpos, endpos);
             }
         }
 
+        GCStack::popFrame(sizeof(BSQString));
         return res;
     }
 }
@@ -1136,7 +1142,6 @@ std::string entityISOTimeStampDisplay_impl(const BSQType* btype, StorageLocation
     dt.tm_hour = t.hour;
     dt.tm_min = t.min;
     dt.tm_sec = t.seconds;
-    dt.tm_gmtoff = t.tzoffset;
 
     char sstrt[20] = {0};
     size_t dtlen = strftime(sstrt, 20, "%Y-%m-%dT%H:%M:%S", &dt);
@@ -1153,10 +1158,21 @@ std::string entityISOTimeStampDisplay_impl(const BSQType* btype, StorageLocation
     else
     {
         char sstzi[8] = {0};
-        size_t tzlen = strftime(sstzi, 8, "%z", &dt);
-        std::string tzi(sstzi, sstzi + dtlen);
+        auto hours = t.tzoffset / 60;
+        auto mins = std::abs(t.tzoffset) % 60;
+        std::string tzstr;
+        if(mins == 0)
+        {
+            size_t tzlen = sprintf(sstzi, "%+02i:%02i", hours, mins);
+            tzstr = std::string(sstzi, sstzi + dtlen);
+        }
+        else
+        {
+            size_t tzlen = sprintf(sstzi, "%+02i", hours);
+            tzstr = std::string(sstzi, sstzi + dtlen);
+        }
 
-        return isobase + millis + tzi + ((btype->name == "ISOTimeStamp") ? "" : ("_" + btype->name));
+        return isobase + millis + tzstr + ((btype->name == "ISOTimeStamp") ? "" : ("_" + btype->name));
     }
 }
 

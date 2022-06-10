@@ -531,21 +531,21 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
         }
     }
 
-    method argMin<U unique Orderable=?>(f: recursive? fn(_: T) -> U): T 
+    method argMin(cmp: recursive? pred(_: T, _: T) -> Bool): T 
         requires !ListOps::s_list_empty<T>(this);
     {
         return ListOps::s_blockingfailure<T>();
         //reduce
     }
 
-    method argMax<U unique Orderable=?>(f: recursive? fn(_: T) -> U): T
+    method argMax(cmp: recursive? pred(_: T, _: T) -> Bool): T
         requires !ListOps::s_list_empty<T>(this);
     {
         return ListOps::s_blockingfailure<T>();
         //reduce
     }
 
-    method argMinOrNone<U unique Orderable=?>(f: recursive? fn(_: T) -> U): T? {
+    method argMinOrNone(cmp: recursive? pred(_: T, _: T) -> Bool): T? {
         if(ListOps::s_list_empty<T>(this)) {
             return none;
         }
@@ -555,7 +555,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
         }
     }
 
-    method argMaxOrNone<U unique Orderable=?>(f: recursive? fn(_: T) -> U): T? {
+    method argMaxOrNone(cmp: recursive? pred(_: T, _: T) -> Bool): T? {
         if(ListOps::s_list_empty<T>(this)) {
             return none;
         }
@@ -565,7 +565,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
         }
     }
 
-    method argMinOption<U unique Orderable=?>(f: recursive? fn(_: T) -> U): Option<T> {
+    method argMinOption(cmp: recursive? pred(_: T, _: T) -> Bool): Option<T> {
         if(ListOps::s_list_empty<T>(this)) {
             return nothing;
         }
@@ -574,7 +574,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
         }
     }
 
-    method argMaxOrOption<U unique Orderable=?>(f: recursive? fn(_: T) -> U): Option<T> {
+    method argMaxOrOption(cmp: recursive? pred(_: T, _: T) -> Bool): Option<T> {
         if(ListOps::s_list_empty<T>(this)) {
             return nothing;
         }
@@ -584,7 +584,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
         }
     }
 
-    method argMinTry<U unique Orderable=?>(out? res: T, f: recursive? fn(_: T) -> U): Bool {
+    method argMinTry(out? res: T, cmp: recursive? pred(_: T, _: T) -> Bool): Bool {
         if(ListOps::s_list_empty<T>(this)) {
             return false;
         }
@@ -594,7 +594,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
         }
     }
 
-    method argMaxTry<U unique Orderable=?>(out? res: T, f: recursive? fn(_: T) -> U): Bool {
+    method argMaxTry(out? res: T, cmp: recursive? pred(_: T, _: T) -> Bool): Bool {
         if(ListOps::s_list_empty<T>(this)) {
             return false;
         }
@@ -2196,21 +2196,21 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
         }
     }
 
-    method argMin<U unique Orderable=?>(f: recursive? fn(_: T) -> U): T
+    method argMin(cmp: recursive? pred(_: T, _: T) -> Bool): T
         requires !ListOps::s_empty<T>(this);
     {
         return ListOps::s_blockingfailure<T>();
         //reduce
     }
 
-    method argMax<U unique Orderable=?>(f: recursive? fn(_: T) -> U): T
+    method argMax(cmp: recursive? pred(_: T, _: T) -> Bool): T
         requires !ListOps::s_empty<T>(this);
     {
         return ListOps::s_blockingfailure<T>();
         //reduce
     }
 
-    method argMinOrNone<U unique Orderable=?>(f: recursive? fn(_: T) -> U): T? {
+    method argMinOrNone(cmp: recursive? pred(_: T, _: T) -> Bool): T? {
         if(ListOps::s_empty<T>(this)) {
             return none;
         }
@@ -2220,7 +2220,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
         }
     }
 
-    method argMaxOrNone<U unique Orderable=?>(f: recursive? fn(_: T) -> U): T? {
+    method argMaxOrNone(cmp: recursive? pred(_: T, _: T) -> Bool): T? {
         if(ListOps::s_empty<T>(this)) {
             return none;
         }
@@ -2230,7 +2230,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
         }
     }
 
-    method argMinOption<U unique Orderable=?>(f: recursive? fn(_: T) -> U): Option<T> {
+    method argMinOption(cmp: recursive? pred(_: T, _: T) -> Bool): Option<T> {
         if(ListOps::s_empty<T>(this)) {
             return nothing;
         }
@@ -2240,7 +2240,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
         }
     }
 
-    method argMaxOrOption<U unique Orderable=?>(f: recursive? fn(_: T) -> U): Option<T> {
+    method argMaxOrOption(cmp: recursive? pred(_: T, _: T) -> Bool): Option<T> {
         if(ListOps::s_empty<T>(this)) {
             return nothing;
         }
@@ -2250,7 +2250,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
         }
     }
 
-    method argMinTry<U unique Orderable=?>(out? res: T, f: recursive? fn(_: T) -> U): Bool {
+    method argMinTry(out? res: T, cmp: recursive? pred(_: T, _: T) -> Bool): Bool {
         if(ListOps::s_empty<T>(this)) {
             return false;
         }
@@ -2260,7 +2260,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
         }
     }
 
-    method argMaxTry<U unique Orderable=?>(out? res: T, f: recursive? fn(_: T) -> U): Bool {
+    method argMaxTry(out? res: T, cmp: recursive? pred(_: T, _: T) -> Bool): Bool {
         if(ListOps::s_empty<T>(this)) {
             return false;
         }

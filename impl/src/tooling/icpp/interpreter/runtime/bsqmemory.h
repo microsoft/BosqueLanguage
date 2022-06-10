@@ -602,6 +602,8 @@ private:
     GCRefList evacobjs;
     std::list<PageInfo*> activeallocprocessing; //pages that need to be processed in the STW phase since we are actively allocating from them
 
+    std::set<BSQCollectionIterator*> activeiters;
+
     //"cost" to get a new page -- pay by doing defered decs, processing pages, or (later running some scavanging if needed)
     //    can adjust to make sure we keep up with alloc/free -- but start out with a cost of 2
     size_t page_cost;
@@ -1074,6 +1076,16 @@ private:
             this->gcCopyRoots(*((uintptr_t*)curr));
         }
 
+        for(auto iter = this->activeiters.begin(); iter != this->activeiters.end(); iter++)
+        {
+            this->gcCopyRoots((uintptr_t)(*iter)->lcurr);
+
+            for(size_t i = 0; i < (*iter)->iterstack.size(); ++i)
+            {
+                this->gcCopyRoots((uintptr_t)(*iter)->iterstack[i]);
+            }
+        }
+
         void* groot = GCStack::global_memory->data;
         if(GCStack::global_init_complete)
         {
@@ -1380,7 +1392,7 @@ private:
     }
 
 public:
-    Allocator() : blockalloc(), worklist(), pendingdecs(nullptr), oldroots(), roots(), evacobjs(), activeallocprocessing(), page_cost(DEFAULT_PAGE_COST), dec_ops_count(DEFAULT_DEC_OPS_COUNT), post_release_dec_ops_count(DEFAULT_POST_COLLECT_RUN_DECS_COST)
+    Allocator() : blockalloc(), worklist(), pendingdecs(nullptr), oldroots(), roots(), evacobjs(), activeallocprocessing(), activeiters(), page_cost(DEFAULT_PAGE_COST), dec_ops_count(DEFAULT_DEC_OPS_COUNT), post_release_dec_ops_count(DEFAULT_POST_COLLECT_RUN_DECS_COST)
     {
         MEM_STATS_OP(this->gccount = 0);
         MEM_STATS_OP(this->maxheap = 0);
@@ -1406,6 +1418,16 @@ public:
         pp->freelist_count--;
 
         return alloc;
+    }
+
+    void insertCollectionIter(BSQCollectionIterator* iter)
+    {
+        this->activeiters.insert(iter);
+    }
+
+    void removeCollectionIter(BSQCollectionIterator* iter)
+    {
+        this->activeiters.erase(iter);
     }
 
     void setGlobalsMemory(const BSQType* global_type)

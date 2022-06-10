@@ -9,12 +9,10 @@
 
 #include <bitset>
 
-#define LIST_LOAD_TYPE_INFO(SL) SLPTR_LOAD_UNION_INLINE_TYPE(SL)
-#define LIST_LOAD_TYPE_INFO_REPR(SL) SLPTR_LOAD_UNION_INLINE_TYPE_AS(BSQListReprType, SL)
-#define LIST_LOAD_DATA(SL) SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(SLPTR_LOAD_UNION_INLINE_DATAPTR(SL))
+#define LIST_LOAD_DATA(SL) SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(SL)
 
-#define LIST_STORE_RESULT_REPR(R, SL) SLPTR_STORE_UNION_INLINE_TYPE(GET_TYPE_META_DATA(R), SL); SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(SLPTR_LOAD_UNION_INLINE_DATAPTR(SL), R)
-#define LIST_STORE_RESULT_EMPTY(SL) SLPTR_STORE_UNION_INLINE_TYPE(BSQWellKnownType::g_typeNone, SL)
+#define LIST_STORE_RESULT_REPR(R, SL) SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(SL, R)
+#define LIST_STORE_RESULT_EMPTY(SL) SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(SL, nullptr)
 
 enum class ListReprKind
 {
@@ -468,7 +466,7 @@ public:
     const BSQTypeID etype; //type of entries in the list
 
     BSQListType(BSQTypeID tid, DisplayFP fpDisplay, std::string name, BSQTypeID etype): 
-        BSQType(tid, BSQTypeLayoutKind::Struct, {16, 16, 16, nullptr, "12"}, STRUCT_STD_GC_FUNCTOR_SET, {}, EMPTY_KEY_CMP, fpDisplay, name),
+        BSQType(tid, BSQTypeLayoutKind::Collection, {8, 8, 8, nullptr, "5"}, {gcProcessHeapOperator_collectionImpl, gcDecOperator_collectionImpl, gcEvacuateOperator_collectionImpl}, {}, EMPTY_KEY_CMP, fpDisplay, name),
         etype(etype)
     {;}
 
@@ -476,12 +474,12 @@ public:
 
     void clearValue(StorageLocationPtr trgt) const override final
     {
-        GC_MEM_ZERO(trgt, 16);
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, nullptr);
     }
 
     void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override final
     {
-        BSQ_MEM_COPY(trgt, src, 16);
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, src);
     }
 
     StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override final

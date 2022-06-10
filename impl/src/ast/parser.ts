@@ -4377,28 +4377,16 @@ class Parser {
                 //TODO: what operations do we want to forward by default (or config)
             }
             else if(ttname === "UTCDateTime") {
-                let implicitops = [["t", "==", "t", "Bool"], ["t", "!=", "t", "Bool"]];
-
-                provides.push([new NominalTypeSignature("Core", ["Orderable"]), undefined]);
-                implicitops = [...implicitops, ["t", "<", "t", "Bool"], ["t", ">", "t", "Bool"], ["t", "<=", "t", "Bool"], ["t", ">=", "t", "Bool"]];
                 //TODO: what operations do we want to forward by default (or config)
             }
             else if(ttname === "CalendarDate") {
-                let implicitops = [["t", "==", "t", "Bool"], ["t", "!=", "t", "Bool"]];
-
-                provides.push([new NominalTypeSignature("Core", ["Orderable"]), undefined]);
-                implicitops = [...implicitops, ["t", "<", "t", "Bool"], ["t", ">", "t", "Bool"], ["t", "<=", "t", "Bool"], ["t", ">=", "t", "Bool"]];
                 //TODO: what operations do we want to forward by default (or config)
             }
             else if(ttname === "RelativeTime") {
-                let implicitops = [["t", "==", "t", "Bool"], ["t", "!=", "t", "Bool"]];
-
-                provides.push([new NominalTypeSignature("Core", ["Orderable"]), undefined]);
-                implicitops = [...implicitops, ["t", "<", "t", "Bool"], ["t", ">", "t", "Bool"], ["t", "<=", "t", "Bool"], ["t", ">=", "t", "Bool"]];
                 //TODO: what operations do we want to forward by default (or config)
             }
             else if(ttname === "TickTime") {
-                let implicitops = [["t", "==", "t", "Bool"], ["t", "!=", "t", "Bool"]];
+                implicitops = [["t", "==", "t", "Bool"], ["t", "!=", "t", "Bool"]];
 
                 provides.push([new NominalTypeSignature("Core", ["Orderable"]), undefined]);
                 implicitops = [...implicitops, ["t", "<", "t", "Bool"], ["t", ">", "t", "Bool"], ["t", "<=", "t", "Bool"], ["t", ">=", "t", "Bool"]];
@@ -4408,7 +4396,7 @@ class Parser {
                 //TODO: allow *, / by scalar
             }
             else if(ttname === "LogicalTime") {
-                let implicitops = [["t", "==", "t", "Bool"], ["t", "!=", "t", "Bool"]];
+                implicitops = [["t", "==", "t", "Bool"], ["t", "!=", "t", "Bool"]];
 
                 provides.push([new NominalTypeSignature("Core", ["Orderable"]), undefined]);
                 implicitops = [...implicitops, ["t", "<", "t", "Bool"], ["t", ">", "t", "Bool"], ["t", "<=", "t", "Bool"], ["t", ">=", "t", "Bool"]];
@@ -4417,6 +4405,8 @@ class Parser {
                 implicitops = [...implicitops, ["t", "+", "t", "t"], ["t", "-", "t", "t"]];
                 //TODO: allow *, / by scalar
 
+                /*
+                *TODO: need zero and one in logical time too!
                 ["zero", "one"].forEach((sf) => {
                     const ttype = new NominalTypeSignature(currentDecl.ns, [iname], []);
 
@@ -4425,12 +4415,10 @@ class Parser {
 
                     staticMembers.push(sfdecl);
                 });
+                */
             }
             else if(ttname === "ISOTimeStamp") {
-                let implicitops = [["t", "==", "t", "Bool"], ["t", "!=", "t", "Bool"]];
-
-                provides.push([new NominalTypeSignature("Core", ["Orderable"]), undefined]);
-                implicitops = [...implicitops, ["t", "<", "t", "Bool"], ["t", ">", "t", "Bool"], ["t", "<=", "t", "Bool"], ["t", ">=", "t", "Bool"]];
+                //TODO: what operations do we want to forward by default (or config)
             }
             else if(ttname === "UUID") {
                 //TODO: what operations do we want to forward by default (or config)
@@ -4441,10 +4429,6 @@ class Parser {
             else {
                 //must be geo-coordinate
                 
-                let implicitops = [["t", "==", "t", "Bool"], ["t", "!=", "t", "Bool"]];
-
-                provides.push([new NominalTypeSignature("Core", ["Orderable"]), undefined]);
-                implicitops = [...implicitops, ["t", "<", "t", "Bool"], ["t", ">", "t", "Bool"], ["t", "<=", "t", "Bool"], ["t", ">=", "t", "Bool"]];
                 //TODO: what operations do we want to forward by default (or config)
             }
 

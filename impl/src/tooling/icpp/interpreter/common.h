@@ -79,6 +79,7 @@ class BSQType;
 #define BSQ_BLOCK_ALLOCATION_SIZE 8192ul
 
 //Collection threshold
+//TODO: we probably want allow this to adjust dynamically on demand, say from 2MB to 16MB or something
 #define BSQ_COLLECT_THRESHOLD 8388608ul
 
 //Make sure any allocated page is addressable by us -- larger than 2^31 and less than 2^42
@@ -234,6 +235,7 @@ enum class BSQTypeLayoutKind : uint32_t
     BoxedStruct,
     String,
     BigNum,
+    Collection,
     Ref,
     UnionRef,
     UnionInline,
