@@ -55,10 +55,15 @@ public:
     static const BSQType* g_typeByteBufferNode;
     static const BSQType* g_typeByteBuffer;
     static const BSQType* g_typeDateTime;
+    static const BSQType* g_typeUTCDateTime;
+    static const BSQType* g_typeCalendarDate;
+    static const BSQType* g_typeRelativeTime;
     static const BSQType* g_typeTickTime;
     static const BSQType* g_typeLogicalTime;
+    static const BSQType* g_typeISOTimeStamp;
     static const BSQType* g_typeUUID;
     static const BSQType* g_typeContentHash;
+    static const BSQType* g_typeGeoCoordinate;
     static const BSQType* g_typeRegex;
 };
 
@@ -1300,20 +1305,77 @@ struct BSQDateTime
     uint8_t hour;    // 0-23
     uint8_t min;     // 0-59
 
+    uint16_t padding;
+
     const char* tzdata; //timezone name in tzdata database
 };
 
 std::string entityDateTimeDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode);
+int entityDateTimeKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
 
-#define CONS_BSQ_DATE_TIME_TYPE(TID, NAME) (new BSQRefType(TID, sizeof(BSQDateTime), nullptr, {}, EMPTY_KEY_CMP, entityDateTimeDisplay_impl, NAME))
+#define CONS_BSQ_DATE_TIME_TYPE(TID, NAME) (new BSQRegisterType<BSQDateTime>(TID, sizeof(BSQDateTime), "11", entityDateTimeKeyCmp_impl, entityDateTimeDisplay_impl, NAME))
+
+////
+//UTCDateTime
+
+struct BSQUTCDateTime
+{
+    uint16_t year;   // Year since 1900
+    uint8_t month;   // 0-11
+    uint8_t day;     // 1-31
+    uint8_t hour;    // 0-23
+    uint8_t min;     // 0-59
+
+    uint16_t padding;
+};
+
+std::string entityUTCDateTimeDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode);
+int entityUTCDateTimeKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
+
+#define CONS_BSQ_UTC_DATE_TIME_TYPE(TID, NAME) (new BSQRegisterType<BSQUTCDateTime>(TID, sizeof(BSQUTCDateTime), "1", entityDateTimeKeyCmp_impl, entityDateTimeDisplay_impl, NAME))
+
+////
+//CalendarDate
+
+struct BSQCalendarDate
+{
+    uint16_t year;   // Year since 1900
+    uint8_t month;   // 0-11
+    uint8_t day;     // 1-31
+
+    uint32_t padding;
+};
+
+std::string entityCalendarDateDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode);
+int entityCalendarDateKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
+
+#define CONS_BSQ_CALENDAR_DATE_TYPE(TID, NAME) (new BSQRegisterType<BSQCalendarDate>(TID, sizeof(BSQCalendarDate), "1", entityCalendarDateKeyCmp_impl, entityCalendarDateDisplay_impl, NAME))
+
+////
+//UTCDateTime
+
+struct BSQRelativeTime
+{
+    uint8_t hour;    // 0-23
+    uint8_t min;     // 0-59
+
+    uint16_t padding;
+    uint32_t padding2;
+};
+
+std::string entityRelativeTimeDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode);
+int entityRelativeTimeKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
+
+#define CONS_BSQ_RELATIVE_TIME_TYPE(TID, NAME) (new BSQRegisterType<BSQRelativeTime>(TID, sizeof(BSQRelativeTime), "1", entityRelativeTimeKeyCmp_impl, entityRelativeTimeDisplay_impl, NAME))
 
 ////
 //TickTime
 typedef uint64_t BSQTickTime;
 
 std::string entityTickTimeDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode);
+int entityTickTimeKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
 
-#define CONS_BSQ_TICK_TIME_TYPE(TID, NAME) (new BSQRegisterType<BSQTickTime>(TID, sizeof(BSQTickTime), "1", EMPTY_KEY_CMP, entityTickTimeDisplay_impl, NAME))
+#define CONS_BSQ_TICK_TIME_TYPE(TID, NAME) (new BSQRegisterType<BSQTickTime>(TID, sizeof(BSQTickTime), "1", entityTickTimeKeyCmp_impl, entityTickTimeDisplay_impl, NAME))
 
 ////
 //LogicalTime
@@ -1323,6 +1385,27 @@ std::string entityLogicalTimeDisplay_impl(const BSQType* btype, StorageLocationP
 int entityLogicalTimeKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
 
 #define CONS_BSQ_LOGICAL_TIME_TYPE(TID, NAME) (new BSQRegisterType<BSQTickTime>(TID, sizeof(BSQLogicalTime), "1", entityLogicalTimeKeyCmp_impl, entityLogicalTimeDisplay_impl, NAME))
+
+////
+//ISOTimeStamp
+
+struct BSQISOTimeStamp
+{
+    uint16_t year;   // Year since 1900
+    uint8_t month;   // 0-11
+    uint8_t day;     // 1-31
+    uint8_t hour;    // 0-23
+    uint8_t min;     // 0-59
+
+    int16_t tzoffset;
+
+    std::chrono::time_point<std::chrono::utc_clock, std::chrono::milliseconds> utctime;
+};
+
+std::string entityISOTimeStampDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode);
+int entityISOTimeStampKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
+
+#define CONS_BSQ_ISO_TIME_STAMP_TYPE(TID, NAME) (new BSQRegisterType<BSQISOTimeStamp>(TID, sizeof(BSQISOTimeStamp), "11", entityISOTimeStampKeyCmp_impl, entityISOTimeStampDisplay_impl, NAME))
 
 ////
 //UUID
@@ -1341,6 +1424,20 @@ std::string entityContentHashDisplay_impl(const BSQType* btype, StorageLocationP
 int entityContentHashKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
 
 #define CONS_BSQ_CONTENT_HASH_TYPE(TID, NAME) (new BSQRefType(TID, sizeof(BSQContentHash), nullptr, {}, entityContentHashKeyCmp_impl, entityContentHashDisplay_impl, NAME))
+
+////
+//GeoCoordinate
+
+struct BSQGeoCoordinate
+{
+    float latitude;
+    float longitude;
+};
+
+std::string entityGeoCoordinateDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode);
+int entityGeoCoordinateKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
+
+#define CONS_BSQ_GEO_COORDINATE_TYPE(TID, NAME) (new BSQRegisterType<BSQGeoCoordinate>(TID, sizeof(BSQGeoCoordinate), "1", entityGeoCoordinateKeyCmp_impl, entityGeoCoordinateDisplay_impl, NAME))
 
 ////
 //Regex

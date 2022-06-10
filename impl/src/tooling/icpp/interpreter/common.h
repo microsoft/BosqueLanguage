@@ -20,6 +20,8 @@
 #include <list>
 #include <map>
 
+#include <chrono>
+
 #include "../../api_parse/decls.h"
 
 ////////////////////////////////
@@ -196,6 +198,7 @@ typedef void* StorageLocationPtr;
 
 #define IS_INLINE_STRING(S) (*(((uint8_t*)(S)) + 15) != 0)
 #define IS_INLINE_BIGNUM(N) false
+#define IS_EMPTY_COLLECTION(C) (C == nullptr)
 
 #define SLPTR_LOAD_CONTENTS_AS(T, L) (*((T*)L))
 #define SLPTR_STORE_CONTENTS_AS(T, L, V) *((T*)L) = V
@@ -241,7 +244,8 @@ enum class BSQTypeLayoutKind : uint32_t
 #define PTR_FIELD_MASK_PTR '2'
 #define PTR_FIELD_MASK_STRING '3'
 #define PTR_FIELD_MASK_BIGNUM '4'
-#define PTR_FIELD_MASK_UNION '5'
+#define PTR_FIELD_MASK_COLLECTION '5'
+#define PTR_FIELD_MASK_UNION '6'
 #define PTR_FIELD_MASK_END (char)0
 
 typedef const char* RefMask;
@@ -322,19 +326,24 @@ typedef uint32_t BSQConstantID;
 #define BSQ_TYPE_ID_BYTEBUFFER_NODE 12
 #define BSQ_TYPE_ID_BYTEBUFFER 13
 #define BSQ_TYPE_ID_DATETIME 14
-#define BSQ_TYPE_ID_TICKTIME 15
-#define BSQ_TYPE_ID_LOGICALTIME 16
-#define BSQ_TYPE_ID_UUID 17
-#define BSQ_TYPE_ID_CONTENTHASH 18
-#define BSQ_TYPE_ID_REGEX 19
+#define BSQ_TYPE_ID_UTC_DATETIME 15
+#define BSQ_TYPE_ID_CALENDAR_DATE 16
+#define BSQ_TYPE_ID_RELATIVE_TIME 17
+#define BSQ_TYPE_ID_TICKTIME 18
+#define BSQ_TYPE_ID_LOGICALTIME 19
+#define BSQ_TYPE_ID_ISO_TIMESTAMP 20
+#define BSQ_TYPE_ID_UUID 21
+#define BSQ_TYPE_ID_CONTENTHASH 22
+#define BSQ_TYPE_ID_GEO_COORDINATE 23
+#define BSQ_TYPE_ID_REGEX 24
 
-#define BSQ_TYPE_ID_STRINGREPR_K16 20
-#define BSQ_TYPE_ID_STRINGREPR_K32 21
-#define BSQ_TYPE_ID_STRINGREPR_K64 22
-#define BSQ_TYPE_ID_STRINGREPR_K96 23
-#define BSQ_TYPE_ID_STRINGREPR_K128 24
+#define BSQ_TYPE_ID_STRINGREPR_K16 25
+#define BSQ_TYPE_ID_STRINGREPR_K32 26
+#define BSQ_TYPE_ID_STRINGREPR_K64 27
+#define BSQ_TYPE_ID_STRINGREPR_K96 28
+#define BSQ_TYPE_ID_STRINGREPR_K128 29
 
-#define BSQ_TYPE_ID_STRINGREPR_TREE 25
+#define BSQ_TYPE_ID_STRINGREPR_TREE 30
 
 enum class BSQPrimitiveImplTag
 {

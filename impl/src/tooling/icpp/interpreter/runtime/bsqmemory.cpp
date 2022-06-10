@@ -47,6 +47,11 @@ void gcProcessHeapOperator_bignumImpl(const BSQType* btype, void** data, void* f
     Allocator::gcProcessSlotWithBigNum(data, fromObj);
 }
 
+void gcProcessHeapOperator_collectionImpl(const BSQType* btype, void** data, void* fromObj)
+{
+    Allocator::gcProcessSlotWithCollection(data, fromObj);
+}
+
 void gcDecOperator_nopImpl(const BSQType* btype, void** data)
 {
     return;
@@ -72,6 +77,11 @@ void gcDecOperator_bignumImpl(const BSQType* btype, void** data)
     Allocator::gcDecrementBigNum(data);
 }
 
+void gcDecOperator_collectionImpl(const BSQType* btype, void** data)
+{
+    Allocator::gcDecrementCollection(data);
+}
+
 void gcEvacuateOperator_nopImpl(const BSQType* btype, void** data, void* obj)
 {
     return;
@@ -95,4 +105,9 @@ void gcEvacuateOperator_stringImpl(const BSQType* btype, void** data, void* obj)
 void gcEvacuateOperator_bignumImpl(const BSQType* btype, void** data, void* obj)
 {
     Allocator::gcEvacuateBigNum(data, obj);
+}
+
+void gcEvacuateOperator_collectionImpl(const BSQType* btype, void** data, void* obj)
+{
+    Allocator::gcEvacuateCollection(data, obj);
 }

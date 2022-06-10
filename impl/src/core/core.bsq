@@ -583,7 +583,12 @@ __internal __typedeclable entity UTCDateTime provides Some, Orderable, APIType, 
         return UTCDateTime::s_create(year, month, day, hour, min);
     }
 }
-//TODO: operators for orderable
+__safe __primitive inline infix operator ==(a: UTCDateTime, b: UTCDateTime): Bool = default;
+__safe __primitive inline infix operator !=(a: UTCDateTime, b: UTCDateTime): Bool = default;
+__safe __primitive inline infix operator <(a: UTCDateTime, b: UTCDateTime): Bool = default;
+__safe __primitive inline infix operator >(a: UTCDateTime, b: UTCDateTime): Bool = default;
+__safe __primitive inline infix operator <=(a: UTCDateTime, b: UTCDateTime): Bool = default;
+__safe __primitive inline infix operator >=(a: UTCDateTime, b: UTCDateTime): Bool = default;
 
 __internal __typedeclable entity CalendarDate provides Some, Orderable, APIType, KeyType {
     __assume_safe internal function s_create(year: Nat, month: Nat, day: Nat, hour: Nat, min: Nat): CalendarDate = calendardate_create;
@@ -596,29 +601,59 @@ __internal __typedeclable entity CalendarDate provides Some, Orderable, APIType,
         return CalendarDate::s_create(year, month, day);
     }
 }
-//TODO: operators for orderable
+__safe __primitive inline infix operator ==(a: CalendarDate, b: CalendarDate): Bool = default;
+__safe __primitive inline infix operator !=(a: CalendarDate, b: CalendarDate): Bool = default;
+__safe __primitive inline infix operator <(a: CalendarDate, b: CalendarDate): Bool = default;
+__safe __primitive inline infix operator >(a: CalendarDate, b: CalendarDate): Bool = default;
+__safe __primitive inline infix operator <=(a: CalendarDate, b: CalendarDate): Bool = default;
+__safe __primitive inline infix operator >=(a: CalendarDate, b: CalendarDate): Bool = default;
 
-__internal __typedeclable entity RelativeLocalTime provides Some, Orderable, APIType, KeyType {
-    __assume_safe internal function s_create(hour: Nat, min: Nat): RelativeLocalTime = relativelocaltime_create;
+__internal __typedeclable entity RelativeTime provides Some, Orderable, APIType, KeyType {
+    __assume_safe internal function s_create(hour: Nat, min: Nat): RelativeTime = relativetime_create;
 
-    function create(year: Nat, month?: Nat=0n, day?: Nat=1n): RelativeLocalTime
+    function create(year: Nat, month?: Nat=0n, day?: Nat=1n): RelativeTime
         requires hour < 24n;
         requires min < 60n;
     {
-        return RelativeLocalTime::s_create(hour, min);
+        return RelativeLTime::s_create(hour, min);
     }
 }
-//TODO: operators for orderable
+__safe __primitive inline infix operator ==(a: RelativeTime, b: RelativeTime): Bool = default;
+__safe __primitive inline infix operator !=(a: RelativeTime, b: RelativeTime): Bool = default;
+__safe __primitive inline infix operator <(a: RelativeTime, b: RelativeTime): Bool = default;
+__safe __primitive inline infix operator >(a: RelativeTime, b: RelativeTime): Bool = default;
+__safe __primitive inline infix operator <=(a: RelativeTime, b: RelativeTime): Bool = default;
+__safe __primitive inline infix operator >=(a: RelativeTime, b: RelativeTime): Bool = default;
 
 //<summary>Primitive TickTime value.</summary>
 __internal __typedeclable entity TickTime provides Some, Orderable, KeyType APIType {
 }
-//TODO: operators for orderable
+__safe __primitive inline infix operator *(a: TickTime, b: Nat): TickTime = default;
+__safe __primitive inline infix operator *(a: Nat, b: TickTime): TickTime = default;
+__primitive inline infix operator /(a: TickTime, b: nat): TickTime = default;
+__safe __primitive inline infix operator +(a: TickTime, b: TickTime): TickTime = default;
+__primitive inline infix operator -(a: TickTime, b: TickTime): TickTime = default;
+__safe __primitive inline infix operator ==(a: TickTime, b: TickTime): Bool = default;
+__safe __primitive inline infix operator !=(a: TickTime, b: TickTime): Bool = default;
+__safe __primitive inline infix operator <(a: TickTime, b: TickTime): Bool = default;
+__safe __primitive inline infix operator >(a: TickTime, b: TickTime): Bool = default;
+__safe __primitive inline infix operator <=(a: TickTime, b: TickTime): Bool = default;
+__safe __primitive inline infix operator >=(a: TickTime, b: TickTime): Bool = default;
 
 //<summary>Primitive LogicalTime value.</summary>
 __internal __typedeclable entity LogicalTime provides Some, Orderable, KeyType, APIType {
 }
-//TODO: operators for orderable and make key type compliant
+__safe __primitive inline infix operator *(a: LogicalTime, b: Nat): LogicalTime = default;
+__safe __primitive inline infix operator *(a: Nat, b: LogicalTime): LogicalTime = default;
+__primitive inline infix operator /(a: LogicalTime, b: nat): LogicalTime = default;
+__safe __primitive inline infix operator +(a: LogicalTime, b: LogicalTime): LogicalTime = default;
+__primitive inline infix operator -(a: LogicalTime, b: LogicalTime): LogicalTime = default;
+__safe __primitive inline infix operator ==(a: LogicalTime, b: LogicalTime): Bool = default;
+__safe __primitive inline infix operator !=(a: LogicalTime, b: LogicalTime): Bool = default;
+__safe __primitive inline infix operator <(a: LogicalTime, b: LogicalTime): Bool = default;
+__safe __primitive inline infix operator >(a: LogicalTime, b: LogicalTime): Bool = default;
+__safe __primitive inline infix operator <=(a: LogicalTime, b: LogicalTime): Bool = default;
+__safe __primitive inline infix operator >=(a: LogicalTime, b: LogicalTime): Bool = default;
 
 
 __internal __typedeclable entity ISOTimeStamp provides Some, Orderable, APIType, KeyType {
@@ -639,7 +674,12 @@ __internal __typedeclable entity ISOTimeStamp provides Some, Orderable, APIType,
     https://en.cppreference.com/w/cpp/chrono/zoned_time for way to extract this
     */
 }
-//TODO: operators for orderable
+__safe __primitive inline infix operator ==(a: ISOTimeStamp, b: ISOTimeStamp): Bool = default;
+__safe __primitive inline infix operator !=(a: ISOTimeStamp, b: ISOTimeStamp): Bool = default;
+__safe __primitive inline infix operator <(a: ISOTimeStamp, b: ISOTimeStamp): Bool = default;
+__safe __primitive inline infix operator >(a: ISOTimeStamp, b: ISOTimeStamp): Bool = default;
+__safe __primitive inline infix operator <=(a: ISOTimeStamp, b: ISOTimeStamp): Bool = default;
+__safe __primitive inline infix operator >=(a: ISOTimeStamp, b: ISOTimeStamp): Bool = default;
 
 //<summary>Primitive UUID value.</summary>
 __internal __typedeclable entity UUID provides Some, KeyType, APIType {
@@ -652,7 +692,12 @@ __internal __typedeclable entity ContentHash provides Some, KeyType, APIType {
 //<summary>Primitive Lat/Long</summary>
 __internal __typedeclable entity GeoCoordinate provides Some, Orderable, KeyType, APIType {
 }
-//TODO: operators for orderable
+__safe __primitive inline infix operator ==(a: GeoCoordinate, b: GeoCoordinate): Bool = default;
+__safe __primitive inline infix operator !=(a: GeoCoordinate, b: GeoCoordinate): Bool = default;
+__safe __primitive inline infix operator <(a: GeoCoordinate, b: GeoCoordinate): Bool = default;
+__safe __primitive inline infix operator >(a: GeoCoordinate, b: GeoCoordinate): Bool = default;
+__safe __primitive inline infix operator <=(a: GeoCoordinate, b: GeoCoordinate): Bool = default;
+__safe __primitive inline infix operator >=(a: GeoCoordinate, b: GeoCoordinate): Bool = default;
 
 //<summary>Primitive regex value.</summary>
 __internal entity Regex provides Some {

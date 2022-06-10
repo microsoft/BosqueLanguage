@@ -33,10 +33,15 @@ const BSQType* BSQWellKnownType::g_typeByteBufferLeaf = CONS_BSQ_BYTE_BUFFER_LEA
 const BSQType* BSQWellKnownType::g_typeByteBufferNode = CONS_BSQ_BYTE_BUFFER_NODE_TYPE();
 const BSQType* BSQWellKnownType::g_typeByteBuffer = CONS_BSQ_BYTE_BUFFER_TYPE(BSQ_TYPE_ID_BYTEBUFFER, "BytBuffer");
 const BSQType* BSQWellKnownType::g_typeDateTime = CONS_BSQ_DATE_TIME_TYPE(BSQ_TYPE_ID_DATETIME, "DateTime");
+const BSQType* BSQWellKnownType::g_typeUTCDateTime = CONS_BSQ_UTC_DATE_TIME_TYPE(BSQ_TYPE_ID_UTC_DATETIME, "UTCDateTime");
+const BSQType* BSQWellKnownType::g_typeCalendarDate = CONS_BSQ_CALENDAR_DATE_TYPE(BSQ_TYPE_ID_CALENDAR_DATE, "CalendarDate");
+const BSQType* BSQWellKnownType::g_typeRelativeTime = CONS_BSQ_RELATIVE_TIME_TYPE(BSQ_TYPE_ID_RELATIVE_TIME, "RelativeTime");
 const BSQType* BSQWellKnownType::g_typeTickTime = CONS_BSQ_TICK_TIME_TYPE(BSQ_TYPE_ID_TICKTIME, "TickTime");
 const BSQType* BSQWellKnownType::g_typeLogicalTime = CONS_BSQ_LOGICAL_TIME_TYPE(BSQ_TYPE_ID_LOGICALTIME, "LogicalTime");
+const BSQType* BSQWellKnownType::g_typeISOTimeStamp = CONS_BSQ_ISO_TIME_STAMP_TYPE(BSQ_TYPE_ID_ISO_TIMESTAMP, "ISOTimeStamp");
 const BSQType* BSQWellKnownType::g_typeUUID = CONS_BSQ_UUID_TYPE(BSQ_TYPE_ID_UUID, "UUID");
 const BSQType* BSQWellKnownType::g_typeContentHash = CONS_BSQ_CONTENT_HASH_TYPE(BSQ_TYPE_ID_CONTENTHASH, "ContentHash");
+const BSQType* BSQWellKnownType::g_typeGeoCoordinate = CONS_BSQ_GEO_COORDINATE_TYPE(BSQ_TYPE_ID_GEO_COORDINATE, "GeoCoordinate");
 const BSQType* BSQWellKnownType::g_typeRegex = CONS_BSQ_REGEX_TYPE();
 
 std::map<BSQRecordPropertyID, std::string> BSQRecordInfo::g_propertynamemap;
@@ -893,25 +898,216 @@ std::string emitDateTimeRaw_v(uint16_t y, uint8_t m, uint8_t d, uint8_t hh, uint
 
 std::string entityDateTimeDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
-    BSQDateTime* t = SLPTR_LOAD_CONTENTS_AS(BSQDateTime*, data);
+    BSQDateTime t = SLPTR_LOAD_CONTENTS_AS(BSQDateTime, data);
 
-    auto tzstr = std::string(t->tzdata);
+    auto tzstr = std::string(t.tzdata);
     if(tzstr == "UTC")
     {
-        auto tstr = emitDateTimeRaw_v(t->year, t->month, t->day, t->hour, t->min) + "Z"; 
+        auto tstr = emitDateTimeRaw_v(t.year, t.month, t.day, t.hour, t.min) + "Z"; 
         return tstr + ((btype->name == "DateTime") ? "" : ("_" + btype->name));
     }
     else
     {
-        auto tstr = emitDateTimeRaw_v(t->year, t->month, t->day, t->hour, t->min) + " " + tzstr;
+        auto tstr = emitDateTimeRaw_v(t.year, t.month, t.day, t.hour, t.min) + " " + tzstr;
 
         return tstr + ((btype->name == "DateTime") ? "" : ("_" + btype->name));
+    }
+}
+
+int entityDateTimeKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2)
+{
+    BSQDateTime t1 = SLPTR_LOAD_CONTENTS_AS(BSQDateTime, data1);
+    BSQDateTime t2 = SLPTR_LOAD_CONTENTS_AS(BSQDateTime, data2);
+
+    if(t1.year != t2.year)
+    {
+        return (t1.year < t2.year) ? -1 : 1;
+    }
+    else
+    {
+        if(t1.month != t2.month)
+        {
+            return (t1.month < t2.month) ? -1 : 1;
+        }
+        else
+        {
+            if(t1.day != t2.day)
+            {
+                return (t1.day < t2.day) ? -1 : 1;
+            }
+            else
+            {
+                if(t1.hour != t2.hour)
+                {
+                    return (t1.hour < t2.hour) ? -1 : 1;
+                }
+                else
+                {
+                    if(t1.min != t2.min)
+                    {
+                        return (t1.min < t2.min) ? -1 : 1;
+                    }
+                    else
+                    {
+                        return strcmp(t1.tzdata, t2.tzdata);
+                    }
+                }
+            }
+        }
+    }
+}
+
+std::string entityUTCDateTimeDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
+{
+    BSQUTCDateTime t = SLPTR_LOAD_CONTENTS_AS(BSQUTCDateTime, data);
+
+    auto tstr = emitDateTimeRaw_v(t.year, t.month, t.day, t.hour, t.min) + "Z"; 
+    return tstr + ((btype->name == "UTCDateTime") ? "" : ("_" + btype->name));
+}
+
+int entityUTCDateTimeKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2)
+{
+    BSQUTCDateTime t1 = SLPTR_LOAD_CONTENTS_AS(BSQUTCDateTime, data1);
+    BSQUTCDateTime t2 = SLPTR_LOAD_CONTENTS_AS(BSQUTCDateTime, data2);
+
+    if(t1.year != t2.year)
+    {
+        return (t1.year < t2.year) ? -1 : 1;
+    }
+    else
+    {
+        if(t1.month != t2.month)
+        {
+            return (t1.month < t2.month) ? -1 : 1;
+        }
+        else
+        {
+            if(t1.day != t2.day)
+            {
+                return (t1.day < t2.day) ? -1 : 1;
+            }
+            else
+            {
+                if(t1.hour != t2.hour)
+                {
+                    return (t1.hour < t2.hour) ? -1 : 1;
+                }
+                else
+                {
+                    if(t1.min != t2.min)
+                    {
+                        return (t1.min < t2.min) ? -1 : 1;
+                    }
+                    else
+                    {
+                        return 0;
+                    }
+                }
+            }
+        }
+    }
+}
+
+std::string entityCalendarDateDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
+{
+    BSQCalendarDate d = SLPTR_LOAD_CONTENTS_AS(BSQCalendarDate, data);
+
+    struct tm dt = {0};
+    dt.tm_year = d.year;
+    dt.tm_mon = d.month;
+    dt.tm_mday = d.day;
+
+    char sstrt[20] = {0};
+    size_t dtlen = strftime(sstrt, 20, "%Y-%m-%d", &dt);
+    std::string res(sstrt, sstrt + dtlen);
+
+    return res;
+}
+
+int entityCalendarDateKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2)
+{
+    BSQCalendarDate t1 = SLPTR_LOAD_CONTENTS_AS(BSQCalendarDate, data1);
+    BSQCalendarDate t2 = SLPTR_LOAD_CONTENTS_AS(BSQCalendarDate, data2);
+
+    if(t1.year != t2.year)
+    {
+        return (t1.year < t2.year) ? -1 : 1;
+    }
+    else
+    {
+        if(t1.month != t2.month)
+        {
+            return (t1.month < t2.month) ? -1 : 1;
+        }
+        else
+        {
+            if(t1.day != t2.day)
+            {
+                return (t1.day < t2.day) ? -1 : 1;
+            }
+            else
+            {
+                return 0;
+            }
+        }
+    }
+}
+
+std::string entityRelativeTimeDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
+{
+    BSQRelativeTime rt = SLPTR_LOAD_CONTENTS_AS(BSQRelativeTime, data);
+
+    struct tm dt = {0};
+    dt.tm_hour = rt.hour;
+    dt.tm_min = rt.min;
+
+    char sstrt[20] = {0};
+    size_t dtlen = strftime(sstrt, 20, "%H:%M", &dt);
+    std::string res(sstrt, sstrt + dtlen);
+
+    return res;
+}
+
+int entityRelativeTimeKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2)
+{
+    BSQRelativeTime t1 = SLPTR_LOAD_CONTENTS_AS(BSQRelativeTime, data1);
+    BSQRelativeTime t2 = SLPTR_LOAD_CONTENTS_AS(BSQRelativeTime, data2);
+
+    if(t1.hour != t2.hour)
+    {
+        return (t1.hour < t2.hour) ? -1 : 1;
+    }
+    else
+    {
+        if(t1.min != t2.min)
+        {
+            return (t1.min < t2.min) ? -1 : 1;
+        }
+        else
+        {
+            return 0;
+        }
     }
 }
 
 std::string entityTickTimeDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
     return "T" + std::to_string(SLPTR_LOAD_CONTENTS_AS(BSQTickTime, data)) + ((btype->name == "TickTime") ? "ns" : ("_" + btype->name));
+}
+
+int entityTickTimeKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2)
+{
+    BSQTickTime t1 = SLPTR_LOAD_CONTENTS_AS(BSQTickTime, data1);
+    BSQTickTime t2 = SLPTR_LOAD_CONTENTS_AS(BSQTickTime, data2);
+
+    if(t1 == t2)
+    {
+        return 0;
+    }
+    else
+    {
+        return (t1 < t2) ? -1 : 1;
+    }
 }
 
 std::string entityLogicalTimeDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
@@ -931,6 +1127,16 @@ int entityLogicalTimeKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1,
     {
         return (v1 < v2) ? -1 : 1;
     }
+}
+
+std::string entityISOTimeStampDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
+{
+    xxxx;
+}
+
+int entityISOTimeStampKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2)
+{
+    xxxx;
 }
 
 std::string entityUUIDDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
@@ -997,6 +1203,16 @@ int entityContentHashKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1,
     {
         return (*(cmp.first) < *(cmp.second)) ? -1 : 1;
     }
+}
+
+std::string entityGeoCoordinateDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
+{
+    xxxx;
+}
+
+int entityGeoCoordinateKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2)
+{
+    xxxx;
 }
 
 std::string entityRegexDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)

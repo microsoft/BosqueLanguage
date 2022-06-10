@@ -796,6 +796,14 @@ public:
         }
     }
 
+    inline static void gcProcessSlotWithCollection(void** slot, void* fromObj)
+    {
+        if (!IS_EMPTY_COLLECTION(*slot))
+        {
+            Allocator::gcProcessSlotHeap(slot, fromObj);
+        }
+    }
+
     inline static void gcProcessSlotsWithUnion(void** slots, void* fromObj)
     {
         const BSQType* umeta = ((const BSQType*)(*slots));
@@ -823,6 +831,9 @@ public:
                 case PTR_FIELD_MASK_BIGNUM:
                     Allocator::gcProcessSlotWithBigNum(cslot, fromObj);
                     break;
+                case PTR_FIELD_MASK_COLLECTION:
+                    Allocator::gcProcessSlotWithCollection(cslot, fromObj);
+                    break;
                 default:
                     Allocator::gcProcessSlotsWithUnion(cslot, fromObj);
                     break;
@@ -844,6 +855,14 @@ public:
     inline static void gcDecrementBigNum(void** v)
     {
         if (!IS_INLINE_BIGNUM(*v))
+        {
+            Allocator::GlobalAllocator.processDecHeapRC(*v);
+        }
+    }
+
+    inline static void gcDecrementCollection(void** v)
+    {
+        if (!IS_EMPTY_COLLECTION(*v))
         {
             Allocator::GlobalAllocator.processDecHeapRC(*v);
         }
@@ -876,6 +895,9 @@ public:
                 case PTR_FIELD_MASK_BIGNUM:
                     Allocator::gcDecrementBigNum(cslot);
                     break;
+                case PTR_FIELD_MASK_COLLECTION:
+                    Allocator::gcDecrementCollection(cslot);
+                    break;
                 default:
                     Allocator::gcDecrementSlotsWithUnion(cslot);
                     break;
@@ -895,6 +917,14 @@ public:
     inline static void gcEvacuateBigNum(void** slot, void* obj)
     {
         if (!IS_INLINE_BIGNUM(*slot))
+        {
+            Allocator::GlobalAllocator.processDecHeapEvacuate(obj, slot);
+        }
+    }
+
+    inline static void gcEvacuateCollection(void** slot, void* obj)
+    {
+        if (!IS_EMPTY_COLLECTION(*slot))
         {
             Allocator::GlobalAllocator.processDecHeapEvacuate(obj, slot);
         }
@@ -926,6 +956,9 @@ public:
                     break;
                 case PTR_FIELD_MASK_BIGNUM:
                     Allocator::gcEvacuateBigNum(cslot, obj);
+                    break;
+                case PTR_FIELD_MASK_COLLECTION:
+                    Allocator::gcEvacuateCollection(cslot, obj);
                     break;
                 default:
                     Allocator::gcEvacuateWithUnion(cslot, obj);
@@ -1396,18 +1429,21 @@ void gcProcessHeapOperator_inlineImpl(const BSQType* btype, void** data, void* f
 void gcProcessHeapOperator_refImpl(const BSQType* btype, void** data, void* fromObj);
 void gcProcessHeapOperator_stringImpl(const BSQType* btype, void** data, void* fromObj);
 void gcProcessHeapOperator_bignumImpl(const BSQType* btype, void** data, void* fromObj);
+void gcProcessHeapOperator_collectionImpl(const BSQType* btype, void** data, void* fromObj);
 
 void gcDecOperator_nopImpl(const BSQType* btype, void** data);
 void gcDecOperator_inlineImpl(const BSQType* btype, void** data);
 void gcDecOperator_refImpl(const BSQType* btype, void** data);
 void gcDecOperator_stringImpl(const BSQType* btype, void** data);
 void gcDecOperator_bignumImpl(const BSQType* btype, void** data);
+void gcDecOperator_collectionImpl(const BSQType* btype, void** data);
 
 void gcEvacuateOperator_nopImpl(const BSQType* btype, void** data, void* obj);
 void gcEvacuateOperator_inlineImpl(const BSQType* btype, void** data, void* obj);
 void gcEvacuateOperator_refImpl(const BSQType* btype, void** data, void* obj);
 void gcEvacuateOperator_stringImpl(const BSQType* btype, void** data, void* obj);
 void gcEvacuateOperator_bignumImpl(const BSQType* btype, void** data, void* obj);
+void gcEvacuateOperator_collectionImpl(const BSQType* btype, void** data, void* obj);
 
 constexpr GCFunctorSet REF_GC_FUNCTOR_SET{ gcProcessHeapOperator_refImpl, gcDecOperator_refImpl, gcEvacuateOperator_refImpl };
 constexpr GCFunctorSet STRUCT_LEAF_GC_FUNCTOR_SET{ gcProcessHeapOperator_nopImpl, gcDecOperator_nopImpl, gcEvacuateOperator_nopImpl };
