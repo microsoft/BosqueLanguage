@@ -463,10 +463,8 @@ void* BSQStringTreeReprType::slice(StorageLocationPtr data, uint64_t nstart, uin
     auto s1type = GET_TYPE_META_DATA_AS(BSQStringReprType, ((BSQStringTreeRepr*)data)->srepr1);
     auto s2type = GET_TYPE_META_DATA_AS(BSQStringReprType, ((BSQStringTreeRepr*)data)->srepr2);
 
-    void** stck = (void**)BSQ_STACK_SPACE_ALLOC(sizeof(void*) * 4);
+    void** stck = (void**)GCStack::allocFrame(sizeof(void*) * 4);
     GC_MEM_ZERO(stck, sizeof(void*) * 4);
-
-    GCStack::pushFrame(stck, "2222");
 
     void* res = nullptr;
     auto s1size = s1type->utf8ByteCount(((BSQStringTreeRepr*)data)->srepr1);
@@ -494,7 +492,7 @@ void* BSQStringTreeReprType::slice(StorageLocationPtr data, uint64_t nstart, uin
         *((BSQStringTreeRepr*)res) = {stck[1], stck[3], nend - nstart};
     }
 
-    GCStack::popFrame();
+    GCStack::popFrame(sizeof(void*) * 4);
     return res;
 }
 
@@ -631,7 +629,7 @@ int entityStringKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, Stor
 
 uint8_t* BSQStringImplType::boxInlineString(BSQInlineString istr)
 {
-    auto res = (uint8_t*)Allocator::GlobalAllocator.allocateSafe(BSQWellKnownType::g_typeStringKRepr16);
+    auto res = (uint8_t*)Allocator::GlobalAllocator.allocateDynamic(BSQWellKnownType::g_typeStringKRepr16);
     *res = (uint8_t)BSQInlineString::utf8ByteCount(istr);
     BSQ_MEM_COPY(res + 1, BSQInlineString::utf8Bytes(istr), *res);
 
@@ -691,51 +689,48 @@ int BSQStringImplType::keycmp(BSQString v1, BSQString v2)
 
 BSQString BSQStringImplType::concat2(StorageLocationPtr s1, StorageLocationPtr s2)
 {
-    //
-    //TODO: want to rebalance here later
-    //
-
-    Allocator::GlobalAllocator.ensureSpace(std::max(sizeof(BSQStringTreeRepr), (sizeof(BSQStringKReprType<32>))));
-
-    BSQString str1 = SLPTR_LOAD_CONTENTS_AS(BSQString, s1);
-    BSQString str2 = SLPTR_LOAD_CONTENTS_AS(BSQString, s2);
-
-    if(BSQStringImplType::empty(str1) & BSQStringImplType::empty(str2))
+    BSQString res;
+    BSQString* stck = (BSQString*)GCStack::allocFrame(sizeof(BSQString) * 2);
+    
+    stck[0] = SLPTR_LOAD_CONTENTS_AS(BSQString, s1);
+    stck[1] = SLPTR_LOAD_CONTENTS_AS(BSQString, s2);
+    
+    if(BSQStringImplType::empty(stck[0]) & BSQStringImplType::empty(stck[1]))
     {
-        return g_emptyString;
+        res = g_emptyString;
     }
-    else if(BSQStringImplType::empty(str1))
+    else if(BSQStringImplType::empty(stck[0]))
     {
-        return str2;
+        res = stck[1];
     }
-    else if(BSQStringImplType::empty(str2))
+    else if(BSQStringImplType::empty(stck[1]))
     {
-        return str1;
+        res = stck[0];
     }
     else
     {
-        auto len1 = BSQStringImplType::utf8ByteCount(str1);
-        auto len2 = BSQStringImplType::utf8ByteCount(str2);
+        auto len1 = BSQStringImplType::utf8ByteCount(stck[0]);
+        auto len2 = BSQStringImplType::utf8ByteCount(stck[1]);
 
         BSQString res = g_emptyString;
-        if(IS_INLINE_STRING(&str1) & IS_INLINE_STRING(&str2))
+        if(IS_INLINE_STRING(&stck[0]) & IS_INLINE_STRING(&stck[1]))
         {
             if(len1 + len2 < 16)
             {
                 BSQInlineString::utf8ByteCount_Initialize(res.u_inlineString, (uint64_t)(len1 + len2));
-                GC_MEM_COPY(BSQInlineString::utf8Bytes(res.u_inlineString), BSQInlineString::utf8Bytes(str1.u_inlineString), (size_t)len1);
-                GC_MEM_COPY(BSQInlineString::utf8Bytes(res.u_inlineString) + len1, BSQInlineString::utf8Bytes(str2.u_inlineString), (size_t)len2);
+                GC_MEM_COPY(BSQInlineString::utf8Bytes(res.u_inlineString), BSQInlineString::utf8Bytes(stck[0].u_inlineString), (size_t)len1);
+                GC_MEM_COPY(BSQInlineString::utf8Bytes(res.u_inlineString) + len1, BSQInlineString::utf8Bytes(stck[1].u_inlineString), (size_t)len2);
             }
             else
             {
                 assert(len1 + len2 <= 30);
 
-                auto crepr = (uint8_t*)Allocator::GlobalAllocator.allocateSafe(BSQWellKnownType::g_typeStringKRepr32);
+                auto crepr = (uint8_t*)Allocator::GlobalAllocator.allocateDynamic(BSQWellKnownType::g_typeStringKRepr32);
                 uint8_t* curr = BSQStringKReprTypeAbstract::getUTF8Bytes(crepr);
 
                 *crepr = (uint8_t)(len1 + len2);
-                BSQ_MEM_COPY(curr, BSQInlineString::utf8Bytes(str1.u_inlineString), len1);
-                BSQ_MEM_COPY(curr + len1, BSQInlineString::utf8Bytes(str1.u_inlineString), len2);
+                BSQ_MEM_COPY(curr, BSQInlineString::utf8Bytes(stck[0].u_inlineString), len1);
+                BSQ_MEM_COPY(curr + len1, BSQInlineString::utf8Bytes(stck[1].u_inlineString), len2);
 
                 res.u_data = crepr;
             }
@@ -744,12 +739,12 @@ BSQString BSQStringImplType::concat2(StorageLocationPtr s1, StorageLocationPtr s
         {
             if(len1 + len2 < 32)
             {
-                auto crepr = (uint8_t*)Allocator::GlobalAllocator.allocateSafe(BSQWellKnownType::g_typeStringKRepr32);
+                auto crepr = (uint8_t*)Allocator::GlobalAllocator.allocateDynamic(BSQWellKnownType::g_typeStringKRepr32);
                 uint8_t* curr = BSQStringKReprTypeAbstract::getUTF8Bytes(crepr);
 
                 *crepr = (uint8_t)(len1 + len2);
 
-                BSQStringForwardIterator iter1(&str1, 0);
+                BSQStringForwardIterator iter1(&stck[0], 0);
                 while(iter1.valid())
                 {
                     *curr = iter1.get_byte();
@@ -757,7 +752,7 @@ BSQString BSQStringImplType::concat2(StorageLocationPtr s1, StorageLocationPtr s
                     iter1.advance_byte();
                 }
 
-                BSQStringForwardIterator iter2(&str2, 0);
+                BSQStringForwardIterator iter2(&stck[1], 0);
                 while(iter2.valid())
                 {
                     *curr = iter2.get_byte();
@@ -769,17 +764,18 @@ BSQString BSQStringImplType::concat2(StorageLocationPtr s1, StorageLocationPtr s
             }
             else
             {
-                auto crepr = (BSQStringTreeRepr*)Allocator::GlobalAllocator.allocateSafe(BSQWellKnownType::g_typeStringTreeRepr);
+                auto crepr = (BSQStringTreeRepr*)Allocator::GlobalAllocator.allocateDynamic(BSQWellKnownType::g_typeStringTreeRepr);
                 crepr->size = (uint64_t)(len1 + len2);
-                crepr->srepr1 = IS_INLINE_STRING(s1) ? BSQStringImplType::boxInlineString(str1.u_inlineString) : str1.u_data;
-                crepr->srepr2 = IS_INLINE_STRING(s2) ? BSQStringImplType::boxInlineString(str2.u_inlineString) : str2.u_data;
+                crepr->srepr1 = IS_INLINE_STRING(s1) ? BSQStringImplType::boxInlineString(stck[0].u_inlineString) : stck[0].u_data;
+                crepr->srepr2 = IS_INLINE_STRING(s2) ? BSQStringImplType::boxInlineString(stck[1].u_inlineString) : stck[1].u_data;
                 
                 res.u_data = crepr;
             }
         }
-
-        return res;
     }
+
+    GCStack::popFrame(sizeof(BSQString) * 2);
+    return res;
 }
 
 BSQString BSQStringImplType::slice(StorageLocationPtr str, int64_t startpos, int64_t endpos)
@@ -1131,12 +1127,51 @@ int entityLogicalTimeKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1,
 
 std::string entityISOTimeStampDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
-    xxxx;
+    BSQISOTimeStamp t = SLPTR_LOAD_CONTENTS_AS(BSQISOTimeStamp, data);
+
+    struct tm dt = {0};
+    dt.tm_year = t.year;
+    dt.tm_mon = t.month;
+    dt.tm_mday = t.day;
+    dt.tm_hour = t.hour;
+    dt.tm_min = t.min;
+    dt.tm_sec = t.seconds;
+    dt.tm_gmtoff = t.tzoffset;
+
+    char sstrt[20] = {0};
+    size_t dtlen = strftime(sstrt, 20, "%Y-%m-%dT%H:%M:%S", &dt);
+    std::string isobase(sstrt, sstrt + dtlen);
+
+    char ssmillis[8] = {0};
+    size_t millislen = sprintf(ssmillis, ".%03i", t.millis);
+    std::string millis(ssmillis, ssmillis + millislen);
+
+    if(t.tzoffset == 0)
+    {
+        return isobase + millis + ((btype->name == "ISOTimeStamp") ? "" : ("_" + btype->name));
+    }
+    else
+    {
+        char sstzi[8] = {0};
+        size_t tzlen = strftime(sstzi, 8, "%z", &dt);
+        std::string tzi(sstzi, sstzi + dtlen);
+
+        return isobase + millis + tzi + ((btype->name == "ISOTimeStamp") ? "" : ("_" + btype->name));
+    }
 }
 
 int entityISOTimeStampKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2)
 {
-    xxxx;
+    auto v1 = SLPTR_LOAD_CONTENTS_AS(BSQISOTimeStamp, data1);
+    auto v2 = SLPTR_LOAD_CONTENTS_AS(BSQISOTimeStamp, data2);
+    if(v1.utctime == v2.utctime)
+    {
+        return 0;
+    }
+    else
+    {
+        return (v1.utctime < v2.utctime) ? -1 : 1;
+    }
 }
 
 std::string entityUUIDDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
@@ -1151,7 +1186,7 @@ std::string entityUUIDDisplay_impl(const BSQType* btype, StorageLocationPtr data
     
     char sstrt[64] = {0};
     sprintf(sstrt, "%06x-%04x-%04x-%04x-%08x", bb4, bb2_1, bb2_2, bb2_3, bb6);
-    std::string res(sstrt, sstrt + 36);
+    std::string res(sstrt, sstrt + 64);
 
     return res;
 }
@@ -1207,12 +1242,23 @@ int entityContentHashKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1,
 
 std::string entityGeoCoordinateDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
-    xxxx;
+    auto v = SLPTR_LOAD_CONTENTS_AS(BSQGeoCoordinate, data);
+
+    return std::string("(") + std::to_string(v.latitude) + std::string(", ") + std::to_string(v.longitude) + std::string(")");
 }
 
 int entityGeoCoordinateKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2)
 {
-    xxxx;
+    auto v1 = SLPTR_LOAD_CONTENTS_AS(BSQISOTimeStamp, data1);
+    auto v2 = SLPTR_LOAD_CONTENTS_AS(BSQISOTimeStamp, data2);
+    if(v1.utctime == v2.utctime)
+    {
+        return 0;
+    }
+    else
+    {
+        return (v1.utctime < v2.utctime) ? -1 : 1;
+    }
 }
 
 std::string entityRegexDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
