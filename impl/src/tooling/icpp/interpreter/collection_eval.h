@@ -23,9 +23,7 @@ public:
 
     inline static void* list_consk(const BSQListTypeFlavor& lflavor, const std::vector<StorageLocationPtr>& params)
     {
-        Allocator::GlobalAllocator.ensureSpace(sizeof(GC_META_DATA_WORD) + lflavor.pv8type->allocinfo.heapsize);
-
-        auto res = Allocator::GlobalAllocator.allocateSafe((params.size() <= 4) ? lflavor.pv4type : lflavor.pv8type);
+        auto res = Allocator::GlobalAllocator.allocateDynamic((params.size() <= 4) ? lflavor.pv4type : lflavor.pv8type);
         BSQPartialVectorType::initializePVData(res, params, lflavor.entrytype);
 
         return res;
@@ -46,112 +44,111 @@ public:
 
     static void* list_append(const BSQListTypeFlavor& lflavor, void* l, void* r)
     {
-        if(l == nullptr & r == nullptr)
+        void** stck = (void**)GCStack::allocFrame(sizeof(void*) * 2);
+        stck[0] = l;
+        stck[1] = r;
+
+        void* res = nullptr;
+        if((l == nullptr) & (r == nullptr))
         {
-            return nullptr;
+            res = nullptr;
         }
         else if(l == nullptr)
         {
-            return r;
+            res = r;
         }
         else if(r == nullptr)
         {
-            return l;
+            res = l;
         }
         else
         {
-            auto ltype = static_cast<const BSQListReprType*>(GET_TYPE_META_DATA(l));
-            auto rtype = static_cast<const BSQListReprType*>(GET_TYPE_META_DATA(r));
+            auto ltype = static_cast<const BSQListReprType*>(GET_TYPE_META_DATA(stck[0]));
+            auto rtype = static_cast<const BSQListReprType*>(GET_TYPE_META_DATA(stck[1]));
 
             if((ltype->lkind != ListReprKind::TreeElement) & (rtype->lkind != ListReprKind::TreeElement))
             {
-                auto count = BSQPartialVectorType::getPVCount(l) + BSQPartialVectorType::getPVCount(r);
+                auto count = BSQPartialVectorType::getPVCount(stck[0]) + BSQPartialVectorType::getPVCount(stck[1]);
 
-                void* res = nullptr;
                 if(count <= 4)
                 {
-                    res = Allocator::GlobalAllocator.allocateSafe(lflavor.pv4type);
-                    BSQPartialVectorType::appendPVData(res, l, lflavor.entrytype->allocinfo.inlinedatasize);
-                    BSQPartialVectorType::appendPVData(res, r, lflavor.entrytype->allocinfo.inlinedatasize);
+                    res = Allocator::GlobalAllocator.allocateDynamic(lflavor.pv4type);
+                    BSQPartialVectorType::appendPVData(res, stck[0], lflavor.entrytype->allocinfo.inlinedatasize);
+                    BSQPartialVectorType::appendPVData(res, stck[1], lflavor.entrytype->allocinfo.inlinedatasize);
                 } 
                 else if(count <= 8)
                 {
-                    res = Allocator::GlobalAllocator.allocateSafe(lflavor.pv8type);
-                    BSQPartialVectorType::appendPVData(res, l, lflavor.entrytype->allocinfo.inlinedatasize);
-                    BSQPartialVectorType::appendPVData(res, r, lflavor.entrytype->allocinfo.inlinedatasize);
+                    res = Allocator::GlobalAllocator.allocateDynamic(lflavor.pv8type);
+                    BSQPartialVectorType::appendPVData(res, stck[0], lflavor.entrytype->allocinfo.inlinedatasize);
+                    BSQPartialVectorType::appendPVData(res, stck[1], lflavor.entrytype->allocinfo.inlinedatasize);
                 }
                 else
                 {
-                    res = Allocator::GlobalAllocator.allocateSafe(lflavor.treetype);
-                    ((BSQListTreeRepr*)res)->l = l;
-                    ((BSQListTreeRepr*)res)->r = r;
+                    res = Allocator::GlobalAllocator.allocateDynamic(lflavor.treetype);
+                    ((BSQListTreeRepr*)res)->l = stck[0];
+                    ((BSQListTreeRepr*)res)->r = stck[1];
                     ((BSQListTreeRepr*)res)->size = count;
                 }
 
-                return res;
             }
             else
             {
-                BSQListTreeRepr* res = (BSQListTreeRepr*)Allocator::GlobalAllocator.allocateSafe(lflavor.treetype);
-                res->l = l;
-                res->r = r;
-                res->size = ltype->getCount(l) + rtype->getCount(r);
-
-                return res;
+                res = (BSQListTreeRepr*)Allocator::GlobalAllocator.allocateDynamic(lflavor.treetype);
+                ((BSQListTreeRepr*)res)->l = stck[0];
+                ((BSQListTreeRepr*)res)->r = stck[1];
+                ((BSQListTreeRepr*)res)->size = ltype->getCount(stck[0]) + rtype->getCount(stck[1]);
             }
         }
+
+        GCStack::popFrame(sizeof(void*) * 2);
     }
 
     template <typename OP_PV>
-    static void* list_tree_transform(const BSQListTypeFlavor& lflavor, BSQCollectionGCReprNode* reprnode, OP_PV fn_partialvector)
+    static void* list_tree_transform(const BSQListTypeFlavor& lflavor, void* reprnode, OP_PV fn_partialvector)
     {
-        auto reprtype = static_cast<const BSQListReprType*>(GET_TYPE_META_DATA(reprnode->repr));
+        auto reprtype = static_cast<const BSQListReprType*>(GET_TYPE_META_DATA(reprnode));
         if(reprtype->lkind != ListReprKind::TreeElement)
         {
             return fn_partialvector(reprnode, static_cast<const BSQPartialVectorType*>(reprtype));
         }
         else
         {
-            auto gclpoint = Allocator::GlobalAllocator.getCollectionNodeCurrentEnd();
-            auto lnode = Allocator::GlobalAllocator.registerCollectionNode(static_cast<BSQListTreeRepr*>(reprnode->repr)->l);
-            auto llnode = list_tree_transform(lflavor, lnode, fn_partialvector);
-            auto llres = Allocator::GlobalAllocator.resetCollectionNodeEnd(gclpoint, llnode);
+            void** stck = (void**)GCStack::allocFrame(sizeof(void*) * 3);
+            stck[0] = reprnode;
+        
+            stck[1] = list_tree_transform(lflavor, static_cast<BSQListTreeRepr*>(stck[0])->l, fn_partialvector);
+            stck[2] = list_tree_transform(lflavor, static_cast<BSQListTreeRepr*>(stck[0])->r, fn_partialvector);
+            
+            void* res = BSQListOps::list_append(lflavor, stck[1], stck[2]);
 
-            auto gcrpoint = Allocator::GlobalAllocator.getCollectionNodeCurrentEnd();
-            auto rnode = Allocator::GlobalAllocator.registerCollectionNode(static_cast<BSQListTreeRepr*>(reprnode->repr)->r);
-            auto rrnode = list_tree_transform(lflavor, rnode, fn_partialvector);
-            auto rrres = Allocator::GlobalAllocator.resetCollectionNodeEnd(gcrpoint, rrnode);
-
-            Allocator::GlobalAllocator.ensureSpace(std::max(lflavor.pv8type->allocinfo.heapsize, lflavor.treetype->allocinfo.heapsize) + sizeof(GC_META_DATA_WORD));
-            return BSQListOps::list_append(lflavor, llres->repr, rrres->repr);
+            GCStack::popFrame(sizeof(void*) * 3);
+            return res;
         }
     }
 
     template <typename OP_PV>
-    static void* list_tree_transform_idx(const BSQListTypeFlavor& lflavor, BSQCollectionGCReprNode* reprnode, uint64_t idx, OP_PV fn_partialvector)
+    static void* list_tree_transform_idx(const BSQListTypeFlavor& lflavor, void* reprnode, uint64_t idx, OP_PV fn_partialvector)
     {
-        auto reprtype = static_cast<const BSQListReprType*>(GET_TYPE_META_DATA(reprnode->repr));
+        auto reprtype = static_cast<const BSQListReprType*>(GET_TYPE_META_DATA(reprnode));
         if(reprtype->lkind != ListReprKind::TreeElement)
         {
             return fn_partialvector(reprnode, static_cast<const BSQPartialVectorType*>(reprtype), idx);
         }
         else
         {
-            auto ltype = GET_TYPE_META_DATA_AS(BSQListReprType, static_cast<BSQListTreeRepr*>(reprnode->repr)->l);
-            auto lsize = ltype->getCount(static_cast<BSQListTreeRepr*>(reprnode->repr)->l);
+            auto ltype = GET_TYPE_META_DATA_AS(BSQListReprType, static_cast<BSQListTreeRepr*>(reprnode)->l);
+            auto lsize = ltype->getCount(static_cast<BSQListTreeRepr*>(reprnode)->l);
 
-            auto gclpoint = Allocator::GlobalAllocator.getCollectionNodeCurrentEnd();
-            auto lnode = Allocator::GlobalAllocator.registerCollectionNode(static_cast<BSQListTreeRepr*>(reprnode->repr)->l);
-            auto llnode = list_tree_transform_idx(lflavor, lnode, idx, fn_partialvector);
-            auto llres = Allocator::GlobalAllocator.resetCollectionNodeEnd(gclpoint, llnode);
+            void** stck = (void**)GCStack::allocFrame(sizeof(void*) * 3);
+            stck[0] = reprnode;
+        
+            stck[1] = list_tree_transform(lflavor, idx, static_cast<BSQListTreeRepr*>(stck[0])->l, fn_partialvector);
+            stck[2] = list_tree_transform(lflavor, idx + lsize, static_cast<BSQListTreeRepr*>(stck[0])->r, fn_partialvector);
+            
+            void* res = BSQListOps::list_append(lflavor, stck[1], stck[2]);
 
-            auto gcrpoint = Allocator::GlobalAllocator.getCollectionNodeCurrentEnd();
-            auto rnode = Allocator::GlobalAllocator.registerCollectionNode(static_cast<BSQListTreeRepr*>(reprnode->repr)->r);
-            auto rrnode = list_tree_transform_idx(lflavor, rnode, idx + lsize, fn_partialvector);
-            auto rrres = Allocator::GlobalAllocator.resetCollectionNodeEnd(gcrpoint, rrnode);
-
-            Allocator::GlobalAllocator.ensureSpace(std::max(lflavor.pv8type->allocinfo.heapsize, lflavor.treetype->allocinfo.heapsize) + sizeof(GC_META_DATA_WORD));
-            return BSQListOps::list_append(lflavor, llres->repr, rrres->repr);
+            GCStack::popFrame(sizeof(void*) * 3);
+            return res;
         }
     }
 
