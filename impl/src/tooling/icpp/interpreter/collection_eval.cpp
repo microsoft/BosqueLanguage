@@ -1086,6 +1086,7 @@ void* BSQMapOps::s_remap_ne(const BSQMapTypeFlavor& mflavor, LambdaEvalThunk ee,
             mflavor.valuetype->storeValue(vsl, mflavor.treetype->getValueLocation(reprnode->repr));
             ee.invoke(icall, lparams, resl);
 
+xxxx;
             void* tinto = (void*)Allocator::GlobalAllocator.allocateDynamic(resflavor.treetype);
             resflavor.treetype->initializeLR(tinto, mflavor.treetype->getKeyLocation(reprnode->repr), mflavor.keytype, resl, resflavor.valuetype, ll->repr, rr->repr);
 

@@ -153,7 +153,6 @@ struct BSQMapTypeFlavor
 
     const BSQType* keytype;
     const BSQType* valuetype;
-    const BSQType* tupletype;
 
     const BSQMapTreeType* treetype;
 };
@@ -164,9 +163,9 @@ class BSQMapType : public BSQType
 public:
     const BSQTypeID ktype; //type of K in the map
     const BSQTypeID vtype; //type of V in the map
-    const BSQTypeID etype; //type of [K, V]
 
-    BSQMapType(BSQTypeID tid, DisplayFP fpDisplay, std::string name, BSQTypeID ktype, BSQTypeID vtype, BSQTypeID etype): 
+    BSQMapType(BSQTypeID tid, DisplayFP fpDisplay, std::string name, BSQTypeID ktype, BSQTypeID vtype): 
+    xxxx; //see list decls too
         BSQType(tid, BSQTypeLayoutKind::Struct, {24, 24, 24, nullptr, "112"}, STRUCT_STD_GC_FUNCTOR_SET, {}, EMPTY_KEY_CMP, fpDisplay, name),
         ktype(ktype), vtype(vtype), etype(etype)
     {;}
