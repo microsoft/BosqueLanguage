@@ -415,28 +415,10 @@ public:
         }
     }
 
-    static void* s_lookup_ne(void* t, const BSQMapTreeType* ttype, StorageLocationPtr kl, const BSQType* ktype)
-    {
-        BSQMapTreeRepr* curr = static_cast<BSQMapTreeRepr*>(t);
-        while(curr != nullptr)
-        {
-            auto ck = ttype->getKeyLocation(curr);
-            if(ktype->fpkeycmp(ktype, kl, ck) < 0)
-            {
-                curr = static_cast<BSQMapTreeRepr*>(curr->l);
-            }
-            else if(ktype->fpkeycmp(ktype, ck, kl) < 0)
-            {
-                curr = static_cast<BSQMapTreeRepr*>(curr->r);
-            }
-            else
-            {
-                return curr;
-            }
-        }
-
-        return nullptr;
-    }
+    static void* s_lookup_ne(void* t, const BSQMapTreeType* ttype, StorageLocationPtr kl, const BSQType* ktype);
+    static void* s_add_ne(const BSQMapTypeFlavor& mflavor, void* t, const BSQMapTreeType* ttype, StorageLocationPtr kl, StorageLocationPtr vl);
+    static void* s_set_ne(const BSQMapTypeFlavor& mflavor, void* t, const BSQMapTreeType* ttype, StorageLocationPtr kl, StorageLocationPtr vl);
+    static void* s_remove_ne(const BSQMapTypeFlavor& mflavor, void* t, const BSQMapTreeType* ttype, StorageLocationPtr kl);
 
     template <typename OP_PV>
     static void* map_tree_transform(const BSQMapTypeFlavor& mflavor, void* reprnode, OP_PV fn_node)
@@ -457,6 +439,36 @@ public:
         auto res = fn_node(stck[0], stck[1], stck[2]);
 
         GCStack::popFrame(sizeof(void*) * 3);
+        return res;
+    }
+
+    static std::pair<void*, void*> extract_min_and_remaining_tree(const BSQMapTypeFlavor& mflavor, BSQMapSpineIterator& iter)
+    {
+        BSQ_INTERNAL_ASSERT(iter.lcurr != nullptr);
+
+        std::pair<void*, void*> res;
+        if(BSQMapTreeType::getLeft(iter.lcurr) != nullptr)
+        {
+            void** stck = (void**)GCStack::allocFrame(sizeof(void*) * 2);
+
+            iter.moveLeft();
+            auto tnp = BSQMapOps::extract_min_and_remaining_tree(mflavor, iter);
+            stck[0] = tnp.first;
+            stck[1] = tnp.second;
+            iter.pop();
+
+            res = std::make_pair((void*)Allocator::GlobalAllocator.allocateSafe(mflavor.treetype), tnp.second);
+            mflavor.treetype->initializeLR(res.first, mflavor.treetype->getKeyLocation(iter.lcurr), mflavor.keytype, mflavor.treetype->getValueLocation(iter.lcurr), mflavor.valuetype, tnp.first, BSQMapTreeType::getRight(iter.lcurr));
+
+            GCStack::popFrame(sizeof(void*) * 2);
+        }
+        else
+        {
+            Allocator::GlobalAllocator.ensureSpace(alloc);
+            xxxx;
+            res = std::make_pair(nullptr, iter.lcurr);
+        }
+
         return res;
     }
 
@@ -481,50 +493,40 @@ public:
             iter.pop();
         }
 
-        stck[2] = nullptr;
-        if(pred(mflavor.treetype->getKeyLocation(iter.lcurr), mflavor.treetype->getValueLocation(iter.lcurr)))
-        {
-            stck[2] = Allocator::GlobalAllocator.allocateDynamic(mflavor.treetype);
-            mflavor.treetype->initializeLeaf(stck[2], mflavor.treetype->getKeyLocation(iter.lcurr), mflavor.keytype, mflavor.treetype->getValueLocation(iter.lcurr), mflavor.valuetype);
-        }
+        auto keepnode = pred(mflavor.treetype->getKeyLocation(iter.lcurr), mflavor.treetype->getValueLocation(iter.lcurr));
 
         void* res = nullptr;
-        if(stck[0] == nullptr && stck[1] == nullptr && stck[2] == nullptr)
+        if(keepnode)
         {
-            res = nullptr;
+            res = Allocator::GlobalAllocator.allocateDynamic(mflavor.treetype);
+            mflavor.treetype->initializeLR(res, mflavor.treetype->getKeyLocation(iter.lcurr), mflavor.keytype, mflavor.treetype->getValueLocation(iter.lcurr), mflavor.valuetype, stck[0], stck[1]);
         }
-        else if(stck[1] == nullptr && stck[2] == nullptr)
+        else
         {
-            res = stck[0];
-        }
-        else if(stck[0] == nullptr && stck[2] == nullptr)
-        {
-            res = stck[1];
-        }
-        else if(stck[0] == nullptr && stck[1] == nullptr)
-        {
-            res = stck[2];
-        }
-        else if(stck[2] == nullptr)
-        {
-            res = nullptr;
-        }
-        else if(stck[1] == nullptr)
-        {
-            res = nullptr;
-        }
-        else if(stck[0] == nullptr)
-        {
-            res = nullptr;
+            if(stck[0] == nullptr && stck[1] == nullptr)
+            {
+                res = nullptr;
+            }
+            else if(stck[0] == nullptr)
+            {
+                res = stck[1];
+            }
+            else if(stck[1] == nullptr)
+            {
+                res = stck[0];
+            }
+            else
+            {
+                iter.moveRight();
+                auto tnp = s_remove_rotate_ne_rec(mflavor, iter, kl, nalloc);
+                iter.pop();
+
+                res = Allocator::GlobalAllocator.allocateSafe(mflavor.treetype);
+                mflavor.treetype->initializeLR(res, mflavor.treetype->getKeyLocation(tnp.second), mflavor.keytype, mflavor.treetype->getValueLocation(tnp.second), mflavor.valuetype, BSQMapTreeType::getLeft(iter.lcurr), tnp.first);
+            }
         }
 
-
-        else if(...)
-        {
-            ...
-        }
-
-        GCStack::popFrame(sizeof(void*) * 4);
+        GCStack::popFrame(sizeof(void*) * 3);
         return res;
     }
 
@@ -547,8 +549,4 @@ public:
 
     static std::pair<void*, BSQNat> s_submap_ne(const BSQMapTypeFlavor& mflavor, LambdaEvalThunk ee, void* t, const BSQMapTreeType* ttype, const BSQPCode* pred, const std::vector<StorageLocationPtr>& params);
     static void* s_remap_ne(const BSQMapTypeFlavor& mflavor, LambdaEvalThunk ee, void* t, const BSQMapTreeType* ttype, const BSQPCode* fn, const std::vector<StorageLocationPtr>& params, const BSQMapTypeFlavor& resflavor);
-
-    static void* s_add_ne(const BSQMapTypeFlavor& mflavor, void* t, const BSQMapTreeType* ttype, StorageLocationPtr kl, StorageLocationPtr vl);
-    static void* s_set_ne(const BSQMapTypeFlavor& mflavor, void* t, const BSQMapTreeType* ttype, StorageLocationPtr kl, StorageLocationPtr vl);
-    static void* s_remove_ne(const BSQMapTypeFlavor& mflavor, void* t, const BSQMapTreeType* ttype, StorageLocationPtr kl);
 };

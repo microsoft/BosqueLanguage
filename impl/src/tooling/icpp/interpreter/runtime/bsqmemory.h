@@ -161,6 +161,8 @@ public:
         assert((GCStack::stackp - GCStack::sdata) < BSQ_MAX_STACK);
         
         uint8_t* frame = GCStack::stackp;
+        GC_MEM_ZERO(frame, bytes);
+
         GCStack::stackp += bytes;
 
         return frame;

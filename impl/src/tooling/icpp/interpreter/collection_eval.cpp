@@ -997,6 +997,222 @@ BSQString BSQListOps::s_strjoin_ne(void* t, const BSQListReprType* ttype, Storag
 
 std::map<std::pair<BSQTypeID, BSQTypeID>, BSQMapTypeFlavor> BSQMapOps::g_flavormap;
 
+void* BSQMapOps::s_lookup_ne(void* t, const BSQMapTreeType* ttype, StorageLocationPtr kl, const BSQType* ktype)
+{
+    BSQMapTreeRepr* curr = static_cast<BSQMapTreeRepr*>(t);
+    while(curr != nullptr)
+    {
+        auto ck = ttype->getKeyLocation(curr);
+        if(ktype->fpkeycmp(ktype, kl, ck) < 0)
+        {
+            curr = static_cast<BSQMapTreeRepr*>(curr->l);
+        }
+        else if(ktype->fpkeycmp(ktype, ck, kl) < 0)
+        {
+            curr = static_cast<BSQMapTreeRepr*>(curr->r);
+        }
+        else
+        {
+            return curr;
+        }
+    }
+
+    return nullptr;
+}
+
+void* s_add_ne_rec(const BSQMapTypeFlavor& mflavor, BSQMapSpineIterator& iter, StorageLocationPtr kl, StorageLocationPtr vl, uint32_t alloc)
+{
+    void* res = nullptr;
+
+    if(iter.lcurr == nullptr)
+    {
+        Allocator::GlobalAllocator.ensureSpace(alloc);
+        res = Allocator::GlobalAllocator.allocateSafe(mflavor.treetype);
+        mflavor.treetype->initializeLeaf(res, kl, mflavor.keytype, vl, mflavor.valuetype);
+    }
+    else
+    {
+        auto nalloc = alloc + mflavor.treetype->allocinfo.heapsize + sizeof(GC_META_DATA_WORD);
+
+        auto ck = mflavor.treetype->getKeyLocation(iter.lcurr);
+        if(mflavor.keytype->fpkeycmp(mflavor.keytype, kl, ck) < 0)
+        {
+            iter.moveLeft();
+            void* ll = s_add_ne_rec(mflavor, iter, kl, vl, nalloc);
+            iter.pop();
+
+            res = Allocator::GlobalAllocator.allocateSafe(mflavor.treetype);
+            mflavor.treetype->initializeLR(res, mflavor.treetype->getKeyLocation(iter.lcurr), mflavor.keytype, mflavor.treetype->getValueLocation(iter.lcurr), mflavor.valuetype, ll, BSQMapTreeType::getRight(iter.lcurr));
+        }
+        else
+        {
+            BSQ_INTERNAL_ASSERT(mflavor.keytype->fpkeycmp(mflavor.keytype, ck, kl) < 0);
+
+            iter.moveRight();
+            void* rr = s_add_ne_rec(mflavor, iter, kl, vl, nalloc);
+            iter.pop();
+
+            res = Allocator::GlobalAllocator.allocateSafe(mflavor.treetype);
+            mflavor.treetype->initializeLR(res, mflavor.treetype->getKeyLocation(iter.lcurr), mflavor.keytype, mflavor.treetype->getValueLocation(iter.lcurr), mflavor.valuetype, BSQMapTreeType::getLeft(iter.lcurr), rr);
+        }
+    }
+
+    return res;
+}
+
+void* BSQMapOps::s_add_ne(const BSQMapTypeFlavor& mflavor, void* t, const BSQMapTreeType* ttype, StorageLocationPtr kl, StorageLocationPtr vl)
+{
+    BSQMapSpineIterator iter(ttype, t);
+    Allocator::GlobalAllocator.registerCollectionIterator(&iter);
+
+    void* res = s_add_ne_rec(mflavor, iter, kl, vl, 0);
+
+    Allocator::GlobalAllocator.releaseCollectionIterator(&iter);
+    return res;
+}
+
+void* s_set_ne_rec(const BSQMapTypeFlavor& mflavor, BSQMapSpineIterator& iter, StorageLocationPtr kl, StorageLocationPtr vl, uint32_t alloc)
+{
+    BSQ_INTERNAL_ASSERT(iter.lcurr != nullptr);
+
+    void* res;
+    auto nalloc = alloc + mflavor.treetype->allocinfo.heapsize + sizeof(GC_META_DATA_WORD);
+
+    auto ck = mflavor.treetype->getKeyLocation(iter.lcurr);
+    if(mflavor.keytype->fpkeycmp(mflavor.keytype, kl, ck) < 0)
+    {
+        iter.moveLeft();
+        void* ll = s_add_ne_rec(mflavor, iter, kl, vl, nalloc);
+        iter.pop();
+
+        res = Allocator::GlobalAllocator.allocateSafe(mflavor.treetype);
+        mflavor.treetype->initializeLR(res, mflavor.treetype->getKeyLocation(iter.lcurr), mflavor.keytype, mflavor.treetype->getValueLocation(iter.lcurr), mflavor.valuetype, ll, BSQMapTreeType::getRight(iter.lcurr));
+    }
+    else if(mflavor.keytype->fpkeycmp(mflavor.keytype, ck, kl) < 0)
+    {
+        iter.moveRight();
+        void* rr = s_add_ne_rec(mflavor, iter, kl, vl, nalloc);
+        iter.pop();
+
+        res = Allocator::GlobalAllocator.allocateSafe(mflavor.treetype);
+        mflavor.treetype->initializeLR(res, mflavor.treetype->getKeyLocation(iter.lcurr), mflavor.keytype, mflavor.treetype->getValueLocation(iter.lcurr), mflavor.valuetype, BSQMapTreeType::getLeft(iter.lcurr), rr);
+    }
+    else
+    {
+        Allocator::GlobalAllocator.ensureSpace(nalloc);
+        res = Allocator::GlobalAllocator.allocateSafe(mflavor.treetype);
+        mflavor.treetype->initializeLR(res, kl, mflavor.keytype, vl, mflavor.valuetype, BSQMapTreeType::getLeft(iter.lcurr), BSQMapTreeType::getRight(iter.lcurr));
+    }
+
+    return res;
+}
+
+void* BSQMapOps::s_set_ne(const BSQMapTypeFlavor& mflavor, void* t, const BSQMapTreeType* ttype, StorageLocationPtr kl, StorageLocationPtr vl)
+{
+    BSQMapSpineIterator iter(ttype, t);
+    Allocator::GlobalAllocator.registerCollectionIterator(&iter);
+
+    void* res = s_set_ne_rec(mflavor, iter, kl, vl, 0);
+
+    Allocator::GlobalAllocator.releaseCollectionIterator(&iter);
+    return res;
+}
+
+std::pair<void*, void*> s_remove_rotate_ne_rec(const BSQMapTypeFlavor& mflavor, BSQMapSpineIterator& iter, StorageLocationPtr kl)
+{
+    BSQ_INTERNAL_ASSERT(iter.lcurr != nullptr);
+
+    std::pair<void*, void*> res;
+    if(BSQMapTreeType::getLeft(iter.lcurr) != nullptr)
+    {
+        auto nalloc = alloc + mflavor.treetype->allocinfo.heapsize + sizeof(GC_META_DATA_WORD);
+
+        iter.moveLeft();
+        auto tnp = s_remove_rotate_ne_rec(mflavor, iter, kl, nalloc);
+        iter.pop();
+
+        res = std::make_pair((void*)Allocator::GlobalAllocator.allocateSafe(mflavor.treetype), tnp.second);
+        mflavor.treetype->initializeLR(res.first, mflavor.treetype->getKeyLocation(iter.lcurr), mflavor.keytype, mflavor.treetype->getValueLocation(iter.lcurr), mflavor.valuetype, tnp.first, BSQMapTreeType::getRight(iter.lcurr));
+    }
+    else
+    {
+        Allocator::GlobalAllocator.ensureSpace(alloc);
+        xxxx;
+        res = std::make_pair(nullptr, iter.lcurr);
+    }
+
+    return res;
+}
+
+void* s_remove_find_ne_rec(const BSQMapTypeFlavor& mflavor, BSQMapSpineIterator& iter, StorageLocationPtr kl, uint32_t alloc)
+{
+    BSQ_INTERNAL_ASSERT(iter.lcurr != nullptr);
+
+    void* res;
+    auto nalloc = alloc + mflavor.treetype->allocinfo.heapsize + sizeof(GC_META_DATA_WORD);
+
+    auto ck = mflavor.treetype->getKeyLocation(iter.lcurr);
+    if(mflavor.keytype->fpkeycmp(mflavor.keytype, kl, ck) < 0)
+    {
+        iter.moveLeft();
+        void* ll = s_remove_find_ne_rec(mflavor, iter, kl, nalloc);
+        iter.pop();
+
+        res = Allocator::GlobalAllocator.allocateSafe(mflavor.treetype);
+        mflavor.treetype->initializeLR(res, mflavor.treetype->getKeyLocation(iter.lcurr), mflavor.keytype, mflavor.treetype->getValueLocation(iter.lcurr), mflavor.valuetype, ll, BSQMapTreeType::getRight(iter.lcurr));
+    }
+    else if(mflavor.keytype->fpkeycmp(mflavor.keytype, ck, kl) < 0)
+    {
+        iter.moveRight();
+        void* rr = s_remove_find_ne_rec(mflavor, iter, kl, nalloc);
+        iter.pop();
+
+        res = Allocator::GlobalAllocator.allocateSafe(mflavor.treetype);
+        mflavor.treetype->initializeLR(res, mflavor.treetype->getKeyLocation(iter.lcurr), mflavor.keytype, mflavor.treetype->getValueLocation(iter.lcurr), mflavor.valuetype, BSQMapTreeType::getLeft(iter.lcurr), rr);
+    }
+    else
+    {
+        Allocator::GlobalAllocator.ensureSpace(alloc);
+
+        auto lltmp = BSQMapTreeType::getLeft(iter.lcurr);
+        auto rrtmp = BSQMapTreeType::getRight(iter.lcurr);
+        if(lltmp == nullptr && rrtmp == nullptr)
+        {    
+            res = nullptr;
+        }
+        else if(lltmp == nullptr)
+        {
+            res = rrtmp;
+        }
+        else if(rrtmp == nullptr)
+        {
+            res = lltmp;
+        }
+        else
+        {
+            iter.moveRight();
+            auto tnp = s_remove_rotate_ne_rec(mflavor, iter, kl, nalloc);
+            iter.pop();
+
+            res = Allocator::GlobalAllocator.allocateSafe(mflavor.treetype);
+            mflavor.treetype->initializeLR(res, mflavor.treetype->getKeyLocation(tnp.second), mflavor.keytype, mflavor.treetype->getValueLocation(tnp.second), mflavor.valuetype, BSQMapTreeType::getLeft(iter.lcurr), tnp.first);
+        }
+    }
+
+    return res;
+}
+
+void* BSQMapOps::s_remove_ne(const BSQMapTypeFlavor& mflavor, void* t, const BSQMapTreeType* ttype, StorageLocationPtr kl)
+{
+    BSQMapSpineIterator iter(ttype, t);
+    Allocator::GlobalAllocator.registerCollectionIterator(&iter);
+
+    void* res = s_remove_find_ne_rec(mflavor, iter, kl, 0);
+
+    Allocator::GlobalAllocator.releaseCollectionIterator(&iter);
+    return res;
+}
+
 void s_union_rec_ne(const BSQMapTypeFlavor& mflavor, StorageLocationPtr tnode, BSQMapSpineIterator& ii)
 {
     if(BSQMapTreeType::getLeft(ii.lcurr) != nullptr)
@@ -1101,198 +1317,6 @@ xxxx;
 
     Allocator::GlobalAllocator.resetCollectionNodeEnd(gcpoint);
     return rres;
-}
-
-void* s_add_ne_rec(const BSQMapTypeFlavor& mflavor, BSQMapSpineIterator& iter, StorageLocationPtr kl, StorageLocationPtr vl, uint32_t alloc)
-{
-    void* res = nullptr;
-
-    if(iter.lcurr == nullptr)
-    {
-        Allocator::GlobalAllocator.ensureSpace(alloc);
-        res = Allocator::GlobalAllocator.allocateSafe(mflavor.treetype);
-        mflavor.treetype->initializeLeaf(res, kl, mflavor.keytype, vl, mflavor.valuetype);
-    }
-    else
-    {
-        auto nalloc = alloc + mflavor.treetype->allocinfo.heapsize + sizeof(GC_META_DATA_WORD);
-
-        auto ck = mflavor.treetype->getKeyLocation(iter.lcurr);
-        if(mflavor.keytype->fpkeycmp(mflavor.keytype, kl, ck) < 0)
-        {
-            iter.moveLeft();
-            void* ll = s_add_ne_rec(mflavor, iter, kl, vl, nalloc);
-            iter.pop();
-
-            res = Allocator::GlobalAllocator.allocateSafe(mflavor.treetype);
-            mflavor.treetype->initializeLR(res, mflavor.treetype->getKeyLocation(iter.lcurr), mflavor.keytype, mflavor.treetype->getValueLocation(iter.lcurr), mflavor.valuetype, ll, BSQMapTreeType::getRight(iter.lcurr));
-        }
-        else
-        {
-            BSQ_INTERNAL_ASSERT(mflavor.keytype->fpkeycmp(mflavor.keytype, ck, kl) < 0);
-
-            iter.moveRight();
-            void* rr = s_add_ne_rec(mflavor, iter, kl, vl, nalloc);
-            iter.pop();
-
-            res = Allocator::GlobalAllocator.allocateSafe(mflavor.treetype);
-            mflavor.treetype->initializeLR(res, mflavor.treetype->getKeyLocation(iter.lcurr), mflavor.keytype, mflavor.treetype->getValueLocation(iter.lcurr), mflavor.valuetype, BSQMapTreeType::getLeft(iter.lcurr), rr);
-        }
-    }
-
-    return res;
-}
-
-void* BSQMapOps::s_add_ne(const BSQMapTypeFlavor& mflavor, void* t, const BSQMapTreeType* ttype, StorageLocationPtr kl, StorageLocationPtr vl)
-{
-    BSQMapSpineIterator iter(ttype, t);
-    Allocator::GlobalAllocator.registerCollectionIterator(&iter);
-
-    void* res = s_add_ne_rec(mflavor, iter, kl, vl, 0);
-
-    Allocator::GlobalAllocator.releaseCollectionIterator(&iter);
-    return res;
-}
-
-void* s_set_ne_rec(const BSQMapTypeFlavor& mflavor, BSQMapSpineIterator& iter, StorageLocationPtr kl, StorageLocationPtr vl, uint32_t alloc)
-{
-    BSQ_INTERNAL_ASSERT(iter.lcurr != nullptr);
-
-    void* res;
-    auto nalloc = alloc + mflavor.treetype->allocinfo.heapsize + sizeof(GC_META_DATA_WORD);
-
-    auto ck = mflavor.treetype->getKeyLocation(iter.lcurr);
-    if(mflavor.keytype->fpkeycmp(mflavor.keytype, kl, ck) < 0)
-    {
-        iter.moveLeft();
-        void* ll = s_add_ne_rec(mflavor, iter, kl, vl, nalloc);
-        iter.pop();
-
-        res = Allocator::GlobalAllocator.allocateSafe(mflavor.treetype);
-        mflavor.treetype->initializeLR(res, mflavor.treetype->getKeyLocation(iter.lcurr), mflavor.keytype, mflavor.treetype->getValueLocation(iter.lcurr), mflavor.valuetype, ll, BSQMapTreeType::getRight(iter.lcurr));
-    }
-    else if(mflavor.keytype->fpkeycmp(mflavor.keytype, ck, kl) < 0)
-    {
-        iter.moveRight();
-        void* rr = s_add_ne_rec(mflavor, iter, kl, vl, nalloc);
-        iter.pop();
-
-        res = Allocator::GlobalAllocator.allocateSafe(mflavor.treetype);
-        mflavor.treetype->initializeLR(res, mflavor.treetype->getKeyLocation(iter.lcurr), mflavor.keytype, mflavor.treetype->getValueLocation(iter.lcurr), mflavor.valuetype, BSQMapTreeType::getLeft(iter.lcurr), rr);
-    }
-    else
-    {
-        Allocator::GlobalAllocator.ensureSpace(nalloc);
-        res = Allocator::GlobalAllocator.allocateSafe(mflavor.treetype);
-        mflavor.treetype->initializeLR(res, kl, mflavor.keytype, vl, mflavor.valuetype, BSQMapTreeType::getLeft(iter.lcurr), BSQMapTreeType::getRight(iter.lcurr));
-    }
-
-    return res;
-}
-
-void* BSQMapOps::s_set_ne(const BSQMapTypeFlavor& mflavor, void* t, const BSQMapTreeType* ttype, StorageLocationPtr kl, StorageLocationPtr vl)
-{
-    BSQMapSpineIterator iter(ttype, t);
-    Allocator::GlobalAllocator.registerCollectionIterator(&iter);
-
-    void* res = s_set_ne_rec(mflavor, iter, kl, vl, 0);
-
-    Allocator::GlobalAllocator.releaseCollectionIterator(&iter);
-    return res;
-}
-
-std::pair<void*, void*> s_remove_rotate_ne_rec(const BSQMapTypeFlavor& mflavor, BSQMapSpineIterator& iter, StorageLocationPtr kl, uint32_t alloc)
-{
-    BSQ_INTERNAL_ASSERT(iter.lcurr != nullptr);
-
-    std::pair<void*, void*> res;
-    if(BSQMapTreeType::getLeft(iter.lcurr) != nullptr)
-    {
-        auto nalloc = alloc + mflavor.treetype->allocinfo.heapsize + sizeof(GC_META_DATA_WORD);
-
-        iter.moveLeft();
-        auto tnp = s_remove_rotate_ne_rec(mflavor, iter, kl, nalloc);
-        iter.pop();
-
-        res = std::make_pair((void*)Allocator::GlobalAllocator.allocateSafe(mflavor.treetype), tnp.second);
-        mflavor.treetype->initializeLR(res.first, mflavor.treetype->getKeyLocation(iter.lcurr), mflavor.keytype, mflavor.treetype->getValueLocation(iter.lcurr), mflavor.valuetype, tnp.first, BSQMapTreeType::getRight(iter.lcurr));
-    }
-    else
-    {
-        Allocator::GlobalAllocator.ensureSpace(alloc);
-        res = std::make_pair(nullptr, iter.lcurr);
-    }
-
-    return res;
-}
-
-void* s_remove_find_ne_rec(const BSQMapTypeFlavor& mflavor, BSQMapSpineIterator& iter, StorageLocationPtr kl, uint32_t alloc)
-{
-    BSQ_INTERNAL_ASSERT(iter.lcurr != nullptr);
-
-    void* res;
-    auto nalloc = alloc + mflavor.treetype->allocinfo.heapsize + sizeof(GC_META_DATA_WORD);
-
-    auto ck = mflavor.treetype->getKeyLocation(iter.lcurr);
-    if(mflavor.keytype->fpkeycmp(mflavor.keytype, kl, ck) < 0)
-    {
-        iter.moveLeft();
-        void* ll = s_remove_find_ne_rec(mflavor, iter, kl, nalloc);
-        iter.pop();
-
-        res = Allocator::GlobalAllocator.allocateSafe(mflavor.treetype);
-        mflavor.treetype->initializeLR(res, mflavor.treetype->getKeyLocation(iter.lcurr), mflavor.keytype, mflavor.treetype->getValueLocation(iter.lcurr), mflavor.valuetype, ll, BSQMapTreeType::getRight(iter.lcurr));
-    }
-    else if(mflavor.keytype->fpkeycmp(mflavor.keytype, ck, kl) < 0)
-    {
-        iter.moveRight();
-        void* rr = s_remove_find_ne_rec(mflavor, iter, kl, nalloc);
-        iter.pop();
-
-        res = Allocator::GlobalAllocator.allocateSafe(mflavor.treetype);
-        mflavor.treetype->initializeLR(res, mflavor.treetype->getKeyLocation(iter.lcurr), mflavor.keytype, mflavor.treetype->getValueLocation(iter.lcurr), mflavor.valuetype, BSQMapTreeType::getLeft(iter.lcurr), rr);
-    }
-    else
-    {
-        Allocator::GlobalAllocator.ensureSpace(alloc);
-
-        auto lltmp = BSQMapTreeType::getLeft(iter.lcurr);
-        auto rrtmp = BSQMapTreeType::getRight(iter.lcurr);
-        if(lltmp == nullptr && rrtmp == nullptr)
-        {    
-            res = nullptr;
-        }
-        else if(lltmp == nullptr)
-        {
-            res = rrtmp;
-        }
-        else if(rrtmp == nullptr)
-        {
-            res = lltmp;
-        }
-        else
-        {
-            iter.moveRight();
-            auto tnp = s_remove_rotate_ne_rec(mflavor, iter, kl, nalloc);
-            iter.pop();
-
-            res = Allocator::GlobalAllocator.allocateSafe(mflavor.treetype);
-            mflavor.treetype->initializeLR(res, mflavor.treetype->getKeyLocation(tnp.second), mflavor.keytype, mflavor.treetype->getValueLocation(tnp.second), mflavor.valuetype, BSQMapTreeType::getLeft(iter.lcurr), tnp.first);
-        }
-    }
-
-    return res;
-}
-
-void* BSQMapOps::s_remove_ne(const BSQMapTypeFlavor& mflavor, void* t, const BSQMapTreeType* ttype, StorageLocationPtr kl)
-{
-    BSQMapSpineIterator iter(ttype, t);
-    Allocator::GlobalAllocator.registerCollectionIterator(&iter);
-
-    void* res = s_remove_find_ne_rec(mflavor, iter, kl, 0);
-
-    Allocator::GlobalAllocator.releaseCollectionIterator(&iter);
-    return res;
 }
 
 std::string entityPartialVectorDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
