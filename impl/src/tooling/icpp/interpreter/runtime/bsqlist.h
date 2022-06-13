@@ -206,7 +206,8 @@ struct BSQListTreeRepr
 {
     void* l;
     void* r;
-    uint64_t size;
+    uint32_t lcount;
+    uint32_t color; //TODO: when we balance
 };
 
 std::string entityListTreeDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode);
@@ -222,7 +223,7 @@ public:
 
     virtual uint64_t getCount(void* repr) const override final
     {
-        return ((BSQListTreeRepr*)repr)->size;
+        return ((BSQListTreeRepr*)repr)->lcount;
     }
 };
 

@@ -87,7 +87,7 @@ public:
                     res = Allocator::GlobalAllocator.allocateDynamic(lflavor.treetype);
                     ((BSQListTreeRepr*)res)->l = stck[0];
                     ((BSQListTreeRepr*)res)->r = stck[1];
-                    ((BSQListTreeRepr*)res)->size = count;
+                    ((BSQListTreeRepr*)res)->lcount = count;
                 }
 
             }
@@ -96,7 +96,7 @@ public:
                 res = (BSQListTreeRepr*)Allocator::GlobalAllocator.allocateDynamic(lflavor.treetype);
                 ((BSQListTreeRepr*)res)->l = stck[0];
                 ((BSQListTreeRepr*)res)->r = stck[1];
-                ((BSQListTreeRepr*)res)->size = ltype->getCount(stck[0]) + rtype->getCount(stck[1]);
+                ((BSQListTreeRepr*)res)->lcount = ltype->getCount(stck[0]) + rtype->getCount(stck[1]);
             }
         }
 
@@ -457,25 +457,23 @@ public:
             stck[1] = tnp.second;
             iter.pop();
 
-            res = std::make_pair((void*)Allocator::GlobalAllocator.allocateSafe(mflavor.treetype), tnp.second);
-            mflavor.treetype->initializeLR(res.first, mflavor.treetype->getKeyLocation(iter.lcurr), mflavor.keytype, mflavor.treetype->getValueLocation(iter.lcurr), mflavor.valuetype, tnp.first, BSQMapTreeType::getRight(iter.lcurr));
+            res = std::make_pair((void*)Allocator::GlobalAllocator.allocateDynamic(mflavor.treetype), stck[1]);
+            mflavor.treetype->initializeLR(res.first, mflavor.treetype->getKeyLocation(iter.lcurr), mflavor.keytype, mflavor.treetype->getValueLocation(iter.lcurr), mflavor.valuetype, stck[0], BSQMapTreeType::getRight(iter.lcurr));
 
             GCStack::popFrame(sizeof(void*) * 2);
         }
         else
         {
-            Allocator::GlobalAllocator.ensureSpace(alloc);
-            xxxx;
-            res = std::make_pair(nullptr, iter.lcurr);
+            res = std::make_pair(BSQMapTreeType::getRight(iter.lcurr), iter.lcurr);
         }
 
         return res;
     }
 
-    //template <typename OP_PV>
+    template <typename OP_PV>
     static void* map_tree_flatten(const BSQMapTypeFlavor& mflavor, BSQMapSpineIterator& iter, OP_PV pred)
     {
-        void** stck = (void**)GCStack::allocFrame(sizeof(void*) * 3);
+        void** stck = (void**)GCStack::allocFrame(sizeof(void*) * 4);
 
         stck[0] = nullptr;
         if(BSQMapTreeType::getLeft(iter.lcurr) != nullptr)
@@ -518,15 +516,17 @@ public:
             else
             {
                 iter.moveRight();
-                auto tnp = s_remove_rotate_ne_rec(mflavor, iter, kl, nalloc);
+                auto tnp = BSQMapOps::extract_min_and_remaining_tree(mflavor, iter);
+                stck[2] = tnp.first;
+                stck[3] = tnp.second;
                 iter.pop();
 
-                res = Allocator::GlobalAllocator.allocateSafe(mflavor.treetype);
-                mflavor.treetype->initializeLR(res, mflavor.treetype->getKeyLocation(tnp.second), mflavor.keytype, mflavor.treetype->getValueLocation(tnp.second), mflavor.valuetype, BSQMapTreeType::getLeft(iter.lcurr), tnp.first);
+                res = Allocator::GlobalAllocator.allocateDynamic(mflavor.treetype);
+                mflavor.treetype->initializeLR(res, mflavor.treetype->getKeyLocation(stck[3]), mflavor.keytype, mflavor.treetype->getValueLocation(stck[3]), mflavor.valuetype, BSQMapTreeType::getLeft(iter.lcurr), stck[2]);
             }
         }
 
-        GCStack::popFrame(sizeof(void*) * 3);
+        GCStack::popFrame(sizeof(void*) * 4);
         return res;
     }
 
