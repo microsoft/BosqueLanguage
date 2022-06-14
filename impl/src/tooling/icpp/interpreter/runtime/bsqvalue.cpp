@@ -39,9 +39,10 @@ const BSQType* BSQWellKnownType::g_typeRelativeTime = CONS_BSQ_RELATIVE_TIME_TYP
 const BSQType* BSQWellKnownType::g_typeTickTime = CONS_BSQ_TICK_TIME_TYPE(BSQ_TYPE_ID_TICKTIME, "TickTime");
 const BSQType* BSQWellKnownType::g_typeLogicalTime = CONS_BSQ_LOGICAL_TIME_TYPE(BSQ_TYPE_ID_LOGICALTIME, "LogicalTime");
 const BSQType* BSQWellKnownType::g_typeISOTimeStamp = CONS_BSQ_ISO_TIME_STAMP_TYPE(BSQ_TYPE_ID_ISO_TIMESTAMP, "ISOTimeStamp");
-const BSQType* BSQWellKnownType::g_typeUUID = CONS_BSQ_UUID_TYPE(BSQ_TYPE_ID_UUID, "UUID");
-const BSQType* BSQWellKnownType::g_typeContentHash = CONS_BSQ_CONTENT_HASH_TYPE(BSQ_TYPE_ID_CONTENTHASH, "ContentHash");
-const BSQType* BSQWellKnownType::g_typeGeoCoordinate = CONS_BSQ_GEO_COORDINATE_TYPE(BSQ_TYPE_ID_GEO_COORDINATE, "GeoCoordinate");
+const BSQType* BSQWellKnownType::g_typeUUID4 = CONS_BSQ_UUID4_TYPE(BSQ_TYPE_ID_UUID4, "UUID4");
+const BSQType* BSQWellKnownType::g_typeUUID7 = CONS_BSQ_UUID7_TYPE(BSQ_TYPE_ID_UUID7, "UUID7");
+const BSQType* BSQWellKnownType::g_typeSHAContentHash = CONS_BSQ_SHA_CONTENT_HASH_TYPE(BSQ_TYPE_ID_SHA_CONTENT_HASH, "SHAContentHash");
+const BSQType* BSQWellKnownType::g_typeLatLongCoordinate = CONS_BSQ_LAT_LONG_COORDINATE_TYPE(BSQ_TYPE_ID_LAT_LONG_COORDINATE, "LatLongCoordinate");
 const BSQType* BSQWellKnownType::g_typeRegex = CONS_BSQ_REGEX_TYPE();
 
 std::map<BSQRecordPropertyID, std::string> BSQRecordInfo::g_propertynamemap;
@@ -1223,9 +1224,9 @@ int entityUUIDKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, Storag
     }
 }
 
-std::string entityContentHashDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
+std::string entitySHAContentHashDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
-    auto v1 = (BSQContentHash*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data);
+    auto v1 = (BSQSHAContentHash*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data);
 
     std::string rr = "0x";
     for(auto iter = v1->bytes; iter < v1->bytes + sizeof(v1->bytes); ++iter)
@@ -1240,10 +1241,10 @@ std::string entityContentHashDisplay_impl(const BSQType* btype, StorageLocationP
     return rr;
 }
 
-int entityContentHashKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2)
+int entitySHAContentHashKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2)
 {
-    auto v1 = (BSQContentHash*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data1);
-    auto v2 = (BSQContentHash*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data2);
+    auto v1 = (BSQSHAContentHash*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data1);
+    auto v2 = (BSQSHAContentHash*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(data2);
 
     auto cmp = std::mismatch(v1->bytes, v1->bytes + sizeof(v1->bytes), v2->bytes);
     if(cmp.first == v1->bytes + sizeof(v1->bytes))
@@ -1256,14 +1257,14 @@ int entityContentHashKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1,
     }
 }
 
-std::string entityGeoCoordinateDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
+std::string entityLatLongCoordinateDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
-    auto v = SLPTR_LOAD_CONTENTS_AS(BSQGeoCoordinate, data);
+    auto v = SLPTR_LOAD_CONTENTS_AS(BSQLatLongCoordinate, data);
 
     return std::string("(") + std::to_string(v.latitude) + std::string(", ") + std::to_string(v.longitude) + std::string(")");
 }
 
-int entityGeoCoordinateKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2)
+int entityLatLongCoordinateKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2)
 {
     auto v1 = SLPTR_LOAD_CONTENTS_AS(BSQISOTimeStamp, data1);
     auto v2 = SLPTR_LOAD_CONTENTS_AS(BSQISOTimeStamp, data2);

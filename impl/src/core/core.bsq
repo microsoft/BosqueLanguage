@@ -658,16 +658,20 @@ __internal __typedeclable entity ISOTimeStamp provides Some, APIType, KeyType {
     */
 }
 
-//<summary>Primitive UUID value.</summary>
-__internal __typedeclable entity UUID provides Some, KeyType, APIType {
+//<summary>Primitive UUID4 value.</summary>
+__internal __typedeclable entity UUID4 provides Some, KeyType, APIType {
+}
+
+//<summary>Primitive UUID7 value.</summary>
+__internal __typedeclable entity UUID7 provides Some, KeyType, APIType {
 }
 
 //<summary>Primitive hash value suitable for content addressable operations or crypto secure digests.</summary>
-__internal __typedeclable entity ContentHash provides Some, KeyType, APIType {
+__internal __typedeclable entity SHAContentHash provides Some, KeyType, APIType {
 }
 
 //<summary>Primitive Lat/Long</summary>
-__internal __typedeclable entity GeoCoordinate provides Some, KeyType, APIType {
+__internal __typedeclable entity LatLongCoordinate provides Some, KeyType, APIType {
 }
 
 //<summary>Primitive regex value.</summary>

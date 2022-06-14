@@ -61,9 +61,10 @@ public:
     static const BSQType* g_typeTickTime;
     static const BSQType* g_typeLogicalTime;
     static const BSQType* g_typeISOTimeStamp;
-    static const BSQType* g_typeUUID;
-    static const BSQType* g_typeContentHash;
-    static const BSQType* g_typeGeoCoordinate;
+    static const BSQType* g_typeUUID4;
+    static const BSQType* g_typeUUID7;
+    static const BSQType* g_typeSHAContentHash;
+    static const BSQType* g_typeLatLongCoordinate;
     static const BSQType* g_typeRegex;
 };
 
@@ -1420,30 +1421,31 @@ typedef struct { uint8_t bytes[16]; } BSQUUID;
 std::string entityUUIDDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode);
 int entityUUIDKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
 
-#define CONS_BSQ_UUID_TYPE(TID, NAME) (new BSQRegisterType<BSQUUID>(TID, sizeof(BSQUUID), "11", entityUUIDKeyCmp_impl, entityUUIDDisplay_impl, NAME))
+#define CONS_BSQ_UUID4_TYPE(TID, NAME) (new BSQRegisterType<BSQUUID>(TID, sizeof(BSQUUID), "11", entityUUIDKeyCmp_impl, entityUUIDDisplay_impl, NAME))
+#define CONS_BSQ_UUID7_TYPE(TID, NAME) (new BSQRegisterType<BSQUUID>(TID, sizeof(BSQUUID), "11", entityUUIDKeyCmp_impl, entityUUIDDisplay_impl, NAME))
 
 ////
 //ContentHash
-typedef struct { uint8_t bytes[64]; } BSQContentHash;
+typedef struct { uint8_t bytes[64]; } BSQSHAContentHash;
 
-std::string entityContentHashDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode);
-int entityContentHashKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
+std::string entitySHAContentHashDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode);
+int entitySHAContentHashKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
 
-#define CONS_BSQ_CONTENT_HASH_TYPE(TID, NAME) (new BSQRefType(TID, sizeof(BSQContentHash), nullptr, {}, entityContentHashKeyCmp_impl, entityContentHashDisplay_impl, NAME))
+#define CONS_BSQ_SHA_CONTENT_HASH_TYPE(TID, NAME) (new BSQRefType(TID, sizeof(BSQSHAContentHash), nullptr, {}, entitySHAContentHashKeyCmp_impl, entitySHAContentHashDisplay_impl, NAME))
 
 ////
 //GeoCoordinate
 
-struct BSQGeoCoordinate
+struct BSQLatLongCoordinate
 {
     float latitude;
     float longitude;
 };
 
-std::string entityGeoCoordinateDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode);
-int entityGeoCoordinateKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
+std::string entityLatLongCoordinateDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode);
+int entityLatLongCoordinateKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
 
-#define CONS_BSQ_GEO_COORDINATE_TYPE(TID, NAME) (new BSQRegisterType<BSQGeoCoordinate>(TID, sizeof(BSQGeoCoordinate), "1", entityGeoCoordinateKeyCmp_impl, entityGeoCoordinateDisplay_impl, NAME))
+#define CONS_BSQ_LAT_LONG_COORDINATE_TYPE(TID, NAME) (new BSQRegisterType<BSQLatLongCoordinate>(TID, sizeof(BSQLatLongCoordinate), "1", entityLatLongCoordinateKeyCmp_impl, entityLatLongCoordinateDisplay_impl, NAME))
 
 ////
 //Regex

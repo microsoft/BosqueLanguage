@@ -428,12 +428,12 @@ public:
         
         if(BSQMapTreeType::getLeft(stck[0]) != nullptr)
         {
-            stck[1] = map_tree_transform(mflavor, stck, BSQMapTreeType::getLeft(stck[0]), fn_node);
+            stck[1] = map_tree_transform(mflavor, BSQMapTreeType::getLeft(stck[0]), fn_node);
         }
 
         if(BSQMapTreeType::getRight(stck[0]) != nullptr)
         {
-            stck[2] = map_tree_transform(mflavor, stck, BSQMapTreeType::getRight(stck[0]), fn_node);
+            stck[2] = map_tree_transform(mflavor, BSQMapTreeType::getRight(stck[0]), fn_node);
         }
 
         auto res = fn_node(stck[0], stck[1], stck[2]);
@@ -545,8 +545,8 @@ public:
         }
     }
 
-    static void* s_union_ne(const BSQMapTypeFlavor& mflavor, void* t1, const BSQMapTreeType* ttype1, void* t2, const BSQMapTreeType* ttype2, uint64_t ccount);
+    static void* s_union_ne(const BSQMapTypeFlavor& mflavor, void* t1, const BSQMapTreeType* ttype1, void* t2, const BSQMapTreeType* ttype2);
 
-    static std::pair<void*, BSQNat> s_submap_ne(const BSQMapTypeFlavor& mflavor, LambdaEvalThunk ee, void* t, const BSQMapTreeType* ttype, const BSQPCode* pred, const std::vector<StorageLocationPtr>& params);
+    static void* s_submap_ne(const BSQMapTypeFlavor& mflavor, LambdaEvalThunk ee, void* t, const BSQMapTreeType* ttype, const BSQPCode* pred, const std::vector<StorageLocationPtr>& params);
     static void* s_remap_ne(const BSQMapTypeFlavor& mflavor, LambdaEvalThunk ee, void* t, const BSQMapTreeType* ttype, const BSQPCode* fn, const std::vector<StorageLocationPtr>& params, const BSQMapTypeFlavor& resflavor);
 };
