@@ -4420,10 +4420,13 @@ class Parser {
             else if(ttname === "ISOTimeStamp") {
                 //TODO: what operations do we want to forward by default (or config)
             }
-            else if(ttname === "UUID") {
+            else if(ttname === "UUID4") {
                 //TODO: what operations do we want to forward by default (or config)
             }
-            else if(ttname === "ContentHash") {
+            else if(ttname === "UUID7") {
+                //TODO: what operations do we want to forward by default (or config)
+            }
+            else if(ttname === "SHAContentHash") {
                 //TODO: what operations do we want to forward by default (or config)
             }
             else {

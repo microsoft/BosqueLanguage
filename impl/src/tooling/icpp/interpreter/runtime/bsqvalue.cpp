@@ -917,49 +917,6 @@ std::string entityDateTimeDisplay_impl(const BSQType* btype, StorageLocationPtr 
     }
 }
 
-int entityDateTimeKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2)
-{
-    BSQDateTime t1 = SLPTR_LOAD_CONTENTS_AS(BSQDateTime, data1);
-    BSQDateTime t2 = SLPTR_LOAD_CONTENTS_AS(BSQDateTime, data2);
-
-    if(t1.year != t2.year)
-    {
-        return (t1.year < t2.year) ? -1 : 1;
-    }
-    else
-    {
-        if(t1.month != t2.month)
-        {
-            return (t1.month < t2.month) ? -1 : 1;
-        }
-        else
-        {
-            if(t1.day != t2.day)
-            {
-                return (t1.day < t2.day) ? -1 : 1;
-            }
-            else
-            {
-                if(t1.hour != t2.hour)
-                {
-                    return (t1.hour < t2.hour) ? -1 : 1;
-                }
-                else
-                {
-                    if(t1.min != t2.min)
-                    {
-                        return (t1.min < t2.min) ? -1 : 1;
-                    }
-                    else
-                    {
-                        return strcmp(t1.tzdata, t2.tzdata);
-                    }
-                }
-            }
-        }
-    }
-}
-
 std::string entityUTCDateTimeDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
     BSQUTCDateTime t = SLPTR_LOAD_CONTENTS_AS(BSQUTCDateTime, data);
@@ -1177,20 +1134,6 @@ std::string entityISOTimeStampDisplay_impl(const BSQType* btype, StorageLocation
     }
 }
 
-int entityISOTimeStampKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2)
-{
-    auto v1 = SLPTR_LOAD_CONTENTS_AS(BSQISOTimeStamp, data1);
-    auto v2 = SLPTR_LOAD_CONTENTS_AS(BSQISOTimeStamp, data2);
-    if(v1.utctime == v2.utctime)
-    {
-        return 0;
-    }
-    else
-    {
-        return (v1.utctime < v2.utctime) ? -1 : 1;
-    }
-}
-
 std::string entityUUIDDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
     auto uuid = SLPTR_LOAD_CONTENTS_AS(BSQUUID, data);
@@ -1262,20 +1205,6 @@ std::string entityLatLongCoordinateDisplay_impl(const BSQType* btype, StorageLoc
     auto v = SLPTR_LOAD_CONTENTS_AS(BSQLatLongCoordinate, data);
 
     return std::string("(") + std::to_string(v.latitude) + std::string(", ") + std::to_string(v.longitude) + std::string(")");
-}
-
-int entityLatLongCoordinateKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2)
-{
-    auto v1 = SLPTR_LOAD_CONTENTS_AS(BSQISOTimeStamp, data1);
-    auto v2 = SLPTR_LOAD_CONTENTS_AS(BSQISOTimeStamp, data2);
-    if(v1.utctime == v2.utctime)
-    {
-        return 0;
-    }
-    else
-    {
-        return (v1.utctime < v2.utctime) ? -1 : 1;
-    }
 }
 
 std::string entityRegexDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)

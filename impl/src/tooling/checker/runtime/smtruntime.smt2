@@ -68,10 +68,11 @@
 ;;BSTRING_TYPE_ALIAS;;
 (define-sort BTickTime () Int)
 (define-sort BLogicalTime () Int)
-(define-sort BUUID () (Seq (_ BitVec 8)))
-(define-sort BContentHash () (_ BitVec 16))
+(define-sort BUUID4 () String)
+(define-sort BUUID7 () String)
+(define-sort BSHAContentHash () Int)
 
-;;TODO BHashable and Hash + HashInvert and axioms
+;;TODO Hash + HashInvert and axioms
 
 (declare-datatype BByteBuffer 
   (
@@ -82,6 +83,36 @@
 (declare-datatype BDateTime 
   (
     (BDateTime@cons (BDateTime@year BNat) (BDateTime@month BNat) (BDateTime@day BNat) (BDateTime@hour BNat) (BDateTime@min BNat) (BDateTime@tzdata BString))
+  )
+)
+
+(declare-datatype BUTCDateTime 
+  (
+    (BUTCDateTime@cons (BUTCDateTime@year BNat) (BUTCDateTime@month BNat) (BUTCDateTime@day BNat) (BUTCDateTime@hour BNat) (BUTCDateTime@min BNat))
+  )
+)
+
+(declare-datatype BCalendarDate 
+  (
+    (BCalendarDate@cons (BCalendarDate@year BNat) (BCalendarDate@month BNat) (BCalendarDate@day BNat))
+  )
+)
+
+(declare-datatype BRelativeTime 
+  (
+    (BRelativeTime@cons (BRelativeTime@hour BNat) (BRelativeTime@min BNat))
+  )
+)
+
+(declare-datatype BISOTimeStamp 
+  (
+    (BISOTimeStamp@cons (BISOTimeStamp@year BNat) (BISOTimeStamp@month BNat) (BISOTimeStamp@day BNat) (BISOTimeStamp@hour BNat) (BISOTimeStamp@min BNat) (BISOTimeStamp@sec BNat) (BISOTimeStamp@millis BNat) (BISOTimeStamp@tzoffset BInt) (BISOTimeStamp@UTCValue Int))
+  )
+)
+
+(declare-datatype BLatLongCoordinate 
+  (
+    (BLatLongCoordinate@cons (BLatLongCoordinate@lat Real) (BLatLongCoordinate@long Real))
   )
 )
 
@@ -125,10 +156,16 @@
       ; String -> String | (Seq (_ BitVec 8))
       ; ByteBuffer -> BByteBuffer
       ; DateTime -> BDateTime
+      ; UTCDateTime -> BUTCDateTime
+      ; CalendarDate -> BCalendarDate
+      ; RelativeTime -> BRelativeTime
       ; TickTime -> Int
       ; LogicalTime -> Int
-      ; UUID -> BUUID
-      ; ContentHash -> (_ BitVec 16)
+      ; ISOTimeStamp -> BISOTimeStamp
+      ; UUID4 -> BUUID4
+      ; UUID7 -> BUUID7
+      ; SHAContentHash -> (_ BitVec 16)
+      ; LatLongCoordinate -> BLatLongCoordinate
     ) (
       ( (bsq_none@literal) ) 
       ( (bsq_nothing@literal) )
@@ -151,9 +188,14 @@
       (bsqkey_bigint@box (bsqkey_bigint_value BBigInt))
       (bsqkey_bignat@box (bsqkey_bignat_value BBigNat))
       (bsqkey_string@box (bsqkey_string_value BString))
+      (bsqkey_utcdatetime@box (bsqkey_utcdatetime_value BUTCDateTime))
+      (bsqkey_calendardate@box (bsqkey_calendardate_value BCalendarDate))
+      (bsqkey_relativetime@box (bsqkey_relativetime_value BRelativeTime))
+      (bsqkey_ticktime@box (bsqkey_ticktime_value BTickTime))
       (bsqkey_logicaltime@box (bsqkey_logicaltime_value BLogicalTime))
-      (bsqkey_uuid@box (bsqkey_uuid_value BUUID))
-      (bsqkey_contenthash@box (bsqkey_contenthash_value BContentHash))
+      (bsqkey_uuid4@box (bsqkey_uuid4_value BUUID4))
+      (bsqkey_uuid7@box (bsqkey_uuid7_value BUUID7))
+      (bsqkey_shacontenthash@box (bsqkey_shacontenthash_value BSHAContentHash))
       ;;KEY_BOX_OPS;;
     )
     ( (BKey@box (BKey_type TypeTag) (BKey_oftype TypeTag) (BKey_value bsq_keyobject)) )
@@ -190,17 +232,57 @@
   (str.< k1 k2)
 )
 
+(define-fun BUTCDateTime@less ((k1 BUTCDateTime) (k2 BUTCDateTime)) Bool
+  (ite (not (= (BUTCDateTime@year k1) (BUTCDateTime@year k2)))
+    (< (BUTCDateTime@year k1) (BUTCDateTime@year k2)
+    (ite (not (= (BUTCDateTime@month k1) (BUTCDateTime@month k2)))
+      (< (BUTCDateTime@month k1) (BUTCDateTime@month k2)
+      (ite (not (= (BUTCDateTime@day k1) (BUTCDateTime@day k2)))
+        (< (BUTCDateTime@day k1) (BUTCDateTime@day k2)
+        (ite (not (= (BUTCDateTime@hour k1) (BUTCDateTime@hour k2)))
+          (< (BUTCDateTime@hour k1) (BUTCDateTime@hour k2)
+          (< (BUTCDateTime@min k1) (BUTCDateTime@min k2)
+        )
+      )
+    )
+  )
+)
+
+(define-fun BCalendarDate@less ((k1 BCalendarDate) (k2 BCalendarDate)) Bool
+  (ite (not (= (BCalendarDate@year k1) (BCalendarDate@year k2)))
+    (< (BCalendarDate@year k1) (BCalendarDate@year k2)
+    (ite (not (= (BCalendarDate@month k1) (BCalendarDate@month k2)))
+      (< (BCalendarDate@month k1) (BCalendarDate@month k2)
+      (< (BCalendarDate@day k1) (BCalendarDate@day k2)
+    )
+  )
+)
+
+(define-fun BRelativeTime@less ((k1 BRelativeTime) (k2 BRelativeTime)) Bool
+  (ite (not (= (BRelativeTime@hour k1) (BRelativeTime@hour k2)))
+    (< (BRelativeTime@hour k1) (BRelativeTime@hour k2)
+    (< (BRelativeTime@min k1) (BRelativeTime@min k2)
+  )
+)
+
+(define-fun BTickTime@less ((k1 BTickTime) (k2 BTickTime)) Bool
+  (< k1 k2)
+)
+
 (define-fun BLogicalTime@less ((k1 BLogicalTime) (k2 BLogicalTime)) Bool
   (< k1 k2)
 )
 
-(define-fun BUUID@less ((k1 BUUID) (k2 BUUID)) Bool
-  ;;TODO: fix this
-  true
+(define-fun BUUID4@less ((k1 BUUID) (k2 BUUID)) Bool
+  (str.< k1 k2)
 )
 
-(define-fun BContentHash@less ((k1 BContentHash) (k2 BContentHash)) Bool
-  (bvult k1 k2)
+(define-fun BUUID7@less ((k1 BUUID) (k2 BUUID)) Bool
+  (str.< k1 k2)
+)
+
+(define-fun BSHAContentHash@less ((k1 BSHAContentHash) (k2 BSHAContentHash)) Bool
+  (< k1 k2)
 )
 
 (define-fun BKey@less ((k1 BKey) (k2 BKey)) Bool
@@ -222,11 +304,26 @@
                     (BBigNat@less (bsqkey_bignat_value vv1) (bsqkey_bignat_value vv2))
                     (ite (= tt TypeTag_String)
                       (BString@less (bsqkey_string_value vv1) (bsqkey_string_value vv2))
-                      (ite (= tt TypeTag_LogicalTime)
-                        (BLogicalTime@less (bsqkey_logicaltime_value vv1) (bsqkey_logicaltime_value vv2))
-                        (ite (= tt TypeTag_UUID)
-                          (BUUID@less (bsqkey_uuid_value vv1) (bsqkey_uuid_value vv2))
-                          (BContentHash@less (bsqkey_contenthash_value vv1) (bsqkey_contenthash_value vv2))
+                      (ite (= tt TypeTag_UTCDateTime)
+                        (BUTCDateTime@less (bsqkey_utcdatetime_value vv1) (bsqkey_utcdatetime_value vv2)) 
+                        (ite (= tt TypeTag_CalendarDate)
+                          (BCalendarDate@less (bsqkey_calendardate_value vv1) (bsqkey_calendardate_value vv2))
+                          (ite (= tt TypeTag_RelativeTime)
+                            (BRelativeTime@less (bsqkey_relativetime_value vv1) (bsqkey_relativetime_value vv2))
+                            (ite (= tt TypeTag_TickTime)
+                              (BTickTime@less (bsqkey_ticktime_value vv1) (bsqkey_ticktime_value vv2))
+                              (ite (= tt TypeTag_LogicalTime)
+                                (BLogicalTime@less (bsqkey_logicaltime_value vv1) (bsqkey_logicaltime_value vv2))
+                                (ite (= tt TypeTag_UUID4)
+                                  (BUUID4@less (bsqkey_uuid4_value vv1) (bsqkey_uuid4_value vv2))
+                                  (ite (= tt TypeTag_UUID7)
+                                    (BUUID7@less (bsqkey_uuid7_value vv1) (bsqkey_uuid7_value vv2))
+                                    (BSHAContentHash@less (bsqkey_shacontenthash_value vv1) (bsqkey_shacontenthash_value vv2))
+                                  )
+                                )
+                              )
+                            )
+                          )
                         )
                       )
                     )
@@ -263,7 +360,7 @@
       (bsqobject_rational@box (bsqobject_rational_value BRational))
       (bsqobject_bytebuffer@box (bsqobject_bytebuffer_value BByteBuffer))
       (bsqobject_datetime@box (bsqobject_datetime_value BDateTime))
-      (bsqobject_ticktime@box (bsqobject_ticktime_value BTickTime))
+      (bsqobject_isotimestamp@box (bsqobject_isotimestamp_value BISOTimeStamp))
       (bsqobject_regex@box (bsqobject_regex_value bsq_regex))
       ;;TUPLE_TYPE_BOXING;;
       ;;RECORD_TYPE_BOXING;;
@@ -338,11 +435,17 @@
 (declare-fun BDateDay@UFCons_API (HavocSequence) BNat)
 (declare-fun BDateHour@UFCons_API (HavocSequence) BNat)
 (declare-fun BDateMinute@UFCons_API (HavocSequence) BNat)
+(declare-fun BDateSecond@UFCons_API (HavocSequence) BNat)
+(declare-fun BDateMillis@UFCons_API (HavocSequence) BNat)
+(declare-fun BDateTZName@UFCons_API (HavocSequence) BString)
+(declare-fun BDateTZOffset@UFCons_API (HavocSequence) BInt)
 (declare-fun BTickTime@UFCons_API (HavocSequence) BTickTime)
 (declare-fun BLogicalTime@UFCons_API (HavocSequence) BLogicalTime)
-(declare-fun BUUID@UFCons_API (HavocSequence) BUUID)
-(declare-fun BContentHash@UFCons_API (HavocSequence) BContentHash)
-
+(declare-fun BUUID4@UFCons_API (HavocSequence) BUUID4)
+(declare-fun BUUID7@UFCons_API (HavocSequence) BUUID7)
+(declare-fun BSHAContentHash@UFCons_API (HavocSequence) BSHAContentHash)
+(declare-fun BLatitude@UFCons_API (HavocSequence) BFloat)
+(declare-fun BLongitude@UFCons_API (HavocSequence) BFloat)
 (declare-fun ContainerSize@UFCons_API (HavocSequence) BNat)
 (declare-fun UnionChoice@UFCons_API (HavocSequence) BNat)
 
@@ -427,13 +530,57 @@
   )
 )
 
+(define-fun @@isLeapYear ((y Int)) Bool
+  (ite (or (= y 1900) (= y 2100) (= y 2200))
+    false
+    (= (mod y 4) 0)
+  )
+)
+
+(define-fun @@check_DayInMonth ((d Int) (m Int) (y Int)) Bool
+  (ite (= m 1)
+    (ite (@@isLeapYear y)
+      (<= d 29)
+      (<= d 28)
+    )
+    (ite (or (= m 3) (= m 5) (= m 8) (= m 10))
+      (<= d 30)
+      (<= d 31)
+    )
+)
+
 (define-fun _@@cons_DateTime_entrypoint ((ctx HavocSequence)) $Result_BDateTime
-  (let ((tctx (seq.++ ctx (seq.unit 0))))
-    (let ((y (BDateYear@UFCons_API (seq.++ tctx (seq.unit 0)))) (m (BDateMonth@UFCons_API (seq.++ tctx (seq.unit 1)))) (d (BDateDay@UFCons_API (seq.++ tctx (seq.unit 2)))) (hh (BDateHour@UFCons_API (seq.++ tctx (seq.unit 3)))) (mm (BDateMinute@UFCons_API (seq.++ tctx (seq.unit 4)))) (tzo (BString@UFCons_API (seq.++ ctx (seq.unit 1)))))
-      (ite (and (<= 0 y) (<= y 300) (<= 0 m) (<= m 11) (<= 1 d) (<= d 31) (<= 0 hh) (<= hh 23) (<= 0 mm) (<= mm 59) (or (= tzo "UTC") (= tzo "PST") (= tzo "MST") (= tzo "CEST")))
-        ($Result_BDateTime@success (BDateTime@cons y m d hh mm tzo))
-        ($Result_BDateTime@error ErrorID_AssumeCheck) 
-      )
+  (let ((y (BDateYear@UFCons_API ctx)) (m (BDateMonth@UFCons_API ctx)) (d (BDateDay@UFCons_API ctx)) (hh (BDateHour@UFCons_API ctx)) (mm (BDateMinute@UFCons_API ctx)) (tzo (BDateTZName@UFCons_API ctx)))
+    (ite (and (<= 1900 y) (<= y 2200) (<= 0 m) (<= m 11) (<= 1 d) (@@check_DayInMonth d m y) (<= 0 hh) (<= hh 23) (<= 0 mm) (<= mm 59) (or (= tzo "UTC") (= tzo "PST") (= tzo "MST") (= tzo "CEST")))
+      ($Result_BDateTime@success (BDateTime@cons y m d hh mm tzo))
+      ($Result_BDateTime@error ErrorID_AssumeCheck) 
+    )
+  )
+)
+
+(define-fun _@@cons_UTCDateTime_entrypoint ((ctx HavocSequence)) $Result_BUTCDateTime
+  (let ((y (BDateYear@UFCons_API ctx)) (m (BDateMonth@UFCons_API ctx)) (d (BDateDay@UFCons_API ctx)) (hh (BDateHour@UFCons_API ctx)) (mm (BDateMinute@UFCons_API ctx)))
+    (ite (and (<= 1900 y) (<= y 2200) (<= 0 m) (<= m 11) (<= 1 d) (@@check_DayInMonth d m y) (<= 0 hh) (<= hh 23) (<= 0 mm) (<= mm 59))
+      ($Result_BUTCDateTime@success (BUTCDateTime@cons y m d hh mm))
+      ($Result_BUTCDateTime@error ErrorID_AssumeCheck) 
+    )
+  )
+)
+
+(define-fun _@@cons_CalendarDate_entrypoint ((ctx HavocSequence)) $Result_BCalendarDate
+  (let ((y (BDateYear@UFCons_API ctx)) (m (BDateMonth@UFCons_API ctx)) (d (BDateDay@UFCons_API ctx)))
+    (ite (and (<= 1900 y) (<= y 2200) (<= 0 m) (<= m 11) (<= 1 d) (@@check_DayInMonth d m y))
+      ($Result_BCalendarDate@success (CalendarDate@cons y m d))
+      ($Result_BCalendarDate@error ErrorID_AssumeCheck) 
+    )
+  )
+)
+
+(define-fun _@@cons_RelativeTime_entrypoint ((ctx HavocSequence)) $Result_BRelativeTime
+  (let ((hh (BDateHour@UFCons_API (seq.++ ctx (seq.unit 3)))) (mm (BDateMinute@UFCons_API (seq.++ ctx (seq.unit 4)))))
+    (ite (and (<= 0 hh) (<= hh 23) (<= 0 mm) (<= mm 59))
+      ($Result_BRelativeTime@success (BRelativeTime@cons hh mm))
+      ($Result_BRelativeTime@error ErrorID_AssumeCheck) 
     )
   )
 )
@@ -456,17 +603,35 @@
   )
 )
 
-(define-fun _@@cons_UUID_entrypoint ((ctx HavocSequence)) $Result_BUUID
-  (let ((uuv (BUUID@UFCons_API ctx)))
-    (ite (= (seq.len uuv) 16)
-      ($Result_BUUID@success uuv)
-      ($Result_BUUID@error ErrorID_AssumeCheck) 
+(define-fun _@@cons_ISOTimeStamp_entrypoint ((ctx HavocSequence)) $Result_BISOTimeStamp
+  (let ((y (BDateYear@UFCons_API ctx)) (m (BDateMonth@UFCons_API ctx)) (d (BDateDay@UFCons_API ctx)) (hh (BDateHour@UFCons_API ctx)) (mm (BDateMinute@UFCons_API ctx)) (mm (BDateMinute@UFCons_API ctx)) (ss (BDateSecond@UFCons_API ctx)) (millis (BDateMillis@UFCons_API ctx)) (tzo (BDateTZOffset@UFCons_API ctx)))
+    (ite (and (<= 1900 y) (<= y 2200) (<= 0 m) (<= m 11) (<= 1 d) (@@check_DayInMonth d m y) (<= 0 hh) (<= hh 23) (<= 0 mm) (<= mm 59) (<= 0 ss) (<= ss 60) (<= 0 millis) (<= millis 999) (-1080 <= tzo) (tzo <= 1080))
+      ($Result_BISOTimeStamp@success (BISOTimeStamp@cons y m d hh mm ss millis tzo))
+      ($Result_BISOTimeStamp@error ErrorID_AssumeCheck) 
     )
   )
 )
 
-(define-fun _@@cons_ContentHash_entrypoint ((ctx HavocSequence)) $Result_BContentHash
-  ($Result_BContentHash@success (BContentHash@UFCons_API ctx))
+(define-fun _@@cons_UUID4_entrypoint ((ctx HavocSequence)) $Result_BUUID4
+  (let ((uuv (BUUID4@UFCons_API ctx)))
+    (ite (str.in.re uuv (re.loop (re.union (re.range "0" "9") (re.range "a" "f")) 32 32))
+      ($Result_BUUID4@success uuv)
+      ($Result_BUUID4@error ErrorID_AssumeCheck) 
+    )
+  )
+)
+
+(define-fun _@@cons_UUID7_entrypoint ((ctx HavocSequence)) $Result_BUUID7
+  (let ((uuv (BUUID7@UFCons_API ctx)))
+    (ite (str.in.re uuv (re.loop (re.union (re.range "0" "9") (re.range "a" "f")) 32 32))
+      ($Result_BUUID7@success uuv)
+      ($Result_BUUID7@error ErrorID_AssumeCheck) 
+    )
+  )
+)
+
+(define-fun _@@cons_ContentHash_entrypoint ((ctx HavocSequence)) $Result_BSHAContentHash
+  ($Result_BSHAContentHash@success (BSHAContentHash@UFCons_API ctx))
 )
 
 (declare-fun @@SortedIntSeq@@Create (Int Int Int) (Seq Int))

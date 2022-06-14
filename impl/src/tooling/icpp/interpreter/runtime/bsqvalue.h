@@ -1312,9 +1312,8 @@ struct BSQDateTime
 };
 
 std::string entityDateTimeDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode);
-int entityDateTimeKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
 
-#define CONS_BSQ_DATE_TIME_TYPE(TID, NAME) (new BSQRegisterType<BSQDateTime>(TID, sizeof(BSQDateTime), "11", entityDateTimeKeyCmp_impl, entityDateTimeDisplay_impl, NAME))
+#define CONS_BSQ_DATE_TIME_TYPE(TID, NAME) (new BSQRegisterType<BSQDateTime>(TID, sizeof(BSQDateTime), "11", EMPTY_KEY_CMP, entityDateTimeDisplay_impl, NAME))
 
 ////
 //UTCDateTime
@@ -1333,7 +1332,7 @@ struct BSQUTCDateTime
 std::string entityUTCDateTimeDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode);
 int entityUTCDateTimeKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
 
-#define CONS_BSQ_UTC_DATE_TIME_TYPE(TID, NAME) (new BSQRegisterType<BSQUTCDateTime>(TID, sizeof(BSQUTCDateTime), "1", entityDateTimeKeyCmp_impl, entityDateTimeDisplay_impl, NAME))
+#define CONS_BSQ_UTC_DATE_TIME_TYPE(TID, NAME) (new BSQRegisterType<BSQUTCDateTime>(TID, sizeof(BSQUTCDateTime), "1", entityUTCDateTimeKeyCmp_impl, entityUTCDateTimeDisplay_impl, NAME))
 
 ////
 //CalendarDate
@@ -1404,15 +1403,11 @@ struct BSQISOTimeStamp
     int16_t tzoffset;
 
     uint32_t padding;
-
-    //TODO: we probably want utc_clock when it is supported
-    std::chrono::time_point<std::chrono::system_clock, std::chrono::milliseconds> utctime;
 };
 
 std::string entityISOTimeStampDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode);
-int entityISOTimeStampKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
 
-#define CONS_BSQ_ISO_TIME_STAMP_TYPE(TID, NAME) (new BSQRegisterType<BSQISOTimeStamp>(TID, sizeof(BSQISOTimeStamp), "111", entityISOTimeStampKeyCmp_impl, entityISOTimeStampDisplay_impl, NAME))
+#define CONS_BSQ_ISO_TIME_STAMP_TYPE(TID, NAME) (new BSQRegisterType<BSQISOTimeStamp>(TID, sizeof(BSQISOTimeStamp), "111", EMPTY_KEY_CMP, entityISOTimeStampDisplay_impl, NAME))
 
 ////
 //UUID
@@ -1443,9 +1438,8 @@ struct BSQLatLongCoordinate
 };
 
 std::string entityLatLongCoordinateDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode);
-int entityLatLongCoordinateKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
 
-#define CONS_BSQ_LAT_LONG_COORDINATE_TYPE(TID, NAME) (new BSQRegisterType<BSQLatLongCoordinate>(TID, sizeof(BSQLatLongCoordinate), "1", entityLatLongCoordinateKeyCmp_impl, entityLatLongCoordinateDisplay_impl, NAME))
+#define CONS_BSQ_LAT_LONG_COORDINATE_TYPE(TID, NAME) (new BSQRegisterType<BSQLatLongCoordinate>(TID, sizeof(BSQLatLongCoordinate), "1", EMPTY_KEY_CMP, entityLatLongCoordinateDisplay_impl, NAME))
 
 ////
 //Regex

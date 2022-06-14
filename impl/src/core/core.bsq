@@ -556,7 +556,7 @@ typedecl ValidTimeZoneName = /[A-Z]{2, 5}/;
 typedecl TimeZoneCode = StringOf<ValidTimeZoneName>;
 
 //<summary>Primitive DateTime value.</summary>
-__internal __typedeclable entity DateTime provides Some, APIType, KeyType {
+__internal __typedeclable entity DateTime provides Some, APIType {
     __assume_safe internal function s_create(year: Nat, month: Nat, day: Nat, hour: Nat, min: Nat, tzdata: TimeZoneCode): DateTime = datetime_create;
 
     function create(year: Nat, month?: Nat=0n, day?: Nat=1n, hour?: Nat=0n, min?: Nat=0n, tzdata?: TimeZoneCode='UTC'_TimeZoneCode): DateTime
@@ -571,7 +571,7 @@ __internal __typedeclable entity DateTime provides Some, APIType, KeyType {
 }
 
 __internal __typedeclable entity UTCDateTime provides Some, APIType, KeyType {
-    __assume_safe internal function s_create(year: Nat, month: Nat, day: Nat, hour: Nat, min: Nat): DateTime = utcdatetime_create;
+    __assume_safe internal function s_create(year: Nat, month: Nat, day: Nat, hour: Nat, min: Nat): UTCDateTime = utcdatetime_create;
 
     function create(year: Nat, month?: Nat=0n, day?: Nat=1n, hour?: Nat=0n, min?: Nat=0n): UTCDateTime
         requires year >= 1900n;
@@ -603,7 +603,7 @@ __internal __typedeclable entity RelativeTime provides Some, APIType, KeyType {
         requires hour < 24n;
         requires min < 60n;
     {
-        return RelativeLTime::s_create(hour, min);
+        return RelativeTime::s_create(hour, min);
     }
 }
 
@@ -639,17 +639,20 @@ __safe __primitive inline infix operator <=(a: LogicalTime, b: LogicalTime): Boo
 __safe __primitive inline infix operator >=(a: LogicalTime, b: LogicalTime): Bool = default;
 
 
-__internal __typedeclable entity ISOTimeStamp provides Some, APIType, KeyType {
-    __assume_safe internal function s_create(year: Nat, month: Nat, day: Nat, hour: Nat, min: Nat): DateTime = utcdatetime_create;
+__internal __typedeclable entity ISOTimeStamp provides Some, APIType {
+    __assume_safe internal function s_create(year: Nat, month: Nat, day: Nat, hour: Nat, min: Nat, sec: Nat, millis: Nat, tzoffset: Int): ISOTimeStamp = isotimestamp_create;
 
-    function create(year: Nat, month?: Nat=0n, day?: Nat=1n, hour?: Nat=0n, min?: Nat=0n): UTCDateTime
+    function create(year: Nat, month?: Nat=0n, day?: Nat=1n, hour?: Nat=0n, min?: Nat=0n, sec?: Nat=0n, millis?: Nat=0n, tzoffset?: Int=0): ISOTimeStamp
         requires year >= 1900n;
         requires month < 12n;
         requires day != 0n && day <= 31n;
         requires hour < 24n;
         requires min < 60n;
+        requires sec < 61n;
+        requires millis < 1000n;
+        requires -1080i <= tzoffset && tzoffset <= 1080i;
     {
-        return UTCDateTime::s_create(year, month, day, hour, min);
+        return ISOTimeStamp::s_create(year, month, day, hour, min, sec, millis, tzoffset);
     }
 
     /*
@@ -671,7 +674,15 @@ __internal __typedeclable entity SHAContentHash provides Some, KeyType, APIType 
 }
 
 //<summary>Primitive Lat/Long</summary>
-__internal __typedeclable entity LatLongCoordinate provides Some, KeyType, APIType {
+__internal __typedeclable entity LatLongCoordinate provides Some, APIType {
+    __assume_safe internal function s_create(lat: Float, long: Float): LatLongCoordinate = latlongcoordinate_create;
+
+    function create(lat: Float, long: Float): ISOTimeStamp
+        requires -90.0f <= lat && lat <= 90.0f;
+        requires -180.0f < long && long <= 180.0f;
+    {
+        return LatLongCoordinate::s_create(lat, long);
+    }
 }
 
 //<summary>Primitive regex value.</summary>
