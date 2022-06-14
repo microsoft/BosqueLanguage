@@ -85,7 +85,7 @@ void Evaluator::evalAbortOp(const AbortOp *op)
 {
     if(this->debuggerattached)
     {
-        throw DebuggerException::CreateErrorAbortRequest({this->cframe->invoke, this->cframe->dbg_currentline, this->call_count});
+        throw DebuggerException::CreateErrorAbortRequest({-1, this->call_count, this->cframe->invoke, op, this->cframe->dbg_currentline});
     }
     else
     {
@@ -99,7 +99,7 @@ void Evaluator::evalAssertCheckOp(const AssertOp *op)
     {
         if(this->debuggerattached)
         {
-            throw DebuggerException::CreateErrorAbortRequest({this->cframe->invoke, this->cframe->dbg_currentline, this->call_count});
+            throw DebuggerException::CreateErrorAbortRequest({-1, this->call_count, this->cframe->invoke, op, this->cframe->dbg_currentline});
         }
         else
         {
@@ -465,122 +465,119 @@ void Evaluator::evalProjectEntityOp(const ProjectEntityOp* op)
 
 void Evaluator::evalUpdateTupleOp(const UpdateTupleOp* op)
 {
-    Allocator::GlobalAllocator.ensureSpace(op->trgttype->allocinfo.heapsize);
-    
     StorageLocationPtr src = this->evalArgument(op->arg);
+    void** stck = (void**)GCStack::allocFrame(sizeof(void*) * 2);
 
-    void* sl = nullptr;
     if(op->layouttype->tkind == BSQTypeLayoutKind::Struct)
     {
-        sl = src;
+        stck[0] = src;
     }
     else if(op->layouttype->tkind == BSQTypeLayoutKind::Ref)
     {
-        sl = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src);
+        stck[0] = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src);
     }
     else
     {
-        sl = dynamic_cast<const BSQUnionType*>(op->layouttype)->getVData_NoAlloc(src);
+        stck[0] = dynamic_cast<const BSQUnionType*>(op->layouttype)->getVData_NoAlloc(src);
     }
 
-    void* trgtl = nullptr;
     if(op->trgttype->tkind == BSQTypeLayoutKind::Struct)
     {
-        trgtl = this->evalTargetVar(op->trgt);
-        GC_MEM_COPY(trgtl, sl, op->trgttype->allocinfo.heapsize);
+        stck[1] = this->evalTargetVar(op->trgt);
+        GC_MEM_COPY(stck[1], stck[0], op->trgttype->allocinfo.heapsize);
     }
     else
     {
-        trgtl = Allocator::GlobalAllocator.allocateSafe(op->trgttype);
-        GC_MEM_COPY(trgtl, sl, op->trgttype->allocinfo.heapsize);
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalTargetVar(op->trgt), trgtl);
+        stck[1] = Allocator::GlobalAllocator.allocateDynamic(op->trgttype);
+        GC_MEM_COPY(stck[1], stck[0], op->trgttype->allocinfo.heapsize);
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalTargetVar(op->trgt), stck[1]);
     }
 
     for(size_t i = 0; i < op->updates.size(); ++i)
     {
-        auto dst = SLPTR_INDEX_DATAPTR(trgtl, std::get<1>(op->updates[i]));
+        auto dst = SLPTR_INDEX_DATAPTR(stck[1], std::get<1>(op->updates[i]));
         std::get<2>(op->updates[i])->storeValue(dst, this->evalArgument(std::get<3>(op->updates[i])));
     }
+
+    GCStack::popFrame(sizeof(void*) * 2);
 }
 
 void Evaluator::evalUpdateRecordOp(const UpdateRecordOp* op)
 {
-    Allocator::GlobalAllocator.ensureSpace(op->trgttype->allocinfo.heapsize);
-    
     StorageLocationPtr src = this->evalArgument(op->arg);
+    void** stck = (void**)GCStack::allocFrame(sizeof(void*) * 2);
 
-    void* sl = nullptr;
     if(op->layouttype->tkind == BSQTypeLayoutKind::Struct)
     {
-        sl = src;
+        stck[0] = src;
     }
     else if(op->layouttype->tkind == BSQTypeLayoutKind::Ref)
     {
-        sl = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src);
+        stck[0] = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src);
     }
     else
     {
-        sl = dynamic_cast<const BSQUnionType*>(op->layouttype)->getVData_NoAlloc(src);
+        stck[0] = dynamic_cast<const BSQUnionType*>(op->layouttype)->getVData_NoAlloc(src);
     }
 
-    void* trgtl = nullptr;
     if(op->trgttype->tkind == BSQTypeLayoutKind::Struct)
     {
-        trgtl = this->evalTargetVar(op->trgt);
-        GC_MEM_COPY(trgtl, sl, op->trgttype->allocinfo.heapsize);
+        stck[1] = this->evalTargetVar(op->trgt);
+        GC_MEM_COPY(stck[1], stck[0], op->trgttype->allocinfo.heapsize);
     }
     else
     {
-        trgtl = Allocator::GlobalAllocator.allocateSafe(op->trgttype);
-        GC_MEM_COPY(trgtl, sl, op->trgttype->allocinfo.heapsize);
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalTargetVar(op->trgt), trgtl);
+        stck[1] = Allocator::GlobalAllocator.allocateDynamic(op->trgttype);
+        GC_MEM_COPY(stck[1], stck[0], op->trgttype->allocinfo.heapsize);
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalTargetVar(op->trgt), stck[1]);
     }
 
     for(size_t i = 0; i < op->updates.size(); ++i)
     {
-        auto dst = SLPTR_INDEX_DATAPTR(trgtl, std::get<1>(op->updates[i]));
+        auto dst = SLPTR_INDEX_DATAPTR(stck[1], std::get<1>(op->updates[i]));
         std::get<2>(op->updates[i])->storeValue(dst, this->evalArgument(std::get<3>(op->updates[i])));
     }
+
+    GCStack::popFrame(sizeof(void*) * 2);
 }
 
 void Evaluator::evalUpdateEntityOp(const UpdateEntityOp* op)
 {
-    Allocator::GlobalAllocator.ensureSpace(op->trgttype->allocinfo.heapsize);
-    
     StorageLocationPtr src = this->evalArgument(op->arg);
+    void** stck = (void**)GCStack::allocFrame(sizeof(void*) * 2);
 
-    void* sl = nullptr;
     if(op->layouttype->tkind == BSQTypeLayoutKind::Struct)
     {
-        sl = src;
+        stck[0] = src;
     }
     else if(op->layouttype->tkind == BSQTypeLayoutKind::Ref)
     {
-        sl = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src);
+        stck[0] = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src);
     }
     else
     {
-        sl = dynamic_cast<const BSQUnionType*>(op->layouttype)->getVData_NoAlloc(src);
+        stck[0] = dynamic_cast<const BSQUnionType*>(op->layouttype)->getVData_NoAlloc(src);
     }
 
-    void* trgtl = nullptr;
     if(op->trgttype->tkind == BSQTypeLayoutKind::Struct)
     {
-        trgtl = this->evalTargetVar(op->trgt);
-        GC_MEM_COPY(trgtl, sl, op->trgttype->allocinfo.heapsize);
+        stck[1] = this->evalTargetVar(op->trgt);
+        GC_MEM_COPY(stck[1], stck[0], op->trgttype->allocinfo.heapsize);
     }
     else
     {
-        trgtl = Allocator::GlobalAllocator.allocateSafe(op->trgttype);
-        GC_MEM_COPY(trgtl, sl, op->trgttype->allocinfo.heapsize);
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalTargetVar(op->trgt), trgtl);
+        stck[1] = Allocator::GlobalAllocator.allocateDynamic(op->trgttype);
+        GC_MEM_COPY(stck[1], stck[0], op->trgttype->allocinfo.heapsize);
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalTargetVar(op->trgt), stck[1]);
     }
 
     for(size_t i = 0; i < op->updates.size(); ++i)
     {
-        auto dst = SLPTR_INDEX_DATAPTR(trgtl, std::get<1>(op->updates[i]));
+        auto dst = SLPTR_INDEX_DATAPTR(stck[1], std::get<1>(op->updates[i]));
         std::get<2>(op->updates[i])->storeValue(dst, this->evalArgument(std::get<3>(op->updates[i])));
     }
+
+    GCStack::popFrame(sizeof(void*) * 2);
 }
 
 void Evaluator::evalLoadFromEpehmeralListOp(const LoadFromEpehmeralListOp* op)
@@ -1863,7 +1860,7 @@ void Evaluator::evaluateOpCodeBlocks()
 #ifdef BSQ_DEBUG_BUILD
         if(this->debuggerattached)
         {
-            if(this->advanceLineAndProcsssBP(op))
+            if(this->advanceOpAndProcsssBP(op))
             {
                 Evaluator::fpDebuggerAction(this);
             }

@@ -302,14 +302,26 @@ const BSQType* jsonLoadDeclOfType(json v)
         return CONS_BSQ_RATIONAL_TYPE(ttype, tname);
     case BSQ_TYPE_ID_DATETIME:
         return CONS_BSQ_DATE_TIME_TYPE(ttype, tname);
+    case BSQ_TYPE_ID_UTC_DATETIME:
+        return CONS_BSQ_UTC_DATE_TIME_TYPE(ttype, tname);
+    case BSQ_TYPE_ID_CALENDAR_DATE:
+        return CONS_BSQ_CALENDAR_DATE_TYPE(ttype, tname);
+    case BSQ_TYPE_ID_RELATIVE_TIME:
+        return CONS_BSQ_RELATIVE_TIME_TYPE(ttype, tname);
     case BSQ_TYPE_ID_TICKTIME:
         return CONS_BSQ_TICK_TIME_TYPE(ttype, tname);
     case BSQ_TYPE_ID_LOGICALTIME:
         return CONS_BSQ_LOGICAL_TIME_TYPE(ttype, tname);
-    case BSQ_TYPE_ID_UUID:
-        return CONS_BSQ_UUID_TYPE(ttype, tname);
-    case BSQ_TYPE_ID_CONTENTHASH:
-        return CONS_BSQ_CONTENT_HASH_TYPE(ttype, tname); 
+    case BSQ_TYPE_ID_ISO_TIMESTAMP:
+        return CONS_BSQ_ISO_TIME_STAMP_TYPE(ttype, tname);
+    case BSQ_TYPE_ID_UUID4:
+        return CONS_BSQ_UUID4_TYPE(ttype, tname);
+    case BSQ_TYPE_ID_UUID7:
+        return CONS_BSQ_UUID7_TYPE(ttype, tname);
+    case BSQ_TYPE_ID_SHA_CONTENT_HASH:
+        return CONS_BSQ_SHA_CONTENT_HASH_TYPE(ttype, tname); 
+    case BSQ_TYPE_ID_LAT_LONG_COORDINATE:
+        return CONS_BSQ_LAT_LONG_COORDINATE_TYPE(ttype, tname);
     default: {
         assert(false);
         return nullptr;
@@ -346,9 +358,8 @@ const BSQType* jsonLoadMapType(json v)
 {
     BSQTypeID ktype = MarshalEnvironment::g_typenameToIdMap.find(v["ktype"].get<std::string>())->second;
     BSQTypeID vtype = MarshalEnvironment::g_typenameToIdMap.find(v["vtype"].get<std::string>())->second;
-    BSQTypeID etype = MarshalEnvironment::g_typenameToIdMap.find(v["etype"].get<std::string>())->second;
 
-    return CONS_BSQ_MAP_TYPE(j_tkey(v), j_name(v), ktype, vtype, etype);
+    return CONS_BSQ_MAP_TYPE(j_tkey(v), j_name(v), ktype, vtype);
 }
 
 const BSQType* jsonLoadMapTreeType(json v)

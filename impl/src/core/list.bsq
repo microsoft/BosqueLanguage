@@ -1045,6 +1045,10 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                 return this;
             }
             else {
+                //TODO: this is interesting -- do we want to do a first/last index thing here as well and
+                //          if they are the same then the result is a single element
+                //          if not slice the list and filter on that
+
                 return ListOps::s_list_reduce<T, List<T>>(this, List<T>{}, recursive? fn(accl: List<T>, x: T): U => {
                     if(!p[recursive?](x)) {
                         return accl;

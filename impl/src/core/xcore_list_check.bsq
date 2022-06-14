@@ -52,6 +52,7 @@ internal entity ListOps provides Some {
     __safe internal function s_list_last_indexof_true(l: List<T>): Int = s_list_last_indexof_true;
 
     __conditional_safe internal recursive? function s_list_reduce<T, U>(l: List<T>, init: U, f: recursive? fn(_: U, _: T) -> U): U = s_list_reduce;
+    __conditional_safe internal recursive? function s_list_reduce_idx<T, U>(l: List<T>, init: U, f: recursive? fn(_: U, _: T, _: Nat) -> U): U = s_list_reduce_idx;
 
     //TODO: minarg, maxarg, and such based on reduce
 }

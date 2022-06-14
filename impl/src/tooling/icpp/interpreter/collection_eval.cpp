@@ -5,42 +5,6 @@
 
 #include "collection_eval.h"
 
-#define BI_LAMBDA_CALL_SETUP_TEMP_X2_CMP(TTYPE1, TEMPSL1, TTYPE2, TEMPSL2, PARAMS, PC, LPARAMS) uint8_t* TEMPSL1 = (uint8_t*)BSQ_STACK_SPACE_ALLOC(TTYPE1->allocinfo.inlinedatasize + TTYPE2->allocinfo.inlinedatasize); \
-        uint8_t* TEMPSL2 = TEMPSL1 + TTYPE1->allocinfo.inlinedatasize; \
-        GC_MEM_ZERO(TEMPSL1, TTYPE1->allocinfo.inlinedatasize + TTYPE2->allocinfo.inlinedatasize); \
-        std::string msk = std::string(TTYPE1->allocinfo.inlinedmask) + std::string(TTYPE2->allocinfo.inlinedmask); \
-        GCStack::pushFrame((void**)TEMPSL1, msk.c_str()); \
-        std::vector<StorageLocationPtr> LPARAMS = {TEMPSL1, TEMPSL2}; \
-        std::transform(PC->cargpos.cbegin(), PC->cargpos.cend(), std::back_inserter(LPARAMS), [&PARAMS](uint32_t pos) { \
-            return PARAMS[pos]; \
-        });
-
-
-#define BI_LAMBDA_CALL_SETUP_KV_TEMP(KTYPE, KTEMPSL, VTYPE, VTEMPSL, PARAMS, PC, LPARAMS) uint8_t* KTEMPSL = (uint8_t*)BSQ_STACK_SPACE_ALLOC(KTYPE->allocinfo.inlinedatasize + VTYPE->allocinfo.inlinedatasize); \
-        uint8_t* VTEMPSL = KTEMPSL + KTYPE->allocinfo.inlinedatasize; \
-        GC_MEM_ZERO(KTEMPSL, KTYPE->allocinfo.inlinedatasize + VTYPE->allocinfo.inlinedatasize); \
-        std::string msk = std::string(KTYPE->allocinfo.inlinedmask) + std::string(VTYPE->allocinfo.inlinedmask); \
-        GCStack::pushFrame((void**)KTEMPSL, msk.c_str()); \
-        std::vector<StorageLocationPtr> LPARAMS = {KTEMPSL, VTEMPSL}; \
-        std::transform(PC->cargpos.cbegin(), PC->cargpos.cend(), std::back_inserter(LPARAMS), [&PARAMS](uint32_t pos) { \
-            return PARAMS[pos]; \
-        });
-
-#define BI_LAMBDA_CALL_SETUP_KV_TEMP_AND_RES(KTYPE, KTEMPSL, VTYPE, VTEMPSL, RTYPE, RESSL, PARAMS, PC, LPARAMS) uint8_t* KTEMPSL = (uint8_t*)BSQ_STACK_SPACE_ALLOC(KTYPE->allocinfo.inlinedatasize + VTYPE->allocinfo.inlinedatasize + RTYPE->allocinfo.inlinedatasize); \
-        uint8_t* VTEMPSL = KTEMPSL + KTYPE->allocinfo.inlinedatasize; \
-        uint8_t* RESSL = VTEMPSL + VTYPE->allocinfo.inlinedatasize; \
-        GC_MEM_ZERO(KTEMPSL, KTYPE->allocinfo.inlinedatasize + VTYPE->allocinfo.inlinedatasize + RTYPE->allocinfo.inlinedatasize); \
-        std::string msk = std::string(KTYPE->allocinfo.inlinedmask) + std::string(VTYPE->allocinfo.inlinedmask) + std::string(RTYPE->allocinfo.inlinedmask); \
-        GCStack::pushFrame((void**)KTEMPSL, msk.c_str()); \
-        std::vector<StorageLocationPtr> LPARAMS = {KTEMPSL, VTEMPSL}; \
-        std::transform(PC->cargpos.cbegin(), PC->cargpos.cend(), std::back_inserter(LPARAMS), [&PARAMS](uint32_t pos) { \
-            return PARAMS[pos]; \
-        });
-
-#define BI_LAMBDA_CALL_SETUP_CLEAR_TEMP_PV(PVTYPE, PVL) GC_MEM_ZERO(PVL, PVTYPE->allocinfo.heapsize)
-
-#define BI_LAMBDA_CALL_SETUP_POP() GCStack::popFrame();
-
 std::map<BSQTypeID, BSQListTypeFlavor> BSQListOps::g_flavormap;
 
 void* s_set_ne_rec(const BSQListTypeFlavor& lflavor, BSQListSpineIterator& iter, BSQNat i, StorageLocationPtr v)

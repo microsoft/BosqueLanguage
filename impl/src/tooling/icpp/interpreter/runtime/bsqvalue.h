@@ -1476,5 +1476,5 @@ std::string entityListDisplay_impl(const BSQType* btype, StorageLocationPtr data
 
 std::string entityMapDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode);
 
-#define CONS_BSQ_MAP_TYPE(TID, NAME, KTYPE, VTYPE, CTYPE) (new BSQMapType(TID, entityMapDisplay_impl, NAME, KTYPE, VTYPE, CTYPE))
+#define CONS_BSQ_MAP_TYPE(TID, NAME, KTYPE, VTYPE) (new BSQMapType(TID, entityMapDisplay_impl, NAME, KTYPE, VTYPE))
 #define CONS_BSQ_MAP_TREE_TYPE(TID, HEAP_SIZE, HEAP_MASK, NAME, KTYPE, KOFFSET, VTYPE, VOFFSET) (new BSQMapTreeType(TID, HEAP_SIZE, HEAP_MASK, NAME, KTYPE, KOFFSET, VTYPE, VOFFSET))
