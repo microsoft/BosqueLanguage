@@ -1106,31 +1106,66 @@ std::string entityISOTimeStampDisplay_impl(const BSQType* btype, StorageLocation
     std::string isobase(sstrt, sstrt + dtlen);
 
     char ssmillis[8] = {0};
-    size_t millislen = sprintf(ssmillis, ".%03i", t.millis);
+    size_t millislen = sprintf(ssmillis, ".%03iZ", t.millis);
     std::string millis(ssmillis, ssmillis + millislen);
 
-    if(t.tzoffset == 0)
+    return isobase + millis + ((btype->name == "ISOTimeStamp") ? "" : ("_" + btype->name));
+}
+
+int entityISOTimeStampKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2)
+{
+    BSQISOTimeStamp t1 = SLPTR_LOAD_CONTENTS_AS(BSQISOTimeStamp, data1);
+    BSQISOTimeStamp t2 = SLPTR_LOAD_CONTENTS_AS(BSQISOTimeStamp, data2);
+
+    if(t1.year != t2.year)
     {
-        return isobase + millis + ((btype->name == "ISOTimeStamp") ? "" : ("_" + btype->name));
+        return (t1.year < t2.year) ? -1 : 1;
     }
     else
     {
-        char sstzi[8] = {0};
-        auto hours = t.tzoffset / 60;
-        auto mins = std::abs(t.tzoffset) % 60;
-        std::string tzstr;
-        if(mins == 0)
+        if(t1.month != t2.month)
         {
-            size_t tzlen = sprintf(sstzi, "%+02i:%02i", hours, mins);
-            tzstr = std::string(sstzi, sstzi + dtlen);
+            return (t1.month < t2.month) ? -1 : 1;
         }
         else
         {
-            size_t tzlen = sprintf(sstzi, "%+02i", hours);
-            tzstr = std::string(sstzi, sstzi + dtlen);
+            if(t1.day != t2.day)
+            {
+                return (t1.day < t2.day) ? -1 : 1;
+            }
+            else
+            {
+                if(t1.hour != t2.hour)
+                {
+                    return (t1.hour < t2.hour) ? -1 : 1;
+                }
+                else
+                {
+                    if(t1.min != t2.min)
+                    {
+                        return (t1.min < t2.min) ? -1 : 1;
+                    }
+                    else
+                    {
+                        if(t1.seconds != t2.seconds)
+                        {
+                            return (t1.seconds < t2.seconds) ? -1 : 1;
+                        }
+                        else
+                        {
+                            if(t1.millis != t2.millis)
+                            {
+                                return (t1.millis < t2.millis) ? -1 : 1;
+                            }
+                            else
+                            {
+                                return 0;
+                            }
+                        }
+                    }
+                }
+            }
         }
-
-        return isobase + millis + tzstr + ((btype->name == "ISOTimeStamp") ? "" : ("_" + btype->name));
     }
 }
 

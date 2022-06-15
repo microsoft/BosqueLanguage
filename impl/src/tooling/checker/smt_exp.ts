@@ -9,10 +9,10 @@ import { MIRResolvedTypeKey } from "../../compiler/mir_ops";
 type VerifierOptions = {
     INT_MIN: number,
     INT_MAX: number,
+    NAT_MAX: number,
     SLEN_MAX: number,
     BLEN_MAX: number,
 
-    ARRAY_MODE: "Seq" | "Array";
     CONTAINER_MAX: number,
 
     ActionMode: SymbolicActionMode

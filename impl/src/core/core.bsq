@@ -560,9 +560,9 @@ __internal __typedeclable entity DateTime provides Some, APIType {
     __assume_safe internal function s_create(year: Nat, month: Nat, day: Nat, hour: Nat, min: Nat, tzdata: TimeZoneCode): DateTime = datetime_create;
 
     function create(year: Nat, month?: Nat=0n, day?: Nat=1n, hour?: Nat=0n, min?: Nat=0n, tzdata?: TimeZoneCode='UTC'_TimeZoneCode): DateTime
-        requires year >= 1900n;
+        requires 1900n <= year && year <= 2200n;
         requires month < 12n;
-        requires day != 0n && day <= 31n;
+        requires DateOps::s_check_DayInMonth(day, month, year);
         requires hour < 24n;
         requires min < 60n;
     {
@@ -574,9 +574,9 @@ __internal __typedeclable entity UTCDateTime provides Some, APIType, KeyType {
     __assume_safe internal function s_create(year: Nat, month: Nat, day: Nat, hour: Nat, min: Nat): UTCDateTime = utcdatetime_create;
 
     function create(year: Nat, month?: Nat=0n, day?: Nat=1n, hour?: Nat=0n, min?: Nat=0n): UTCDateTime
-        requires year >= 1900n;
+        requires 1900n <= year && year <= 2200n;
         requires month < 12n;
-        requires day != 0n && day <= 31n;
+        requires DateOps::s_check_DayInMonth(day, month, year);
         requires hour < 24n;
         requires min < 60n;
     {
@@ -588,9 +588,9 @@ __internal __typedeclable entity CalendarDate provides Some, APIType, KeyType {
     __assume_safe internal function s_create(year: Nat, month: Nat, day: Nat, hour: Nat, min: Nat): CalendarDate = calendardate_create;
 
     function create(year: Nat, month?: Nat=0n, day?: Nat=1n): CalendarDate
-        requires year >= 1900n;
+        requires 1900n <= year && year <= 2200n;
         requires month < 12n;
-        requires day != 0n && day <= 31n;
+        requires DateOps::s_check_DayInMonth(day, month, year);
     {
         return CalendarDate::s_create(year, month, day);
     }
@@ -639,26 +639,20 @@ __safe __primitive inline infix operator <=(a: LogicalTime, b: LogicalTime): Boo
 __safe __primitive inline infix operator >=(a: LogicalTime, b: LogicalTime): Bool = default;
 
 
-__internal __typedeclable entity ISOTimeStamp provides Some, APIType {
-    __assume_safe internal function s_create(year: Nat, month: Nat, day: Nat, hour: Nat, min: Nat, sec: Nat, millis: Nat, tzoffset: Int): ISOTimeStamp = isotimestamp_create;
+__internal __typedeclable entity ISOTimeStamp provides Some, KeyType, APIType {
+    __assume_safe internal function s_create(year: Nat, month: Nat, day: Nat, hour: Nat, min: Nat, sec: Nat, millis: Nat): ISOTimeStamp = isotimestamp_create;
 
-    function create(year: Nat, month?: Nat=0n, day?: Nat=1n, hour?: Nat=0n, min?: Nat=0n, sec?: Nat=0n, millis?: Nat=0n, tzoffset?: Int=0): ISOTimeStamp
-        requires year >= 1900n;
+    function create(year: Nat, month?: Nat=0n, day?: Nat=1n, hour?: Nat=0n, min?: Nat=0n, sec?: Nat=0n, millis?: Nat=0n): ISOTimeStamp
+        requires 1900n <= year && year <= 2200n;
         requires month < 12n;
-        requires day != 0n && day <= 31n;
+        requires DateOps::s_check_DayInMonth(day, month, year);
         requires hour < 24n;
         requires min < 60n;
         requires sec < 61n;
         requires millis < 1000n;
-        requires -1080i <= tzoffset && tzoffset <= 1080i;
     {
         return ISOTimeStamp::s_create(year, month, day, hour, min, sec, millis, tzoffset);
     }
-
-    /*
-    We want to keep original LOCAL time but also a stashed UTC time to allow for comparison
-    https://en.cppreference.com/w/cpp/chrono/zoned_time for way to extract this
-    */
 }
 
 //<summary>Primitive UUID4 value.</summary>

@@ -186,17 +186,35 @@ class SMTTypeEmitter {
                 else if(this.isType(tt, "DateTime")) {
                     return new SMTTypeInfo("BDateTime", "TypeTag_DateTime", entity.tkey);
                 }
+                else if(this.isType(tt, "UTCDateTime")) {
+                    return new SMTTypeInfo("BUTCDateTime", "TypeTag_UTCDateTime", entity.tkey);
+                }
+                else if(this.isType(tt, "CalendarDate")) {
+                    return new SMTTypeInfo("BCalendarDate", "TypeTag_CalendarDate", entity.tkey);
+                }
+                else if(this.isType(tt, "RelativeTime")) {
+                    return new SMTTypeInfo("BRelativeTime", "TypeTag_RelativeTime", entity.tkey);
+                }
                 else if(this.isType(tt, "TickTime")) {
                     return new SMTTypeInfo("BTickTime", "TypeTag_TickTime", entity.tkey);
                 }
                 else if(this.isType(tt, "LogicalTime")) {
                     return new SMTTypeInfo("BLogicalTime", "TypeTag_LogicalTime", entity.tkey);
                 }
-                else if(this.isType(tt, "UUID")) {
-                    return new SMTTypeInfo("BUUID", "TypeTag_UUID", entity.tkey);
+                else if(this.isType(tt, "ISOTimeStamp")) {
+                    return new SMTTypeInfo("BISOTimeStamp", "TypeTag_ISOTimeStamp", entity.tkey);
                 }
-                else if(this.isType(tt, "ContentHash")) {
-                    return new SMTTypeInfo("BContentHash", "TypeTag_ContentHash", entity.tkey);
+                else if(this.isType(tt, "UUID4")) {
+                    return new SMTTypeInfo("BUUID4", "TypeTag_UUID4", entity.tkey);
+                }
+                else if(this.isType(tt, "UUID7")) {
+                    return new SMTTypeInfo("BUUID7", "TypeTag_UUID7", entity.tkey);
+                }
+                else if(this.isType(tt, "SHAContentHash")) {
+                    return new SMTTypeInfo("BSHAContentHash", "TypeTag_SHAContentHash", entity.tkey);
+                }
+                else if(this.isType(tt, "LatLongCoordinate")) {
+                    return new SMTTypeInfo("BLatLongCoordinate", "TypeTag_LatLongCoordinate", entity.tkey);
                 }
                 else if(this.isType(tt, "Regex")) {
                     return new SMTTypeInfo("bsq_regex", "TypeTag_Regex", entity.tkey);

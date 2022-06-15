@@ -474,6 +474,7 @@ class SMTAssembly {
         const v_min_max: string[] = [
             `(declare-const @BINTMIN Int) (assert (= @BINTMIN ${this.vopts.INT_MIN}))`,
             `(declare-const @BINTMAX Int) (assert (= @BINTMAX ${this.vopts.INT_MAX}))`,
+            `(declare-const @BNAXMAX Int) (assert (= @BNATMAX ${this.vopts.NAT_MAX}))`,
             `(declare-const @SLENMAX Int) (assert (= @SLENMAX ${this.vopts.SLEN_MAX}))`,
             `(declare-const @BLENMAX Int) (assert (= @BLENMAX ${this.vopts.BLEN_MAX}))`,
             `(declare-const @CONTAINERMAX Int) (assert (= @CONTAINERMAX ${this.vopts.CONTAINER_MAX}))`

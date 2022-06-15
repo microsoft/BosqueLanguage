@@ -1400,14 +1400,14 @@ struct BSQISOTimeStamp
     uint16_t seconds; //0-61
     uint16_t millis; //0-999
 
-    int16_t tzoffset;
-
-    uint32_t padding;
+    int16_t padding1;
+    uint32_t padding2;
 };
 
 std::string entityISOTimeStampDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode);
+int entityISOTimeStampKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
 
-#define CONS_BSQ_ISO_TIME_STAMP_TYPE(TID, NAME) (new BSQRegisterType<BSQISOTimeStamp>(TID, sizeof(BSQISOTimeStamp), "111", EMPTY_KEY_CMP, entityISOTimeStampDisplay_impl, NAME))
+#define CONS_BSQ_ISO_TIME_STAMP_TYPE(TID, NAME) (new BSQRegisterType<BSQISOTimeStamp>(TID, sizeof(BSQISOTimeStamp), "11", entityISOTimeStampKeyCmp_impl, entityISOTimeStampDisplay_impl, NAME))
 
 ////
 //UUID

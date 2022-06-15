@@ -106,7 +106,7 @@
 
 (declare-datatype BISOTimeStamp 
   (
-    (BISOTimeStamp@cons (BISOTimeStamp@year BNat) (BISOTimeStamp@month BNat) (BISOTimeStamp@day BNat) (BISOTimeStamp@hour BNat) (BISOTimeStamp@min BNat) (BISOTimeStamp@sec BNat) (BISOTimeStamp@millis BNat) (BISOTimeStamp@tzoffset BInt) (BISOTimeStamp@UTCValue Int))
+    (BISOTimeStamp@cons (BISOTimeStamp@year BNat) (BISOTimeStamp@month BNat) (BISOTimeStamp@day BNat) (BISOTimeStamp@hour BNat) (BISOTimeStamp@min BNat) (BISOTimeStamp@sec BNat) (BISOTimeStamp@millis BNat))
   )
 )
 
@@ -193,6 +193,7 @@
       (bsqkey_relativetime@box (bsqkey_relativetime_value BRelativeTime))
       (bsqkey_ticktime@box (bsqkey_ticktime_value BTickTime))
       (bsqkey_logicaltime@box (bsqkey_logicaltime_value BLogicalTime))
+      (bsqkey_isotimestamp@box (bsqkey_isotimestamp_value BISOTimeStamp))
       (bsqkey_uuid4@box (bsqkey_uuid4_value BUUID4))
       (bsqkey_uuid7@box (bsqkey_uuid7_value BUUID7))
       (bsqkey_shacontenthash@box (bsqkey_shacontenthash_value BSHAContentHash))
@@ -273,6 +274,28 @@
   (< k1 k2)
 )
 
+(define-fun BISOTimeStamp@less ((k1 BISOTimeStamp) (k2 BISOTimeStamp)) Bool
+  (ite (not (= (BISOTimeStamp@year k1) (BISOTimeStamp@year k2)))
+    (< (BISOTimeStamp@year k1) (BISOTimeStamp@year k2)
+    (ite (not (= (BISOTimeStamp@month k1) (BISOTimeStamp@month k2)))
+      (< (BISOTimeStamp@month k1) (BISOTimeStamp@month k2)
+      (ite (not (= (BISOTimeStamp@day k1) (BISOTimeStamp@day k2)))
+        (< (BISOTimeStamp@day k1) (BISOTimeStamp@day k2)
+        (ite (not (= (BISOTimeStamp@hour k1) (BISOTimeStamp@hour k2)))
+          (< (BISOTimeStamp@hour k1) (BISOTimeStamp@hour k2)
+          (ite (not (= (BISOTimeStamp@min k1) (BISOTimeStamp@min k2)))
+            (< (BISOTimeStamp@min k1) (BISOTimeStamp@min k2)
+            (ite (not (= (BISOTimeStamp@sec k1) (BISOTimeStamp@sec k2)))
+              (< (BISOTimeStamp@sec k1) (BISOTimeStamp@sec k2)
+              (< (BISOTimeStamp@millis k1) (BISOTimeStamp@millis k2)
+            )
+          )
+        )
+      )
+    )
+  )
+)
+
 (define-fun BUUID4@less ((k1 BUUID) (k2 BUUID)) Bool
   (str.< k1 k2)
 )
@@ -314,11 +337,14 @@
                               (BTickTime@less (bsqkey_ticktime_value vv1) (bsqkey_ticktime_value vv2))
                               (ite (= tt TypeTag_LogicalTime)
                                 (BLogicalTime@less (bsqkey_logicaltime_value vv1) (bsqkey_logicaltime_value vv2))
-                                (ite (= tt TypeTag_UUID4)
-                                  (BUUID4@less (bsqkey_uuid4_value vv1) (bsqkey_uuid4_value vv2))
-                                  (ite (= tt TypeTag_UUID7)
-                                    (BUUID7@less (bsqkey_uuid7_value vv1) (bsqkey_uuid7_value vv2))
-                                    (BSHAContentHash@less (bsqkey_shacontenthash_value vv1) (bsqkey_shacontenthash_value vv2))
+                                (ite (= tt TypeTag_ISOTimeStamp)
+                                  (BISOTimeStamp@less (bsqkey_isotimestamp_value vv1) (bsqkey_isotimestamp_value vv2))
+                                  (ite (= tt TypeTag_UUID4)
+                                    (BUUID4@less (bsqkey_uuid4_value vv1) (bsqkey_uuid4_value vv2))
+                                    (ite (= tt TypeTag_UUID7)
+                                      (BUUID7@less (bsqkey_uuid7_value vv1) (bsqkey_uuid7_value vv2))
+                                      (BSHAContentHash@less (bsqkey_shacontenthash_value vv1) (bsqkey_shacontenthash_value vv2))
+                                    )
                                   )
                                 )
                               )
@@ -360,7 +386,6 @@
       (bsqobject_rational@box (bsqobject_rational_value BRational))
       (bsqobject_bytebuffer@box (bsqobject_bytebuffer_value BByteBuffer))
       (bsqobject_datetime@box (bsqobject_datetime_value BDateTime))
-      (bsqobject_isotimestamp@box (bsqobject_isotimestamp_value BISOTimeStamp))
       (bsqobject_regex@box (bsqobject_regex_value bsq_regex))
       ;;TUPLE_TYPE_BOXING;;
       ;;RECORD_TYPE_BOXING;;
@@ -438,7 +463,6 @@
 (declare-fun BDateSecond@UFCons_API (HavocSequence) BNat)
 (declare-fun BDateMillis@UFCons_API (HavocSequence) BNat)
 (declare-fun BDateTZName@UFCons_API (HavocSequence) BString)
-(declare-fun BDateTZOffset@UFCons_API (HavocSequence) BInt)
 (declare-fun BTickTime@UFCons_API (HavocSequence) BTickTime)
 (declare-fun BLogicalTime@UFCons_API (HavocSequence) BLogicalTime)
 (declare-fun BUUID4@UFCons_API (HavocSequence) BUUID4)
@@ -457,7 +481,7 @@
   ($Result_bsq_nothing@success bsq_nothing@literal)
 )
 
-;;@BINTMIN, @BINTMAX, @SLENMAX, @BLENMAX
+;;@BINTMIN, @BINTMAX, @BNATMAX, @SLENMAX, @BLENMAX
 ;;V_MIN_MAX;;
 
 (define-fun _@@cons_Bool_entrypoint ((ctx HavocSequence)) $Result_Bool
@@ -475,7 +499,7 @@
 
 (define-fun _@@cons_Nat_entrypoint ((ctx HavocSequence)) $Result_BNat
   (let ((iv (BNat@UFCons_API ctx)))
-    (ite (and (<= 0 iv) (<= iv @BINTMAX))
+    (ite (and (<= 0 iv) (<= iv (+ @BNATMAX))
       ($Result_BNat@success iv)
       ($Result_BNat@error ErrorID_AssumeCheck) 
     )
@@ -493,7 +517,7 @@
 
 (define-fun _@@cons_BigNat_entrypoint ((ctx HavocSequence)) $Result_BBigNat
   (let ((iv (BBigNat@UFCons_API ctx)))
-    (ite (and (<= 0 iv) (<= iv (+ @BINTMAX @BINTMAX)))
+    (ite (and (<= 0 iv) (<= iv (+ @BNATMAX @BNATMAX)))
       ($Result_BBigNat@success iv)
       ($Result_BBigNat@error ErrorID_AssumeCheck) 
     )
@@ -604,9 +628,9 @@
 )
 
 (define-fun _@@cons_ISOTimeStamp_entrypoint ((ctx HavocSequence)) $Result_BISOTimeStamp
-  (let ((y (BDateYear@UFCons_API ctx)) (m (BDateMonth@UFCons_API ctx)) (d (BDateDay@UFCons_API ctx)) (hh (BDateHour@UFCons_API ctx)) (mm (BDateMinute@UFCons_API ctx)) (mm (BDateMinute@UFCons_API ctx)) (ss (BDateSecond@UFCons_API ctx)) (millis (BDateMillis@UFCons_API ctx)) (tzo (BDateTZOffset@UFCons_API ctx)))
-    (ite (and (<= 1900 y) (<= y 2200) (<= 0 m) (<= m 11) (<= 1 d) (@@check_DayInMonth d m y) (<= 0 hh) (<= hh 23) (<= 0 mm) (<= mm 59) (<= 0 ss) (<= ss 60) (<= 0 millis) (<= millis 999) (-1080 <= tzo) (tzo <= 1080))
-      ($Result_BISOTimeStamp@success (BISOTimeStamp@cons y m d hh mm ss millis tzo))
+  (let ((y (BDateYear@UFCons_API ctx)) (m (BDateMonth@UFCons_API ctx)) (d (BDateDay@UFCons_API ctx)) (hh (BDateHour@UFCons_API ctx)) (mm (BDateMinute@UFCons_API ctx)) (mm (BDateMinute@UFCons_API ctx)) (ss (BDateSecond@UFCons_API ctx)) (millis (BDateMillis@UFCons_API ctx)))
+    (ite (and (<= 1900 y) (<= y 2200) (<= 0 m) (<= m 11) (<= 1 d) (@@check_DayInMonth d m y) (<= 0 hh) (<= hh 23) (<= 0 mm) (<= mm 59) (<= 0 ss) (<= ss 60) (<= 0 millis) (<= millis 999))
+      ($Result_BISOTimeStamp@success (BISOTimeStamp@cons y m d hh mm ss millis))
       ($Result_BISOTimeStamp@error ErrorID_AssumeCheck) 
     )
   )
