@@ -255,7 +255,7 @@ A function can be exported from the application in a `.bsqapi` file (see info on
 
 # The `bosque` Command 
 
-The `bosque` command is the primary tools for building, testing, and managing bosque packages and applications. The bosque command can be run on sets of files _or_, preferably, used in conjunction with Bosque packages which are defined with a `package.json` format.
+The `bosque` command is the primary tool for building, testing, and managing bosque packages and applications. The bosque command can be run on sets of files _or_, preferably, used in conjunction with Bosque packages which are defined with a `package.json` format.
 
 ## Calculator Example
 
