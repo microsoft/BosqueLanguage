@@ -48,7 +48,7 @@ __universal concept KeyType provides Any {
 }
 
 //<summary>Type for indicating that a datatype is a Validator.</summary>
-__universal private concept Validator provides Any {
+__universal concept Validator provides Any {
 }
 
 //<summary>Type for indicating that a datatype is parsable.</summary>
@@ -97,7 +97,7 @@ abstract infix operator <=(a: Some, b: Some): Bool;
 abstract infix operator >=(a: Some, b: Some): Bool;
 
 //<summary>Primitive integer value.</summary>
-__internal __typedeclable entity Int provides Some, Algebraic, Orderable, KeyType, APIType {
+__internal __typedeclable __typebase entity Int provides Some, Algebraic, Orderable, KeyType, APIType {
     const zero: Int = 0i;
     const one: Int = 1i;
 
@@ -125,7 +125,7 @@ __safe __primitive inline infix operator <=(a: Int, b: Int): Bool = default;
 __safe __primitive inline infix operator >=(a: Int, b: Int): Bool = default;
 
 //<summary>Primitive natural number value.</summary>
-__internal __typedeclable entity Nat provides Some, Algebraic, Orderable, KeyType, APIType {
+__internal __typedeclable __typebase entity Nat provides Some, Algebraic, Orderable, KeyType, APIType {
     const zero: Nat = 0n;
     const one: Nat = 1n;
 
@@ -152,7 +152,7 @@ __safe __primitive inline infix operator <=(a: Nat, b: Nat): Bool = default;
 __safe __primitive inline infix operator >=(a: Nat, b: Nat): Bool = default;
 
 //<summary>Primitive big-integer value.</summary>
-__internal __typedeclable entity BigInt provides Some, Algebraic, Orderable, KeyType, APIType {
+__internal __typedeclable __typebase entity BigInt provides Some, Algebraic, Orderable, KeyType, APIType {
     const zero: BigInt = 0I;
     const one: BigInt = 1I;
 
@@ -180,7 +180,7 @@ __safe __primitive inline infix operator <=(a: BigInt, b: BigInt): Bool = defaul
 __safe __primitive inline infix operator >=(a: BigInt, b: BigInt): Bool = default;
 
 //<summary>Primitive big-integer value.</summary>
-__internal __typedeclable entity BigNat provides Some, Algebraic, Orderable, KeyType, APIType {
+__internal __typedeclable __typebase entity BigNat provides Some, Algebraic, Orderable, KeyType, APIType {
     const zero: BigNat = 0N;
     const one: BigNat = 1N;
 
@@ -207,7 +207,7 @@ __safe __primitive inline infix operator <=(a: BigNat, b: BigNat): Bool = defaul
 __safe __primitive inline infix operator >=(a: BigNat, b: BigNat): Bool = default;
 
 //<summary>Primitive rational value.</summary>
-__internal __typedeclable entity Rational provides Some, Algebraic, Orderable, APIType {
+__internal __typedeclable __typebase entity Rational provides Some, Algebraic, Orderable, APIType {
     const zero: Rational = 0/1R;
     const one: Rational = 1/1R;
 
@@ -235,7 +235,7 @@ __safe __primitive inline infix operator <=(a: Rational, b: Rational): Bool = de
 __safe __primitive inline infix operator >=(a: Rational, b: Rational): Bool = default;
 
 //<summary>Primitive float value defaults to 64bit.</summary>
-__internal __typedeclable entity Float provides Some, Algebraic, Orderable, APIType {
+__internal __typedeclable __typebase entity Float provides Some, Algebraic, Orderable, APIType {
     const zero: Float = 0.0f;
     const one: Float = 1.0f;
 
@@ -282,7 +282,7 @@ __safe __primitive inline infix operator <=(a: Float, b: Float): Bool = default;
 __safe __primitive inline infix operator >=(a: Float, b: Float): Bool = default;
 
 //<summary>Primitive float decimal value.</summary>
-__internal __typedeclable entity Decimal provides Some, Algebraic, Orderable, APIType {
+__internal __typedeclable __typebase entity Decimal provides Some, Algebraic, Orderable, APIType {
     const zero: Decimal = 0.0d;
     const one: Decimal = 1.0d;
 
@@ -329,7 +329,7 @@ __safe __primitive inline infix operator <=(a: Decimal, b: Decimal): Bool = defa
 __safe __primitive inline infix operator >=(a: Decimal, b: Decimal): Bool = default;
 
 //<summary>Primitive string value.</summary>
-__internal __typedeclable entity String provides Some, KeyType, APIType {
+__internal __typedeclable __typebase entity String provides Some, KeyType, APIType {
     __safe private function s_empty(s: String): Bool = string_empty;
     __assume_safe private function s_concat2(s1: String, s2: String): String = string_append;
 
@@ -367,15 +367,23 @@ __internal __typedeclable entity String provides Some, KeyType, APIType {
     }
 
     method extractFront(v: String | Regex): String, String {
-        use bin search on RE(.*) and RE -- take maximal slice
+        use search on RE(.*) -- take maximal slice
     }
 
     method extractEnd(v: String | Regex): String, String {
-        use bin search on (.*)RE and RE -- take maximal slice
+        use search on (.*)RE -- take maximal slice
     }
 
-    method splitAt(v: String | Regex): String, String, String {
-        use bin search on min start position of RE(.*)
+    method removeFront(v: String | Regex): String, String {
+        use search on RE(.*) -- take maximal slice
+    }
+
+    method removeEnd(v: String | Regex): String, String {
+        use search on (.*)RE -- take maximal slice
+    }
+
+    method splitAtFirst(v: String | Regex): String, String, String {
+        use search on min position of RE(.*)
     }
 
     method splitAll(...seps: List<String>): List<String> {
@@ -424,102 +432,6 @@ __internal __constructable __typedeclable entity DataString<T unique Parsable> p
     }
 }
 
-//<summary>
-//A structured string representing a RELATIVE logical directory path value.
-//L is the relative root, S, T are the path step and seperators 
-//</summary>
-_internal __constructable __typedeclable entity RelativeLogicalDirectoryPath<L unique Validator, S unique Validator, T unique Validator> provides Some, KeyType, APIType {
-    private function s_into(s: String): RelativeLogicalDirectoryPath<L, S, T> = special_inject;
-    method value(): String = special_extract;
-
-    //TODO: isValid, fromString, tryFromString
-
-    //TODO: join and extract operations
-}
-
-//<summary>
-//A structured string representing a logical directory path value.
-//A, B are the root and root seperator validators, K, L are the base and base separators, S, T are the path step and seperators 
-//</summary>
-_internal __constructable __typedeclable entity LogicalDirectoryPath<A unique Validator, B unique Validator, K unique Validator, L unique Validator, S unique Validator, T unique Validator> provides Some, KeyType, APIType {
-    private function s_into(s: String): LogicalDirectoryPath<A, B, K, L, S, T> = special_inject;
-    method value(): String = special_extract;
-
-    //TODO: isValid, fromString, tryFromString
-
-    //TODO: extend and extract operations
-}
-
-
-//<summary>
-//A structured string representing a RELATIVE logical glob path value. Any step, resource, or ext component in the Glob may be a {...} enclosed regex or, *, or ** instead
-//L is the relative root, S, T are the path step and seperators, E, X are the entry and 
-//</summary>
-_internal __constructable __typedeclable entity RelativeLogicalGlob<L unique Validator, S unique Validator, T unique Validator, E unique Validator, X unique Validator> provides Some {
-    private function s_into(s: String): RelativeLogicalGlob<S, T, E, X> = special_inject;
-    method value(): String = special_extract;
-
-    //TODO: isValid, fromString, tryFromString
-
-    //TODO: join and extract operations
-
-    //TODO: match operations
-}
-
-//<summary>
-//A structured string representing a logical glob path value. Any step, resource, or ext component in the Glob may be a {...} enclosed regex or, *, or ** instead
-//A, B are the root and root seperator validators, K, L are the base and base separators, S, T are the path step and seperators, E, X are the entry and 
-//</summary>
-_internal __constructable __typedeclable entity LogicalGlob<A unique Validator, B unique Validator, K unique Validator, L unique Validator, S unique Validator, T unique Validator, E unique Validator, X unique Validator> provides Some {
-    private function s_into(s: String): LogicalGlob<A, B, K, L, S, T, E, X> = special_inject;
-    method value(): String = special_extract;
-
-    //TODO: isValid, fromString, tryFromString
-
-    //TODO: extend and extract operations
-
-    //TODO: match operations
-}
-
-//<summary>
-//A structured string representing a RELATIVE logical resource path value.
-//L is the relative root, S, T are the path step and seperators, E, X are the entry and 
-//</summary>
-_internal __constructable __typedeclable entity RelativeLogicalResourcePath<L unique Validator, S unique Validator, T unique Validator, E unique Validator, X unique Validator> provides Some, KeyType, APIType {
-    private function s_into(s: String): RelativeLogicalResourcePath<L, S, T, E, X> = special_inject;
-    method value(): String = special_extract;
-
-    //TODO: isValid, fromString, tryFromString
-
-    //TODO: join and extract operations
-}
-
-//<summary>
-//A structured string representing a RELATIVE logical resource path value.
-//A, B are the root and root seperator validators, K, L are the base and base separators, S, T are the path step and seperators, E, X are the entry and 
-//</summary>
-_internal __constructable __typedeclable entity LogicalResourcePath<A unique Validator, B unique Validator, K unique Validator, L unique Validator, S unique Validator, T unique Validator, E unique Validator, X unique Validator> provides Some, KeyType, APIType {
-    private function s_into(s: String): LogicalResourcePath<A, B, K, L, S, T, E, X> = special_inject;
-    method value(): String = special_extract;
-
-    //TODO: isValid, fromString, tryFromString
-
-    //TODO: extend and extract operations
-}
-
-//<summary>
-//A structured string representing a scoped identity (email, login, userid, etc.).
-//A, B are the root and root seperator validators, K, L are the base and base separators, S, T are the path step and seperators, E, X are the entry and 
-//</summary>
-_internal __constructable __typedeclable entity ScopedIdentity<I unique Validator, A unique Validator, B unique Validator, K unique Validator, L unique Validator, S unique Validator, T unique Validator, E unique Validator, X unique Validator> provides Some, KeyType, APIType {
-    private function s_into(s: String): ScopedIdentity<I, A, B, K, L, S, T, E, X> = special_inject;
-    method value(): String = special_extract;
-
-    //TODO: isValid, fromString, tryFromString
-
-    //TODO: extend and extract operations
-}
-
 enum BufferFormat {
     utf8,
     binary,
@@ -556,7 +468,7 @@ typedecl ValidTimeZoneName = /[A-Z]{2, 5}/;
 typedecl TimeZoneCode = StringOf<ValidTimeZoneName>;
 
 //<summary>Primitive DateTime value.</summary>
-__internal __typedeclable entity DateTime provides Some, APIType {
+__internal __typedeclable __typebase entity DateTime provides Some, APIType {
     __assume_safe internal function s_create(year: Nat, month: Nat, day: Nat, hour: Nat, min: Nat, tzdata: TimeZoneCode): DateTime = datetime_create;
 
     function create(year: Nat, month?: Nat=0n, day?: Nat=1n, hour?: Nat=0n, min?: Nat=0n, tzdata?: TimeZoneCode='UTC'_TimeZoneCode): DateTime
@@ -570,7 +482,7 @@ __internal __typedeclable entity DateTime provides Some, APIType {
     }
 }
 
-__internal __typedeclable entity UTCDateTime provides Some, APIType, KeyType {
+__internal __typedeclable __typebase entity UTCDateTime provides Some, APIType, KeyType {
     __assume_safe internal function s_create(year: Nat, month: Nat, day: Nat, hour: Nat, min: Nat): UTCDateTime = utcdatetime_create;
 
     function create(year: Nat, month?: Nat=0n, day?: Nat=1n, hour?: Nat=0n, min?: Nat=0n): UTCDateTime
@@ -584,7 +496,7 @@ __internal __typedeclable entity UTCDateTime provides Some, APIType, KeyType {
     }
 }
 
-__internal __typedeclable entity CalendarDate provides Some, APIType, KeyType {
+__internal __typedeclable __typebase entity CalendarDate provides Some, APIType, KeyType {
     __assume_safe internal function s_create(year: Nat, month: Nat, day: Nat, hour: Nat, min: Nat): CalendarDate = calendardate_create;
 
     function create(year: Nat, month?: Nat=0n, day?: Nat=1n): CalendarDate
@@ -596,7 +508,7 @@ __internal __typedeclable entity CalendarDate provides Some, APIType, KeyType {
     }
 }
 
-__internal __typedeclable entity RelativeTime provides Some, APIType, KeyType {
+__internal __typedeclable __typebase entity RelativeTime provides Some, APIType, KeyType {
     __assume_safe internal function s_create(hour: Nat, min: Nat): RelativeTime = relativetime_create;
 
     function create(year: Nat, month?: Nat=0n, day?: Nat=1n): RelativeTime
@@ -608,7 +520,7 @@ __internal __typedeclable entity RelativeTime provides Some, APIType, KeyType {
 }
 
 //<summary>Primitive TickTime value.</summary>
-__internal __typedeclable entity TickTime provides Some, Orderable, KeyType APIType {
+__internal __typedeclable __typebase entity TickTime provides Some, Orderable, KeyType APIType {
 }
 __safe __primitive inline infix operator *(a: TickTime, b: Nat): TickTime = default;
 __safe __primitive inline infix operator *(a: Nat, b: TickTime): TickTime = default;
@@ -623,7 +535,7 @@ __safe __primitive inline infix operator <=(a: TickTime, b: TickTime): Bool = de
 __safe __primitive inline infix operator >=(a: TickTime, b: TickTime): Bool = default;
 
 //<summary>Primitive LogicalTime value.</summary>
-__internal __typedeclable entity LogicalTime provides Some, Orderable, KeyType, APIType {
+__internal __typedeclable __typebase entity LogicalTime provides Some, Orderable, KeyType, APIType {
     //TODO: logical time zero and one
 }
 __safe __primitive inline infix operator *(a: LogicalTime, b: Nat): LogicalTime = default;
@@ -639,7 +551,7 @@ __safe __primitive inline infix operator <=(a: LogicalTime, b: LogicalTime): Boo
 __safe __primitive inline infix operator >=(a: LogicalTime, b: LogicalTime): Bool = default;
 
 
-__internal __typedeclable entity ISOTimeStamp provides Some, KeyType, APIType {
+__internal __typedeclable __typebase entity ISOTimeStamp provides Some, KeyType, APIType {
     __assume_safe internal function s_create(year: Nat, month: Nat, day: Nat, hour: Nat, min: Nat, sec: Nat, millis: Nat): ISOTimeStamp = isotimestamp_create;
 
     function create(year: Nat, month?: Nat=0n, day?: Nat=1n, hour?: Nat=0n, min?: Nat=0n, sec?: Nat=0n, millis?: Nat=0n): ISOTimeStamp
@@ -656,19 +568,19 @@ __internal __typedeclable entity ISOTimeStamp provides Some, KeyType, APIType {
 }
 
 //<summary>Primitive UUID4 value.</summary>
-__internal __typedeclable entity UUID4 provides Some, KeyType, APIType {
+__internal __typedeclable __typebase entity UUID4 provides Some, KeyType, APIType {
 }
 
 //<summary>Primitive UUID7 value.</summary>
-__internal __typedeclable entity UUID7 provides Some, KeyType, APIType {
+__internal __typedeclable __typebase entity UUID7 provides Some, KeyType, APIType {
 }
 
 //<summary>Primitive hash value suitable for content addressable operations or crypto secure digests.</summary>
-__internal __typedeclable entity SHAContentHash provides Some, KeyType, APIType {
+__internal __typedeclable __typebase entity SHAContentHash provides Some, KeyType, APIType {
 }
 
 //<summary>Primitive Lat/Long</summary>
-__internal __typedeclable entity LatLongCoordinate provides Some, APIType {
+__internal __typedeclable __typebase entity LatLongCoordinate provides Some, APIType {
     __assume_safe internal function s_create(lat: Float, long: Float): LatLongCoordinate = latlongcoordinate_create;
 
     function create(lat: Float, long: Float): ISOTimeStamp

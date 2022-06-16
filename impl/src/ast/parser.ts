@@ -179,6 +179,7 @@ const AttributeStrings = [
     "__typedeclable",
     "__constructable",
     "__primitive",
+    "__typebase",
     "__safe",
     "__assume_safe",
     "__conditional_safe",
@@ -4248,7 +4249,7 @@ class Parser {
                 this.raiseError(line, "Cannot have invariant function on Enum types");
             }
 
-            attributes.push("__enum_type", "__constructable", "__typedeclable");
+            attributes.push("__enum_type", "__constructable");
 
             this.clearRecover();
             currentDecl.objects.set(ename, new EntityTypeDecl(sinfo, this.m_penv.getCurrentFile(), attributes, currentDecl.ns, ename, [], provides, invariants, validates, staticMembers, staticFunctions, staticOperators, memberFields, memberMethods, new Map<string, EntityTypeDecl>()));
@@ -4359,18 +4360,6 @@ class Parser {
                 //TODO: what operations do we want to forward by default (or config)
             }
             else if(ttname === "DataString") {
-                //TODO: what operations do we want to forward by default (or config)
-            }
-            else if(ttname === "RelativeLogicalDirectoryPath" || ttname === "RelativeLogicalResourcePath") {
-                //TODO: what operations do we want to forward by default (or config)
-            }
-            else if(ttname === "LogicalDirectoryPath" || ttname === "LogicalResourcePath") {
-                //TODO: what operations do we want to forward by default (or config)
-            }
-            else if(ttname === "RelativeLogicalGlob" || ttname === "LogicalGlob") {
-                //TODO: what operations do we want to forward by default (or config)
-            }
-            else if(ttname === "ScopedIdentity") {
                 //TODO: what operations do we want to forward by default (or config)
             }
             else if(ttname === "DateTime") {

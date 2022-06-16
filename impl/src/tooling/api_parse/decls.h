@@ -113,6 +113,7 @@ enum class TypeTag
     EntityTag,
     UnionTag
 };
+xxxx;
 
 struct DateTime
 {
@@ -151,7 +152,8 @@ public:
     virtual bool parseLogicalTimeImpl(const APIModule* apimodule, const IType* itype, uint64_t j, ValueRepr value, State& ctx) = 0;
     virtual bool parseUUIDImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, ValueRepr value, State& ctx) = 0;
     virtual bool parseContentHashImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, ValueRepr value, State& ctx) = 0;
-    
+    xxxx;
+
     virtual void prepareParseTuple(const APIModule* apimodule, const IType* itype, State& ctx) = 0;
     virtual ValueRepr getValueForTupleIndex(const APIModule* apimodule, const IType* itype, ValueRepr value, size_t i, State& ctx) = 0;
     virtual void completeParseTuple(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;

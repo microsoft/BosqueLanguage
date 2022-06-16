@@ -707,6 +707,7 @@ IType* IType::jparse(json j)
             return LogicalTimeType::jparse(j);
         case TypeTag::UUIDTag:
             return UUIDType::jparse(j);
+            xxxx;
         case TypeTag::ContentHashTag:
             return ContentHashType::jparse(j);
         case TypeTag::ConstructableOfType:

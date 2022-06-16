@@ -331,6 +331,7 @@ class SMTTypeEmitter {
                 oftypetag = smtfrom.smttypetag;
                 objval = new SMTCallSimple("bsqkey_contenthash@box", [exp]);
             }
+            xxxx;
             else {
                 const entity = this.assembly.entityDecls.get(from.typeID) as MIREntityTypeDecl;
 
@@ -342,6 +343,9 @@ class SMTTypeEmitter {
                     oftypetag = this.getSMTTypeFor(this.getMIRType("String")).smttypetag;
                     objval = objval = new SMTCallSimple("bsqkey_string@box", [exp]);
                 }
+
+                xxxx;
+
                 else if (entity instanceof MIRConstructableInternalEntityTypeDecl) {
                     oftypetag = this.getSMTTypeFor(this.getMIRType(entity.fromtype)).smttypetag;
                     objval = new SMTCallSimple(this.getSMTConstructorName(this.getMIRType(entity.fromtype)).box, [exp]);
@@ -452,6 +456,7 @@ class SMTTypeEmitter {
             else if(this.isType(into, "ContentHash")) {
                 return new SMTCallSimple("bsqkey_contenthash_value", [oexp]);
             }
+            xxxx;
             else if (this.isUniqueTupleType(into)) {
                 return new SMTCallSimple(this.getSMTConstructorName(into).bfield, [oexp]);
             }

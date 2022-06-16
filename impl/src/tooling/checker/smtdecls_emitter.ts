@@ -755,6 +755,7 @@ class SMTEmitter {
                 else if (edecl.attributes.includes("__typedprimitive")) {
                     this.generateAPITypeConstructorFunction_TypedPrimitive(tt, havocfuncs, ufuncs);
                 }
+                xxxx;
                 else if (edecl.attributes.includes("__enum_type")) {
                     this.generateAPITypeConstructorFunction_Enum(tt, havocfuncs, ufuncs);
                 }
@@ -918,6 +919,7 @@ class SMTEmitter {
             else if (edcl.attributes.includes("__databuffer_type")) {
                 this.processDataBufferEntityDecl(edcl as MIRDataBufferInternalEntityTypeDecl);
             }
+            xxxx;
             else if (edcl.attributes.includes("__typedprimitive")) {
                 this.processConstructableEntityDecl(edcl as MIRConstructableEntityTypeDecl);
             }

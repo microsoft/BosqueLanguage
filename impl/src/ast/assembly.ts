@@ -1507,6 +1507,7 @@ class Assembly {
     getSpecialContentHashType(): ResolvedType { return this.internSpecialObjectType(["ContentHash"]); }
     getSpecialRegexType(): ResolvedType { return this.internSpecialObjectType(["Regex"]); }
     getSpecialNothingType(): ResolvedType { return this.internSpecialObjectType(["Nothing"]); }
+    xxxx;
 
     getSpecialHavocType(): ResolvedType { return this.internSpecialObjectType(["HavocSequence"]); }
 

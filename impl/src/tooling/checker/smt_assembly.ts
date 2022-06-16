@@ -341,6 +341,7 @@ class SMTAssembly {
         "TypeTag_ContentHash",
         "TypeTag_Regex"
     ];
+    xxxx;
     keytypeTags: string[] = [
         "TypeTag_None",
         "TypeTag_Bool",

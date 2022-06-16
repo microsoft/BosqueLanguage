@@ -1788,6 +1788,7 @@ class SMTBodyEmitter {
                 const oftype = this.typegen.getSMTTypeFor(this.typegen.getMIRType("String"));
                 return new SMTCallSimple(`${oftype.smttypename}@less`, [lhsexp, rhsexp]);
             }
+            xxxx;
             else if(etype instanceof MIRDataBufferInternalEntityTypeDecl) {
                 const oftype = this.typegen.getSMTTypeFor(this.typegen.getMIRType("String"));
                 return new SMTCallSimple(`${oftype.smttypename}@less`, [lhsexp, rhsexp]);

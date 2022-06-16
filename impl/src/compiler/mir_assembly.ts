@@ -377,21 +377,23 @@ class MIRConstructableEntityTypeDecl extends MIREntityTypeDecl {
     readonly fromtype: MIRResolvedTypeKey;
     readonly validatefunc: MIRInvokeKey | undefined; 
     readonly usingcons: MIRInvokeKey | undefined;
+    readonly basetype: MIRResolvedTypeKey;
 
-    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], fromtype: MIRResolvedTypeKey, validatefunc: MIRInvokeKey | undefined, usingcons: MIRInvokeKey | undefined) {
+    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], fromtype: MIRResolvedTypeKey, validatefunc: MIRInvokeKey | undefined, usingcons: MIRInvokeKey | undefined, basetype: MIRResolvedTypeKey) {
         super(srcInfo, srcFile, tkey, attributes, ns, name, terms, provides);
 
         this.fromtype = fromtype;
         this.validatefunc = validatefunc;
         this.usingcons = usingcons;
+        this.basetype = basetype;
     }
 
     jemit(): object {
-        return { tag: "constructable", ...this.jemitbase(), fromtype: this.fromtype, validatefunc: this.validatefunc, usingcons: this.usingcons };
+        return { tag: "constructable", ...this.jemitbase(), fromtype: this.fromtype, validatefunc: this.validatefunc, usingcons: this.usingcons, basetype: this.basetype };
     }
 
     static jparse(jobj: any): MIRConstructableEntityTypeDecl {
-        return new MIRConstructableEntityTypeDecl(...MIROOTypeDecl.jparsebase(jobj), jobj.fromtype, jobj.validatefunc, jobj.usingcons);
+        return new MIRConstructableEntityTypeDecl(...MIROOTypeDecl.jparsebase(jobj), jobj.fromtype, jobj.validatefunc, jobj.usingcons, jobj.basetype);
     }
 }
 
@@ -1124,6 +1126,7 @@ class MIRAssembly {
                 else if(tt.typeID === "DateTime") {
                     return {tag: APIEmitTypeTag.DateTimeTag};
                 }
+                xxxx;
                 else if(tt.typeID === "TickTime") {
                     return {tag: APIEmitTypeTag.TickTimeTag};
                 }
@@ -1172,6 +1175,7 @@ class MIRAssembly {
             else if (entity instanceof MIRDataBufferInternalEntityTypeDecl) {
                 return {tag: APIEmitTypeTag.DataStringTag, name: tt.typeID, oftype: entity.fromtype, chkinv: entity.accepts}
             }
+            xxxx;
             else {
                 assert(entity instanceof MIRPrimitiveCollectionEntityTypeDecl);
 

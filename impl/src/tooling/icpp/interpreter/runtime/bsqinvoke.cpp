@@ -314,6 +314,7 @@ const BSQType* jsonLoadDeclOfType(json v)
         return CONS_BSQ_LOGICAL_TIME_TYPE(ttype, tname);
     case BSQ_TYPE_ID_ISO_TIMESTAMP:
         return CONS_BSQ_ISO_TIME_STAMP_TYPE(ttype, tname);
+        xxxx;
     case BSQ_TYPE_ID_UUID4:
         return CONS_BSQ_UUID4_TYPE(ttype, tname);
     case BSQ_TYPE_ID_UUID7:

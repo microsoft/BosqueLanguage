@@ -791,6 +791,7 @@ class ICPPAssembly
             else if (edcl.attributes.includes("__databuffer_type")) {
                 return this.processDataBufferStringOfEntityDecl(edcl as MIRDataBufferInternalEntityTypeDecl, icpplayout);
             }
+            xxxx;
             else if (edcl.attributes.includes("__typedprimitive")) {
                 return this.processConstructableEntityDecl(edcl as MIRConstructableEntityTypeDecl, icpplayout);
             }

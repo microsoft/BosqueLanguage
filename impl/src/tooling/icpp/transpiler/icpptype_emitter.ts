@@ -153,6 +153,7 @@ class ICPPTypeEmitter {
                     return this.getICPPTypeInfoIsSmallInlineable(mirtype);
 
                 }
+                xxxx;
                 else if (entity instanceof MIRConstructableInternalEntityTypeDecl) {
                     const mirtype = this.getMIRType(entity.fromtype);
                     return this.getICPPTypeInfoIsSmallInlineable(mirtype);
@@ -248,6 +249,7 @@ class ICPPTypeEmitter {
         else if (this.isType(tt, "Regex")) {
             return {layout: ICPPLayoutCategory.Inline, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "1"};
         }
+        xxxx;
         else {
             if(entity.name === "PartialVector4") {
                 return {layout: ICPPLayoutCategory.Ref, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "2"};
@@ -335,6 +337,7 @@ class ICPPTypeEmitter {
                     const mirtype = this.getMIRType("ByteBuffer");
                     res = this.getICPPTypeInfoInlineLayout(mirtype);
                 }
+                xxxx;
                 else if (entity instanceof MIRConstructableInternalEntityTypeDecl) {
                     const mirtype = this.getMIRType(entity.fromtype);
                     res = this.getICPPTypeInfoInlineLayout(mirtype);
@@ -641,6 +644,7 @@ class ICPPTypeEmitter {
 
                 return fromlayout.createFromLayoutInfo(entity.tkey);
             }
+            xxxx;
             else if (entity instanceof MIRConstructableInternalEntityTypeDecl) {
                 const mirtype = this.getMIRType(entity.fromtype);
                 const fromlayout = this.getICPPLayoutInfo(mirtype);

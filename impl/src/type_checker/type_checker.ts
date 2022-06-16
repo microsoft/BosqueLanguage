@@ -6707,7 +6707,16 @@ class TypeChecker {
                 }
                 else if(tdecl.attributes.includes("__typedprimitive")) {
                     const rrtype = (tdecl.memberMethods.find((mm) => mm.name === "value") as MemberMethodDecl).invoke.resultType;
-                    const oftype = this.resolveAndEnsureTypeOnly(tdecl.sourceLocation, rrtype, binds);
+                    let oftype = this.resolveAndEnsureTypeOnly(tdecl.sourceLocation, rrtype, binds);
+
+                    let basetype = oftype;
+                    let basetypedecl = basetype.getUniqueCallTargetType().object;
+                    while(!basetypedecl.attributes.includes("__typebase")) {
+                        const uutype = (basetypedecl.memberMethods.find((mm) => mm.name === "value") as MemberMethodDecl).invoke.resultType;
+
+                        basetype = this.resolveAndEnsureTypeOnly(tdecl.sourceLocation, uutype, basetype.getUniqueCallTargetType().binds);
+                        basetypedecl = basetype.getUniqueCallTargetType().object;
+                    }
 
                     let validatekey: string | undefined = undefined;
                     let conskey: string | undefined = undefined;
@@ -6726,7 +6735,8 @@ class TypeChecker {
                             conskey = conskeyid.keyid;
                         }
                     }
-                    const mirentity = new MIRConstructableEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, oftype.typeID, validatekey, conskey);
+                    
+                    const mirentity = new MIRConstructableEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, oftype.typeID, validatekey, conskey, basetype.typeID);
                     this.m_emitter.masm.entityDecls.set(tkey, mirentity);
                 }
                 else if(tdecl.attributes.includes("__stringof_type") || tdecl.attributes.includes("__datastring_type")) {
