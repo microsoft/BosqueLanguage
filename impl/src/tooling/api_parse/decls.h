@@ -101,10 +101,16 @@ enum class TypeTag
     ByteBufferTag,
     DataBufferTag,
     DateTimeTag,
+    UTCDateTimeTag,
+    CalendarDateTag,
+    RelativeTimeTag,
     TickTimeTag,
     LogicalTimeTag,
-    UUIDTag,
-    ContentHashTag,
+    ISOTimeStampTag,
+    UUID4Tag,
+    UUID7Tag,
+    SHAContentHashTag,
+    LatLongCoordinateTag,
     ConstructableOfType,
     TupleTag,
     RecordTag,
@@ -113,7 +119,6 @@ enum class TypeTag
     EntityTag,
     UnionTag
 };
-xxxx;
 
 struct DateTime
 {

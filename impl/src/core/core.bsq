@@ -583,7 +583,7 @@ __internal __typedeclable __typebase entity SHAContentHash provides Some, KeyTyp
 __internal __typedeclable __typebase entity LatLongCoordinate provides Some, APIType {
     __assume_safe internal function s_create(lat: Float, long: Float): LatLongCoordinate = latlongcoordinate_create;
 
-    function create(lat: Float, long: Float): ISOTimeStamp
+    function create(lat: Float, long: Float): LatLongCoordinate
         requires -90.0f <= lat && lat <= 90.0f;
         requires -180.0f < long && long <= 180.0f;
     {

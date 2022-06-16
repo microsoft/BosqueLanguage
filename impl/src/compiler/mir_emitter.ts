@@ -1402,13 +1402,18 @@ class MIREmitter {
         emitter.registerResolvedTypeReference(assembly.getSpecialBufferCompressionType());
         emitter.registerResolvedTypeReference(assembly.getSpecialByteBufferType());
         emitter.registerResolvedTypeReference(assembly.getSpecialDateTimeType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialUTCDateTimeType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialCalendarDateType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialRelativeTimeType());
         emitter.registerResolvedTypeReference(assembly.getSpecialTickTimeType());
         emitter.registerResolvedTypeReference(assembly.getSpecialLogicalTimeType());
-        emitter.registerResolvedTypeReference(assembly.getSpecialUUIDType());
-        emitter.registerResolvedTypeReference(assembly.getSpecialContentHashType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialISOTimeStampType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialUUID4Type());
+        emitter.registerResolvedTypeReference(assembly.getSpecialUUID7Type());
+        emitter.registerResolvedTypeReference(assembly.getSpecialSHAContentHashType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialLatLongCoordinateType());
         emitter.registerResolvedTypeReference(assembly.getSpecialRegexType());
         emitter.registerResolvedTypeReference(assembly.getSpecialNothingType());
-        xxxx;
 
         if(buildmode === BuildApplicationMode.ModelChecker) {
             emitter.registerResolvedTypeReference(assembly.getSpecialHavocType());

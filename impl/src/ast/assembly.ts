@@ -1501,13 +1501,18 @@ class Assembly {
     getSpecialBufferCompressionType(): ResolvedType { return this.internSpecialObjectType(["BufferCompression"]); }
     getSpecialByteBufferType(): ResolvedType { return this.internSpecialObjectType(["ByteBuffer"]); }
     getSpecialDateTimeType(): ResolvedType { return this.internSpecialObjectType(["DateTime"]); }
+    getSpecialUTCDateTimeType(): ResolvedType { return this.internSpecialObjectType(["UTCDateTime"]); }
+    getSpecialCalendarDateType(): ResolvedType { return this.internSpecialObjectType(["CalendarDate"]); }
+    getSpecialRelativeTimeType(): ResolvedType { return this.internSpecialObjectType(["RelativeTime"]); }
     getSpecialTickTimeType(): ResolvedType { return this.internSpecialObjectType(["TickTime"]); }
     getSpecialLogicalTimeType(): ResolvedType { return this.internSpecialObjectType(["LogicalTime"]); }
-    getSpecialUUIDType(): ResolvedType { return this.internSpecialObjectType(["UUID"]); }
-    getSpecialContentHashType(): ResolvedType { return this.internSpecialObjectType(["ContentHash"]); }
+    getSpecialISOTimeStampType(): ResolvedType { return this.internSpecialObjectType(["ISOTimeStamp"]); }
+    getSpecialUUID4Type(): ResolvedType { return this.internSpecialObjectType(["UUID4"]); }
+    getSpecialUUID7Type(): ResolvedType { return this.internSpecialObjectType(["UUID7"]); }
+    getSpecialSHAContentHashType(): ResolvedType { return this.internSpecialObjectType(["SHAContentHash"]); }
+    getSpecialLatLongCoordinateType(): ResolvedType { return this.internSpecialObjectType(["LatLongCoordinate"]); }
     getSpecialRegexType(): ResolvedType { return this.internSpecialObjectType(["Regex"]); }
     getSpecialNothingType(): ResolvedType { return this.internSpecialObjectType(["Nothing"]); }
-    xxxx;
 
     getSpecialHavocType(): ResolvedType { return this.internSpecialObjectType(["HavocSequence"]); }
 

@@ -27,10 +27,16 @@ enum APIEmitTypeTag
     ByteBufferTag,
     DataBufferTag,
     DateTimeTag,
+    UTCDateTimeTag,
+    CalendarDateTag,
+    RelativeTimeTag,
     TickTimeTag,
     LogicalTimeTag,
-    UUIDTag,
-    ContentHashTag,
+    ISOTimeStampTag,
+    UUID4Tag,
+    UUID7Tag,
+    SHAContentHashTag,
+    LatLongCoordinateTag,
     ConstructableOfType,
     TupleTag,
     RecordTag,
@@ -1126,18 +1132,35 @@ class MIRAssembly {
                 else if(tt.typeID === "DateTime") {
                     return {tag: APIEmitTypeTag.DateTimeTag};
                 }
-                xxxx;
+                else if(tt.typeID === "UTCDateTime") {
+                    return {tag: APIEmitTypeTag.UTCDateTimeTag};
+                }
+                else if(tt.typeID === "CalendarDate") {
+                    return {tag: APIEmitTypeTag.CalendarDateTag};
+                }
+                else if(tt.typeID === "RelativeTime") {
+                    return {tag: APIEmitTypeTag.RelativeTimeTag};
+                }
                 else if(tt.typeID === "TickTime") {
                     return {tag: APIEmitTypeTag.TickTimeTag};
                 }
                 else if(tt.typeID === "LogicalTime") {
                     return {tag: APIEmitTypeTag.LogicalTimeTag};
                 }
-                else if(tt.typeID === "UUID") {
-                    return {tag: APIEmitTypeTag.UUIDTag};
+                else if(tt.typeID === "ISOTimeStamp") {
+                    return {tag: APIEmitTypeTag.ISOTimeStampTag};
                 }
-                else if(tt.typeID === "ContentHash") {
-                    return {tag: APIEmitTypeTag.ContentHashTag};
+                else if(tt.typeID === "UUID4") {
+                    return {tag: APIEmitTypeTag.UUID4Tag};
+                }
+                else if(tt.typeID === "UUID7") {
+                    return {tag: APIEmitTypeTag.UUID7Tag};
+                }
+                else if(tt.typeID === "SHAContentHash") {
+                    return {tag: APIEmitTypeTag.SHAContentHashTag};
+                }
+                else if(tt.typeID === "LatLongCoordinate") {
+                    return {tag: APIEmitTypeTag.LatLongCoordinateTag};
                 }
                 else {
                     assert(false);
@@ -1175,7 +1198,6 @@ class MIRAssembly {
             else if (entity instanceof MIRDataBufferInternalEntityTypeDecl) {
                 return {tag: APIEmitTypeTag.DataStringTag, name: tt.typeID, oftype: entity.fromtype, chkinv: entity.accepts}
             }
-            xxxx;
             else {
                 assert(entity instanceof MIRPrimitiveCollectionEntityTypeDecl);
 
