@@ -5,7 +5,7 @@
 
 import { MIRAssembly, MIRConstructableEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIRDataBufferInternalEntityTypeDecl, MIRDataStringInternalEntityTypeDecl, MIREntityType, MIREntityTypeDecl, MIREnumEntityTypeDecl, MIREphemeralListType, MIRFieldDecl, MIRHavocEntityTypeDecl, MIRInternalEntityTypeDecl, MIRPrimitiveCollectionEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRRecordType, MIRStringOfInternalEntityTypeDecl, MIRTupleType, MIRType } from "../../compiler/mir_assembly";
 import { MIRGlobalKey, MIRInvokeKey, MIRResolvedTypeKey } from "../../compiler/mir_ops";
-import { SMTCallGeneral, SMTCallSimple, SMTConst, SMTExp, SMTTypeInfo, VerifierOptions } from "./smt_exp";
+import { SMTCallGeneral, SMTCallSimple, SMTConst, SMTExp, SMTIf, SMTTypeInfo, VerifierOptions } from "./smt_exp";
 
 import * as assert from "assert";
 
@@ -319,33 +319,53 @@ class SMTTypeEmitter {
                 oftypetag = smtfrom.smttypetag;
                 objval = new SMTCallSimple("bsqkey_string@box", [exp]);
             }
+            else if(this.isType(from, "UTCDateTime")) {
+                oftypetag = smtfrom.smttypetag;
+                objval = new SMTCallSimple("bsqkey_utcdatetime@box", [exp]);
+            }
+            else if(this.isType(from, "CalendarDate")) {
+                oftypetag = smtfrom.smttypetag;
+                objval = new SMTCallSimple("bsqkey_calendardate@box", [exp]);
+            }
+            else if(this.isType(from, "RelativeTime")) {
+                oftypetag = smtfrom.smttypetag;
+                objval = new SMTCallSimple("bsqkey_relativetimetime@box", [exp]);
+            }
+            else if(this.isType(from, "TickTime")) {
+                oftypetag = smtfrom.smttypetag;
+                objval = new SMTCallSimple("bsqkey_ticktime@box", [exp]);
+            }
             else if(this.isType(from, "LogicalTime")) {
                 oftypetag = smtfrom.smttypetag;
                 objval = new SMTCallSimple("bsqkey_logicaltime@box", [exp]);
             }
-            else if(this.isType(from, "UUID")) {
+            else if(this.isType(from, "ISOTimeStamp")) {
                 oftypetag = smtfrom.smttypetag;
-                objval = new SMTCallSimple("bsqkey_uuid@box", [exp]);
+                objval = new SMTCallSimple("bsqkey_isotimestamp@box", [exp]);
             }
-            else if(this.isType(from, "ContentHash")) {
+            else if(this.isType(from, "UUID4")) {
                 oftypetag = smtfrom.smttypetag;
-                objval = new SMTCallSimple("bsqkey_contenthash@box", [exp]);
+                objval = new SMTCallSimple("bsqkey_uuid4@box", [exp]);
             }
-            xxxx;
+            else if(this.isType(from, "UUID7")) {
+                oftypetag = smtfrom.smttypetag;
+                objval = new SMTCallSimple("bsqkey_uuid7@box", [exp]);
+            }
+            else if(this.isType(from, "SHAContentHash")) {
+                oftypetag = smtfrom.smttypetag;
+                objval = new SMTCallSimple("bsqkey_shacontenthash@box", [exp]);
+            }
             else {
                 const entity = this.assembly.entityDecls.get(from.typeID) as MIREntityTypeDecl;
 
                 if (entity instanceof MIRStringOfInternalEntityTypeDecl) {
                     oftypetag = this.getSMTTypeFor(this.getMIRType("String")).smttypetag;
-                    objval = objval = new SMTCallSimple("bsqkey_string@box", [exp]);
+                    objval = new SMTCallSimple("bsqkey_string@box", [exp]);
                 }
                 else if (entity instanceof MIRDataStringInternalEntityTypeDecl) {
                     oftypetag = this.getSMTTypeFor(this.getMIRType("String")).smttypetag;
-                    objval = objval = new SMTCallSimple("bsqkey_string@box", [exp]);
+                    objval = new SMTCallSimple("bsqkey_string@box", [exp]);
                 }
-
-                xxxx;
-
                 else if (entity instanceof MIRConstructableInternalEntityTypeDecl) {
                     oftypetag = this.getSMTTypeFor(this.getMIRType(entity.fromtype)).smttypetag;
                     objval = new SMTCallSimple(this.getSMTConstructorName(this.getMIRType(entity.fromtype)).box, [exp]);
@@ -355,8 +375,8 @@ class SMTTypeEmitter {
                     objval = new SMTCallSimple("bsqkey_nat@box", [exp]);
                 }
                 else if (entity instanceof MIRConstructableEntityTypeDecl) {
-                    oftypetag = this.getSMTTypeFor(this.getMIRType(entity.fromtype)).smttypetag;
-                    objval = new SMTCallSimple(this.getSMTConstructorName(this.getMIRType(entity.fromtype)).box, [exp]);
+                    oftypetag = this.getSMTTypeFor(this.getMIRType(entity.basetype)).smttypetag;
+                    objval = new SMTCallSimple(this.getSMTConstructorName(this.getMIRType(entity.basetype)).box, [exp]);
                 }
                 else {
                     assert(this.isUniqueEntityType(from));
@@ -399,8 +419,8 @@ class SMTTypeEmitter {
                 else if(this.isType(from, "DateTime")) {
                     objval = new SMTCallSimple("bsqobject_datetime@box", [exp]);
                 }
-                else if(this.isType(from, "TickTime")) {
-                    objval = new SMTCallSimple("bsqobject_ticktime@box", [exp]);
+                else if(this.isType(from, "LatLongCoordinate")) {
+                    objval = new SMTCallSimple("bsqobject_latlongcoordinate@box", [exp]);
                 }
                 else if (this.isType(from, "Regex")) {
                     objval = new SMTCallSimple("bsqobject_regex@box", [exp]);
@@ -447,21 +467,32 @@ class SMTTypeEmitter {
             else if (this.isType(into, "String")) {
                 return new SMTCallSimple("bsqkey_string_value", [oexp]);
             }
+            else if(this.isType(into, "UTCDateTime")) {
+                return new SMTCallSimple("bsqkey_utcdatetime_value", [oexp]);
+            }
+            else if(this.isType(into, "CalendarDate")) {
+                return new SMTCallSimple("bsqkey_calendardate_value", [oexp]);
+            }
+            else if(this.isType(into, "RelativeTime")) {
+                return new SMTCallSimple("bsqkey_relativetime_value", [oexp]);
+            }
+            else if(this.isType(into, "TickTime")) {
+                return new SMTCallSimple("bsqkey_ticktime_value", [oexp]);
+            }
             else if(this.isType(into, "LogicalTime")) {
                 return new SMTCallSimple("bsqkey_logicaltime_value", [oexp]);
             }
-            else if(this.isType(into, "UUID")) {
-                return new SMTCallSimple("bsqkey_uuid_value", [oexp]);
+            else if(this.isType(into, "ISOTimeStamp")) {
+                return new SMTCallSimple("bsqkey_isotimestamp_value", [oexp]);
             }
-            else if(this.isType(into, "ContentHash")) {
-                return new SMTCallSimple("bsqkey_contenthash_value", [oexp]);
+            else if(this.isType(into, "UUID4")) {
+                return new SMTCallSimple("bsqkey_uuid4_value", [oexp]);
             }
-            xxxx;
-            else if (this.isUniqueTupleType(into)) {
-                return new SMTCallSimple(this.getSMTConstructorName(into).bfield, [oexp]);
+            else if(this.isType(into, "UUID7")) {
+                return new SMTCallSimple("bsqkey_uuid7_value", [oexp]);
             }
-            else if (this.isUniqueRecordType(into)) {
-                return new SMTCallSimple(this.getSMTConstructorName(into).bfield, [oexp]);
+            else if(this.isType(into, "SHAContentHash")) {
+                return new SMTCallSimple("bsqkey_shacontenthash_value", [oexp]);
             }
             else {
                 assert(this.isUniqueEntityType(into));
@@ -500,8 +531,8 @@ class SMTTypeEmitter {
                 else if(this.isType(into, "DateTime")) {
                     return new SMTCallSimple("bsqobject_datetime_value", [oexp]);
                 }
-                else if(this.isType(into, "TickTime")) {
-                    return new SMTCallSimple("bsqobject_ticktime_value", [oexp]);
+                else if(this.isType(into, "LatLongCoordinate")) {
+                    return new SMTCallSimple("bsqobject_latlongcoordinate_value", [oexp]);
                 }
                 else if (this.isType(into, "Regex")) {
                     return new SMTCallSimple("bsqobject_regex_value", [oexp]);
@@ -651,88 +682,20 @@ class SMTTypeEmitter {
         return {cons: `${this.getSMTTypeFor(ttype).smttypename}@cons`, seqf: `${this.getSMTTypeFor(ttype).smttypename}_seq`};
     }
 
-    generateListTypeConsInfoArray(ttype: MIRType): {cons: string, lenf: string, seqf: string} {
-        return {cons: `${this.getSMTTypeFor(ttype).smttypename}@cons`, lenf: `${this.getSMTTypeFor(ttype).smttypename}_len`, seqf: `${this.getSMTTypeFor(ttype).smttypename}_seq`};
-    }
-
-    generateArrayEntryType(ttype: MIRType): SMTTypeInfo {
-        return new SMTTypeInfo(`$ListEntry_${this.getSMTTypeFor(ttype).smttypename}`, "[INTERNAL RESULT]", "[INTERNAL RESULT]");
-    }
-
-    generateArrayEntryTypeConsInfo(ttype: MIRType): {cons: string, empty: string, idxf: string, valf: string} {
-        return {cons: `$ListEntry_${this.getSMTTypeFor(ttype).smttypename}@cons`, empty: `$ListEntry_${this.getSMTTypeFor(ttype).smttypename}@empty`, idxf: `$ListEntry_${this.getSMTTypeFor(ttype).smttypename}_idx`, valf: `$ListEntry_${this.getSMTTypeFor(ttype).smttypename}_value`};
-    }
-
-    generateArrayEntryTypeConstructorValid(ttype: MIRType, idx: SMTExp, val: SMTExp): SMTExp {
-        const consinfo = this.generateArrayEntryTypeConsInfo(ttype);
-        return new SMTCallSimple(consinfo.cons, [idx, val]);
-    }
-
-    generateArrayEntryTypeConstructorEmpty(ttype: MIRType): SMTExp {
-        const consinfo = this.generateArrayEntryTypeConsInfo(ttype);
-        return new SMTConst(consinfo.empty);
-    }
-
-    generateArrayEntryTypeIsValid(ttype: MIRType, entry: SMTExp): SMTExp {
-        const consinfo = this.generateArrayEntryTypeConsInfo(ttype);
-        return SMTCallSimple.makeNotEq(new SMTConst(consinfo.empty), entry);
-    }
-
-    generateArrayEntryTypeGetIdx(ttype: MIRType, entry: SMTExp): SMTExp {
-        const consinfo = this.generateArrayEntryTypeConsInfo(ttype);
-        return new SMTCallSimple(consinfo.idxf, [entry]);
-    }
-
-    generateArrayEntryTypeGetValue(ttype: MIRType, entry: SMTExp): SMTExp {
-        const consinfo = this.generateArrayEntryTypeConsInfo(ttype);
-        return new SMTCallSimple(consinfo.valf, [entry]);
-    }
-
     generateListTypeConstructorSeq(ttype: MIRType, seq: SMTExp): SMTExp {
         const consinfo = this.generateListTypeConsInfoSeq(ttype);
         return new SMTCallSimple(consinfo.cons, [seq]);
     }
 
-    generateListTypeConstructorArray(ttype: MIRType, len: SMTExp, seq: SMTExp): SMTExp {
-        const consinfo = this.generateListTypeConsInfoArray(ttype);
-        return new SMTCallSimple(consinfo.cons, [len, seq]);
-    }
-
-    generateListTypeConstructorArrayElements(ttype: MIRType, len: SMTExp, elements: SMTExp[]): SMTExp {
-        const consinfo = this.generateListTypeConsInfoArray(ttype);
-        
-        const entryinfo = this.generateArrayEntryTypeConsInfo(ttype);
-
-        const mirttype = (this.assembly.entityDecls.get(ttype.typeID) as MIRPrimitiveListEntityTypeDecl).getTypeT();
-
-        let array: SMTExp = new SMTConst(`((as const (Array BNat ${this.getSMTTypeFor(mirttype).smttypename})) ${entryinfo.empty})`);
-        for(let i = 0; i < elements.length; ++i) {
-            array = new SMTCallSimple("store", [array, new SMTConst(`${i}`), this.generateArrayEntryTypeConstructorValid(ttype, new SMTConst(`${i}`), elements[i])]);
-        }
-
-        return new SMTCallSimple(consinfo.cons, [len, array]);
-    }
-
     generateListTypeGetData(ttype: MIRType, ll: SMTExp): SMTExp {
-        if(this.vopts.ARRAY_MODE === "Seq") {
-            return new SMTCallSimple(this.generateListTypeConsInfoSeq(ttype).seqf, [ll]);
-        }
-        else {
-            return new SMTCallSimple(this.generateListTypeConsInfoArray(ttype).seqf, [ll]);
-        }
+        return new SMTCallSimple(this.generateListTypeConsInfoSeq(ttype).seqf, [ll]);
     }
 
     generateListTypeGetLength(ttype: MIRType, ll: SMTExp): SMTExp {
-        if(this.vopts.ARRAY_MODE === "Seq") {
-            return new SMTCallSimple("seq.len", [this.generateListTypeGetData(ttype, ll)]);
-        }
-        else {
-            const consinfo = this.generateListTypeConsInfoArray(ttype);
-            return new SMTCallSimple(consinfo.lenf, [ll]);
-        }
+        return new SMTCallSimple("seq.len", [this.generateListTypeGetData(ttype, ll)]);
     }
 
-    generateListTypeSeq_GetLengthMinus1(ttype: MIRType, ll: SMTExp): SMTExp {
+    generateListTypeGetLengthMinus1(ttype: MIRType, ll: SMTExp): SMTExp {
         const len = this.generateListTypeGetLength(ttype, ll);
         return new SMTCallSimple("-", [len, new SMTConst("1")]);
     }
@@ -741,23 +704,13 @@ class SMTTypeEmitter {
         return new SMTTypeInfo(`$MapEntry_${this.getSMTTypeFor(ttype).smttypename}`, "[INTERNAL RESULT]", "[INTERNAL RESULT]");
     }
 
-    generateMapEntryTypeConsInfo(ttype: MIRType): {cons: string, empty: string, keyf: string, valf: string} {
-        return {cons: `$MapEntry_${this.getSMTTypeFor(ttype).smttypename}@cons`, empty: `$MapEntry_${this.getSMTTypeFor(ttype).smttypename}@empty`, keyf: `$MapEntry_${this.getSMTTypeFor(ttype).smttypename}_key`, valf: `$MapEntry_${this.getSMTTypeFor(ttype).smttypename}_vtup`};
+    generateMapEntryTypeConsInfo(ttype: MIRType): {cons: string, keyf: string, valf: string} {
+        return {cons: `$MapEntry_${this.getSMTTypeFor(ttype).smttypename}@cons`, keyf: `$MapEntry_${this.getSMTTypeFor(ttype).smttypename}_key`, valf: `$MapEntry_${this.getSMTTypeFor(ttype).smttypename}_vtup`};
     }
 
-    generateMapEntryTypeConstructorValid(ttype: MIRType, key: SMTExp, val: SMTExp): SMTExp {
+    generateMapEntryTypeConstructor(ttype: MIRType, key: SMTExp, val: SMTExp): SMTExp {
         const consinfo = this.generateMapEntryTypeConsInfo(ttype);
         return new SMTCallSimple(consinfo.cons, [key, val]);
-    }
-
-    generateMapEntryTypeConstructorEmpty(ttype: MIRType): SMTExp {
-        const consinfo = this.generateMapEntryTypeConsInfo(ttype);
-        return new SMTConst(consinfo.empty);
-    }
-
-    generateMapEntryTypeIsValid(ttype: MIRType, entry: SMTExp): SMTExp {
-        const consinfo = this.generateMapEntryTypeConsInfo(ttype);
-        return SMTCallSimple.makeNotEq(new SMTConst(consinfo.empty), entry);
     }
 
     generateMapEntryTypeGetKey(ttype: MIRType, entry: SMTExp): SMTExp {
@@ -770,41 +723,53 @@ class SMTTypeEmitter {
         return new SMTCallSimple(consinfo.valf, [entry]);
     }
 
-    generateMapTypeConsInfo(ttype: MIRType): {cons: string, lenf: string, arrayf: string} {
-        return {cons: `${this.getSMTTypeFor(ttype).smttypename}@cons`, lenf: `${this.getSMTTypeFor(ttype).smttypename}_len`, arrayf: `${this.getSMTTypeFor(ttype).smttypename}_array`};
+    generateMapTypeConsInfo(ttype: MIRType): {cons: string, seqf: string} {
+        return {cons: `${this.getSMTTypeFor(ttype).smttypename}@cons`, seqf: `${this.getSMTTypeFor(ttype).smttypename}_seq`};
     }
 
-    generateMapTypeConstructor(ttype: MIRType, len: SMTExp, array: SMTExp): SMTExp {
+    generateMapTypeConstructor(ttype: MIRType, seq: SMTExp): SMTExp {
         const consinfo = this.generateMapTypeConsInfo(ttype);
-        return new SMTCallSimple(consinfo.cons, [len, array]);
+        return new SMTCallSimple(consinfo.cons, [seq]);
     }
 
-    generateMapTypeConstructorElements(ttype: MIRType, len: SMTExp, elements: SMTExp[]): SMTExp {
-        const consinfo = this.generateMapTypeConsInfo(ttype);
-        
-        const entrytype = this.generateMapEntryType(ttype);
-        const entryinfo = this.generateMapEntryTypeConsInfo(ttype);
-
+    generateMapTypeConstructorElements_EntryPoint(ttype: MIRType, elements: SMTExp[]): SMTExp {
         const mirktype = (this.assembly.entityDecls.get(ttype.typeID) as MIRPrimitiveMapEntityTypeDecl).getTypeK();
-        const mirtuptype = this.getMIRType((this.assembly.entityDecls.get(ttype.typeID) as MIRPrimitiveMapEntityTypeDecl).tupentrytype);
+        const mirtuptype = this.getMIRType((this.assembly.entityDecls.get(ttype.typeID) as MIRPrimitiveMapEntityTypeDecl).tupletype);
 
-        let array: SMTExp = new SMTConst(`((as const (Array ${this.getSMTTypeFor(mirktype).smttypename} ${entrytype.smttypename})) ${entryinfo.empty})`);
-        for(let i = 0; i < elements.length; ++i) {
-            const ekey = new SMTCallSimple(this.generateTupleIndexGetFunction(mirtuptype.getUniqueTupleTargetType(), 0), [elements[i]]);
-            array = new SMTCallSimple("store", [array, ekey, this.generateMapEntryTypeConstructorValid(ttype, ekey, elements[i])]);
+        const consargs = elements.map((ee) => {
+            const vkey = new SMTCallSimple(this.generateTupleIndexGetFunction(mirtuptype.getUniqueTupleTargetType(), 0), [ee]);
+            return new SMTCallSimple("seq.unit", [this.generateMapEntryTypeConstructor(ttype, vkey, ee)]);
+        });
+        const consexp = this.generateMapTypeConstructor(ttype, new SMTCallSimple("seq.++", consargs));
+
+        const smtktype = this.getSMTTypeFor(mirktype);
+        if (elements.length == 1) {
+            return consexp;
         }
+        else {
+            const cmpop: string = smtktype.isGeneralKeyType() ? `${smtktype.smttypename}@less` : "BKey@less";
+            let cmps: SMTExp[] = [];
+            for (let i = 0; i < elements.length - 1; ++i) {
+                const ekey = new SMTCallSimple(this.generateTupleIndexGetFunction(mirtuptype.getUniqueTupleTargetType(), 0), [elements[i]]);
+                const ekeypp = new SMTCallSimple(this.generateTupleIndexGetFunction(mirtuptype.getUniqueTupleTargetType(), 0), [elements[i + 1]]);
+            
+                cmps.push(new SMTCallSimple(cmpop, [ekey, ekeypp]));
+            }
 
-        return new SMTCallSimple(consinfo.cons, [len, array]);
+            const chkordered = SMTCallSimple.makeAndOf(...cmps);
+            return new SMTIf(chkordered,
+                this.generateResultTypeConstructorSuccess(ttype, consexp),
+                this.generateErrorResultAssert(ttype)
+            );
+        }
+    }
+
+    generateMapTypeGetData(ttype: MIRType, mm: SMTExp): SMTExp {
+        return new SMTCallSimple(this.generateMapTypeConsInfo(ttype).seqf, [mm]);
     }
 
     generateMapTypeGetLength(ttype: MIRType, mm: SMTExp): SMTExp {
-        const consinfo = this.generateMapTypeConsInfo(ttype);
-        return new SMTCallSimple(consinfo.lenf, [mm]);
-    }
-
-    generateMapTypeGetArray(ttype: MIRType, mm: SMTExp): SMTExp {
-        const consinfo = this.generateMapTypeConsInfo(ttype);
-        return new SMTCallSimple(consinfo.arrayf, [mm]);
+        return new SMTCallSimple("seq.len", [this.generateMapTypeGetData(ttype, mm)]);
     }
 
     generateHavocConstructorName(tt: MIRType): string {

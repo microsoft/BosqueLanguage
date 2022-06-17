@@ -215,11 +215,11 @@ function isBodySafe(ikey: MIRInvokeKey, masm: MIRAssembly, errorTrgtPos: { file:
     else {
         const invk = masm.invokeDecls.get(ikey) as MIRInvokeBodyDecl;
         const haserrorop = [...invk.body.body].some((bb) => bb[1].ops.some((op) => {
-            return op.canRaise(true);
+            return op.canRaise();
         }));
 
         const hastrgt = (invk.srcFile === errorTrgtPos.file) && [...invk.body.body].some((bb) => bb[1].ops.some((op) => {
-            return op.canRaise(true) && (op.sinfo.line === errorTrgtPos.line && op.sinfo.pos === errorTrgtPos.pos);
+            return op.canRaise() && (op.sinfo.line === errorTrgtPos.line && op.sinfo.pos === errorTrgtPos.pos);
         }));
 
         if (hastrgt) {
