@@ -18,7 +18,7 @@ entity Forecast provides APIType {
     field windSpeed: {min: ImperialUnits::MPH, max: ImperialUnits::MPH};
     field windDirection: WindDirection;
     field shortForecast: StringOf<ShortForecastDetail>;
-    field forecastPercentage: Numerics::Percentage;
+    field forecastPercentage: Numerics::Percent;
 
     invariant $temp.low <= $temp.high;
     invariant 0_ImperialUnits::MPH <= $windSpeed.min && $windSpeed.min <= $windSpeed.max; 

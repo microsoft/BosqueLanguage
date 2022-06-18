@@ -1,5 +1,5 @@
 namespace Numerics;
 
-orderable algebraic typedecl Percentage = Float & {
-    invariant $value <= 100.0f;
+orderable algebraic typedecl Percent = Float & {
+    invariant 0.0f <= $value && $value <= 100.0f;
 }
