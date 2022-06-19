@@ -1276,7 +1276,7 @@ class TypeChecker {
         }
         else {
             if (eargs.every((v) => !v[1])) {
-                this.m_emitter.emitConstructorPrimaryCollectionSingletons(sinfo, tkey, eargs.map<[MIRType, MIRArgument]>((arg) => [this.m_emitter.registerResolvedTypeReference(arg[0]), arg[2]]), trgt);
+                this.m_emitter.emitConstructorPrimaryCollectionSingletons(sinfo, tkey, eargs.map<[MIRType, MIRArgument]>((arg) => [this.m_emitter.registerResolvedTypeReference(arg[0]), arg[2]]), trgt, isassociative);
             }
             else if (eargs.every((v) => v[1])) {
                 if(eargs.length === 1 && eargs[0][0].isSameType(resulttype)) {
@@ -1284,11 +1284,11 @@ class TypeChecker {
                     this.m_emitter.emitRegisterStore(sinfo, eargs[0][2], trgt, this.m_emitter.registerResolvedTypeReference(eargs[0][0]), undefined);
                 }
                 else {
-                    this.m_emitter.emitConstructorPrimaryCollectionCopies(sinfo, tkey, eargs.map<[MIRType, MIRArgument]>((arg) => [this.m_emitter.registerResolvedTypeReference(arg[0]), arg[2]]), trgt);
+                    this.m_emitter.emitConstructorPrimaryCollectionCopies(sinfo, tkey, eargs.map<[MIRType, MIRArgument]>((arg) => [this.m_emitter.registerResolvedTypeReference(arg[0]), arg[2]]), trgt, isassociative);
                 }
             }
             else {
-                this.m_emitter.emitConstructorPrimaryCollectionMixed(sinfo, tkey, eargs.map<[boolean, MIRType, MIRArgument]>((arg) => [arg[1], this.m_emitter.registerResolvedTypeReference(arg[0]), arg[2]]), trgt);
+                this.m_emitter.emitConstructorPrimaryCollectionMixed(sinfo, tkey, eargs.map<[boolean, MIRType, MIRArgument]>((arg) => [arg[1], this.m_emitter.registerResolvedTypeReference(arg[0]), arg[2]]), trgt, isassociative);
             }
         }
 

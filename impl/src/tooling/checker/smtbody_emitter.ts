@@ -504,7 +504,7 @@ class SMTBodyEmitter {
             ];
         }
         else {
-            xxxx
+            const neworder = new SMT
         }
 
         const entrytype = this.typegen.generateMapEntryType(geninfo.resulttype);
