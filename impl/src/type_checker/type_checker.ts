@@ -1267,6 +1267,7 @@ class TypeChecker {
         }
 
         const resulttype = ResolvedType.createSingle(oftype);
+        const isassociative = oftype.object.isMapType() || oftype.object.isSetType();
 
         const tkey = this.m_emitter.registerResolvedTypeReference(resulttype).typeID;
         this.m_emitter.registerResolvedTypeReference(entrytype);
