@@ -223,20 +223,6 @@ class ICPPEntityLayoutInfo extends ICPPLayoutInfo {
     }
 }
 
-class ICPPCollectionInternalsLayoutInfo extends ICPPLayoutInfo {
-    readonly xinfo: {name: string, type: MIRResolvedTypeKey, size: number, offset: number}[];
-
-    constructor(tkey: MIRResolvedTypeKey, allocinfo: ICPPTypeSizeInfo, xinfo: {name: string, type: MIRResolvedTypeKey, size: number, offset: number}[]) {
-        super(tkey, allocinfo, ICPPLayoutCategory.Ref);
-
-        this.xinfo = xinfo;
-    }
-
-    createFromLayoutInfo(tkey: MIRResolvedTypeKey): ICPPLayoutInfo {
-        return new ICPPLayoutInfoFixed(tkey, this.allocinfo.createFromSizeInfo(tkey), this.layout);
-    }
-}
-
 class ICPPEphemeralListLayoutInfo extends ICPPLayoutInfo {
     readonly etypes: MIRResolvedTypeKey[];
     readonly eoffsets: number[];
@@ -562,56 +548,7 @@ class ICPPAssembly
             name: edecl.tkey,
             ktype: edecl.getTypeK(),
             vtype: edecl.getTypeV(),
-            etype: edecl.tupentrytype
-        };
-    }
-
-    private processPartialVector4EntityDecl(edecl: MIRPrimitiveInternalEntityTypeDecl, icpptype: ICPPCollectionInternalsLayoutInfo): object {
-        const etype = edecl.terms.get("T") as MIRType;
-
-        return {
-            ptag: ICPPParseTag.PartialVector4Tag,
-            tkey: edecl.tkey,
-            name: edecl.tkey,
-            heapsize: icpptype.allocinfo.heapsize,
-            heapmask: icpptype.allocinfo.heapmask,
-            etype: etype.typeID,
-            esize: icpptype.xinfo[0].size
-        };
-    }
-
-    private processPartialVector8EntityDecl(edecl: MIRPrimitiveInternalEntityTypeDecl, icpptype: ICPPCollectionInternalsLayoutInfo): object {
-        return {
-            ptag: ICPPParseTag.PartialVector4Tag,
-            tkey: edecl.tkey,
-            name: edecl.tkey,
-            heapsize: icpptype.allocinfo.heapsize,
-            heapmask: icpptype.allocinfo.heapmask,
-            etype: icpptype.xinfo[0].type,
-            esize: icpptype.xinfo[0].size
-        };
-    }
-
-    private processListTreeEntityDecl(edecl: MIRPrimitiveInternalEntityTypeDecl, icpptype: ICPPCollectionInternalsLayoutInfo): object {
-        return {
-            ptag: ICPPParseTag.ListTreeTag,
-            tkey: edecl.tkey,
-            name: edecl.tkey,
-            etype: icpptype.xinfo[0].type,
-        };
-    }
-
-    private processMapTreeEntityDecl(edecl: MIRPrimitiveInternalEntityTypeDecl, icpptype: ICPPCollectionInternalsLayoutInfo): object {
-        return {
-            ptag: ICPPParseTag.MapTreeTag,
-            tkey: edecl.tkey,
-            name: edecl.tkey,
-            heapsize: icpptype.allocinfo.heapsize,
-            heapmask: icpptype.allocinfo.heapmask,
-            ktype: icpptype.xinfo[0].type,
-            vtype: icpptype.xinfo[1].type,
-            koffset: icpptype.xinfo[0].offset,
-            voffset: icpptype.xinfo[1].offset
+            etype: edecl.tupletype
         };
     }
 
@@ -791,7 +728,6 @@ class ICPPAssembly
             else if (edcl.attributes.includes("__databuffer_type")) {
                 return this.processDataBufferStringOfEntityDecl(edcl as MIRDataBufferInternalEntityTypeDecl, icpplayout);
             }
-            xxxx;
             else if (edcl.attributes.includes("__typedprimitive")) {
                 return this.processConstructableEntityDecl(edcl as MIRConstructableEntityTypeDecl, icpplayout);
             }
@@ -821,18 +757,6 @@ class ICPPAssembly
             }
             else if (edcl.attributes.includes("__map_type")) {
                 return this.processPrimitiveMapEntityDecl(edcl as MIRPrimitiveMapEntityTypeDecl, icpplayout);
-            }
-            else if (edcl.attributes.includes("__partial_vector4_type")) {
-                return this.processPartialVector4EntityDecl(edcl as MIRPrimitiveInternalEntityTypeDecl, icpplayout as ICPPCollectionInternalsLayoutInfo);
-            }
-            else if (edcl.attributes.includes("__partial_vector8_type")) {
-                return this.processPartialVector8EntityDecl(edcl as MIRPrimitiveInternalEntityTypeDecl, icpplayout as ICPPCollectionInternalsLayoutInfo);
-            }
-            else if (edcl.attributes.includes("__list_tree_type")) {
-                return this.processListTreeEntityDecl(edcl as MIRPrimitiveInternalEntityTypeDecl, icpplayout as ICPPCollectionInternalsLayoutInfo);
-            }
-            else if (edcl.attributes.includes("__map_tree_type")) {
-                return this.processMapTreeEntityDecl(edcl as MIRPrimitiveInternalEntityTypeDecl, icpplayout as ICPPCollectionInternalsLayoutInfo);
             }
             else if (edcl instanceof MIRObjectEntityTypeDecl) {
                 return this.processEntityDecl(edcl, icpplayout as ICPPEntityLayoutInfo);
@@ -983,7 +907,7 @@ class ICPPAssembly
 export {
     TranspilerOptions, SourceInfo, ICPP_WORD_SIZE, UNIVERSAL_CONTENT_SIZE, UNIVERSAL_TOTAL_SIZE, UNIVERSAL_MASK,
     ICPPTypeSizeInfo, RefMask,
-    ICPPLayoutCategory, ICPPLayoutInfo, ICPPLayoutInfoFixed, ICPPTupleLayoutInfo, ICPPRecordLayoutInfo, ICPPEntityLayoutInfo, ICPPCollectionInternalsLayoutInfo, ICPPEphemeralListLayoutInfo, 
+    ICPPLayoutCategory, ICPPLayoutInfo, ICPPLayoutInfoFixed, ICPPTupleLayoutInfo, ICPPRecordLayoutInfo, ICPPEntityLayoutInfo, ICPPEphemeralListLayoutInfo, 
     ICPPLayoutInlineUnion, ICPPLayoutRefUnion, ICPPLayoutUniversalUnion,
     ICPPInvokeDecl, ICPPFunctionParameter, ICPPPCode, ICPPInvokeBodyDecl, ICPPInvokePrimitiveDecl,
     ICPPConstDecl,
