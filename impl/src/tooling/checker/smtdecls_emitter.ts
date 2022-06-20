@@ -97,7 +97,7 @@ class SMTEmitter {
 
     private generateAPITypeConstructorFunction_TypedPrimitive(tt: MIRType, havocfuncs: Set<String>, ufuncs: SMTFunctionUninterpreted[]) {
         const tdecl = this.bemitter.assembly.entityDecls.get(tt.typeID) as MIRConstructableEntityTypeDecl;
-        const oftype = this.temitter.getMIRType(tdecl.fromtype);
+        const oftype = this.temitter.getMIRType(tdecl.valuetype);
 
         havocfuncs.add(this.temitter.generateHavocConstructorName(tt));
         this.walkAndGenerateHavocType(oftype, havocfuncs, ufuncs);
@@ -568,8 +568,8 @@ class SMTEmitter {
         const smttype = this.temitter.getSMTTypeFor(mirtype);
 
         const consfuncs = this.temitter.getSMTConstructorName(mirtype);
-        const oftype = this.temitter.getSMTTypeFor(this.temitter.getMIRType(edecl.fromtype));
-        const iskey = this.bemitter.assembly.subtypeOf(this.temitter.getMIRType(edecl.fromtype), this.temitter.getMIRType("KeyType"));
+        const oftype = this.temitter.getSMTTypeFor(this.temitter.getMIRType(edecl.valuetype));
+        const iskey = this.bemitter.assembly.subtypeOf(this.temitter.getMIRType(edecl.valuetype), this.temitter.getMIRType("KeyType"));
 
         const smtdecl = new SMTEntityOfTypeDecl(iskey, smttype.smttypename, smttype.smttypetag, consfuncs.box, consfuncs.bfield, oftype.smttypename);
         this.assembly.entityDecls.push(smtdecl);

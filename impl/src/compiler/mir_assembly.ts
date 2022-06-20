@@ -380,7 +380,7 @@ class MIRObjectEntityTypeDecl extends MIREntityTypeDecl {
 } 
 
 class MIRConstructableEntityTypeDecl extends MIREntityTypeDecl {
-    readonly fromtype: MIRResolvedTypeKey;
+    readonly valuetype: MIRResolvedTypeKey;
     readonly validatefunc: MIRInvokeKey | undefined; 
     readonly usingcons: MIRInvokeKey | undefined;
     readonly basetype: MIRResolvedTypeKey;
@@ -388,18 +388,18 @@ class MIRConstructableEntityTypeDecl extends MIREntityTypeDecl {
     constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], fromtype: MIRResolvedTypeKey, validatefunc: MIRInvokeKey | undefined, usingcons: MIRInvokeKey | undefined, basetype: MIRResolvedTypeKey) {
         super(srcInfo, srcFile, tkey, attributes, ns, name, terms, provides);
 
-        this.fromtype = fromtype;
+        this.valuetype = fromtype;
         this.validatefunc = validatefunc;
         this.usingcons = usingcons;
         this.basetype = basetype;
     }
 
     jemit(): object {
-        return { tag: "constructable", ...this.jemitbase(), fromtype: this.fromtype, validatefunc: this.validatefunc, usingcons: this.usingcons, basetype: this.basetype };
+        return { tag: "constructable", ...this.jemitbase(), valuetype: this.valuetype, validatefunc: this.validatefunc, usingcons: this.usingcons, basetype: this.basetype };
     }
 
     static jparse(jobj: any): MIRConstructableEntityTypeDecl {
-        return new MIRConstructableEntityTypeDecl(...MIROOTypeDecl.jparsebase(jobj), jobj.fromtype, jobj.validatefunc, jobj.usingcons, jobj.basetype);
+        return new MIRConstructableEntityTypeDecl(...MIROOTypeDecl.jparsebase(jobj), jobj.valuetype, jobj.validatefunc, jobj.usingcons, jobj.basetype);
     }
 }
 
@@ -1220,7 +1220,7 @@ class MIRAssembly {
             }
         }
         else if(entity instanceof MIRConstructableEntityTypeDecl) {
-            return {tag: APIEmitTypeTag.ConstructableOfType, name: tt.typeID, oftype: entity.fromtype, validatefunc: entity.validatefunc || null};
+            return {tag: APIEmitTypeTag.ConstructableOfType, name: tt.typeID, oftype: entity.valuetype, validatefunc: entity.validatefunc || null};
         }
         else if(entity instanceof MIREnumEntityTypeDecl) {
             return {tag: APIEmitTypeTag.EnumTag, name: tt.typeID, enums: entity.enums};

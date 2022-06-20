@@ -336,44 +336,12 @@ const BSQType* jsonLoadListType(json v)
     return CONS_BSQ_LIST_TYPE(j_tkey(v), j_name(v), etype);
 }
 
-const BSQType* jsonLoadPartialVectorType(json v, ListReprKind pvtag)
-{
-    uint64_t heapsize = v["heapsize"].get<uint64_t>();
-    RefMask hmask = jsonLoadRefMask(v["heapmask"]);
-
-    BSQTypeID etype = MarshalEnvironment::g_typenameToIdMap.find(v["etype"].get<std::string>())->second;
-    uint64_t esize = v["esize"].get<uint64_t>();
-
-    return CONS_BSQ_PARTIAL_VECTOR_TYPE(j_tkey(v), heapsize, hmask, j_name(v), etype, esize, pvtag);
-}
-
-const BSQType* jsonLoadListTreeType(json v)
-{
-    BSQTypeID etype = MarshalEnvironment::g_typenameToIdMap.find(v["etype"].get<std::string>())->second;
-    
-    return CONS_BSQ_TREE_LIST_TYPE(j_tkey(v), j_name(v), etype);
-}
-
 const BSQType* jsonLoadMapType(json v)
 {
     BSQTypeID ktype = MarshalEnvironment::g_typenameToIdMap.find(v["ktype"].get<std::string>())->second;
     BSQTypeID vtype = MarshalEnvironment::g_typenameToIdMap.find(v["vtype"].get<std::string>())->second;
 
     return CONS_BSQ_MAP_TYPE(j_tkey(v), j_name(v), ktype, vtype);
-}
-
-const BSQType* jsonLoadMapTreeType(json v)
-{
-    uint64_t heapsize = v["heapsize"].get<uint64_t>();
-    RefMask hmask = jsonLoadRefMask(v["heapmask"]);
-
-    BSQTypeID ktype = MarshalEnvironment::g_typenameToIdMap.find(v["ktype"].get<std::string>())->second;
-    BSQTypeID vtype = MarshalEnvironment::g_typenameToIdMap.find(v["vtype"].get<std::string>())->second;
-    
-    uint32_t koffset = v["koffset"].get<uint32_t>();
-    uint32_t voffset = v["voffset"].get<uint32_t>();
-
-    return CONS_BSQ_MAP_TREE_TYPE(j_tkey(v), heapsize, hmask, j_name(v), ktype, koffset, vtype, voffset);
 }
 
 const BSQType* jsonLoadRefUnionType(json v)
@@ -435,10 +403,6 @@ enum class ICPPParseTag
     QueueTag,
     SetTag,
     MapTag,
-    PartialVector4Tag,
-    PartialVector8Tag,
-    ListTreeTag,
-    MapTreeTag,
     RefUnionTag,
     InlineUnionTag,
     UniversalUnionTag
@@ -510,18 +474,6 @@ void jsonLoadBSQTypeDecl(json v)
         break;
     case ICPPParseTag::MapTag:
         ttype = jsonLoadMapType(v);
-        break;
-    case ICPPParseTag::PartialVector4Tag:
-        ttype = jsonLoadPartialVectorType(v, ListReprKind::PV4);
-        break;
-    case ICPPParseTag::PartialVector8Tag:
-        ttype = jsonLoadPartialVectorType(v, ListReprKind::PV8);
-        break;
-    case ICPPParseTag::ListTreeTag:
-        ttype = jsonLoadListTreeType(v);
-        break;
-    case ICPPParseTag::MapTreeTag:
-        ttype = jsonLoadMapTreeType(v);
         break;
     case ICPPParseTag::RefUnionTag:
         ttype = jsonLoadRefUnionType(v);

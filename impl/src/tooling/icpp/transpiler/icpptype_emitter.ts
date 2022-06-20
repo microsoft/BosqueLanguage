@@ -14,7 +14,9 @@ import { SourceInfo } from "../../../ast/parser";
 import * as assert from "assert";
 
 const SMALL_INLINEABLE_TYPES = [
-    "None", "Nothing", "Bool", "Int", "Nat", "BigInt", "BigNat", "Float", "Decimal", "Rational", "String", "TickTime", "LogicalTime", "UUID", "Regex"
+    "None", "Nothing", "Bool", "Int", "Nat", "BigInt", "BigNat", "Float", "Decimal", "Rational", "String", 
+    "DateTime", "UTCDateTime", "CalendarDate", "RelativeTime", "TickTime", "LogicalTime", "ISOTimeStamp", 
+    "UUID4", "UUID7", "LatLongCoordinate", "Regex"
 ];
 
 type ICPPTypeInlineInfo = { 
@@ -153,7 +155,6 @@ class ICPPTypeEmitter {
                     return this.getICPPTypeInfoIsSmallInlineable(mirtype);
 
                 }
-                xxxx;
                 else if (entity instanceof MIRConstructableInternalEntityTypeDecl) {
                     const mirtype = this.getMIRType(entity.fromtype);
                     return this.getICPPTypeInfoIsSmallInlineable(mirtype);
@@ -163,7 +164,7 @@ class ICPPTypeEmitter {
                 }
             }
             else if (entity instanceof MIRConstructableEntityTypeDecl) {
-                const mirtype = this.getMIRType(entity.fromtype);
+                const mirtype = this.getMIRType(entity.basetype);
                 return this.getICPPTypeInfoIsSmallInlineable(mirtype);
             }
             else if (entity instanceof MIREnumEntityTypeDecl) {
@@ -234,39 +235,38 @@ class ICPPTypeEmitter {
         else if (this.isType(tt, "DateTime")) {
             return {layout: ICPPLayoutCategory.Inline, size: 2*ICPP_WORD_SIZE, asize: 2*ICPP_WORD_SIZE, mask: "11"};
         }
+        else if (this.isType(tt, "UTCDateTime")) {
+            return {layout: ICPPLayoutCategory.Inline, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "1"};
+        }
+        else if (this.isType(tt, "CalendarDate")) {
+            return {layout: ICPPLayoutCategory.Inline, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "1"};
+        }
+        else if (this.isType(tt, "RelativeTime")) {
+            return {layout: ICPPLayoutCategory.Inline, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "1"};
+        }
         else if (this.isType(tt, "TickTime")) {
             return {layout: ICPPLayoutCategory.Inline, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "1"};
         }
         else if (this.isType(tt, "LogicalTime")) {
             return {layout: ICPPLayoutCategory.Inline, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "1"};
         }
-        else if (this.isType(tt, "UUID")) {
+        else if (this.isType(tt, "ISOTimeStamp")) {
             return {layout: ICPPLayoutCategory.Inline, size: 2*ICPP_WORD_SIZE, asize: 2*ICPP_WORD_SIZE, mask: "11"};
         }
-        else if (this.isType(tt, "ContentHash")) {
+        else if (this.isType(tt, "UUID4")) {
+            return {layout: ICPPLayoutCategory.Inline, size: 2*ICPP_WORD_SIZE, asize: 2*ICPP_WORD_SIZE, mask: "11"};
+        }
+        else if (this.isType(tt, "UUID7")) {
+            return {layout: ICPPLayoutCategory.Inline, size: 2*ICPP_WORD_SIZE, asize: 2*ICPP_WORD_SIZE, mask: "11"};
+        }
+        else if (this.isType(tt, "SHAContentHash")) {
             return {layout: ICPPLayoutCategory.Ref, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "2"};
         }
-        else if (this.isType(tt, "Regex")) {
+        else if (this.isType(tt, "LatLongCoordinate")) {
             return {layout: ICPPLayoutCategory.Inline, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "1"};
         }
-        xxxx;
         else {
-            if(entity.name === "PartialVector4") {
-                return {layout: ICPPLayoutCategory.Ref, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "2"};
-            }
-            else if (entity.name === "PartialVector8") {
-                return {layout: ICPPLayoutCategory.Ref, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "2"};
-            }
-            else if (entity.name === "ListTree") {
-                return {layout: ICPPLayoutCategory.Ref, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "2"};
-            }
-            else if (entity.name === "MapTree") {
-                return {layout: ICPPLayoutCategory.Ref, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "2"};
-            }
-            else {
-                assert(false, "Unknown primitive internal entity");
-                return {layout: ICPPLayoutCategory.Inline, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "1"};
-            }
+            return {layout: ICPPLayoutCategory.Inline, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "1"};
         }
     }
 
@@ -337,7 +337,6 @@ class ICPPTypeEmitter {
                     const mirtype = this.getMIRType("ByteBuffer");
                     res = this.getICPPTypeInfoInlineLayout(mirtype);
                 }
-                xxxx;
                 else if (entity instanceof MIRConstructableInternalEntityTypeDecl) {
                     const mirtype = this.getMIRType(entity.fromtype);
                     res = this.getICPPTypeInfoInlineLayout(mirtype);
@@ -346,21 +345,21 @@ class ICPPTypeEmitter {
                     assert(entity instanceof MIRPrimitiveCollectionEntityTypeDecl, "Should be a collection type");
 
                     if(entity instanceof MIRPrimitiveMapEntityTypeDecl) {
-                        res = {layout: ICPPLayoutCategory.Inline, size: 3*ICPP_WORD_SIZE, asize: 3*ICPP_WORD_SIZE, mask: "112"};
+                        res = {layout: ICPPLayoutCategory.Inline, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "2"};
                     }
                     else if(entity instanceof MIRPrimitiveStackEntityTypeDecl) {
-                        res = {layout: ICPPLayoutCategory.Inline, size: 2*ICPP_WORD_SIZE, asize: 2*ICPP_WORD_SIZE, mask: "12"};
+                        res = {layout: ICPPLayoutCategory.Inline, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "2"};
                     }
                     else if(entity instanceof MIRPrimitiveQueueEntityTypeDecl) {
-                        res = {layout: ICPPLayoutCategory.Inline, size: 2*ICPP_WORD_SIZE, asize: 2*ICPP_WORD_SIZE, mask: "12"};
+                        res = {layout: ICPPLayoutCategory.Inline, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "2"};
                     }
                     else if(entity instanceof MIRPrimitiveSetEntityTypeDecl) {
-                        res = {layout: ICPPLayoutCategory.Inline, size: 3*ICPP_WORD_SIZE, asize: 3*ICPP_WORD_SIZE, mask: "112"};
+                        res = {layout: ICPPLayoutCategory.Inline, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "2"};
                     }
                     else {
                         assert(entity instanceof MIRPrimitiveListEntityTypeDecl, "Should be a list type");
     
-                        res = {layout: ICPPLayoutCategory.Inline, size: 2*ICPP_WORD_SIZE, asize: 2*ICPP_WORD_SIZE, mask: "12"};
+                        res = {layout: ICPPLayoutCategory.Inline, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "2"};
                     }
                 }
             }
