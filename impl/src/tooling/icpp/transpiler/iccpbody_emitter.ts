@@ -8,7 +8,7 @@ import { ICPPTypeEmitter } from "./icpptype_emitter";
 import { MIRAbort, MIRArgGuard, MIRArgument, MIRAssertCheck, MIRBasicBlock, MIRBinKeyEq, MIRBinKeyLess, MIRConstantArgument, MIRConstantBigInt, MIRConstantBigNat, MIRConstantDataString, MIRConstantDecimal, MIRConstantFalse, MIRConstantFloat, MIRConstantInt, MIRConstantNat, MIRConstantNone, MIRConstantNothing, MIRConstantRational, MIRConstantRegex, MIRConstantString, MIRConstantStringOf, MIRConstantTrue, MIRConstantTypedNumber, MIRConstructorEntityDirect, MIRConstructorEphemeralList, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionMixed, MIRConstructorPrimaryCollectionSingletons, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConvertValue, MIRDebug, MIRDeclareGuardFlagLocation, MIREntityProjectToEphemeral, MIREntityUpdate, MIREphemeralListExtend, MIRExtract, MIRFieldKey, MIRGlobalKey, MIRGlobalVariable, MIRGuard, MIRGuardedOptionInject, MIRInject, MIRInvokeFixedFunction, MIRInvokeKey, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRIsTypeOf, MIRJump, MIRJumpCond, MIRJumpNone, MIRLoadConst, MIRLoadField, MIRLoadFromEpehmeralList, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadUnintVariableValue, MIRLogicAction, MIRMaskGuard, MIRMultiLoadFromEpehmeralList, MIROp, MIROpTag, MIRPhi, MIRPrefixNotOp, MIRRecordHasProperty, MIRRecordProjectToEphemeral, MIRRecordUpdate, MIRRegisterArgument, MIRRegisterAssign, MIRResolvedTypeKey, MIRReturnAssign, MIRReturnAssignOfCons, MIRSetConstantGuardFlag, MIRSliceEpehmeralList, MIRStatmentGuard, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRTupleHasIndex, MIRTupleProjectToEphemeral, MIRTupleUpdate, MIRVarLifetimeEnd, MIRVarLifetimeStart } from "../../../compiler/mir_ops";
 import { Argument, ArgumentTag, EMPTY_CONST_POSITION, ICPPGuard, ICPPOp, ICPPOpEmitter, ICPPStatementGuard, OpCodeTag, ParameterInfo, TargetVar } from "./icpp_exp";
 import { SourceInfo } from "../../../ast/parser";
-import { ICPPEntityLayoutInfo, ICPPEphemeralListLayoutInfo, ICPPFunctionParameter, ICPPInvokeBodyDecl, ICPPInvokeDecl, ICPPInvokePrimitiveDecl, ICPPLayoutInfo, ICPPPCode, ICPPRecordLayoutInfo, ICPPTupleLayoutInfo, RefMask, TranspilerOptions, UNIVERSAL_TOTAL_SIZE } from "./icpp_assembly";
+import { ICPPEntityLayoutInfo, ICPPEphemeralListLayoutInfo, ICPPFunctionParameter, ICPPInvokeBodyDecl, ICPPInvokeDecl, ICPPInvokePrimitiveDecl, ICPPLayoutInfo, ICPPPCode, ICPPRecordLayoutInfo, ICPPTupleLayoutInfo, TranspilerOptions, UNIVERSAL_TOTAL_SIZE } from "./icpp_assembly";
 
 import * as assert from "assert";
 import { topologicalOrder } from "../../../compiler/mir_info";
@@ -26,12 +26,9 @@ class ICPPBodyEmitter {
     currentFile: string = "[No File]";
     currentRType: MIRType;
 
-    private scalarStackMap: Map<string, number> = new Map<string, number>();
-    private scalarStackSize: number = 0;
-    private scalarStackLayout: {offset: number, name: string, storage: ICPPLayoutInfo}[] = [];
-    private mixedStackMap: Map<string, number> = new Map<string, number>();
-    private mixedStackSize: number = 0;
-    private mixedStackLayout: {offset: number, name: string, storage: ICPPLayoutInfo}[] = [];
+    private stackMap: Map<string, number> = new Map<string, number>();
+    private stackSize: number = 0;
+    private stackLayout: {offset: number, name: string, storage: ICPPLayoutInfo}[] = [];
 
     literalMap: Map<string, number> = new Map<string, number>();
     constMap: Map<MIRGlobalKey, number> = new Map<MIRGlobalKey, number>();
@@ -59,104 +56,48 @@ class ICPPBodyEmitter {
     requiredRecordMerge: { inv: string, args: {layout: MIRType, flow: MIRType}[], resulttype: MIRType }[] = [];
 
     private getStackInfoForArgVar(vname: string): Argument {
-        if (this.scalarStackMap.has(vname)) {
-            return ICPPOpEmitter.genScalarArgument(this.scalarStackMap.get(vname) as number);
-        }
-        else {
-            return ICPPOpEmitter.genMixedArgument(this.mixedStackMap.get(vname) as number);
-        }
+        return ICPPOpEmitter.genStackArgument(this.stackMap.get(vname) as number);
     }
 
     private getStackInfoForTargetVar(vname: string, oftype: ICPPLayoutInfo): TargetVar {
-        //
-        //TODO: later we should make this an abstract index and do "register allocation" on the live ranges -- will also need to convert this to offsets at emit time (or something)
-        //
-        if(oftype.canScalarStackAllocate()) {
-            if(this.scalarStackMap.has(vname)) {
-                return { kind: ArgumentTag.ScalarVal, offset: this.scalarStackMap.get(vname) as number };
-            }
-            else {
-                const trgt = { kind: ArgumentTag.ScalarVal, offset: this.scalarStackSize };
-
-                this.scalarStackLayout.push({ offset: this.scalarStackSize, name: vname, storage: oftype });
-                this.scalarStackMap.set(vname, this.scalarStackSize);
-                this.scalarStackSize = this.scalarStackSize + oftype.allocinfo.inlinedatasize;
-
-                return trgt;
-            }
+        if (this.stackMap.has(vname)) {
+            return { kind: ArgumentTag.StackVal, offset: this.stackMap.get(vname) as number };
         }
         else {
-            if(this.mixedStackMap.has(vname)) {
-                return { kind: ArgumentTag.MixedVal, offset: this.mixedStackMap.get(vname) as number };
-            }
-            else {
-                const trgt = { kind: ArgumentTag.MixedVal, offset: this.mixedStackSize };
+            const trgt = { kind: ArgumentTag.StackVal, offset: this.stackSize };
 
-                this.mixedStackLayout.push({ offset: this.mixedStackSize, name: vname, storage: oftype });
-                this.mixedStackMap.set(vname, this.mixedStackSize);
-                this.mixedStackSize = this.mixedStackSize + oftype.allocinfo.inlinedatasize;
+            this.stackLayout.push({ offset: this.stackSize, name: vname, storage: oftype });
+            this.stackMap.set(vname, this.stackSize);
+            this.stackSize = this.stackSize + oftype.allocinfo.inlinedatasize;
 
-                return trgt;
-            }
+            return trgt;
         }
     }
 
     private getStackInfoForArgumentVar(pname: string, oftype: ICPPLayoutInfo): ParameterInfo {
-        //
-        //TODO: later we should make this an abstract index and do "register allocation" on the live ranges -- will also need to convert this to offsets at emit time (or something)
-        //
-        if(oftype.canScalarStackAllocate()) {
-            if(this.scalarStackMap.has(pname)) {
-                return { kind: ArgumentTag.ScalarVal, poffset: this.scalarStackMap.get(pname) as number };
-            }
-            else {
-                const trgt = { kind: ArgumentTag.ScalarVal, poffset: this.scalarStackSize };
-
-                this.scalarStackLayout.push({ offset: this.scalarStackSize, name: pname, storage: oftype });
-                this.scalarStackMap.set(pname, this.scalarStackSize);
-                this.scalarStackSize = this.scalarStackSize + oftype.allocinfo.inlinedatasize;
-
-                return trgt;
-            }
+        if (this.stackMap.has(pname)) {
+            return { kind: ArgumentTag.StackVal, poffset: this.stackMap.get(pname) as number };
         }
         else {
-            if (this.mixedStackMap.has(pname)) {
-                return { kind: ArgumentTag.MixedVal, poffset: this.mixedStackMap.get(pname) as number };
-            }
-            else {
-                const trgt = { kind: ArgumentTag.MixedVal, poffset: this.mixedStackSize };
+            const trgt = { kind: ArgumentTag.StackVal, poffset: this.stackSize };
 
-                this.mixedStackLayout.push({ offset: this.mixedStackSize, name: pname, storage: oftype });
-                this.mixedStackMap.set(pname, this.mixedStackSize);
-                this.mixedStackSize = this.mixedStackSize + oftype.allocinfo.inlinedatasize;
+            this.stackLayout.push({ offset: this.stackSize, name: pname, storage: oftype });
+            this.stackMap.set(pname, this.stackSize);
+            this.stackSize = this.stackSize + oftype.allocinfo.inlinedatasize;
 
-                return trgt;
-            }
+            return trgt;
         }
     }
 
     private generateScratchVarInfo(oftype: ICPPLayoutInfo): [TargetVar, Argument] {
-        if (oftype.canScalarStackAllocate()) {
-            const trgt = { kind: ArgumentTag.ScalarVal, offset: this.scalarStackSize };
+        const trgt = { kind: ArgumentTag.StackVal, offset: this.stackSize };
 
-            const vname = `@scalar_scratch_${this.scalarStackLayout.length}`;
-            this.scalarStackLayout.push({ offset: this.scalarStackSize, name: vname, storage: oftype });
-            this.scalarStackMap.set(vname, this.scalarStackSize);
-            this.scalarStackSize = this.scalarStackSize + oftype.allocinfo.inlinedatasize;
+        const vname = `@scalar_scratch_${this.stackLayout.length}`;
+        this.stackLayout.push({ offset: this.stackSize, name: vname, storage: oftype });
+        this.stackMap.set(vname, this.stackSize);
+        this.stackSize = this.stackSize + oftype.allocinfo.inlinedatasize;
 
-            return [trgt, ICPPOpEmitter.genScalarArgument(trgt.offset)];
-        }
-        else {
-            const trgt = { kind: ArgumentTag.MixedVal, offset: this.mixedStackSize };
-
-            const vname = `@mixed_scratch_${this.mixedStackLayout.length}`;
-            this.mixedStackLayout.push({ offset: this.mixedStackSize, name: vname, storage: oftype });
-            this.mixedStackMap.set(vname, this.mixedStackSize);
-            this.mixedStackSize = this.mixedStackSize + oftype.allocinfo.inlinedatasize;
-
-
-            return [trgt, ICPPOpEmitter.genMixedArgument(trgt.offset)];
-        }
+        return [trgt, ICPPOpEmitter.genStackArgument(trgt.offset)];
     }
 
     private generateStorageLocationForPhi(vname: MIRRegisterArgument, oftype: string) {
@@ -164,42 +105,15 @@ class ICPPBodyEmitter {
     }
 
     private getStorageTargetForPhi(vname: MIRRegisterArgument): TargetVar {
-        if(this.scalarStackMap.has(vname.nameID)) {
-            return { kind: ArgumentTag.ScalarVal, offset: this.scalarStackMap.get(vname.nameID) as number };
-        }
-        else {
-            return { kind: ArgumentTag.MixedVal, offset: this.mixedStackMap.get(vname.nameID) as number };
-        }
+        return { kind: ArgumentTag.StackVal, offset: this.stackMap.get(vname.nameID) as number };
     }
 
     private generateVarInfoForHomeUpdate(homename: string, rname: string): [TargetVar, Argument, ICPPLayoutInfo] {
-        let oftype: ICPPLayoutInfo | undefined = undefined; 
-        let kind: ArgumentTag = ArgumentTag.InvalidOp;
-        let hnlocation: number = -1;
-        let rlocation: number = -1;
+        const oftype = (this.stackLayout.find((entry) => entry.name === rname) as { offset: number, name: string, storage: ICPPLayoutInfo }).storage;
+        const hnlocation = this.stackMap.get(homename) as number;
+        const rlocation = this.stackMap.get(rname) as number;
 
-        if(this.scalarStackMap.has(rname)) {
-            oftype = (this.scalarStackLayout.find((entry) => entry.name === rname) as {offset: number, name: string, storage: ICPPLayoutInfo}).storage;
-            kind = ArgumentTag.ScalarVal;
-            hnlocation = this.scalarStackMap.get(homename) as number;
-            rlocation = this.scalarStackMap.get(rname) as number;
-        }
-        else {
-            oftype = (this.mixedStackLayout.find((entry) => entry.name === rname) as {offset: number, name: string, storage: ICPPLayoutInfo}).storage;
-            kind = ArgumentTag.MixedVal;
-            hnlocation = this.mixedStackMap.get(homename) as number;
-            rlocation = this.mixedStackMap.get(rname) as number;
-        }
-
-        return [{kind: kind, offset: hnlocation}, {kind: kind, location: rlocation}, oftype];
-    }
-
-    private genMaskForStack(): RefMask {
-        let mask: RefMask = "";
-        for(let i = 0; i < this.mixedStackLayout.length; ++i) {
-            mask = mask + this.mixedStackLayout[i].storage.allocinfo.inlinedmask;
-        }
-        return mask;
+        return [{kind: ArgumentTag.StackVal, offset: hnlocation}, {kind: ArgumentTag.StackVal, location: rlocation}, oftype];
     }
 
     private generateProjectVirtualTupleInvName(argflowtype: MIRType, indecies: number[], resulttype: MIRType): string {
@@ -237,6 +151,14 @@ class ICPPBodyEmitter {
         return `$EntityUpdate_${argflowtype.typeID}.{${fnames}}->${resulttype.typeID}`;
     }
 
+    private generateEmptyConstructorList(resulttype: MIRType): string {
+        return `$ListEmptyCons->${resulttype.typeID}`;
+    }
+
+    private generateEmptyConstructorMap(resulttype: MIRType): string {
+        return `$MapEmptyCons->${resulttype.typeID}`;
+    }
+
     private generateSingletonConstructorsList(argc: number, resulttype: MIRType): string {
         return `$ListSingletonCons->${resulttype.typeID}#${argc}`;
     }
@@ -264,7 +186,7 @@ class ICPPBodyEmitter {
         this.initializeBodyGen("[GENERATED]", geninfo.resulttype);
         let paraminfo: ParameterInfo[] = [];
         paraminfo.push(this.getStackInfoForArgumentVar("arg", icpptuple));
-        const parg = icpptuple.canScalarStackAllocate() ? ICPPOpEmitter.genScalarArgument(0) : ICPPOpEmitter.genMixedArgument(0);
+        const parg = ICPPOpEmitter.genStackArgument(0);
 
         let ops: ICPPOp[] = [];
         let pargs: Argument[] = [];
@@ -289,7 +211,7 @@ class ICPPBodyEmitter {
         ops.push(ICPPOpEmitter.genConstructorEphemeralListOp(sinfo, rt, geninfo.resulttype.typeID, pargs));
         ops.push(ICPPOpEmitter.genJumpOp(sinfo, 1, "exit")); //dummy final jump block
         
-        return new ICPPInvokeBodyDecl(name, name, "[GENERATED]", sinfo, sinfo, false, params, paraminfo, geninfo.resulttype.typeID, this.getStackInfoForArgVar("$$return"), this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), 0, ops, 0, false);
+        return new ICPPInvokeBodyDecl(name, name, "[GENERATED]", sinfo, sinfo, false, params, paraminfo, geninfo.resulttype.typeID, this.getStackInfoForArgVar("$$return"), this.stackSize, 0, ops, 0);
     }
 
     generateProjectRecordPropertyVirtual(geninfo: { inv: string, argflowtype: MIRType, properties: string[], resulttype: MIRType }, sinfo: SourceInfo, recordtype: MIRType): ICPPInvokeDecl {
@@ -301,7 +223,7 @@ class ICPPBodyEmitter {
         this.initializeBodyGen("[GENERATED]", geninfo.resulttype);
         let paraminfo: ParameterInfo[] = [];
         paraminfo.push(this.getStackInfoForArgumentVar("arg", icpprecord));
-        const parg = icpprecord.canScalarStackAllocate() ? ICPPOpEmitter.genScalarArgument(0) : ICPPOpEmitter.genMixedArgument(0);
+        const parg = ICPPOpEmitter.genStackArgument(0);
 
         let ops: ICPPOp[] = [];
         let pargs: Argument[] = [];
@@ -328,7 +250,7 @@ class ICPPBodyEmitter {
         ops.push(ICPPOpEmitter.genConstructorEphemeralListOp(sinfo, rt, geninfo.resulttype.typeID, pargs));
         ops.push(ICPPOpEmitter.genJumpOp(sinfo, 1, "exit")); //dummy final jump block
         
-        return new ICPPInvokeBodyDecl(name, name, "[GENERATED]", sinfo, sinfo, false, params, paraminfo, geninfo.resulttype.typeID, this.getStackInfoForArgVar("$$return"), this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), 0, ops, 0, false);
+        return new ICPPInvokeBodyDecl(name, name, "[GENERATED]", sinfo, sinfo, false, params, paraminfo, geninfo.resulttype.typeID, this.getStackInfoForArgVar("$$return"), this.stackSize, 0, ops, 0);
     }
 
     generateProjectEntityFieldVirtual(geninfo: { inv: string, argflowtype: MIRType, fields: MIRFieldDecl[], resulttype: MIRType }, sinfo: SourceInfo, entitytype: MIRType): ICPPInvokeDecl {
@@ -340,7 +262,7 @@ class ICPPBodyEmitter {
         this.initializeBodyGen("[GENERATED]", geninfo.resulttype);
         let paraminfo: ParameterInfo[] = [];
         paraminfo.push(this.getStackInfoForArgumentVar("arg", icppentity));
-        const parg = icppentity.canScalarStackAllocate() ? ICPPOpEmitter.genScalarArgument(0) : ICPPOpEmitter.genMixedArgument(0);
+        const parg = ICPPOpEmitter.genStackArgument(0);
         
         let ops: ICPPOp[] = [];
         let pargs: Argument[] = [];
@@ -367,7 +289,7 @@ class ICPPBodyEmitter {
         ops.push(ICPPOpEmitter.genConstructorEphemeralListOp(sinfo, rt, geninfo.resulttype.typeID, pargs));
         ops.push(ICPPOpEmitter.genJumpOp(sinfo, 1, "exit")); //dummy final jump block
         
-        return new ICPPInvokeBodyDecl(name, name, "[GENERATED]", sinfo, sinfo, false, params, paraminfo, geninfo.resulttype.typeID, this.getStackInfoForArgVar("$$return"), this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), 0, ops, 0, false);
+        return new ICPPInvokeBodyDecl(name, name, "[GENERATED]", sinfo, sinfo, false, params, paraminfo, geninfo.resulttype.typeID, this.getStackInfoForArgVar("$$return"), this.stackSize, 0, ops, 0);
     }
 
     generateUpdateEntityFieldDirect(geninfo: { inv: string, arglayouttype: MIRType, argflowtype: MIRType, updates: [MIRFieldKey, MIRResolvedTypeKey][], resulttype: MIRType }, sinfo: SourceInfo): ICPPInvokeDecl {
@@ -380,7 +302,7 @@ class ICPPBodyEmitter {
         this.initializeBodyGen("[GENERATED]", geninfo.resulttype);
         let paraminfo: ParameterInfo[] = [];
         paraminfo.push(this.getStackInfoForArgumentVar("arg", icppentity));
-        const parg = icppentity.canScalarStackAllocate() ? ICPPOpEmitter.genScalarArgument(0) : ICPPOpEmitter.genMixedArgument(0);
+        const parg = ICPPOpEmitter.genStackArgument(0);
         
         for(let i = 0; i < geninfo.updates.length; ++i) {
             const upd = geninfo.updates[i];
@@ -413,7 +335,7 @@ class ICPPBodyEmitter {
         ops.push(ICPPOpEmitter.genInvokeFixedFunctionOp(sinfo, rt, geninfo.resulttype.typeID, edecl.consfunc, pargs, -1, ICPPOpEmitter.genNoStatmentGuard()));
         ops.push(ICPPOpEmitter.genJumpOp(sinfo, 1, "exit")); //dummy final jump block
         
-        return new ICPPInvokeBodyDecl(geninfo.inv, geninfo.inv, "[GENERATED]", sinfo, sinfo, false, params, paraminfo, geninfo.resulttype.typeID, this.getStackInfoForArgVar("$$return"), this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), 0, ops, 0, false);
+        return new ICPPInvokeBodyDecl(geninfo.inv, geninfo.inv, "[GENERATED]", sinfo, sinfo, false, params, paraminfo, geninfo.resulttype.typeID, this.getStackInfoForArgVar("$$return"), this.stackSize, 0, ops, 0);
     }
 
     generateSingletonConstructorList(geninfo: { inv: string, argc: number, resulttype: MIRType }): ICPPInvokeDecl {
@@ -430,7 +352,7 @@ class ICPPBodyEmitter {
 
     generateSingletonConstructorMap(geninfo: { inv: string, argc: number, resulttype: MIRType }): ICPPInvokeDecl {
         const ldecl = this.assembly.entityDecls.get(geninfo.resulttype.typeID) as MIRPrimitiveMapEntityTypeDecl;
-        const etype = ldecl.tupentrytype;
+        const etype = ldecl.tupletype;
 
         let params: ICPPFunctionParameter[] = [];
         for(let j = 0; j < geninfo.argc; ++j) {
@@ -468,12 +390,9 @@ class ICPPBodyEmitter {
         this.currentFile = srcFile;
         this.currentRType = rtype;
 
-        this.scalarStackMap = new Map<string, number>();
-        this.scalarStackSize = 0;
-        this.scalarStackLayout = [];
-        this.mixedStackMap = new Map<string, number>();
-        this.mixedStackSize = 0;
-        this.mixedStackLayout = [];
+        this.stackMap = new Map<string, number>();
+        this.stackSize = 0;
+        this.stackLayout = [];
     
         this.maskMap = new Map<string, number>();
         this.masksize = 0;
@@ -585,7 +504,7 @@ class ICPPBodyEmitter {
 
     generateGuardToInfo(gg: MIRGuard): ICPPGuard {
         if(gg instanceof MIRArgGuard) {
-            return ICPPOpEmitter.genVarGuard(this.scalarStackMap.get(gg.greg.nameID) as number);
+            return ICPPOpEmitter.genVarGuard(this.stackMap.get(gg.greg.nameID) as number);
         }
         else {
             const mg = gg as MIRMaskGuard;
@@ -1204,15 +1123,15 @@ class ICPPBodyEmitter {
     }
 
     processConstructorPrimaryCollectionEmptyList_Helper(op: MIRConstructorPrimaryCollectionEmpty, ltype: MIRPrimitiveListEntityTypeDecl): ICPPOp {
-        const miroftype = this.typegen.getMIRType("None");
-        //TODO: clean this up
-        return this.typegen.coerce(op.sinfo, this.getSpecialLiteralValue("none"), this.typegen.getMIRType("None"), this.trgtToICPPTargetLocation(op.trgt, op.tkey), miroftype,  ICPPOpEmitter.genNoStatmentGuard());
+        const icall = this.generateEmptyConstructorList(this.typegen.getMIRType(op.tkey));
+       
+        return ICPPOpEmitter.genInvokeFixedFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.tkey), op.tkey, icall, [], -1, ICPPOpEmitter.genNoStatmentGuard());
     }
 
     processConstructorPrimaryCollectionEmptyMap_Helper(op: MIRConstructorPrimaryCollectionEmpty, ltype: MIRPrimitiveMapEntityTypeDecl): ICPPOp {
-        const miroftype = this.typegen.getMIRType("None");
-        //TODO: clean this up
-        return this.typegen.coerce(op.sinfo, this.getSpecialLiteralValue("none"), this.typegen.getMIRType("None"), this.trgtToICPPTargetLocation(op.trgt, op.tkey), miroftype,  ICPPOpEmitter.genNoStatmentGuard());
+        const icall = this.generateEmptyConstructorMap(this.typegen.getMIRType(op.tkey));
+       
+        return ICPPOpEmitter.genInvokeFixedFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.tkey), op.tkey, icall, [], -1, ICPPOpEmitter.genNoStatmentGuard());
     }
 
     processConstructorPrimaryCollectionEmpty(op: MIRConstructorPrimaryCollectionEmpty): ICPPOp {
@@ -1955,7 +1874,7 @@ class ICPPBodyEmitter {
             const revblocks = [...inorderblocks].reverse();
             const body = this.generateBlockExps((idecl as MIRInvokeBodyDecl).body.body, inorderblocks, revblocks);
 
-            return new ICPPInvokeBodyDecl(idecl.shortname, idecl.ikey, idecl.srcFile, idecl.sinfoStart, idecl.sinfoEnd, idecl.recursive, params, paraminfo, idecl.resultType, this.getStackInfoForArgVar("$$return"), this.scalarStackSize, this.mixedStackSize, this.genMaskForStack(), this.masksize, body, idecl.masksize, idecl.isUserCode);
+            return new ICPPInvokeBodyDecl(idecl.shortname, idecl.ikey, idecl.srcFile, idecl.sinfoStart, idecl.sinfoEnd, idecl.recursive, params, paraminfo, idecl.resultType, this.getStackInfoForArgVar("$$return"), this.stackSize, this.masksize, body, idecl.masksize);
         }
         else {
             assert(idecl instanceof MIRInvokePrimitiveDecl);

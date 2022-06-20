@@ -4375,36 +4375,10 @@ class Parser {
                 //TODO: what operations do we want to forward by default (or config)
             }
             else if(ttname === "TickTime") {
-                implicitops = [["t", "==", "t", "Bool"], ["t", "!=", "t", "Bool"]];
-
-                provides.push([new NominalTypeSignature("Core", ["Orderable"]), undefined]);
-                implicitops = [...implicitops, ["t", "<", "t", "Bool"], ["t", ">", "t", "Bool"], ["t", "<=", "t", "Bool"], ["t", ">=", "t", "Bool"]];
-
-                provides.push([new NominalTypeSignature("Core", ["Algebraic"]), undefined]);
-                implicitops = [...implicitops, ["t", "+", "t", "t"], ["t", "-", "t", "t"]];
-                //TODO: allow *, / by scalar
+                //TODO: what operations do we want to forward by default (or config)
             }
             else if(ttname === "LogicalTime") {
-                implicitops = [["t", "==", "t", "Bool"], ["t", "!=", "t", "Bool"]];
-
-                provides.push([new NominalTypeSignature("Core", ["Orderable"]), undefined]);
-                implicitops = [...implicitops, ["t", "<", "t", "Bool"], ["t", ">", "t", "Bool"], ["t", "<=", "t", "Bool"], ["t", ">=", "t", "Bool"]];
-
-                provides.push([new NominalTypeSignature("Core", ["Algebraic"]), undefined]);
-                implicitops = [...implicitops, ["t", "+", "t", "t"], ["t", "-", "t", "t"]];
-                //TODO: allow *, / by scalar
-
-                /*
-                *TODO: need zero and one in logical time too!
-                ["zero", "one"].forEach((sf) => {
-                    const ttype = new NominalTypeSignature(currentDecl.ns, [iname], []);
-
-                    const cexp = new ConstructorPrimaryExpression(sinfo, ttype, new Arguments([new PositionalArgument(undefined, false, new AccessStaticFieldExpression(sinfo, idval, sf))]));
-                    const sfdecl = new StaticMemberDecl(sinfo, this.m_penv.getCurrentFile(), [], sf, ttype, new ConstantExpressionValue(cexp, new Set<string>()));
-
-                    staticMembers.push(sfdecl);
-                });
-                */
+                //TODO: what operations do we want to forward by default (or config)
             }
             else if(ttname === "ISOTimeStamp") {
                 //TODO: what operations do we want to forward by default (or config)

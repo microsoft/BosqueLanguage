@@ -10,8 +10,7 @@ enum ArgumentTag
 {
     InvalidOp = 0x0,
     Const,
-    ScalarVal,
-    MixedVal
+    StackVal
 }
 
 const EMPTY_CONST_POSITION = 0;
@@ -201,12 +200,8 @@ class ICPPOpEmitter
         return { kind: ArgumentTag.Const, location: offset };
     }
 
-    static genScalarArgument(offset: number): Argument {
-        return { kind: ArgumentTag.ScalarVal, location: offset };
-    }
-
-    static genMixedArgument(offset: number): Argument {
-        return { kind: ArgumentTag.MixedVal, location: offset };
+    static genStackArgument(offset: number): Argument {
+        return { kind: ArgumentTag.StackVal, location: offset };
     }
 
     static genMaskGuard(gindex: number, goffset: number): ICPPGuard {

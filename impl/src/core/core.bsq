@@ -522,34 +522,11 @@ __internal __typedeclable __typebase entity RelativeTime provides Some, APIType,
 //<summary>Primitive TickTime value.</summary>
 __internal __typedeclable __typebase entity TickTime provides Some, Orderable, KeyType APIType {
 }
-__safe __primitive inline infix operator *(a: TickTime, b: Nat): TickTime = default;
-__safe __primitive inline infix operator *(a: Nat, b: TickTime): TickTime = default;
-__primitive inline infix operator /(a: TickTime, b: nat): TickTime = default;
-__safe __primitive inline infix operator +(a: TickTime, b: TickTime): TickTime = default;
-__primitive inline infix operator -(a: TickTime, b: TickTime): TickTime = default;
-__safe __primitive inline infix operator ==(a: TickTime, b: TickTime): Bool = default;
-__safe __primitive inline infix operator !=(a: TickTime, b: TickTime): Bool = default;
-__safe __primitive inline infix operator <(a: TickTime, b: TickTime): Bool = default;
-__safe __primitive inline infix operator >(a: TickTime, b: TickTime): Bool = default;
-__safe __primitive inline infix operator <=(a: TickTime, b: TickTime): Bool = default;
-__safe __primitive inline infix operator >=(a: TickTime, b: TickTime): Bool = default;
 
 //<summary>Primitive LogicalTime value.</summary>
 __internal __typedeclable __typebase entity LogicalTime provides Some, Orderable, KeyType, APIType {
     //TODO: logical time zero and one
 }
-__safe __primitive inline infix operator *(a: LogicalTime, b: Nat): LogicalTime = default;
-__safe __primitive inline infix operator *(a: Nat, b: LogicalTime): LogicalTime = default;
-__primitive inline infix operator /(a: LogicalTime, b: nat): LogicalTime = default;
-__safe __primitive inline infix operator +(a: LogicalTime, b: LogicalTime): LogicalTime = default;
-__primitive inline infix operator -(a: LogicalTime, b: LogicalTime): LogicalTime = default;
-__safe __primitive inline infix operator ==(a: LogicalTime, b: LogicalTime): Bool = default;
-__safe __primitive inline infix operator !=(a: LogicalTime, b: LogicalTime): Bool = default;
-__safe __primitive inline infix operator <(a: LogicalTime, b: LogicalTime): Bool = default;
-__safe __primitive inline infix operator >(a: LogicalTime, b: LogicalTime): Bool = default;
-__safe __primitive inline infix operator <=(a: LogicalTime, b: LogicalTime): Bool = default;
-__safe __primitive inline infix operator >=(a: LogicalTime, b: LogicalTime): Bool = default;
-
 
 __internal __typedeclable __typebase entity ISOTimeStamp provides Some, KeyType, APIType {
     __assume_safe internal function s_create(year: Nat, month: Nat, day: Nat, hour: Nat, min: Nat, sec: Nat, millis: Nat): ISOTimeStamp = isotimestamp_create;

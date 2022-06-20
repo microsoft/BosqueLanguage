@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { MIRAssembly, MIRConceptTypeDecl, MIRConstructableEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIRDataBufferInternalEntityTypeDecl, MIRDataStringInternalEntityTypeDecl, MIREnumEntityTypeDecl, MIREphemeralListType, MIRFieldDecl, MIRObjectEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRRecordType, MIRStringOfInternalEntityTypeDecl, MIRTupleType, MIRType } from "../../../compiler/mir_assembly";
+import { MIRAssembly, MIRConceptTypeDecl, MIRConstructableEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIRDataBufferInternalEntityTypeDecl, MIRDataStringInternalEntityTypeDecl, MIREnumEntityTypeDecl, MIREphemeralListType, MIRFieldDecl, MIRObjectEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRRecordType, MIRStringOfInternalEntityTypeDecl, MIRTupleType, MIRType } from "../../../compiler/mir_assembly";
 import { MIRFieldKey, MIRGlobalKey, MIRInvokeKey, MIRResolvedTypeKey, MIRVirtualMethodKey } from "../../../compiler/mir_ops";
 import { ICPPParseTag } from "./icppdecls_emitter";
 import { Argument, ICPPOp, ParameterInfo } from "./icpp_exp";
@@ -105,18 +105,6 @@ abstract class ICPPLayoutInfo {
     }
 
     abstract createFromLayoutInfo(tkey: MIRResolvedTypeKey): ICPPLayoutInfo;
-
-    canScalarStackAllocate(): boolean {
-        if(this.layout === ICPPLayoutCategory.Inline) {
-            return /^1+$/.test(this.allocinfo.inlinedmask);
-        }
-        else if(this.layout === ICPPLayoutCategory.UnionInline) {
-            return /^51+$/.test(this.allocinfo.inlinedmask);
-        }
-        else {
-            return false;
-        }
-    }
 
     needsBoxableType(): boolean {
         return this.layout === ICPPLayoutCategory.Inline && this.allocinfo.inlinedatasize > UNIVERSAL_CONTENT_SIZE;
@@ -296,15 +284,11 @@ class ICPPInvokeDecl {
     readonly params: ICPPFunctionParameter[];
     readonly resultType: MIRResolvedTypeKey;
 
-    readonly scalarStackBytes: number;
-    readonly mixedStackBytes: number;
-    readonly mixedStackMask: RefMask;
-
+    readonly stackBytes: number;
     readonly maskSlots: number;
 
-    readonly isUserCode: boolean;
 
-    constructor(name: string, ikey: MIRInvokeKey, srcFile: string, sinfoStart: SourceInfo, sinfoEnd: SourceInfo, recursive: boolean, params: ICPPFunctionParameter[], resultType: MIRResolvedTypeKey, scalarStackBytes: number, mixedStackBytes: number, mixedStackMask: RefMask, maskSlots: number, isUserCode: boolean) {
+    constructor(name: string, ikey: MIRInvokeKey, srcFile: string, sinfoStart: SourceInfo, sinfoEnd: SourceInfo, recursive: boolean, params: ICPPFunctionParameter[], resultType: MIRResolvedTypeKey, stackBytes: number, maskSlots: number) {
         this.name = name;
         this.ikey = ikey;
         this.srcFile = srcFile;
@@ -314,17 +298,13 @@ class ICPPInvokeDecl {
         this.params = params;
         this.resultType = resultType;
 
-        this.scalarStackBytes = scalarStackBytes;
-        this.mixedStackBytes = mixedStackBytes;
-        this.mixedStackMask = mixedStackMask;
+        this.stackBytes = stackBytes;
 
         this.maskSlots = maskSlots;
-
-        this.isUserCode = isUserCode;
     }
 
     jsonEmit(): object {
-        return {name: this.name, ikey: this.ikey, srcFile: this.srcFile, sinfoStart: this.sinfoStart, sinfoEnd: this.sinfoEnd, recursive: this.recursive, params: this.params.map((param) => param.jsonEmit()), resultType: this.resultType, scalarStackBytes: this.scalarStackBytes, mixedStackBytes: this.mixedStackBytes, mixedStackMask: this.mixedStackMask, maskSlots: this.maskSlots, isUserCode: this.isUserCode};
+        return {name: this.name, ikey: this.ikey, srcFile: this.srcFile, sinfoStart: this.sinfoStart, sinfoEnd: this.sinfoEnd, recursive: this.recursive, params: this.params.map((param) => param.jsonEmit()), resultType: this.resultType, stackBytes: this.stackBytes, maskSlots: this.maskSlots};
     }
 }
 
@@ -334,8 +314,8 @@ class ICPPInvokeBodyDecl extends ICPPInvokeDecl {
     readonly resultArg: Argument;
     readonly argmaskSize: number;
 
-    constructor(name: string, ikey: MIRInvokeKey, srcFile: string, sinfoStart: SourceInfo, sinfoEnd: SourceInfo, recursive: boolean, params: ICPPFunctionParameter[], paraminfo: ParameterInfo[], resultType: MIRResolvedTypeKey, resultArg: Argument, scalarStackBytes: number, mixedStackBytes: number, mixedStackMask: RefMask, maskSlots: number, body: ICPPOp[], argmaskSize: number, isUserCode: boolean) {
-        super(name, ikey, srcFile, sinfoStart, sinfoEnd, recursive, params, resultType, scalarStackBytes, mixedStackBytes, mixedStackMask, maskSlots, isUserCode);
+    constructor(name: string, ikey: MIRInvokeKey, srcFile: string, sinfoStart: SourceInfo, sinfoEnd: SourceInfo, recursive: boolean, params: ICPPFunctionParameter[], paraminfo: ParameterInfo[], resultType: MIRResolvedTypeKey, resultArg: Argument, stackBytes: number, maskSlots: number, body: ICPPOp[], argmaskSize: number) {
+        super(name, ikey, srcFile, sinfoStart, sinfoEnd, recursive, params, resultType, stackBytes, maskSlots);
         this.body = body;
         this.paraminfo = paraminfo;
         this.resultArg = resultArg;
@@ -371,7 +351,7 @@ class ICPPInvokePrimitiveDecl extends ICPPInvokeDecl {
     readonly pcodes: Map<string, ICPPPCode>;
 
     constructor(name: string, ikey: MIRInvokeKey, srcFile: string, sinfoStart: SourceInfo, sinfoEnd: SourceInfo, recursive: boolean, params: ICPPFunctionParameter[], resultType: MIRResolvedTypeKey, enclosingtype: string | undefined, implkeyname: string, binds: Map<string, MIRResolvedTypeKey>, pcodes: Map<string, ICPPPCode>) {
-        super(name, ikey, srcFile, sinfoStart, sinfoEnd, recursive, params, resultType, 0, 0, "", 0, false);
+        super(name, ikey, srcFile, sinfoStart, sinfoEnd, recursive, params, resultType, 0, 0);
         this.enclosingtype = enclosingtype;
         this.implkeyname = implkeyname;
         this.binds = binds;
