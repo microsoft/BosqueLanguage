@@ -3232,6 +3232,9 @@ class SMTBodyEmitter {
                 }
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
             }
+            case "s_list_mask_select": {
+                xxxx;
+            }
             case "s_list_reduce": {
                 const lt = this.typegen.getMIRType(idecl.params[0].type);
                 const sval = this.typegen.generateListTypeGetData(lt, new SMTVar(args[0].vname));
@@ -3269,6 +3272,15 @@ class SMTBodyEmitter {
                     const cbody = NOT_IMPLEMENTED("s_list_reduce array");
                     return SMTFunction.createWithImplicitLambdas(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody, implicitlambdas);
                 }
+            }
+            case "s_list_reduce_idx": {
+                xxxx;
+            }
+            case "s_list_transduce": {
+                xxxx;
+            }
+            case "s_list_transduce_idx": {
+                xxxx;
             }
             case "s_map_empty": {
                 const mt = this.typegen.getMIRType(idecl.params[0].type);

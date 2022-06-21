@@ -56,9 +56,12 @@ internal entity ListOps provides Some {
     __safe internal function s_list_indexof_true(l: List<T>): Int = s_list_indexof_true; 
     __safe internal function s_list_last_indexof_true(l: List<T>): Int = s_list_last_indexof_true;
 
+    __safe internal function s_list_mask_select<T>(l: List<T>, mask: List<Bool>): List<T> = s_list_mask_select;
+
     __conditional_safe internal recursive? function s_list_reduce<T, U>(l: List<T>, init: U, f: recursive? fn(_: U, _: T) -> U): U = s_list_reduce;
     __conditional_safe internal recursive? function s_list_reduce_idx<T, U>(l: List<T>, init: U, f: recursive? fn(_: U, _: T, _: Nat) -> U): U = s_list_reduce_idx;
 
-    //TODO: minarg, maxarg, and such based on reduce
+    __conditional_safe internal recursive? function s_list_transduce<T, E, U>(l: List<T>, env: E, op: recursive? fn(_: E, _: T) -> (|E, U|)): (|E, List<U>|) = s_list_transduce;
+    __conditional_safe internal recursive? function s_list_transduce_idx<T, E, U>(l: List<T>, env: E, op: recursive? fn(_: E, _: T, _: Nat) -> (|E, U|)): (|E, List<U>|) = s_list_transduce_idx;
 }
 #endif
