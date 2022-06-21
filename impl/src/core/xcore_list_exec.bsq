@@ -32,16 +32,18 @@ internal entity ListOps provides Some {
     internal function s_list_push_front<T>(l: List<T>, v: T): List<T> = s_list_push_front;
 
     internal recursive? function s_list_has_pred<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): Bool = s_list_has_pred;
-    internal recursive? function s_list_has_pred_idx<T>(l: List<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Bool = s_list_find_has_idx;
+    internal recursive? function s_list_has_pred_idx<T>(l: List<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Bool = s_list_has_pred_idx;
 
     internal recursive? function s_list_find_pred<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): Int = s_list_find_pred;
     internal recursive? function s_list_find_pred_idx<T>(l: List<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Int = s_list_find_pred_idx;
-    internal recursive? function s_list_find_pred_last<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): Int = s_list_find_pred_lase;
+    internal recursive? function s_list_find_pred_last<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): Int = s_list_find_pred_last;
     internal recursive? function s_list_find_pred_last_idx<T>(l: List<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Int = s_list_find_pred_last_idx;
 
-    internal function s_has<T>(l: List<T>, v: T): Bool = s_list_has; 
-    internal function s_indexof<T>(l: List<T>, v: T): Int = s_list_indexof; 
-    internal function s_last_indexof<T>(l: List<T>, v: T): Int = s_list_last_indexof; 
+    internal recursive? function s_list_single_index_of<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): Int = s_list_single_index_of;
+
+    internal function s_list_has<T>(l: List<T>, v: T): Bool = s_list_has; 
+    internal function s_list_indexof<T>(l: List<T>, v: T): Int = s_list_indexof; 
+    internal function s_list_last_indexof<T>(l: List<T>, v: T): Int = s_list_last_indexof; 
 
     internal recursive? function s_filter_pred<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): List<T> = s_list_filter_pred;
     internal recursive? function s_filter_pred_idx<T>(l: List<T>, p: recursive? pred(_: T, _: Nat) -> Bool): List<T> = s_list_filter_pred_idx;
@@ -58,10 +60,10 @@ internal entity ListOps provides Some {
     internal recursive? function s_sort<T>(l: List<T>, cmp: recursive? pred(_: T, _: T) -> Bool): List<T> = s_list_sort;
     internal recursive? function s_unique_from_sorted<T>(l: List<T>, eq: recursive? pred(_: T, _: T) -> Bool): List<T> = s_list_unique_from_sorted;
 
-    internal recursive? function s_reduce<T, U>(l: List<T>, iv: U, f: recursive? fn(_: U, _: T) -> U): U = s_list_reduce_ne;
-    internal recursive? function s_reduce_idx<T, U>(l: List<T>, iv: U, f: recursive? fn(_: U, _: T, _: Nat) -> U): U = s_list_reduce_idx_ne;
+    internal recursive? function s_list_reduce<T, U>(l: List<T>, iv: U, f: recursive? fn(_: U, _: T) -> U): U = s_list_reduce_ne;
+    internal recursive? function s_list_reduce_idx<T, U>(l: List<T>, iv: U, f: recursive? fn(_: U, _: T, _: Nat) -> U): U = s_list_reduce_idx_ne;
 
-    internal recursive? function s_transduce<T, E, U>(l: List<T>, env: E, op: recursive? fn(_: E, _: T) -> (|E, U|)): (|E, List<U>|) = s_list_transduce_ne;
-    internal recursive? function s_transduce_idx<T, E, U>(l: List<T>, env: E, op: recursive? fn(_: E, _: T, _: Nat) -> (|E, U|)): (|E, List<U>|) = s_list_transduce_idx_ne;
+    internal recursive? function s_list_transduce<T, E, U>(l: List<T>, env: E, op: recursive? fn(_: E, _: T) -> (|E, U|)): (|E, List<U>|) = s_list_transduce_ne;
+    internal recursive? function s_list_transduce_idx<T, E, U>(l: List<T>, env: E, op: recursive? fn(_: E, _: T, _: Nat) -> (|E, U|)): (|E, List<U>|) = s_list_transduce_idx_ne;
 }
 #endif

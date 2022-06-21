@@ -94,6 +94,7 @@ std::map<std::string, BSQPrimitiveImplTag> MarshalEnvironment::g_primitiveinvoke
     {"s_list_find_pred_idx", BSQPrimitiveImplTag::s_list_find_pred_idx},
     {"s_list_find_pred_last", BSQPrimitiveImplTag::s_list_find_pred_last},
     {"s_list_find_pred_last_idx", BSQPrimitiveImplTag::s_list_find_pred_last_idx},
+    {"s_list_single_index_of", BSQPrimitiveImplTag::s_list_single_index_of},
     {"s_list_filter_pred", BSQPrimitiveImplTag::s_list_filter_pred},
     {"s_list_filter_pred_idx", BSQPrimitiveImplTag::s_list_filter_pred_idx},
     {"s_list_map", BSQPrimitiveImplTag::s_list_map},

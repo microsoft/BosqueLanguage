@@ -2427,6 +2427,10 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         SLPTR_STORE_CONTENTS_AS(BSQNat, resultsl, pos);
         break;
     }
+    case BSQPrimitiveImplTag::s_list_single_index_of: {
+        xxxx;
+        break;
+    }
     case BSQPrimitiveImplTag::s_list_filter_pred_ne: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
 

@@ -426,6 +426,7 @@ enum class BSQPrimitiveImplTag
     s_list_find_pred_idx,
     s_list_find_pred_last,
     s_list_find_pred_last_idx,
+    s_list_single_index_of,
     s_list_filter_pred,
     s_list_filter_pred_idx,
     s_list_map,

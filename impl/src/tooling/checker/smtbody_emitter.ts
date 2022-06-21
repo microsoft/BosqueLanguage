@@ -3179,7 +3179,14 @@ class SMTBodyEmitter {
                 }
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
             }
+            case "s_list_all_true": {
+                xxxx;
+            }
+            case "s_list_all_false": {
+                xxxx;
+            }
             case "s_list_single_indexof_true": {
+                xxxx; //use UF and quantifiers
                 let cbody: SMTExp = new SMTConst("[UNDEF]");
                 const sval = this.typegen.generateListTypeGetData(this.typegen.getMIRType(idecl.params[0].type), new SMTVar(args[0].vname));
                 if (this.vopts.ARRAY_MODE === "Seq") {
