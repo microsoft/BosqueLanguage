@@ -3,12 +3,12 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { MIRAssembly, MIRConceptType, MIRConstructableEntityTypeDecl, MIRDataBufferInternalEntityTypeDecl, MIRDataStringInternalEntityTypeDecl, MIREntityType, MIREntityTypeDecl, MIREnumEntityTypeDecl, MIREphemeralListType, MIRFieldDecl, MIRInvokeBodyDecl, MIRInvokeDecl, MIRInvokePrimitiveDecl, MIRObjectEntityTypeDecl, MIRPCode, MIRPrimitiveCollectionEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRRecordType, MIRStringOfInternalEntityTypeDecl, MIRTupleType, MIRType } from "../../compiler/mir_assembly";
+import { MIRAssembly, MIRConceptType, MIRConstructableEntityTypeDecl, MIREntityType, MIREntityTypeDecl, MIREphemeralListType, MIRFieldDecl, MIRInvokeBodyDecl, MIRInvokeDecl, MIRInvokePrimitiveDecl, MIRObjectEntityTypeDecl, MIRPCode, MIRPrimitiveCollectionEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRRecordType, MIRTupleType, MIRType } from "../../compiler/mir_assembly";
 import { SMTTypeEmitter } from "./smttype_emitter";
 import { MIRAbort, MIRArgGuard, MIRArgument, MIRAssertCheck, MIRBasicBlock, MIRBinKeyEq, MIRBinKeyLess, MIRConstantArgument, MIRConstantBigInt, MIRConstantBigNat, MIRConstantDataString, MIRConstantDecimal, MIRConstantFalse, MIRConstantFloat, MIRConstantInt, MIRConstantNat, MIRConstantNone, MIRConstantNothing, MIRConstantRational, MIRConstantRegex, MIRConstantString, MIRConstantStringOf, MIRConstantTrue, MIRConstantTypedNumber, MIRConstructorEntityDirect, MIRConstructorEphemeralList, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionMixed, MIRConstructorPrimaryCollectionSingletons, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConvertValue, MIRDeclareGuardFlagLocation, MIREntityProjectToEphemeral, MIREntityUpdate, MIREphemeralListExtend, MIRExtract, MIRFieldKey, MIRGlobalVariable, MIRGuard, MIRGuardedOptionInject, MIRInject, MIRInvokeFixedFunction, MIRInvokeKey, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRIsTypeOf, MIRJump, MIRJumpCond, MIRJumpNone, MIRLoadConst, MIRLoadField, MIRLoadFromEpehmeralList, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadUnintVariableValue, MIRLogicAction, MIRMaskGuard, MIRMultiLoadFromEpehmeralList, MIROp, MIROpTag, MIRPhi, MIRPrefixNotOp, MIRRecordHasProperty, MIRRecordProjectToEphemeral, MIRRecordUpdate, MIRRegisterArgument, MIRRegisterAssign, MIRResolvedTypeKey, MIRReturnAssign, MIRReturnAssignOfCons, MIRSetConstantGuardFlag, MIRSliceEpehmeralList, MIRStatmentGuard, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRTupleHasIndex, MIRTupleProjectToEphemeral, MIRTupleUpdate, MIRVirtualMethodKey } from "../../compiler/mir_ops";
 import { SMTCallSimple, SMTCallGeneral, SMTCallGeneralWOptMask, SMTCond, SMTConst, SMTExp, SMTIf, SMTLet, SMTLetMulti, SMTMaskConstruct, SMTVar, SMTCallGeneralWPassThroughMask, SMTTypeInfo, VerifierOptions } from "./smt_exp";
 import { SourceInfo } from "../../ast/parser";
-import { SMTFunction, SMTFunctionUninterpreted } from "./smt_assembly";
+import { SMTFunction } from "./smt_assembly";
 
 import * as assert from "assert";
 import { BSQRegex } from "../../ast/bsqregex";
@@ -490,7 +490,6 @@ class SMTBodyEmitter {
         const ldecl = this.assembly.entityDecls.get(geninfo.resulttype.typeID) as MIRPrimitiveMapEntityTypeDecl;
         const etype = ldecl.tupletype;
         const etuple = this.typegen.getMIRType(etype).options[0] as MIRTupleType;
-        const keytype = ldecl.getTypeK();
 
         let args: { vname: string, vtype: SMTTypeInfo }[] = [];
         for(let j = 0; j < geninfo.argc; ++j) {
@@ -2761,9 +2760,9 @@ class SMTBodyEmitter {
                 const dd = new SMTCallSimple("BLatLongCoordinate@cons", args.map((arg) => new SMTVar(arg.vname)));
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);
             }
-
-            
             case "s_list_index": {
+                //TODO: would special Seq constructor support improve this (see also fill)
+
                 const genlist = new SMTCallSimple("@@SortedIntSeq@@Create", args.map((arg) => new SMTVar(arg.vname)));
                 const chklist = SMTCallSimple.makeAndOf(
                     new SMTCallSimple("@@CheckIntSeqLen", [new SMTVar("seq"), new SMTVar(args[2].vname)]),
@@ -2789,7 +2788,12 @@ class SMTBodyEmitter {
                 const lt = this.typegen.getMIRType(idecl.params[0].type);
                 const cbody = this.typegen.generateListTypeGetLength(lt, new SMTVar(args[0].vname));
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
-            } 
+            }
+            case "s_list_fill": {
+                //TODO: would special Seq constructor support improve this (see also index)
+
+                xxxx;
+            }
             case "s_list_append": {
                 let cbody: SMTExp = new SMTConst("[UNDEF]");
                 if (this.vopts.ARRAY_MODE === "Seq") {
@@ -3094,7 +3098,10 @@ class SMTBodyEmitter {
                 }
             }
             case "s_list_map_fn_idx": {
-                assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
+                xxxx;
+            }
+            case "s_list_map_sync": {
+                xxxx;
             }
             case "s_list_has": {
                 let cbody: SMTExp = new SMTConst("[UNDEF]");
@@ -3318,9 +3325,6 @@ class SMTBodyEmitter {
                     ])
                 );
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
-            }
-            case "s_blockingfailure": {
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
             }
             default: {
                 assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);

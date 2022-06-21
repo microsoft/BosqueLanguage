@@ -8,8 +8,6 @@ namespace Core;
 
 #if CHECK_LIBS
 internal entity MapOps provides Some {
-    internal function s_blockingfailure<T>(): T = s_blockingfailure;
-
     __safe internal function s_map_empty<K grounded KeyType, V>(m: Map<K, V>): Bool = s_map_empty; 
     __safe internal function s_map_count<K grounded KeyType, V>(m: Map<K, V>): Nat = s_map_count; 
 

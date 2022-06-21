@@ -2393,16 +2393,16 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         Allocator::GlobalAllocator.releaseCollectionIterator(&liter);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_safe_get: {
+    case BSQPrimitiveImplTag::s_list_get: {
         BSQListOps::s_safe_get(LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]), invk->binds.find("T")->second, resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_safe_back: {
+    case BSQPrimitiveImplTag::s_list_back: {
         auto ii = LIST_LOAD_TYPE_INFO_REPR(params[0])->getCount(LIST_LOAD_DATA(params[0])) - 1;
         BSQListOps::s_safe_get(LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), ii, invk->binds.find("T")->second, resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_safe_front: {
+    case BSQPrimitiveImplTag::s_list_front: {
         BSQNat ii = 0;
         BSQListOps::s_safe_get(LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), ii, invk->binds.find("T")->second, resultsl);
         break;

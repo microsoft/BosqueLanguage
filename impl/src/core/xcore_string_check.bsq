@@ -19,7 +19,7 @@ internal entity StringOps provides Some {
                 return istr;
             }
             else {
-                return ListOps::s_list_reduce<String, String>(tl, istr, fn(acc: String, s: String): String => acc.append(s));
+                return ListOps::s_list_reduce<String, String>(tl, istr, fn(acc: String, s: String): String => String::s_concat2(acc, s));
             }
         }
     }
@@ -35,7 +35,7 @@ internal entity StringOps provides Some {
                 return istr;
             }
             else {
-                return ListOps::s_list_reduce<String, String>(tl, istr, fn(acc: String, s: String): String => acc.append(sep).append(s));
+                return ListOps::s_list_reduce<String, String>(tl, istr, fn(acc: String, s: String): String => String::s_concat2(String::s_concat2(acc, sep), s));
             }
         }
     }

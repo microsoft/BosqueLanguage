@@ -8,23 +8,23 @@ namespace Core;
 
 #if CHECK_LIBS
 internal entity ListOps provides Some {
-    internal function s_blockingfailure<T>(): T = s_blockingfailure; 
-
-    internal function s_list_index_int(start: Int, end: Int, len: Int): List<Int> = s_list_range_int;
-    internal function s_list_index_nat(start: Nat, end: Nat, len: Nat): List<Nat> = s_list_range_nat;
+    __safe internal function s_list_index_int(start: Int, end: Int, len: Int): List<Int> = s_list_index;
+    __safe internal function s_list_index_nat(start: Nat, end: Nat, len: Nat): List<Nat> = s_list_index;
 
     __safe internal function s_list_empty<T>(l: List<T>): Bool = s_list_empty; 
     __safe internal function s_list_size<T>(l: List<T>): Nat = s_list_size; 
 
-    __safe internal function s_list_append<T>(l: List<T>, r: List<T>): List<T> = s_list_append;
+    __safe internal function s_list_fill<T>(count: Nat, v: T): List<T> = s_list_fill;
 
-    __safe internal function s_list_slice_front<T>(l: List<T>, idx: Nat): List<T> = s_list_slice_front; 
-    __safe internal function s_list_slice_end<T>(l: List<T>, idx: Nat): List<T> = s_list_slice_end;
-    __safe internal function s_list_slice<T>(l: List<T>, start: Nat, length: Nat): List<T> = s_list_slice; 
+    __safe internal function s_list_append<T>(l: List<T>, r: List<T>): List<T> = s_list_append;
 
     __safe internal function s_list_get<T>(l: List<T>, idx: Nat): T = s_list_get; 
     __safe internal function s_list_get_back<T>(l: List<T>): T = s_list_get_back; 
     __safe internal function s_list_get_front<T>(l: List<T>): T = s_list_get_front; 
+
+    __safe internal function s_list_slice_front<T>(l: List<T>, idx: Nat): List<T> = s_list_slice_front; 
+    __safe internal function s_list_slice_end<T>(l: List<T>, idx: Nat): List<T> = s_list_slice_end;
+    __safe internal function s_list_slice<T>(l: List<T>, start: Nat, length: Nat): List<T> = s_list_slice; 
 
     __safe internal function s_list_set<T>(l: List<T>, idx: Nat, v: T): List<T> = s_list_set; 
     __safe internal function s_list_push_back<T>(l: List<T>, v: T): List<T> = s_list_push_back; 
@@ -38,6 +38,7 @@ internal entity ListOps provides Some {
     __conditional_safe internal recursive? function s_list_map_pred_idx<T>(l: List<T>, p: recursive? pred(_: T, _: Nat) -> Bool): List<Bool> = s_list_map_pred_idx;
     __conditional_safe internal recursive? function s_list_map_fn<T, U>(l: List<T>, f: recursive? fn(_: T) -> U): List<U> = s_list_map_fn;
     __conditional_safe internal recursive? function s_list_map_fn_idx<T, U>(l: List<T>, p: recursive? pred(_: T, _: Nat) -> U): List<U> = s_list_map_fn_idx;
+    __conditional_safe internal recursive? function s_list_map_fn_sync<T, U, V>(l1: List<T>, l2: List<U>, count: Nat, f: recursive? fn(_: T, _: U) -> V): List<V> = s_list_map_sync;
 
     __safe internal function s_list_has<T>(l: List<T>, v: T): Bool = s_list_has; 
     __safe internal function s_list_indexof<T>(l: List<T>, v: T): Int = s_list_indexof; 

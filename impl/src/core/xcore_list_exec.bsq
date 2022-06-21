@@ -8,36 +8,36 @@ namespace Core;
 
 #if EXEC_LIBS
 internal entity ListOps provides Some {
-    internal function s_blockingfailure<T>(): T = s_blockingfailure; 
+    internal function s_list_index_int(start: Int, end: Int, len: Int): List<Int> = s_list_range;
+    internal function s_list_index_int(start: Nat, end: Nat, len: Nat): List<Nat> = s_list_range;
 
-    internal function s_index_int(start: Int, end: Int, len: Int): List<Int> = s_list_range_int;
-    internal function s_index_nat(start: Nat, end: Nat, len: Nat): List<Nat> = s_list_range_nat;
+    internal function s_list_empty<T>(l: List<T>): Bool = s_list_empty; 
+    internal function s_list_size<T>(l: List<T>): Nat = s_list_size; 
 
-    internal function s_empty<T>(l: List<T>): Bool = s_list_empty; 
-    internal function s_size<T>(l: List<T>): Nat = s_list_size; 
+    internal function s_list_fill<T>(count: Nat, v: T): List<T> = s_list_fill;
 
-    internal function s_fill<T>(count: Nat, v: T): List<T> = s_list_fill;
+    internal function s_list_append<T>(ll: List<T>, rr: List<T>): List<T> = s_list_append;
 
-    internal function s_get<T>(l: List<T>, i: Nat): T = s_list_safe_get;
-    internal function s_back<T>(l: List<T>): T = s_list_safe_back;
-    internal function s_front<T>(l: List<T>): T = s_list_safe_front;
+    internal function s_list_get<T>(l: List<T>, i: Nat): T = s_list_get;
+    internal function s_list_back<T>(l: List<T>): T = s_list_back;
+    internal function s_list_front<T>(l: List<T>): T = s_list_front;
 
-    internal function s_set<T>(l: List<T>, i: Nat, v: T): List<T> = s_list_set;
-    internal function s_remove<T>(l: List<T>, i: Nat): List<T> = s_list_remove;
+    internal function s_list_set<T>(l: List<T>, i: Nat, v: T): List<T> = s_list_set;
+    internal function s_list_remove<T>(l: List<T>, i: Nat): List<T> = s_list_remove;
 
-    internal function s_pop_back<T>(l: List<T>): List<T> = s_list_pop_back;
-    internal function s_pop_front<T>(l: List<T>): List<T> = s_list_pop_front;
+    internal function s_list_pop_back<T>(l: List<T>): List<T> = s_list_pop_back;
+    internal function s_list_pop_front<T>(l: List<T>): List<T> = s_list_pop_front;
 
-    internal function s_push_back<T>(l: List<T>, v: T): List<T> = s_list_push_back;
-    internal function s_push_front<T>(l: List<T>, v: T): List<T> = s_list_push_front;
+    internal function s_list_push_back<T>(l: List<T>, v: T): List<T> = s_list_push_back;
+    internal function s_list_push_front<T>(l: List<T>, v: T): List<T> = s_list_push_front;
 
-    internal recursive? function s_has_pred<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): Bool = s_list_has_pred;
-    internal recursive? function s_has_pred_idx<T>(l: List<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Bool = s_list_find_has_idx;
+    internal recursive? function s_list_has_pred<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): Bool = s_list_has_pred;
+    internal recursive? function s_list_has_pred_idx<T>(l: List<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Bool = s_list_find_has_idx;
 
-    internal recursive? function s_find_pred<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): Int = s_list_find_pred;
-    internal recursive? function s_find_pred_idx<T>(l: List<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Int = s_list_find_pred_idx;
-    internal recursive? function s_find_pred_last<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): Int = s_list_find_pred_lase;
-    internal recursive? function s_find_pred_last_idx<T>(l: List<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Int = s_list_find_pred_last_idx;
+    internal recursive? function s_list_find_pred<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): Int = s_list_find_pred;
+    internal recursive? function s_list_find_pred_idx<T>(l: List<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Int = s_list_find_pred_idx;
+    internal recursive? function s_list_find_pred_last<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): Int = s_list_find_pred_lase;
+    internal recursive? function s_list_find_pred_last_idx<T>(l: List<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Int = s_list_find_pred_last_idx;
 
     internal function s_has<T>(l: List<T>, v: T): Bool = s_list_has; 
     internal function s_indexof<T>(l: List<T>, v: T): Int = s_list_indexof; 
@@ -46,14 +46,12 @@ internal entity ListOps provides Some {
     internal recursive? function s_filter_pred<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): List<T> = s_list_filter_pred;
     internal recursive? function s_filter_pred_idx<T>(l: List<T>, p: recursive? pred(_: T, _: Nat) -> Bool): List<T> = s_list_filter_pred_idx;
 
-    internal recursive? function s_map<T, U>(l: List<T>, f: recursive? fn(_: T) -> U): List<U> = s_list_map;
-    internal recursive? function s_map_idx<T, U>(l: List<T>, f: recursive? fn(_: T, _: Nat) -> U): List<U> = s_list_map_idx;
-    internal recursive? function s_map_sync<T, U, V>(l1: List<T>, l2: List<U>, count: Nat, f: recursive? fn(_: T, _: U) -> V): List<V> = s_list_map_sync;
+    internal recursive? function s_list_map_fn<T, U>(l: List<T>, f: recursive? fn(_: T) -> U): List<U> = s_list_map;
+    internal recursive? function s_list_map_fn_idx<T, U>(l: List<T>, f: recursive? fn(_: T, _: Nat) -> U): List<U> = s_list_map_idx;
+    internal recursive? function s_list_map_fn_sync<T, U, V>(l1: List<T>, l2: List<U>, count: Nat, f: recursive? fn(_: T, _: U) -> V): List<V> = s_list_map_sync;
 
     internal function s_slice_front<T>(l: List<T>, start: Nat): List<T> = s_list_slice_start;
     internal function s_slice_end<T>(l: List<T>, end: Nat): List<T> = s_list_slice_end;
-
-    internal function s_append<T>(ll: List<T>, rr: List<T>): List<T> = s_list_append;
 
     internal function s_reverse<T>(ll: List<T>): List<T> = s_list_reverse_ne;
 
