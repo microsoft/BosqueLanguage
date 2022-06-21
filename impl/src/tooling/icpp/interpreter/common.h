@@ -386,16 +386,20 @@ enum class BSQPrimitiveImplTag
 
     float_power,
     decimal_power,
+    nat_mod,
 
     string_empty,
     string_append,
-    s_strconcat_ne,
-    s_strjoin_ne,
 
     bytebuffer_getformat,
     bytebuffer_getcompression,
 
     datetime_create,
+    utcdatetime_create,
+    calendardate_create,
+    relativetime_create,
+    isotimestamp_create,
+    latlongcoordinate_create,
 
     s_list_build_k,
     s_list_size_ne,

@@ -158,6 +158,7 @@ struct BSQMapTypeFlavor
 
     const BSQType* keytype;
     const BSQType* valuetype;
+    const BSQType* tupletype;
 
     const BSQMapTreeType* treetype;
 };

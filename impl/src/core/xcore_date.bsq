@@ -31,7 +31,7 @@ internal entity DateOps provides Some {
             return false;
         }
         else {
-            return NumericOps::modNat(y, 4) == 0;
+            return NumericOps::s_modNat(y, 4) == 0;
         }
     }
 }

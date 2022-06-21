@@ -388,9 +388,6 @@ public:
 
     static void* s_sort_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* lt, const std::vector<StorageLocationPtr>& params);
     static void* s_unique_from_sorted_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* eq, const std::vector<StorageLocationPtr>& params);
-
-    static BSQString s_strconcat_ne(void* t, const BSQListReprType* ttype);
-    static BSQString s_strjoin_ne(void* t, const BSQListReprType* ttype, StorageLocationPtr sep);
 };
 
 class BSQMapOps

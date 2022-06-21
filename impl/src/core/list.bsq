@@ -35,12 +35,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return List<[Nat, T]>{};
         }
         else {
-            let len = ListOps::s_list_size<T>(this);
-            let ilist = ListOps::s_list_index_nat(0, len, len);
-
-            return ListOps::s_list_map_fn<Nat, [Nat, T]>(ilist, fn(n: Nat): [Nat, T] => {
-                return [n, ListOps::s_list_get<T>(this, n)];
-            });
+            return ListOps::s_map_idx<T, [Nat, T]>(this, fn(v: T, idx: Nat): [Nat, T] => [idx, v]);
         }
     }
 
@@ -51,12 +46,18 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return List<[T, U]>{};
         }
         else {
-            let len = ListOps::s_list_size<T>(this);
-            let ilist = ListOps::s_list_index_nat(0, len, len);
+            return ListOps::s_map_sync<T, U, [T, U]>(this, l, fn(v1: T, v2: U): [T, U] => [v1, v2]);
+        }
+    }
 
-            return ListOps::s_list_map_fn<Nat, [T, U]>(ilist, fn(n: Nat): [T, U] => {
-                return [ListOps::s_list_get<T>(this, n), ListOps::s_list_get<U>(l, n)];
-            });
+    method zipMap<U=?, V=?>(l: List<U>, f: recursive? fn(_: T, _: U) -> V): List<V>
+        requires ListOps::s_list_size<T>(this) == ListOps::s_list_size<U>(l);
+    {
+        if(ListOps::s_list_empty<T>(this)) {
+            return List<V>{};
+        }
+        else {
+            return ListOps::s_map_sync<T, U, V>(this, l, f);
         }
     }
 
@@ -1746,7 +1747,18 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return List<[T, U]>{};
         }
         else {
-            return ListOps::s_map_sync<T, U, [T, U]>(this, l, ListOps::s_size<T>(l1), fn(v1: T, v2: U): [T, U] => [v1, v2]);
+            return ListOps::s_map_sync<T, U, [T, U]>(this, l, fn(v1: T, v2: U): [T, U] => [v1, v2]);
+        }
+    }
+
+    method zipMap<U=?, V=?>(l: List<U>, f: recursive? fn(_: T, _: U) -> V): List<V>
+        requires ListOps::s_list_size<T>(this) == ListOps::s_list_size<U>(l);
+    {
+        if(ListOps::s_list_empty<T>(this)) {
+            return List<V>{};
+        }
+        else {
+            return ListOps::s_map_sync<T, U, V>(this, l, f);
         }
     }
 

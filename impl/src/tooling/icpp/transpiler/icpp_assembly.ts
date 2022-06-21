@@ -287,7 +287,6 @@ class ICPPInvokeDecl {
     readonly stackBytes: number;
     readonly maskSlots: number;
 
-
     constructor(name: string, ikey: MIRInvokeKey, srcFile: string, sinfoStart: SourceInfo, sinfoEnd: SourceInfo, recursive: boolean, params: ICPPFunctionParameter[], resultType: MIRResolvedTypeKey, stackBytes: number, maskSlots: number) {
         this.name = name;
         this.ikey = ikey;
@@ -459,7 +458,8 @@ class ICPPAssembly
             ptag: ICPPParseTag.EntityDeclOfTag,
             tkey: icpptype.tkey,
             name: edecl.tkey,
-            oftype: edecl.fromtype
+            valuetype: edecl.valuetype,
+            basetype: edecl.basetype
         };
     }
     
@@ -491,7 +491,7 @@ class ICPPAssembly
                 name: edecl.tkey,
                 allocinfo: icpptype.allocinfo.jemit(),
                 oftype: edecl.fromtype,
-                norefs: icpptype.canScalarStackAllocate(),
+                norefs: ICPPTypeSizeInfo.isScalarOnlyMask(icpptype.allocinfo.inlinedmask),
                 boxedtype: icpptype.needsBoxableType() ? this.generateBoxedTypeName(icpptype.tkey) : null
             };
         }
@@ -554,7 +554,7 @@ class ICPPAssembly
                 allocinfo: icpplayout.allocinfo.jemit(),
                 name: edcl.tkey,
                 vtable: vtbl || null,
-                norefs: icpplayout.canScalarStackAllocate(),
+                norefs: ICPPTypeSizeInfo.isScalarOnlyMask(icpplayout.allocinfo.inlinedmask),
                 boxedtype: icpplayout.needsBoxableType() ? this.generateBoxedTypeName(edcl.tkey) : null,
                 fieldnames: icpplayout.fieldnames,
                 fieldtypes: icpplayout.fieldtypes,
@@ -614,7 +614,7 @@ class ICPPAssembly
                 allocinfo: icpplayout.allocinfo.jemit(),
                 name: cdcl.typeID,
                 vtable: vtbl || null,
-                norefs: icpplayout.canScalarStackAllocate(),
+                norefs: ICPPTypeSizeInfo.isScalarOnlyMask(icpplayout.allocinfo.inlinedmask),
                 boxedtype: icpplayout.needsBoxableType() ? this.generateBoxedTypeName(cdcl.typeID) : null,
                 maxIndex: icpplayout.maxIndex,
                 ttypes: icpplayout.ttypes,
@@ -645,7 +645,7 @@ class ICPPAssembly
                 allocinfo: icpplayout.allocinfo.jemit(),
                 name: cdcl.typeID,
                 vtable: vtbl || null,
-                norefs: icpplayout.canScalarStackAllocate(),
+                norefs: ICPPTypeSizeInfo.isScalarOnlyMask(icpplayout.allocinfo.inlinedmask),
                 boxedtype: icpplayout.needsBoxableType() ? this.generateBoxedTypeName(cdcl.typeID) : null,
                 propertynames: icpplayout.propertynames,
                 propertytypes: icpplayout.propertytypes,
@@ -660,7 +660,7 @@ class ICPPAssembly
             tkey: cdcl.typeID,
             allocinfo: icpplayout.allocinfo.jemit(),
             name: cdcl.typeID,
-            norefs: icpplayout.canScalarStackAllocate(),
+            norefs: ICPPTypeSizeInfo.isScalarOnlyMask(icpplayout.allocinfo.inlinedmask),
             etypes: icpplayout.etypes,
             idxoffsets: icpplayout.eoffsets
         };
@@ -799,10 +799,7 @@ class ICPPAssembly
                 const ldcl = edcl as MIRPrimitiveListEntityTypeDecl;
                 return {
                     ltype: ldcl.tkey,
-                    entrytype: ldcl.getTypeT().typeID,
-                    pv4type: `PartialVector4<${ldcl.getTypeT().typeID}>`,
-                    pv8type: `PartialVector8<${ldcl.getTypeT().typeID}>`,
-                    treetype: `ListTree<${ldcl.getTypeT().typeID}>`
+                    entrytype: ldcl.getTypeT().typeID
                 };
             }
             else {
@@ -817,8 +814,7 @@ class ICPPAssembly
                     ltype: mdcl.tkey,
                     keytype: mdcl.getTypeK().typeID,
                     valuetype: mdcl.getTypeV().typeID,
-                    tupletype: mdcl.tupentrytype,
-                    treetype: `MapTree<${mdcl.getTypeK().typeID}, ${mdcl.getTypeV().typeID}>`
+                    tupletype: mdcl.tupletype
                 };
             }
             else {

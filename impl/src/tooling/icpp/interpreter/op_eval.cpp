@@ -1997,7 +1997,7 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
     }
     case BSQPrimitiveImplTag::number_nattoint: {
         BSQNat nn = SLPTR_LOAD_CONTENTS_AS(BSQNat, params[0]);
-        BSQ_LANGUAGE_ASSERT(nn <= (BSQNat)std::numeric_limits<BSQInt>::max(), &invk->srcFile, 0, "Out-of-bounds Nat to Int");
+        BSQ_LANGUAGE_ASSERT(nn <= (BSQNat)UINT64_MAX, &invk->srcFile, 0, "Out-of-bounds Nat to Int");
         
         SLPTR_STORE_CONTENTS_AS(BSQInt, resultsl, (BSQInt)nn);
         break;
@@ -2019,14 +2019,14 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
     }
     case BSQPrimitiveImplTag::number_bignattonat: {
         BSQBigNat nn = SLPTR_LOAD_CONTENTS_AS(BSQBigNat, params[0]);
-        BSQ_LANGUAGE_ASSERT(nn <= (BSQBigNat)std::numeric_limits<BSQNat>::max(), &invk->srcFile, 0, "Out-of-bounds BigNat to Nat");
+        BSQ_LANGUAGE_ASSERT(nn <= (BSQBigNat)UINT64_MAX, &invk->srcFile, 0, "Out-of-bounds BigNat to Nat");
         
         SLPTR_STORE_CONTENTS_AS(BSQNat, resultsl, (BSQNat)nn);
         break;
     }
     case BSQPrimitiveImplTag::number_biginttoint: {
         BSQBigInt ii = SLPTR_LOAD_CONTENTS_AS(BSQBigInt, params[0]);
-        BSQ_LANGUAGE_ASSERT((BSQBigInt)std::numeric_limits<BSQInt>::lowest() <= ii && ii <= (BSQBigInt)std::numeric_limits<BSQInt>::max(), &invk->srcFile, 0, "Out-of-bounds BigInt to Int");
+        BSQ_LANGUAGE_ASSERT((BSQBigInt)INT64_MIN <= ii && ii <= (BSQBigInt)INT64_MAX, &invk->srcFile, 0, "Out-of-bounds BigInt to Int");
         
         SLPTR_STORE_CONTENTS_AS(BSQInt, resultsl, (BSQInt)ii);
         break;
@@ -2139,6 +2139,10 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         SLPTR_STORE_CONTENTS_AS(BSQDecimal, resultsl, std::pow(SLPTR_LOAD_CONTENTS_AS(BSQDecimal, params[0]), SLPTR_LOAD_CONTENTS_AS(BSQDecimal, params[1])));
         break;
     }
+    case BSQPrimitiveImplTag::nat_mod: {
+        SLPTR_STORE_CONTENTS_AS(BSQNat, resultsl, SLPTR_LOAD_CONTENTS_AS(BSQNat, params[0]) % SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]));
+        break;
+    }
     case BSQPrimitiveImplTag::string_empty: {
         BSQString str = SLPTR_LOAD_CONTENTS_AS(BSQString, params[0]);
 
@@ -2147,18 +2151,6 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
     }
     case BSQPrimitiveImplTag::string_append: {
         BSQString res = BSQStringImplType::concat2(params[0], params[1]);
-
-        SLPTR_STORE_CONTENTS_AS(BSQString, resultsl, res);
-        break;
-    }
-    case BSQPrimitiveImplTag::s_strconcat_ne: {
-        BSQString res = BSQListOps::s_strconcat_ne(LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]));
-
-        SLPTR_STORE_CONTENTS_AS(BSQString, resultsl, res);
-        break;
-    }
-    case BSQPrimitiveImplTag::s_strjoin_ne: {
-        BSQString res = BSQListOps::s_strjoin_ne(LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), params[1]);
 
         SLPTR_STORE_CONTENTS_AS(BSQString, resultsl, res);
         break;
@@ -2190,12 +2182,76 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
             (uint8_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[2]),
             (uint8_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[3]),
             (uint8_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[4]),
+            0, //padding
             tziter.first->c_str()
         };
 
         SLPTR_STORE_CONTENTS_AS(BSQDateTime, resultsl, dt);
         break;
     }
+    case BSQPrimitiveImplTag::utcdatetime_create: {
+        BSQUTCDateTime dt = {
+            (uint16_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[0]),
+            (uint8_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]),
+            (uint8_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[2]),
+            (uint8_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[3]),
+            (uint8_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[4]),
+            0 //padding
+        };
+
+        SLPTR_STORE_CONTENTS_AS(BSQUTCDateTime, resultsl, dt);
+        break;
+    }
+    case BSQPrimitiveImplTag::calendardate_create: {
+        BSQCalendarDate dt = {
+            (uint16_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[0]),
+            (uint8_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]),
+            (uint8_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[2]),
+            0
+        };
+
+        SLPTR_STORE_CONTENTS_AS(BSQCalendarDate, resultsl, dt);
+        break;
+    }
+    case BSQPrimitiveImplTag::relativetime_create: {
+        BSQRelativeTime dt = {
+            (uint16_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[0]),
+            (uint8_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]),
+            0
+        };
+
+        SLPTR_STORE_CONTENTS_AS(BSQRelativeTime, resultsl, dt);
+        break;
+    }
+    case BSQPrimitiveImplTag::isotimestamp_create: {
+        BSQISOTimeStamp its = {
+            (uint16_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[0]),
+            (uint8_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]),
+            (uint8_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[2]),
+            (uint8_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[3]),
+            (uint8_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[4]),
+
+            (uint8_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[5]),
+            (uint8_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[6]),
+
+            0, //padding
+            0 //more padding
+        };
+
+        SLPTR_STORE_CONTENTS_AS(BSQISOTimeStamp, resultsl, its);
+        break;
+    }
+    case BSQPrimitiveImplTag::latlongcoordinate_create: {
+        BSQLatLongCoordinate llc = {
+            (float)SLPTR_LOAD_CONTENTS_AS(double, params[0]),
+            (float)SLPTR_LOAD_CONTENTS_AS(double, params[1])
+        };
+
+        SLPTR_STORE_CONTENTS_AS(BSQLatLongCoordinate, resultsl, llc);
+        break;
+    }
+
+
     case BSQPrimitiveImplTag::s_list_build_k: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
         auto rres = BSQListOps::list_cons(lflavor, params);

@@ -54,15 +54,20 @@ std::map<std::string, BSQPrimitiveImplTag> MarshalEnvironment::g_primitiveinvoke
     {"float_power", BSQPrimitiveImplTag::float_power},
     {"decimal_power", BSQPrimitiveImplTag::decimal_power},
 
+    {"nat_mod", BSQPrimitiveImplTag::nat_mod},
+
     {"string_empty", BSQPrimitiveImplTag::string_empty},
     {"string_append", BSQPrimitiveImplTag::string_append},
-    {"s_strconcat_ne", BSQPrimitiveImplTag::s_strconcat_ne},
-    {"s_strjoin_ne", BSQPrimitiveImplTag::s_strjoin_ne},
 
     {"bytebuffer_getformat", BSQPrimitiveImplTag::bytebuffer_getformat},
     {"bytebuffer_getcompression", BSQPrimitiveImplTag::bytebuffer_getcompression},
 
     {"datetime_create", BSQPrimitiveImplTag::datetime_create},
+    {"utcdatetime_create", BSQPrimitiveImplTag::utcdatetime_create},
+    {"calendartime_create", BSQPrimitiveImplTag::calendardate_create},
+    {"relativetime_create", BSQPrimitiveImplTag::relativetime_create},
+    {"isotimestamp_create", BSQPrimitiveImplTag::isotimestamp_create},
+    {"latlongcoordinate_create", BSQPrimitiveImplTag::latlongcoordinate_create},
 
     {"s_list_build_k", BSQPrimitiveImplTag::s_list_build_k},
     {"s_list_size_ne", BSQPrimitiveImplTag::s_list_size_ne},

@@ -171,16 +171,13 @@ class SMTEntityInternalOfTypeDecl extends SMTEntityDecl {
     }
 }
 
-
 class SMTEntityCollectionEntryTypeDecl extends SMTEntityDecl {
     readonly consf: { cname: string, cargs: { fname: string, ftype: string }[] };
-    readonly emptyf: string;
 
-    constructor(smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: string }[] }, emptyf: string) {
+    constructor(smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: string }[] }) {
         super(false, smtname, typetag, "INVALID_SPECIAL", "INVALID_SPECIAL");
 
         this.consf = consf;
-        this.emptyf = emptyf;
     }
 }
 
@@ -335,13 +332,18 @@ class SMTAssembly {
         "TypeTag_String",
         "TypeTag_ByteBuffer",
         "TypeTag_DateTime",
+        "TypeTag_UTCDateTime",
+        "TypeTag_CalendarDate",
+        "TypeTag_RelativeTime",
         "TypeTag_TickTime",
         "TypeTag_LogicalTime",
-        "TypeTag_UUID",
-        "TypeTag_ContentHash",
+        "TypeTag_ISOTimeStamp",
+        "TypeTag_UUID4",
+        "TypeTag_UUID7",
+        "TypeTag_ShaContentHash",
+        "TypeTag_LatLongCoordinate",
         "TypeTag_Regex"
     ];
-    xxxx;
     keytypeTags: string[] = [
         "TypeTag_None",
         "TypeTag_Bool",
@@ -350,10 +352,15 @@ class SMTAssembly {
         "TypeTag_BigInt",
         "TypeTag_BigNat",
         "TypeTag_String",
-        "TypeTag_DateTime",
+        "TypeTag_UTCDateTime",
+        "TypeTag_CalendarDate",
+        "TypeTag_RelativeTime",
+        "TypeTag_TickTime",
         "TypeTag_LogicalTime",
-        "TypeTag_UUID",
-        "TypeTag_ContentHash"
+        "TypeTag_ISOTimeStamp",
+        "TypeTag_UUID4",
+        "TypeTag_UUID7",
+        "TypeTag_ShaContentHash",
     ];
 
     abstractTypes: string[] = [];
@@ -370,6 +377,7 @@ class SMTAssembly {
     constantDecls: SMTConstantDecl[] = [];
     
     uninterpfunctions: SMTFunctionUninterpreted[] = [];
+    permutefunctions: string[] = [];
 
     maskSizes: Set<number> = new Set<number>();
     resultTypes: { hasFlag: boolean, rtname: string, ctype: SMTTypeInfo }[] = [];
@@ -568,7 +576,7 @@ class SMTAssembly {
                 const einfo = (tt as SMTEntityCollectionTypeDecl).entrydecl as SMTEntityCollectionEntryTypeDecl;
                 return {
                     decl: `(${einfo.smtname} 0)`,
-                    consf: `( (${einfo.consf.cname} ${einfo.consf.cargs.map((te) => `(${te.fname} ${te.ftype})`).join(" ")}) (${einfo.emptyf}) )`
+                    consf: `( (${einfo.consf.cname} ${einfo.consf.cargs.map((te) => `(${te.fname} ${te.ftype})`).join(" ")}) )`
                 };
             });
 
@@ -619,6 +627,9 @@ class SMTAssembly {
         const ufdecls = this.uninterpfunctions
             .sort((uf1, uf2) => uf1.fname.localeCompare(uf2.fname))
             .map((uf) => uf.emitSMT2());
+
+        const permdecls = this.permutefunctions
+            .sort((pf1, pf2) => pf1.localeCompare(pf2));
 
         const gdefs = this.constantDecls
             .sort((c1, c2) => c1.gkey.localeCompare(c2.gkey))
@@ -776,7 +787,7 @@ class SMTAssembly {
                 ...collectiontypeinfoconsts,
                 ...gdecls
             ],
-            UF_DECLS: ufdecls,
+            UF_DECLS: [...ufdecls, ...permdecls],
             FUNCTION_DECLS: foutput.reverse(),
             GLOBAL_DEFINITIONS: gdefs,
             ACTION: action

@@ -540,7 +540,7 @@ __internal __typedeclable __typebase entity ISOTimeStamp provides Some, KeyType,
         requires sec < 61n;
         requires millis < 1000n;
     {
-        return ISOTimeStamp::s_create(year, month, day, hour, min, sec, millis, tzoffset);
+        return ISOTimeStamp::s_create(year, month, day, hour, min, sec, millis);
     }
 }
 

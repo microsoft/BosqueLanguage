@@ -2721,6 +2721,10 @@ class SMTBodyEmitter {
                 const rr = new SMTCallSimple("^", [new SMTVar(args[0].vname), new SMTVar(args[0].vname)]);
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, rr);
             }
+            case "nat_mod": {
+                const rr = new SMTCallSimple("mod", [new SMTVar(args[0].vname), new SMTVar(args[0].vname)]);
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, rr);
+            }
             case "string_empty": {
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, SMTCallSimple.makeEq(new SMTCallSimple("str.len", [new SMTVar(args[0].vname)]), new SMTConst("0")));
             }
@@ -2737,6 +2741,28 @@ class SMTBodyEmitter {
                 const dd = new SMTCallSimple("BDateTime@cons", args.map((arg) => new SMTVar(arg.vname)));
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);
             }
+            case "utcdatetime_create": {
+                const dd = new SMTCallSimple("BUTCDateTime@cons", args.map((arg) => new SMTVar(arg.vname)));
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);
+            }
+            case "calendardate_create": {
+                const dd = new SMTCallSimple("BCalendarDate@cons", args.map((arg) => new SMTVar(arg.vname)));
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);
+            }
+            case "relativetime_create": {
+                const dd = new SMTCallSimple("BRelativeTime@cons", args.map((arg) => new SMTVar(arg.vname)));
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);
+            }
+            case "isotimestamp_create": {
+                const dd = new SMTCallSimple("BISOTimeStamp@cons", args.map((arg) => new SMTVar(arg.vname)));
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);
+            }
+            case "latlongcoordinate_create": {
+                const dd = new SMTCallSimple("BLatLongCoordinate@cons", args.map((arg) => new SMTVar(arg.vname)));
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);
+            }
+
+            
             case "s_list_index": {
                 const genlist = new SMTCallSimple("@@SortedIntSeq@@Create", args.map((arg) => new SMTVar(arg.vname)));
                 const chklist = SMTCallSimple.makeAndOf(
