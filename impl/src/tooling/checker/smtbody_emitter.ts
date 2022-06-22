@@ -3242,18 +3242,23 @@ class SMTBodyEmitter {
                 xxxx;
             }
             case "s_list_reverse": {
+                //use for all assert
                 xxxx;
             }
             case "s_list_is_sorted": {
+                //use forall assert
                 xxxx;
             }
             case "s_list_is_unique": {
+                //use forall assert
                 xxxx;
             }
             case "s_list_sort": {
+                //use UF generate sort seq -- make sure either < OR index is less
                 xxxx;
             }
             case "s_list_uniqueify": {
+                //use UF generate sort seq -- make sure always <
                 xxxx;
             }
             case "s_list_reduce": {
