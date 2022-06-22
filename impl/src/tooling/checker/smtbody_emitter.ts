@@ -3241,6 +3241,21 @@ class SMTBodyEmitter {
             case "s_list_mask_select_cast": {
                 xxxx;
             }
+            case "s_list_reverse": {
+                xxxx;
+            }
+            case "s_list_is_sorted": {
+                xxxx;
+            }
+            case "s_list_is_unique": {
+                xxxx;
+            }
+            case "s_list_sort": {
+                xxxx;
+            }
+            case "s_list_uniqueify": {
+                xxxx;
+            }
             case "s_list_reduce": {
                 const lt = this.typegen.getMIRType(idecl.params[0].type);
                 const sval = this.typegen.generateListTypeGetData(lt, new SMTVar(args[0].vname));

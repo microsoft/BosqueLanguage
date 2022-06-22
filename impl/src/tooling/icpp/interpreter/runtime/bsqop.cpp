@@ -103,7 +103,7 @@ std::map<std::string, BSQPrimitiveImplTag> MarshalEnvironment::g_primitiveinvoke
     {"s_list_map_idx", BSQPrimitiveImplTag::s_list_map_idx},
     {"s_list_map_sync", BSQPrimitiveImplTag::s_list_map_sync},
     {"s_list_sort", BSQPrimitiveImplTag::s_list_sort},
-    {"s_list_unique_from_sorted", BSQPrimitiveImplTag::s_list_unique_from_sorted},
+    {"s_list_uniqueify", BSQPrimitiveImplTag::s_list_uniqueify},
 
     {"s_map_build_k", BSQPrimitiveImplTag::s_map_build_k},
     {"s_map_size", BSQPrimitiveImplTag::s_map_size},

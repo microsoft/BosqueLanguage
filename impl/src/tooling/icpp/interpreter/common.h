@@ -435,7 +435,7 @@ enum class BSQPrimitiveImplTag
     s_list_map_idx,
     s_list_map_sync,
     s_list_sort,
-    s_list_unique_from_sorted,
+    s_list_uniqueify,
 
     s_map_build_k,
     s_map_size,

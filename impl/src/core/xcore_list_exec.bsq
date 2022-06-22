@@ -58,10 +58,10 @@ internal entity ListOps provides Some {
     internal function s_list_slice_end<T>(l: List<T>, end: Nat): List<T> = s_list_slice_end;
     internal function s_list_slice<T>(l: List<T>, start: Nat, length: Nat): List<T> = s_list_slice;
 
-    internal function s_reverse<T>(ll: List<T>): List<T> = s_list_reverse_ne;
+    internal function s_list_reverse<T>(ll: List<T>): List<T> = s_list_reverse;
 
-    internal recursive? function s_sort<T>(l: List<T>, cmp: recursive? pred(_: T, _: T) -> Bool): List<T> = s_list_sort;
-    internal recursive? function s_unique_from_sorted<T>(l: List<T>, eq: recursive? pred(_: T, _: T) -> Bool): List<T> = s_list_unique_from_sorted;
+    internal recursive? function s_list_sort<T>(l: List<T>, cmp: recursive? pred(_: T, _: T) -> Bool): List<T> = s_list_sort;
+    internal recursive? function s_list_uniqueify<T>(l: List<T>, cmp: recursive? pred(_: T, _: T) -> Bool): List<T> = s_list_uniqueify;
 
     internal recursive? function s_list_reduce<T, U>(l: List<T>, iv: U, f: recursive? fn(_: U, _: T) -> U): U = s_list_reduce;
     internal recursive? function s_list_reduce_idx<T, U>(l: List<T>, iv: U, f: recursive? fn(_: U, _: T, _: Nat) -> U): U = s_list_reduce_idx;

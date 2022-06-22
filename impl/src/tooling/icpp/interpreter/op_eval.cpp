@@ -2498,7 +2498,7 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         LIST_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_unique_from_sorted_ne: {
+    case BSQPrimitiveImplTag::s_list_uniqueify: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
 
         auto rr = BSQListOps::s_unique_from_sorted_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), invk->pcodes.find("eq")->second, params);
