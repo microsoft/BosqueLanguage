@@ -2561,6 +2561,8 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     recursive? method partition<K grounded KeyType=?>(pf: recursive? fn(_: T) -> K): Map<K, List<T>> {
+        xxxx;
+
         if(ListOps::s_list_empty<T>(this)) {
             return Map<K, List<T>>{};
         }
@@ -2571,6 +2573,8 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     recursive? method sort(cmp: recursive? pred(_: T, _: T) -> Bool): List<T> {
+        xxxx;
+
         if(ListOps::s_list_empty<T>(this)) {
             return List<T>{};
         }
@@ -2580,6 +2584,8 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     recursive? method uniqueify(cmp: recursive? pred(_: T, _: T) -> Bool, eq: recursive? pred(_: T, _: T) -> Bool): List<T> {
+        xxxx;
+
         if(ListOps::s_list_empty<T>(this)) {
             return List<T>{};
         }
@@ -2589,6 +2595,8 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     }
 
     method reverse(): List<T> {
+        xxxx;
+        
         if(ListOps::s_list_empty<T>(this)) {
             return List<T>{};
         }
