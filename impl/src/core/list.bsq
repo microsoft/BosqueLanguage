@@ -1847,13 +1847,13 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                 return List<U>{s_safeAs<T, U>(ListOps::s_list_get<T>(this, sidx))};
             }
             elif(ListOps::s_list_all_true(mask)) {
-                return xxx;
+                return ListOps::s_list_cast<T, U>(this);
             }
             else {
-                return xxx ListOps::s_list_mask_select<T>(this, mask);
+                return ListOps::s_list_mask_select_cast<T, U>(this, mask);
             }
 #else
-            xxxx;
+            return ListOps::s_list_filter_cast<T, U>[recursive?](this, p);
 #endif
         }
     }
@@ -1863,16 +1863,24 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return List<T!Some>{};
         }
         else {
+#if CHECK_LIBS
             let mask = ListOps::s_list_map_pred<T>(this, pred(v: T): Bool => v !== none);
-            if(!ListOps::s_list_has_true(mask)) {
+            if(ListOps::s_list_all_false(mask)) {
                 return List<T!Some>{};
             }
-            elif(!ListOps::s_list_has_false(mask)) {
-                return ListOps::s_map_fn<T, T!Some>(fl, fn(v: T): U => s_safeAs<T, T!Some>(v));
+            elif(ListOps::s_list_single_true(mask)) {
+                let sidx = ListOps::s_list_single_indexof_true(mask);
+                return List<T!Some>{s_safeAs<T, T!Some>(ListOps::s_list_get<T>(this, sidx))};
+            }
+            elif(ListOps::s_list_all_true(mask)) {
+                return ListOps::s_list_cast<T, T!Some>(this);
             }
             else {
-                return ListOps::s_blockingfailure<List<T!Some>>();
+                return ListOps::s_list_mask_select_cast<T, T!Some>(this, mask);
             }
+#else
+            return ListOps::s_list_filter_cast<T, T!Some>[recursive?](this, p);
+#endif
         }
     }
 
@@ -1881,16 +1889,24 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return List<T!IOptionT>{};
         }
         else {
+#if CHECK_LIBS
             let mask = ListOps::s_list_map_pred<T>(this, pred(v: T): Bool => v !== nothing);
-            if(!ListOps::s_list_has_true(mask)) {
+            if(ListOps::s_list_all_false(mask)) {
                 return List<T!IOptionT>{};
             }
-            elif(!ListOps::s_list_has_false(mask)) {
-                return ListOps::s_map_fn<T, T!IOptionT>(fl, fn(v: T): U => s_safeAs<T, T!IOptionT>(v));
+            elif(ListOps::s_list_single_true(mask)) {
+                let sidx = ListOps::s_list_single_indexof_true(mask);
+                return List<T!IOptionT>{s_safeAs<T, T!IOptionT>(ListOps::s_list_get<T>(this, sidx))};
+            }
+            elif(ListOps::s_list_all_true(mask)) {
+                return ListOps::s_list_cast<T, T!IOptionT>(this);
             }
             else {
-                return ListOps::s_blockingfailure<List<T!IOptionT>>();
+                return ListOps::s_list_mask_select_cast<T, T!IOptionT>(this, mask);
             }
+#else
+            return ListOps::s_list_filter_cast<T, T!IOptionT>[recursive?](this, p);
+#endif
         }
     }
 
@@ -1899,16 +1915,24 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return List<T!IResultT>{};
         }
         else {
+#if CHECK_LIBS
             let mask = ListOps::s_list_map_pred<T>(this, pred(v: T): Bool => v.isOk());
-            if(!ListOps::s_list_has_true(mask)) {
+            if(ListOps::s_list_all_false(mask)) {
                 return List<T!IResultT>{};
             }
-            elif(!ListOps::s_list_has_false(mask)) {
-                return ListOps::s_map_fn<T, T!IResultT>(fl, fn(v: T): U => s_safeAs<T, T!IResultT>(v));
+            elif(ListOps::s_list_single_true(mask)) {
+                let sidx = ListOps::s_list_single_indexof_true(mask);
+                return List<T!IResultT>{s_safeAs<T, T!IResultT>(ListOps::s_list_get<T>(this, sidx))};
+            }
+            elif(ListOps::s_list_all_true(mask)) {
+                return ListOps::s_list_cast<T, T!IResultT>(this);
             }
             else {
-                return ListOps::s_blockingfailure<List<T!IResultT>>();
+                return ListOps::s_list_mask_select_cast<T, T!IResultT>(this, mask);
             }
+#else
+            return ListOps::s_list_filter_cast<T, T!IResultT>[recursive?](this, p);
+#endif
         }
     }
 
@@ -1917,16 +1941,24 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return List<T!IResultE>{};
         }
         else {
+#if CHECK_LIBS
             let mask = ListOps::s_list_map_pred<T>(this, pred(v: T): Bool => v.isErr());
-            if(!ListOps::s_list_has_true(mask)) {
+            if(ListOps::s_list_all_false(mask)) {
                 return List<T!IResultE>{};
             }
-            elif(!ListOps::s_list_has_false(mask)) {
-                return ListOps::s_map_fn<T, T!IResultE>(fl, fn(v: T): U => s_safeAs<T, T!IResultE>(v));
+            elif(ListOps::s_list_single_true(mask)) {
+                let sidx = ListOps::s_list_single_indexof_true(mask);
+                return List<T!IResultE>{s_safeAs<T, T!IResultE>(ListOps::s_list_get<T>(this, sidx))};
+            }
+            elif(ListOps::s_list_all_true(mask)) {
+                return ListOps::s_list_cast<T, T!IResultE>(this);
             }
             else {
-                return ListOps::s_blockingfailure<List<T!IResultE>>();
+                return ListOps::s_list_mask_select_cast<T, T!IResultE>(this, mask);
             }
+#else
+            return ListOps::s_list_filter_cast<T, T!IResultE>[recursive?](this, p);
+#endif
         }
     }
 
@@ -2019,11 +2051,19 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
         elif(start == end) {
             return List<T>{};
         }
-        elif(/\(start == 0n, end == ListOps::s_list_size<T>(this))) {
-            return this;
-        }
         else {
-            return ListOps::s_list_slice<T>(this, start, end - start);
+            if(/\(start == 0n, end == ListOps::s_list_size<T>(this))) {
+                return this;
+            }
+            elif(start == 0n) {
+                return ListOps::s_list_slice_end<T>(this, end);
+            }
+            elif(end == ListOps::s_list_size<T>(this)) {
+                return ListOps::s_list_slice_start<T>(this, start);
+            }
+            else {
+                return ListOps::s_list_slice<T>(this, start, end - start);
+            }
         }
     }
 
@@ -2036,11 +2076,11 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
         elif(k == 0n) {
             return this;
         }
-        elif(start == ListOps::s_list_size<T>(this)) {
+        elif(k == ListOps::s_list_size<T>(this)) {
             return List<T>{};
         }
         else {
-            return ListOps::s_list_slice_front<T>(this, k);
+            return ListOps::s_list_slice_start<T>(this, k);
         }
     } 
 
@@ -2066,8 +2106,13 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return List<T>{}; 
         }
         else {
+#if CHECK_LIBS
             let vmap = ListOps::s_list_map_pred<T>[recursive?](this, p);
             let idx = ListOps::s_list_indexof_false(vmap);
+#else
+            let idx = ListOps::s_list_find_pred<T>[recursive?](this, recursive? pred(v: T) => !p[recursive?](v));
+#endif
+
             if(idx == -1i) {
                 return this;
             }
@@ -2085,7 +2130,22 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return List<T>{}; 
         }
         else {
-            return ListOps::s_blockingfailure<List<T>>();
+#if CHECK_LIBS
+            let vmap = ListOps::s_list_map_pred_idx<T>[recursive?](this, p);
+            let idx = ListOps::s_list_indexof_false(vmap);
+#else
+            let idx = ListOps::s_list_find_pred_idx<T>[recursive?](this, recursive? pred(v: T, idx: Nat) => !p[recursive?](v, idx));
+#endif
+
+            if(idx == -1i) {
+                return this;
+            }
+            elif(idx == 0i) {
+                return List<T>{};
+            }
+            else {
+                return ListOps::s_list_slice_end<T>(this, NumericOps::s_intToNat(idx));
+            }
         }
     }
 
@@ -2094,8 +2154,13 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return List<T>{}; 
         }
         else {
+#if CHECK_LIBS
             let vmap = ListOps::s_list_map_pred<T>[recursive?](this, p);
             let idx = ListOps::s_list_indexof_false(vmap);
+#else
+            let idx = ListOps::s_list_find_pred<T>[recursive?](this, recursive? pred(v: T) => !p[recursive?](v));
+#endif
+
             if(idx == 0i) {
                 return this;
             }
@@ -2113,7 +2178,23 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return List<T>{}; 
         }
         else {
-            return ListOps::s_blockingfailure<List<T>>();
+#if CHECK_LIBS
+            let vmap = ListOps::s_list_map_pred_idx<T>[recursive?](this, p);
+            let idx = ListOps::s_list_indexof_false(vmap);
+#else
+            let idx = ListOps::s_list_find_pred_idx<T>[recursive?](this, recursive? pred(v: T, idx: Nat) => !p[recursive?](v, idx));
+#endif
+
+            if(idx == 0i) {
+                return this;
+            }
+            elif(idx == -1i) {
+                return List<T>{};
+            }
+            else {
+                return ListOps::s_list_slice_start<T>(this, NumericOps::s_intToNat(idx));
+            }
+        }
         }
     }
 
@@ -2122,8 +2203,13 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return List<T>{}; 
         }
         else {
+#if CHECK_LIBS
             let vmap = ListOps::s_list_map_pred<T>[recursive?](this, p);
             let idx = ListOps::s_list_indexof_true(vmap);
+#else
+            let idx = ListOps::s_list_find_pred<T>[recursive?](this, p);
+#endif
+
             if(idx == -1i) {
                 return this;
             }
@@ -2141,7 +2227,22 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return List<T>{}; 
         }
         else {
-            return ListOps::s_blockingfailure<List<T>>();
+#if CHECK_LIBS
+            let vmap = ListOps::s_list_map_pred_idx<T>[recursive?](this, p);
+            let idx = ListOps::s_list_indexof_true(vmap);
+#else
+            let idx = ListOps::s_list_find_pred_idx<T>[recursive?](this, p);
+#endif
+
+            if(idx == -1i) {
+                return this;
+            }
+            elif(idx == 0i) {
+                return List<T>{};
+            }
+            else {
+                return ListOps::s_list_slice_end<T>(this, NumericOps::s_intToNat(idx));
+            }
         }
     }
 
@@ -2150,8 +2251,13 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return List<T>{}; 
         }
         else {
+#if CHECK_LIBS
             let vmap = ListOps::s_list_map_pred<T>[recursive?](this, p);
             let idx = ListOps::s_list_indexof_true(vmap);
+#else
+            let idx = ListOps::s_list_find_pred<T>[recursive?](this, p);
+#endif
+
             if(idx == 0i) {
                 return this;
             }
@@ -2169,7 +2275,22 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return List<T>{}; 
         }
         else {
-            return ListOps::s_blockingfailure<List<T>>();
+#if CHECK_LIBS
+            let vmap = ListOps::s_list_map_pred_idx<T>[recursive?](this, p);
+            let idx = ListOps::s_list_indexof_true(vmap);
+#else
+            let idx = ListOps::s_list_find_pred_idx<T>[recursive?](this, p);
+#endif
+
+            if(idx == 0i) {
+                return this;
+            }
+            elif(idx == -1i) {
+                return List<T>{};
+            }
+            else {
+                return ListOps::s_list_slice_start<T>(this, NumericOps::s_intToNat(idx));
+            }
         }
     }
 
@@ -2187,7 +2308,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return List<U>{}; 
         }
         else {
-            return ListOps::s_blockingfailure<List<U>>();
+            return ListOps::s_list_map_fn_idx<T, U>[recursive?](this, f);
         }
     }
 
@@ -2212,7 +2333,14 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return List<U?>{}; 
         }
         else {
-            return ListOps::s_blockingfailure<List<U?>>();
+            return ListOps::s_list_map_fn_idx<T, U?>[recursive?](this, recursive? fn(v: T, idx: Nat): U? => {
+                if(v === none) {
+                    return none;
+                }
+                else {
+                    return f[recursive?](v, idx);
+                }
+            });
         }
     }
 
@@ -2237,7 +2365,14 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return List<Option<U>>{}; 
         }
         else {
-            return ListOps::s_blockingfailure<List<Option<U>>>();
+            return ListOps::s_list_map_fn_idx<T, Option<U>>[recursive?](this, recursive? fn(v: T, idx: Nat): U => {
+                if(v === nothing) {
+                    return nothing;
+                }
+                else {
+                    return something(f[recursive?](v.data(), idx));
+                }
+            });
         }
     }
 
@@ -2247,7 +2382,10 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
         }
         else {
             return ListOps::s_list_map_fn<T, U>(this, fn(v: T): U => {
-                return m.get(v);
+                let mv = MapOps::s_map_find<T, U>(v);
+
+                assert(mv.1);
+                return mv.0.1;
             });
         }
     }
@@ -2258,7 +2396,14 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
         }
         else {
             return ListOps::s_list_map_fn<T, U?>(this, fn(v: T): U => {
-                return m.getOrNone(v);
+                let mv = MapOps::s_map_find<T, U>(v);
+
+                if(!mv.1) {
+                    return none;
+                }
+                else {
+                    return mv.0.1;
+                }
             });
         }
     }
@@ -2268,8 +2413,15 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return List<Option<U>>{};
         }
         else {
-            return ListOps::s_list_map_fn<T, U>(this, fn(v: T): U => {
-                return m.getOrOption(v);
+            return ListOps::s_list_map_fn<T, Option<U>>(this, fn(v: T): Option<U> => {
+                let mv = MapOps::s_map_find<T, U>(v);
+
+                if(!mv.1) {
+                    return nothing;
+                }
+                else {
+                    something(return mv.0.1);
+                }
             });
         }
     }
@@ -2279,22 +2431,57 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return List<U>{};
         }
         else {
-            let mask = ListOps::s_list_map_pred<T>[recursive?](this, pred(v: T) => m.has(v));
-            if(!ListOps::s_list_has_true(mask)) {
+#if CHECK_LIBS
+            let mask = ListOps::s_list_map_pred<T>(this, pred(v: T): Bool => MapOps::s_map_has<T, U>(m, v));
+            if(ListOps::s_list_all_false(mask)) {
                 return List<U>{};
             }
-            elif(!ListOps::s_list_has_false(mask)) {
-                return ListOps::s_list_map_fn<T, U>(this, fn(v: T): U => m.get(v));
+            elif(ListOps::s_list_single_true(mask)) {
+                let sidx = ListOps::s_list_single_indexof_true(mask);
+                return List<U>{MapOps::s_map_get<T, U>(ListOps::s_list_get<T>(this, sidx))};
+            }
+            elif(ListOps::s_list_all_true(mask)) {
+                return ListOps::s_list_map_fn<T, U>(this, fn(v: T): U => MapOps::s_map_get<T, U>(v));
             }
             else {
-                let sti = ListOps::s_list_single_indexof_true(mask);
-                if(sti != -1) {
-                    return List<U>{m.get(ListOps::s_list_get<T>(this, NumericOps::s_intToNat(idx)))};
+                let pjct = ListOps::s_list_mask_select<T>(this, mask);
+                return ListOps::s_list_map_fn<T, U>(pjct, fn(v: T): U => MapOps::s_map_get<T, U>(v));
+            }
+#else
+        let pjct = ListOps::s_filter_pred<T>[recursive?](this, p);
+        return ListOps::s_list_map_fn<T, U>(pjct, fn(v: T): U => MapOps::s_map_get<T, U>(v));
+#endif
+        }
+    }
+
+    recursive? method joinGroup<U=?>(ol: List<U>, p: recursive? pred(_: T, _: U) -> Bool): List<[T, List<U>]> {
+        if(ListOps::s_list_empty<T>(this)) {
+            return List<[T, List<U>]>{};
+        }
+        elif(ListOps::s_list_empty<U>(ol)) {
+            return ListOps::s_list_map_fn<T, [T, List<U>]>(this, fn(v: T): [T, List<U>] => [v, List<U>{}]);
+        }
+        else {
+            return ListOps::s_list_map_fn<T, [T, List<U>]>(this, recursive? fn(v: T): [T, List<U>] => {
+#if CHECK_LIBS
+                let mask = ListOps::s_list_map_pred<U>[recursive?](ol, recursive? pred(u: U): Bool => p[recursive?](v, u));
+                if(ListOps::s_list_all_false(mask)) {
+                    return [v, List<U>{}];
+                }
+                elif(ListOps::s_list_single_true(mask)) {
+                    let sidx = ListOps::s_list_single_indexof_true(mask);
+                    return [v, List<U>{ListOps::s_list_get<U>(ol, sidx)}];
+                }
+                elif(ListOps::s_list_all_true(mask)) {
+                    return [v, ol];
                 }
                 else {
-                    return ListOps::s_blockingfailure<List<U>>();
+                    return [v, ListOps::s_list_mask_select<U>(ol, mask)];
                 }
-            }
+#else
+                return [v, ListOps::s_filter_pred<U>[recursive?](ol, recursive? pred(u: U): Bool => p[recursive?](v, u))];
+#endif
+            });
         }
     }
 
@@ -2303,18 +2490,43 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return List<[T, U]>{};
         }
         else {
-            return ListOps::s_blockingfailure<List<[T, U]>>();
-            //map, filter, concat
-        }
-    }
-
-    recursive? method joinGroup<U=?>(ol: List<U>, p: recursive? pred(_: T, _: U) -> Bool): List<[T, List<U>]> {
-        if(\/(ListOps::s_empty<T>(this), ListOps::s_empty<T>(ol))) {
-            return List<[T, U]>{};
-        }
-        else {
-            return ListOps::s_blockingfailure<List<[T, U]>>();
-            //map, filter
+            return ListOps::s_list_reduce<T, List<[T, U]>>(this, List<[T, U]>{}, recursive? fn(acc: List<[T, U]>, v: T): List<[T, U]> => {
+#if CHECK_LIBS
+                let mask = ListOps::s_list_map_pred<U>[recursive?](ol, recursive? pred(u: U): Bool => p[recursive?](v, u));
+                if(ListOps::s_list_all_false(mask)) {
+                    return acc;
+                }
+                elif(ListOps::s_list_single_true(mask)) {
+                    let sidx = ListOps::s_list_single_indexof_true(mask);
+                    return ListOps::s_list_push_back<U>(acc, ListOps::s_list_get<U>(ol, sidx));
+                }
+                elif(ListOps::s_list_all_true(mask)) {
+                    if(ListOps::s_list_empty<U>(acc)) {
+                        return ol;
+                    }
+                    else {
+                        return ListOps::s_list_append<U>(acc, ol);
+                    }
+                }
+                else {
+                    let ull = ListOps::s_list_mask_select<U>(ol, mask);
+                    if(ListOps::s_list_empty<U>(acc)) {
+                        return ull;
+                    }
+                    else { 
+                        return ListOps::s_list_append<U>(acc, ull);
+                    }
+                }
+#else
+                let ull = ListOps::s_filter_pred<U>[recursive?](ol, recursive? pred(u: U): Bool => p[recursive?](v, u));
+                if(ListOps::s_list_empty<T>(ull)) {
+                    return acc;
+                }
+                else {
+                    return ListOps::s_list_append<U>(acc, ull);
+                }
+#endif
+            });
         }
     }
 

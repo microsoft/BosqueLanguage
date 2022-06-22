@@ -11,8 +11,13 @@ internal entity MapOps provides Some {
     __safe internal function s_map_empty<K grounded KeyType, V>(m: Map<K, V>): Bool = s_map_empty; 
     __safe internal function s_map_count<K grounded KeyType, V>(m: Map<K, V>): Nat = s_map_count; 
 
+    //
+    //XXXX add a min elem and max elem method here (and in exec)!!!!!
+    //
+
     __safe internal function s_map_has<K grounded KeyType, V>(m: Map<K, V>, k: K): Bool = s_map_has; 
-    __safe internal function s_map_get<K grounded KeyType, V>(m: Map<K, V>, k: K): [K, V] = s_map_get; 
+    __safe internal function s_map_get<K grounded KeyType, V>(m: Map<K, V>, k: K): [K, V] = s_map_get;
+    __safe internal function s_map_find<K grounded KeyType, V>(m: Map<K, V>, k: K): (|[K, V], Bool|) = s_map_find;
     
     __safe internal function s_map_disjoint<K grounded KeyType, V>(m1: Map<K, V>, m2: Map<K, V>): Bool = s_map_disjoint;
     __safe internal function s_map_union<K grounded KeyType, V>(m1: Map<K, V>, m2: Map<K, V>): Map<K, V> = s_map_union; 

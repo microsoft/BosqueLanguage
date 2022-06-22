@@ -2393,6 +2393,19 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         Allocator::GlobalAllocator.releaseCollectionIterator(&liter);
         break;
     }
+    case BSQPrimitiveImplTag::s_list_slice: {
+        xxxx;
+        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
+
+        BSQListSpineIterator liter(LIST_LOAD_TYPE_INFO_REPR(params[0]), LIST_LOAD_DATA(params[0]));
+        Allocator::GlobalAllocator.registerCollectionIterator(&liter);
+
+        auto rr = BSQListOps::s_slice_end(lflavor, liter, LIST_LOAD_TYPE_INFO_REPR(params[0]), SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]), 0);
+        LIST_STORE_RESULT_REPR(rr, resultsl);
+        
+        Allocator::GlobalAllocator.releaseCollectionIterator(&liter);
+        break;
+    }
     case BSQPrimitiveImplTag::s_list_get: {
         BSQListOps::s_safe_get(LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]), invk->binds.find("T")->second, resultsl);
         break;
@@ -2439,6 +2452,14 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         break;
     }
     case BSQPrimitiveImplTag::s_list_filter_pred_idx_ne: {
+        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
+
+        auto rr = BSQListOps::s_filter_pred_idx_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), invk->pcodes.find("p")->second, params);
+        LIST_STORE_RESULT_REPR(rr, resultsl);
+        break;
+    }
+    case BSQPrimitiveImplTag::s_list_filter_cast: {
+        xxxx;
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
 
         auto rr = BSQListOps::s_filter_pred_idx_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), invk->pcodes.find("p")->second, params);

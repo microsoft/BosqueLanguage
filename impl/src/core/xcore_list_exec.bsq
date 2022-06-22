@@ -45,15 +45,18 @@ internal entity ListOps provides Some {
     internal function s_list_indexof<T>(l: List<T>, v: T): Int = s_list_indexof; 
     internal function s_list_last_indexof<T>(l: List<T>, v: T): Int = s_list_last_indexof; 
 
-    internal recursive? function s_filter_pred<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): List<T> = s_list_filter_pred;
-    internal recursive? function s_filter_pred_idx<T>(l: List<T>, p: recursive? pred(_: T, _: Nat) -> Bool): List<T> = s_list_filter_pred_idx;
+    internal recursive? function s_list_filter_pred<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): List<T> = s_list_filter_pred;
+    internal recursive? function s_list_filter_pred_idx<T>(l: List<T>, p: recursive? pred(_: T, _: Nat) -> Bool): List<T> = s_list_filter_pred_idx;
+
+    internal recursive? function s_list_filter_cast<T, U>(l: List<T>, p: recursive? pred(_: T) -> Bool): List<U> = s_list_filter_cast;
 
     internal recursive? function s_list_map_fn<T, U>(l: List<T>, f: recursive? fn(_: T) -> U): List<U> = s_list_map;
     internal recursive? function s_list_map_fn_idx<T, U>(l: List<T>, f: recursive? fn(_: T, _: Nat) -> U): List<U> = s_list_map_idx;
     internal recursive? function s_list_map_fn_sync<T, U, V>(l1: List<T>, l2: List<U>, count: Nat, f: recursive? fn(_: T, _: U) -> V): List<V> = s_list_map_sync;
 
-    internal function s_slice_front<T>(l: List<T>, start: Nat): List<T> = s_list_slice_start;
-    internal function s_slice_end<T>(l: List<T>, end: Nat): List<T> = s_list_slice_end;
+    internal function s_list_slice_front<T>(l: List<T>, start: Nat): List<T> = s_list_slice_start;
+    internal function s_list_slice_end<T>(l: List<T>, end: Nat): List<T> = s_list_slice_end;
+    internal function s_list_slice<T>(l: List<T>, start: Nat, length: Nat): List<T> = s_list_slice;
 
     internal function s_reverse<T>(ll: List<T>): List<T> = s_list_reverse_ne;
 
