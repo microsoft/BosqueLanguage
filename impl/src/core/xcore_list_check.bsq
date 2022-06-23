@@ -38,7 +38,7 @@ internal entity ListOps provides Some {
     __conditional_safe internal recursive? function s_list_map_pred_idx<T>(l: List<T>, p: recursive? pred(_: T, _: Nat) -> Bool): List<Bool> = s_list_map_pred_idx;
     __conditional_safe internal recursive? function s_list_map_fn<T, U>(l: List<T>, f: recursive? fn(_: T) -> U): List<U> = s_list_map_fn;
     __conditional_safe internal recursive? function s_list_map_fn_idx<T, U>(l: List<T>, p: recursive? pred(_: T, _: Nat) -> U): List<U> = s_list_map_fn_idx;
-    __conditional_safe internal recursive? function s_list_map_fn_sync<T, U, V>(l1: List<T>, l2: List<U>, count: Nat, f: recursive? fn(_: T, _: U) -> V): List<V> = s_list_map_sync;
+    __conditional_safe internal recursive? function s_list_map_fn_sync<T, U, V>(l1: List<T>, l2: List<U>, f: recursive? fn(_: T, _: U) -> V): List<V> = s_list_map_sync;
 
     __safe internal function s_list_has<T>(l: List<T>, v: T): Bool = s_list_has; 
     __safe internal function s_list_indexof<T>(l: List<T>, v: T): Int = s_list_indexof; 
