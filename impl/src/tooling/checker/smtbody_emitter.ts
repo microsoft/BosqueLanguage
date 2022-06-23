@@ -3319,6 +3319,12 @@ class SMTBodyEmitter {
                 const cbody = this.typegen.generateMapTypeGetLength(mt, new SMTVar(args[0].vname));
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
             }
+            case "s_map_min_key": {
+                xxxx;
+            }
+            case "s_map_max_key": {
+                xxxx;
+            }
             case "s_map_has": {
                 const mt = this.typegen.getMIRType(idecl.params[0].type);
                 const cbody = SMTCallSimple.makeNotEq(
@@ -3332,10 +3338,10 @@ class SMTBodyEmitter {
                 const cbody = this.typegen.generateMapEntryTypeGetValueTuple(mt, new SMTCallSimple("select", [this.typegen.generateMapTypeGetArray(mt, new SMTVar(args[0].vname)), new SMTVar(args[1].vname)]));
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
             }
-            case "s_map_disjoint": {
+            case "s_map_union": {
                 assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
             }
-            case "s_map_union": {
+            case "s_map_union_fast": {
                 assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
             }
             case "s_map_add": {

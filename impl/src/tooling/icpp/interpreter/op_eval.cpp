@@ -2512,16 +2512,24 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         MAP_STORE_RESULT_REPR(rr, params.size(), resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_map_size_ne: {
+    case BSQPrimitiveImplTag::s_map_count: {
         SLPTR_STORE_CONTENTS_AS(BSQNat, resultsl, MAP_LOAD_COUNT(params[0]));
         break;
     }
-    case BSQPrimitiveImplTag::s_map_has_ne: {
+    case BSQPrimitiveImplTag::s_map_min_key: {
+        xxxx;
+        break;
+    }
+    case BSQPrimitiveImplTag::s_map_max_key: {
+        xxxx;
+        break;
+    }
+    case BSQPrimitiveImplTag::s_map_has: {
         auto rr = BSQMapOps::s_lookup_ne(MAP_LOAD_REPR(params[0]), MAP_LOAD_TYPE_INFO_REPR(params[0]), params[1], invk->binds.find("K")->second);
         SLPTR_STORE_CONTENTS_AS(BSQBool, resultsl, (BSQBool)(rr != nullptr));
         break;
     }
-    case BSQPrimitiveImplTag::s_map_find_ne: {
+    case BSQPrimitiveImplTag::s_map_find: {
         auto ttype = MAP_LOAD_TYPE_INFO_REPR(params[0]);
         auto rr = BSQMapOps::s_lookup_ne(MAP_LOAD_REPR(params[0]), ttype, params[1], invk->binds.find("K")->second);
         BSQ_INTERNAL_ASSERT(rr != nullptr);
@@ -2529,9 +2537,18 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         invk->binds.find("K")->second->storeValue(resultsl, ttype->getValueLocation(rr));
         break;
     }
-    case BSQPrimitiveImplTag::s_map_union_ne: {
+    case BSQPrimitiveImplTag::s_map_union: {
         const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.find(std::make_pair(invk->binds.find("K")->second->tid, invk->binds.find("V")->second->tid))->second;
 
+        uint64_t count = MAP_LOAD_COUNT(params[0]) + MAP_LOAD_COUNT(params[1]);
+        auto rr = BSQMapOps::s_union_ne(mflavor, MAP_LOAD_REPR(params[0]), MAP_LOAD_TYPE_INFO_REPR(params[0]), MAP_LOAD_REPR(params[1]), MAP_LOAD_TYPE_INFO_REPR(params[1]), count);
+        MAP_STORE_RESULT_REPR(rr, count, resultsl);
+        break;
+    }
+    case BSQPrimitiveImplTag::s_map_union_fast: {
+        const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.find(std::make_pair(invk->binds.find("K")->second->tid, invk->binds.find("V")->second->tid))->second;
+
+xxxx;
         uint64_t count = MAP_LOAD_COUNT(params[0]) + MAP_LOAD_COUNT(params[1]);
         auto rr = BSQMapOps::s_union_ne(mflavor, MAP_LOAD_REPR(params[0]), MAP_LOAD_TYPE_INFO_REPR(params[0]), MAP_LOAD_REPR(params[1]), MAP_LOAD_TYPE_INFO_REPR(params[1]), count);
         MAP_STORE_RESULT_REPR(rr, count, resultsl);

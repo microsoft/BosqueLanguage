@@ -5,14 +5,14 @@
 
 //The core namespace implements the primitive concepts used in the bosque core language
 namespace Core;
-#if CHECK_LIBS
+
 __internal entity Map<K grounded KeyType, V> provides Some, Expandoable<[K, V]>, APIType when K grounded APIType && V grounded APIType, TestableType when K grounded TestableType && V grounded TestableType {
     method empty(): Bool {
         return MapOps::s_map_empty<K, V>(this);
     }
 
     method size(): Nat {
-        return MapOps::s_map_size<K, V>(this);
+        return MapOps::s_map_count<K, V>(this);
     }
 
     method has(key: K): Bool {
@@ -27,37 +27,35 @@ __internal entity Map<K grounded KeyType, V> provides Some, Expandoable<[K, V]>,
     }
 
     method getOrNone(key: K): V? {
-        if(!MapOps::s_map_has<K, V>(this, key)) {
+        let ev = MapOps.s_map_find<K, V>(this, key);
+        if(!ev.1) {
             return none;
         }
         else {
-            let e = MapOps::s_map_get<K, V>(this, key);
-            return e.1;
+            return ev.0.1;
         }
     }
 
     method getOption(key: K): Option<V> {
-        if(!MapOps::s_map_has<K, V>(this, key)) {
+        let ev = MapOps.s_map_find<K, V>(this, key);
+        if(!ev.1) {
             return nothing;
         }
         else {
-            let e = MapOps::s_map_get<K, V>(this, key);
-            return something(e.1);
+            return something(ev.0.1);
         }
     }
 
     method getTry(key: K, out? v: V): Bool {
-        if(!MapOps::s_map_has<K, V>(this, key)) {
+        let ev = MapOps.s_map_find<K, V>(this, key);
+        if(!ev.1) {
             return false;
         }
         else {
-            let e = MapOps::s_map_get<K, V>(this, key);
-            v = e.1;
+            v = ev.0.1;
             return true;
         }
     }
-
-    //TODO: do we want a disjoint and/or submap check here?
 
     method union(m: Map<K, V>): Map<K, V> {
         if(/\(MapOps::s_map_empty<K, V>(this), MapOps::s_map_empty<K, V>(m))) {
@@ -70,9 +68,31 @@ __internal entity Map<K grounded KeyType, V> provides Some, Expandoable<[K, V]>,
             return this;
         }
         else {
-            assert MapOps::s_map_disjoint<K, V>(this, m);
+            let minkey1 = MapOps::s_map_min_key<K, V>(this);
+            let maxkey1 = MapOps::s_map_max_key<K, V>(this);
 
-            return MapOps::s_map_union(this, m);
+            let minkey2 = MapOps::s_map_min_key<K, V>(m);
+            let maxkey2 = MapOps::s_map_max_key<K, V>(m);
+
+            if(MapOps::s_map_count<K, V>(this) == 1) {
+                assert(!MapOps::s_map_has<K, V>(m, minkey1));
+                return MapOps::s_map_add<K, V>(m, minkey1);
+            }
+            elif(MapOps::s_map_count<K, V>(m) == 1) {
+                assert(!MapOps::s_map_has<K, V>(this, minkey2));
+                return MapOps::s_map_add<K, V>(this, minkey2);
+            }
+            else {
+                if(KeyType::less<K>(maxkey1, minkey2)) {
+                    return MapOps::s_map_union_fast<K, V>(this, m);
+                }
+                elif(KeyType::less<K>(maxkey2, minkey1)) {
+                    return MapOps::s_map_union_fast<K, V>(m, this);
+                }
+                else {
+                    return MapOps::s_map_union<K, V>(this, m);
+                }
+            }
         }
     }
 
@@ -90,6 +110,7 @@ __internal entity Map<K grounded KeyType, V> provides Some, Expandoable<[K, V]>,
             return Map<K, U>{};
         }
         else {
+            xxxx;
             return MapOps::s_blockingfailure<Map<K, U>>();
         }
     }
@@ -121,129 +142,3 @@ __internal entity Map<K grounded KeyType, V> provides Some, Expandoable<[K, V]>,
     //TODO: ref versions of the add/remove/set operators
     //
 }
-
-//////////////////////////////////////////////////////////////////////////////////
-#else
-//////////////////////////////////////////////////////////////////////////////////
-
-__internal entity Map<K grounded KeyType, V> provides Some, Expandoable<[K, V]>, APIType when K grounded APIType && V grounded APIType, TestableType when K grounded TestableType && V grounded TestableType {
-    method empty(): Bool {
-        return MapOps::s_empty<K, V>(this);
-    }
-
-    method size(): Nat {
-        if(MapOps::s_empty<K, V>(this)) {
-            return 0n;
-        }
-        else {
-            return MapOps::s_size<K, V>(this);
-        }
-    }
-
-    method has(key: K): Bool {
-        return MapOps::s_has<K, V>(this, key);
-    }
-
-    method get(key: K): V 
-        requires MapOps::s_has<K, V>(this, key);
-    {
-        let e = MapOps::s_get<K, V>(this, key);
-        return e.1;
-    }
-
-    method getOrNone(key: K): V? {
-        let fv = MapOps::s_find<K, V>(this, key);
-        if(fv === none) {
-            return none;
-        }
-        else {
-            return fv.1;
-        }
-    }
-
-    method getOption(key: K): Option<V> {
-        let fv = MapOps::s_find<K, V>(this, key);
-        if(fv === none) {
-            return nothing;
-        }
-        else {
-            return something(fv.1);
-        }
-    }
-
-    method getTry(key: K, out? v: V): Bool {
-        let fv = MapOps::s_find<K, V>(this, key);
-        if(fv === none) {
-            return false;
-        }
-        else {
-            v = fv.1;
-            return true;
-        }
-    }
-
-    //TODO: do we want a disjoint and/or submap check here?
-
-    method union(m: Map<K, V>): Map<K, V> {
-        if(/\(MapOps::s_empty<K, V>(this), MapOps::s_empty<K, V>(m))) {
-            return Map<K, V>{};
-        }
-        elif(MapOps::s_empty<K, V>(this)) {
-            return m;
-        }
-        elif(MapOps::s_empty<K, V>(m)) {
-            return this;
-        }
-        else {
-            return MapOps::s_union(this, m);
-        }
-    }
-
-    recursive? method submap(p: recursive? pred(k: K, v: V) -> Bool): Map<K, V> {
-        if(MapOps::s_empty<K, V>(this)) {
-            return Map<K, V>{};
-        }
-        else {
-            return MapOps::s_submap<K, V>[recursive?](this, p);
-        }
-    }
-
-    recursive? method remap<U=?>(f: recursive? fn(k: K, v: V) -> U): Map<K, U> {
-        if(MapOps::s_empty<K, V>(this)) {
-            return Map<K, V>{};
-        }
-        else {
-            return MapOps::s_remap<K, U>[recursive?](this, f);
-        }
-    }
-
-    method add(k: K, v: V): Map<K, V>
-        requires !MapOps::s_has<K, V>(this, k);
-    {
-        if(MapOps::s_empty<K, V>(this)) {
-            return Map<K, U>{[k, v]};
-        }
-        else {
-            return MapOps::s_map_add<K, V>(this, k, v);
-        }
-    }
-
-    method set(k: K, v: V): Map<K, V> 
-        requires MapOps::s_has<K, V>(this, k);
-    {
-        return MapOps::s_set<K, V>(this, k, v);
-    }
-
-    method remove(k: K): Map<K, V> 
-        requires MapOps::s_has<K, V>(this, k);
-    {
-        return MapOps::s_remove<K, V>(this, k);
-    }
-
-    //
-    //TODO: ref versions of the add/remove/set operators
-    //
-}
-#endif
-
-
