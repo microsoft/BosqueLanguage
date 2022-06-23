@@ -101,7 +101,20 @@ __internal entity Map<K grounded KeyType, V> provides Some, Expandoable<[K, V]>,
             return Map<K, V>{};
         }
         else {
-            return MapOps::s_blockingfailure<Map<K, V>>();
+#if CHECK_LIBS
+            let mask = MapOps::s_map_map_pred<K, V>[recursive?](this, p);
+            if(ListOps::s_list_all_false(mask)) {
+                return Map<K, V>{};
+            }
+            elif(ListOps::s_list_all_true(mask)) {
+                return this;
+            }
+            else {
+                return ListOps::s_map_mask_select<K, V>(this, mask);
+            }
+#else
+            return MapOps::s_map_submap<K, V>(this, p);
+#endif
         }
     }
 
@@ -110,8 +123,7 @@ __internal entity Map<K grounded KeyType, V> provides Some, Expandoable<[K, V]>,
             return Map<K, U>{};
         }
         else {
-            xxxx;
-            return MapOps::s_blockingfailure<Map<K, U>>();
+            return MapOps::s_map_remap<K, V, U>[recursive?](this, f);
         }
     }
 

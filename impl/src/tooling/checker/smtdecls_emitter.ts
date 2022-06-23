@@ -1125,7 +1125,7 @@ class SMTEmitter {
             this.assembly.uninterpfunctions.push(ufcc);
         });
 
-        this.assembly.permutefunctions = [...this.bemitter.requiredPermuteOps];
+        this.assembly.uninterpOps = [...this.bemitter.requiredUFOps];
 
         this.assembly.model = new SMTModelState(iargs, rarg, argchk, this.temitter.generateResultType(restype), iexp, targeterrorcheck, isvaluecheck, isvaluefalsechk);
         this.assembly.allErrors = this.bemitter.allErrors;

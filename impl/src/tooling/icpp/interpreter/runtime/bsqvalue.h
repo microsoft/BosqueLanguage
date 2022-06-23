@@ -976,6 +976,8 @@ struct BSQStringTreeRepr
     void* srepr1;
     void* srepr2;
     uint64_t size;
+    //TODO: stash perfect hashing bit if in tree to allow for fast order compare on strings! Maybe de-dup on GC in this tree too and use as Key value.
+    //Then we need to sweep this tree periodically for release OR do some special case for count 1 and a string check
 };
 
 class BSQStringTreeReprType : public BSQStringReprType

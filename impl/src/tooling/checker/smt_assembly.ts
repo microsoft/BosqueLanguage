@@ -377,7 +377,7 @@ class SMTAssembly {
     constantDecls: SMTConstantDecl[] = [];
     
     uninterpfunctions: SMTFunctionUninterpreted[] = [];
-    permutefunctions: string[] = [];
+    uninterpOps: string[] = [];
 
     maskSizes: Set<number> = new Set<number>();
     resultTypes: { hasFlag: boolean, rtname: string, ctype: SMTTypeInfo }[] = [];
@@ -628,7 +628,7 @@ class SMTAssembly {
             .sort((uf1, uf2) => uf1.fname.localeCompare(uf2.fname))
             .map((uf) => uf.emitSMT2());
 
-        const permdecls = this.permutefunctions
+        const ufopdecls = this.uninterpOps
             .sort((pf1, pf2) => pf1.localeCompare(pf2));
 
         const gdefs = this.constantDecls
@@ -787,7 +787,7 @@ class SMTAssembly {
                 ...collectiontypeinfoconsts,
                 ...gdecls
             ],
-            UF_DECLS: [...ufdecls, ...permdecls],
+            UF_DECLS: [...ufdecls, ...ufopdecls],
             FUNCTION_DECLS: foutput.reverse(),
             GLOBAL_DEFINITIONS: gdefs,
             ACTION: action
