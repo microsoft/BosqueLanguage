@@ -2285,6 +2285,10 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         LIST_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
+    case BSQPrimitiveImplTag::s_list_insert: {
+        xxxx;
+        break;
+    }
     case BSQPrimitiveImplTag::s_list_remove_ne: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
         auto ii = SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]);

@@ -2611,7 +2611,26 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                     return this;
                 }
                 else {
-                    return ListOps::s_list_sort<T>[recursive?](this, cmp);
+                    //TODO: this is rough, maybe a special \forall UF type thing would be better
+                    return ListOps::s_list_reduce<T, List<T>>[recursive?](this, List<T>{}, recursive? fn(acc: List<T>, v: T) => List<T> {
+                        if(ListOps::s_empty<T>(acc)) {
+                            return List<T>{v};
+                        }
+                        else {
+                            let mask = ListOps::s_list_map_pred<T>[recursive?](acc, recursive? pred(accv: T): Bool => cmp[recursive?](accv, v));
+                            let iidx = ListOps::s_list_indexof_false(mask);
+                            
+                            if(iidx == -1i) {
+                                return ListOps::s_list_push_back<T>(acc, v);
+                            }
+                            elif(iidx == 0) {
+                                return ListOps::s_list_push_front<T>(acc, v);
+                            }
+                            else {
+                                return ListOps::s_list_insert<T>(acc, iidx, v);
+                            }
+                        }
+                    });
                 }
 #else
                 return ListOps::s_list_sort<T>[recursive?](this, pred);
@@ -2634,7 +2653,21 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                     return this;
                 }
                 else {
-                    return ListOps::s_list_uniqueify<T>[recursive?](this, cmp);
+                    //TODO: this is rough, maybe a special \forall UF type thing would be better
+                    return ListOps::s_list_reduce<T, List<T>>[recursive?](this, List<T>{}, recursive? fn(acc: List<T>, v: T) => List<T> {
+                        if(ListOps::s_empty<T>(acc)) {
+                            return List<T>{v};
+                        }
+                        else {
+                            let mask = ListOps::s_list_map_pred<T>[recursive?](acc, recursive? pred(accv: T): Bool => /\(!cmp[recursive?](accv, v), !cmp[recursive?](v, accv)));
+                            if(ListOps::s_list_all_false(mask)) {
+                                return acc;
+                            }
+                            else {
+                                return ListOps::s_list_push_back<T>(acc, v);
+                            }
+                        }
+                    });
                 }
 #else
                 return ListOps::s_list_uniqueify<T>[recursive?](this, pred);
@@ -2652,7 +2685,19 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                 return this;
             }
             else {
+#if CHECK_LIBS
+                //TODO: this is a bit rough, maybe special case with quantifier and assert later
+                return ListOps::s_list_reduce<T, List<T>>(this, List<T>{}, fn(acc: List<T>, v: T) => List<T> {
+                    if(ListOps::s_empty<T>(acc)) {
+                        return List<T>{v};
+                    }
+                    else {
+                        return ListOps::s_list_push_front<T>(acc, v);
+                    }
+                });
+#else
                 return ListOps::s_list_reverse<T>(this);
+#endif
             }
         }
     }
@@ -2691,6 +2736,25 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
         requires i < ListOps::s_list_size<T>(this);
     {
         return ListOps::s_list_set<T>(this, i, v);
+    }
+
+    method insert(i: Nat, v: T): List<T> 
+        requires i <= ListOps::s_list_size<T>(this);
+    {
+        if(ListOps::s_list_empty<T>(this)) {
+            return List<T>{v};
+        }
+        else {
+            if(i == 0) {
+                return ListOps::s_list_push_front<T>(this, v);
+            }
+            elif(i == ListOps::s_list_size<T>(this)) {
+                return ListOps::s_list_push_back<T>(this, v);
+            }
+            else {
+                return ListOps::s_list_insert<T>(this, i, v);
+            }
+        }
     }
 
     method remove(i: Nat): List<T> 

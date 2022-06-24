@@ -406,6 +406,7 @@ enum class BSQPrimitiveImplTag
     s_list_set,
     s_list_push_back,
     s_list_push_front,
+    s_list_insert,
     s_list_remove,
     s_list_pop_back,
     s_list_pop_front,

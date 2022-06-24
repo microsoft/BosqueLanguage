@@ -2889,6 +2889,15 @@ class SMTBodyEmitter {
                 ]));
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
             }
+            case "s_list_insert": {
+                const sval = this.typegen.generateListTypeGetData(mirrestype, new SMTVar(args[0].vname));
+                const cbody = new SMTLet("sval", sval, this.typegen.generateListTypeConstructorSeq(mirrestype, new SMTCallSimple("seq.++", [
+                    new SMTCallSimple("seq.extract", [new SMTVar("sval"), new SMTConst("0"), new SMTVar(args[1].vname)]),
+                    new SMTCallSimple("seq.unit", [new SMTVar(args[2].vname)]),
+                    new SMTCallSimple("seq.extract", [new SMTVar("sval"), new SMTVar(args[1].vname), new SMTCallSimple("-", [this.typegen.generateListTypeGetLength(mirrestype, new SMTVar(args[0].vname)), new SMTVar(args[1].vname)])])
+                ])));
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+            }
             case "s_list_remove": {
                 const sval = this.typegen.generateListTypeGetData(mirrestype, new SMTVar(args[0].vname));
                 const cbody = new SMTLet("sval", sval, this.typegen.generateListTypeConstructorSeq(mirrestype, new SMTCallSimple("seq.++", [
@@ -3306,10 +3315,6 @@ class SMTBodyEmitter {
 
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateListTypeConstructorSeq(mirrestype, foldcall));
             }
-            case "s_list_reverse": {
-                //use for all assert
-                xxxx;
-            }
             case "s_list_is_sorted": {
                 const lt = this.typegen.getMIRType(idecl.params[0].type);
                 const tsval = this.typegen.generateListTypeGetData(lt, new SMTVar(args[0].vname));
@@ -3317,33 +3322,18 @@ class SMTBodyEmitter {
 
                 const ttype = (this.assembly.entityDecls.get(lt.typeID) as MIRPrimitiveListEntityTypeDecl).getTypeT();
                 
-                const issorted = `(forall ((@ii Int)) (=> (and (<= 0 @ii) (< @ii ${lenm1.emitSMT2(undefined)})) (${this.typegen.getSMTTypeFor(ttype).smttypename}@less (seq.nth ${tsval.emitSMT2(undefined)} @ii) (seq.nth ${tsval.emitSMT2(undefined)} (+ @ii 1)))))`;
+                const issorted = `(not (exists ((@ii Int)) (and (<= 0 @ii) (< @ii ${lenm1.emitSMT2(undefined)}) (${this.typegen.getSMTTypeFor(ttype).smttypename}@less (seq.nth ${tsval.emitSMT2(undefined)} (+ @ii 1)) (seq.nth ${tsval.emitSMT2(undefined)} @ii))))`;
                 
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTConst(issorted));
             }
             case "s_list_is_unique": {
-                //use forall assert
-                xxxx;
-            }
-            case "s_list_sort": {
-                //use UF generate sort seq -- make sure either < OR index is less
                 const lt = this.typegen.getMIRType(idecl.params[0].type);
                 const tsval = this.typegen.generateListTypeGetData(lt, new SMTVar(args[0].vname));
+                const lenm1 = this.typegen.generateListTypeGetLengthMinus1(lt, new SMTVar(args[0].vname));
 
-                const ttype = (this.assembly.entityDecls.get(lt.typeID) as MIRPrimitiveListEntityTypeDecl).getTypeT();
-
-                const vtype = this.typegen.getSMTTypeFor(ttype);
-                const sortidxfun = `sorted@${vtype.smttypename}`;
-                const newpermuteop = `(declare-fun ${sortidxfun} ((Seq ${vtype.smttypename})) (Seq Int))`;
-
-                if(!this.requiredUFOps.includes(newpermuteop)) {
-                    this.requiredUFOps.push(newpermuteop);
-                }
-                xxxx;
-            }
-            case "s_list_uniqueify": {
-                //use UF generate sort seq -- make sure always <
-                xxxx;
+                const isunique = `(not (exists ((@ii Int)) (and (<= 0 @ii) (< @ii ${lenm1.emitSMT2(undefined)}) (= (seq.nth ${tsval.emitSMT2(undefined)} @ii) (seq.nth ${tsval.emitSMT2(undefined)} (+ @ii 1))))))`;
+                
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTConst(isunique));
             }
             case "s_list_reduce": {
                 const lt = this.typegen.getMIRType(idecl.params[0].type);
@@ -3378,13 +3368,42 @@ class SMTBodyEmitter {
                 }
             }
             case "s_list_reduce_idx": {
-                xxxx;
+                const lt = this.typegen.getMIRType(idecl.params[0].type);
+                const sval = this.typegen.generateListTypeGetData(lt, new SMTVar(args[0].vname));
+
+                const pc = idecl.pcodes.get("f") as MIRPCode;
+                const pcdcl = this.typegen.assembly.invokeDecls.get(pc.code) as MIRInvokeDecl;
+                const argtype = this.typegen.getSMTTypeFor(this.typegen.getMIRType(pcdcl.params[0].type));
+                const pcfn = this.typegen.lookupFunctionName(pc.code);
+                const captured = pc.cargs.map((carg) => carg.cname);
+
+                const implicitlambdas = [pcfn];
+
+                if (this.isSafeInvoke(pc.code)) {
+                    const foldcall = new SMTCallSimple("seq.foldli", [
+                        new SMTConst(`(lambda ((@@acc ${this.typegen.getSMTTypeFor(mirrestype).smttypename}) (@@x ${argtype.smttypename}) (@@idx Int)) (${pcfn} @@acc @@x @@idx${captured.length !== 0 ? (" " + captured.join(" ")) : ""}))`),
+                        new SMTVar(args[1].vname),
+                        sval
+                    ]);
+
+                    return SMTFunction.createWithImplicitLambdas(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, foldcall, implicitlambdas);
+                }
+                else {
+                    const resultsmtu = this.typegen.generateResultType(mirrestype);
+                    const foldcall = new SMTCallSimple("seq.foldli", [
+                        new SMTConst(`(lambda ((@@acc ${resultsmtu.smttypename}) (@@x ${argtype.smttypename}) (@@idx Int)) (ite (${this.typegen.generateResultIsErrorTest(mirrestype, new SMTVar("@@acc"))}) @acc (${pcfn} ${this.typegen.generateResultGetSuccess(mirrestype, new SMTVar("@@acc")).emitSMT2(undefined)} @@x @@idx${captured.length !== 0 ? (" " + captured.join(" ")) : ""})))`),
+                        this.typegen.generateResultTypeConstructorSuccess(mirrestype, new SMTVar(args[1].vname)),
+                        sval
+                    ]);
+
+                    return SMTFunction.createWithImplicitLambdas(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, foldcall, implicitlambdas);
+                }
             }
             case "s_list_transduce": {
-                xxxx;
+                assert(false, "s_list_transduce");
             }
             case "s_list_transduce_idx": {
-                xxxx;
+                assert(false, "s_list_transduce")
             }
             case "s_map_empty": {
                 const mt = this.typegen.getMIRType(idecl.params[0].type);

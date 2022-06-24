@@ -29,6 +29,7 @@ internal entity ListOps provides Some {
     __safe internal function s_list_set<T>(l: List<T>, idx: Nat, v: T): List<T> = s_list_set; 
     __safe internal function s_list_push_back<T>(l: List<T>, v: T): List<T> = s_list_push_back; 
     __safe internal function s_list_push_front<T>(l: List<T>, v: T): List<T> = s_list_push_front; 
+    __safe internal function s_list_insert<T>(l: List<T>, idx: Nat, v: T): List<T> = s_list_insert;
 
     __safe internal function s_list_remove<T>(l: List<T>, idx: Nat): List<T> = s_list_remove; 
     __safe internal function s_list_pop_back<T>(l: List<T>): List<T> = s_list_pop_back; 
@@ -60,13 +61,8 @@ internal entity ListOps provides Some {
     __safe internal function s_list_cast<T, U>(l: List<T>): List<U> = s_list_cast;
     __safe internal function s_list_mask_select_cast<T, U>(l: List<T>, mask: List<Bool>): List<U> = s_list_mask_select_cast;
 
-    __safe internal function s_list_reverse<T>(ll: List<T>): List<T> = s_list_reverse;
-
     __conditional_safe internal recursive? s_list_is_sorted<T>(l: List<T>, cmp: recursive? pred(_: T, _: T) -> Bool): Bool = s_list_is_sorted;
     __conditional_safe internal recursive? function s_list_is_unique<T>(l: List<T>, eq: recursive? pred(_: T, _: T) -> Bool): List<T> = s_list_is_unique;
-
-    internal recursive? function s_list_sort<T>(l: List<T>, cmp: recursive? pred(_: T, _: T) -> Bool): List<T> = s_list_sort;
-    internal recursive? function s_list_uniqueify<T>(l: List<T>, eq: recursive? pred(_: T, _: T) -> Bool): List<T> = s_list_uniqueify;
 
     __conditional_safe internal recursive? function s_list_reduce<T, U>(l: List<T>, init: U, f: recursive? fn(_: U, _: T) -> U): U = s_list_reduce;
     __conditional_safe internal recursive? function s_list_reduce_idx<T, U>(l: List<T>, init: U, f: recursive? fn(_: U, _: T, _: Nat) -> U): U = s_list_reduce_idx;

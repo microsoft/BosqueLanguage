@@ -74,6 +74,7 @@ std::map<std::string, BSQPrimitiveImplTag> MarshalEnvironment::g_primitiveinvoke
     {"s_list_set", BSQPrimitiveImplTag::s_list_set},
     {"s_list_push_back", BSQPrimitiveImplTag::s_list_push_back},
     {"s_list_push_front", BSQPrimitiveImplTag::s_list_push_front},
+    {"s_list_insert", BSQPrimitiveImplTag::s_list_insert},
     {"s_list_remove", BSQPrimitiveImplTag::s_list_remove},
     {"s_list_pop_back", BSQPrimitiveImplTag::s_list_pop_back},
     {"s_list_pop_front", BSQPrimitiveImplTag::s_list_pop_front},

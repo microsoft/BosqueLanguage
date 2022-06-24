@@ -24,6 +24,7 @@ internal entity ListOps provides Some {
 
     internal function s_list_set<T>(l: List<T>, i: Nat, v: T): List<T> = s_list_set;
     internal function s_list_remove<T>(l: List<T>, i: Nat): List<T> = s_list_remove;
+    internal function s_list_insert<T>(l: List<T>, idx: Nat, v: T): List<T> = s_list_insert;
 
     internal function s_list_pop_back<T>(l: List<T>): List<T> = s_list_pop_back;
     internal function s_list_pop_front<T>(l: List<T>): List<T> = s_list_pop_front;
