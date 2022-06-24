@@ -3417,20 +3417,36 @@ class SMTBodyEmitter {
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
             }
             case "s_map_min_key": {
-                xxxx;
+                const mt = this.typegen.getMIRType(idecl.params[0].type);
+                const cbody = this.typegen.generateMapEntryTypeGetKey(mt, new SMTCallSimple("seq.nth", [this.typegen.generateMapTypeGetData(mt, new SMTVar(args[0].vname)), new SMTConst("0")]));
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
             }
             case "s_map_max_key": {
-                xxxx;
+                const mt = this.typegen.getMIRType(idecl.params[0].type);
+                const idx = this.typegen.generateListTypeGetLengthMinus1(this.typegen.getMIRType(idecl.params[0].type), new SMTVar(args[0].vname));
+                const cbody = this.typegen.generateMapEntryTypeGetKey(mt, new SMTCallSimple("seq.nth", [this.typegen.generateMapTypeGetData(mt, new SMTVar(args[0].vname)), idx]));
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
             }
             case "s_map_has": {
                 const mt = this.typegen.getMIRType(idecl.params[0].type);
-                const cbody = SMTCallSimple.makeNotEq(
-                    this.typegen.generateMapEntryTypeConstructorEmpty(mt),
-                    new SMTCallSimple("select", [this.typegen.generateMapTypeGetArray(mt, new SMTVar(args[0].vname)), new SMTVar(args[1].vname)])
-                );
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                const mval = this.typegen.generateMapTypeGetData(mt, new SMTVar(args[0].vname));
+                
+                const entrytype = this.typegen.generateMapEntryType(mt);
+                const accesskey = this.typegen.generateMapEntryTypeGetKey(mt, new SMTVar("@@x"));
+                const maparray = new SMTCallSimple("seq.map", [
+                    new SMTConst(`(lambda ((@@x ${entrytype.smttypename})) (= ${args[1].vname} ${accesskey.emitSMT2(undefined)})`),
+                    mval
+                ]);
+
+                const cbody = new SMTCallSimple("seq.contains", [maparray, new SMTConst("true")]);
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateListTypeConstructorSeq(mirrestype, cbody));
             }
             case "s_map_get": {
+                const mt = this.typegen.getMIRType(idecl.params[0].type);
+                const cbody = this.typegen.generateMapEntryTypeGetValueTuple(mt, new SMTCallSimple("select", [this.typegen.generateMapTypeGetArray(mt, new SMTVar(args[0].vname)), new SMTVar(args[1].vname)]));
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+            }
+            case "s_map_find": {
                 const mt = this.typegen.getMIRType(idecl.params[0].type);
                 const cbody = this.typegen.generateMapEntryTypeGetValueTuple(mt, new SMTCallSimple("select", [this.typegen.generateMapTypeGetArray(mt, new SMTVar(args[0].vname)), new SMTVar(args[1].vname)]));
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
