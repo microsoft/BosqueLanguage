@@ -2257,10 +2257,19 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         LIST_STORE_RESULT_REPR(rres, resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_size_ne: {
-        auto count = LIST_LOAD_TYPE_INFO_REPR(params[0])->getCount(LIST_LOAD_DATA(params[0]));
-        
-        SLPTR_STORE_CONTENTS_AS(BSQNat, resultsl, count);
+    case BSQPrimitiveImplTag::s_list_emtpy: {
+        xxxx; ???;
+        break;
+    }
+    case BSQPrimitiveImplTag::s_list_size: {
+        xxxx;
+        void* ll = SLPTR_LOAD_CONTENTS_AS(void*, params[0]);
+        if(ll == nullptr) {
+            SLPTR_STORE_CONTENTS_AS(BSQNat, resultsl, 0); 
+        }
+        else {
+            auto count = SLPTR_LOAD_HEAP_TYPE_AS(BSQListReprType, params[0])->getCount(ll);
+        }
         break;
     }
     case BSQPrimitiveImplTag::s_list_set_ne: {
