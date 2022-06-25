@@ -2518,6 +2518,10 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         SLPTR_STORE_CONTENTS_AS(BSQNat, resultsl, MAP_LOAD_COUNT(params[0]));
         break;
     }
+    case BSQPrimitiveImplTag::s_map_entries: {
+        xxxx;
+        break;;
+    }
     case BSQPrimitiveImplTag::s_map_min_key: {
         xxxx;
         break;

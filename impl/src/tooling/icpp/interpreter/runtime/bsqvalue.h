@@ -998,6 +998,8 @@ public:
 
 struct BSQString
 {
+    //TODO: should we make the reprs use this instead of void* -- makes a tree node can store much more 
+    //      also we can then use this as a place to stash a pointer for the perfect tree hash for less compare and GC de-dupe
     union { void* u_data; BSQInlineString u_inlineString; };
 };
 constexpr BSQString g_emptyString = {0};

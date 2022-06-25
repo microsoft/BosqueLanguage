@@ -108,6 +108,7 @@ std::map<std::string, BSQPrimitiveImplTag> MarshalEnvironment::g_primitiveinvoke
 
     {"s_map_build_k", BSQPrimitiveImplTag::s_map_build_k},
     {"s_map_count", BSQPrimitiveImplTag::s_map_count},
+    {"s_map_entries", BSQPrimitiveImplTag::s_map_entries},
     {"s_map_min_key", BSQPrimitiveImplTag::s_map_min_key},
     {"s_map_max_key", BSQPrimitiveImplTag::s_map_max_key},
     {"s_map_has", BSQPrimitiveImplTag::s_map_has},

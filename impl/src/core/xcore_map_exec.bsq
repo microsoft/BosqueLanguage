@@ -11,6 +11,8 @@ internal entity MapOps provides Some {
     internal function s_map_empty<K grounded KeyType, V>(m: Map<K, V>): Nat = s_map_empty;
     internal function s_map_count<K grounded KeyType, V>(m: Map<K, V>): Nat = s_map_count;
 
+    internal function s_map_entries<K grounded KeyType, V>(m: Map<K, V>): List<[K, V]> = s_map_entries;
+
     internal function s_map_min_key<K grounded KeyType, V>(m: Map<K, V>): K = s_map_min_key;
     internal function s_map_max_key<K grounded KeyType, V>(m: Map<K, V>): K = s_map_max_key;
 

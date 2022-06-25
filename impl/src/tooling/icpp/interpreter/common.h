@@ -440,6 +440,7 @@ enum class BSQPrimitiveImplTag
 
     s_map_build_k,
     s_map_count,
+    s_map_entries,
     s_map_min_key,
     s_map_max_key,
     s_map_has,
