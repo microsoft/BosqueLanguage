@@ -165,7 +165,7 @@ __internal entity Map<K grounded KeyType, V> provides Some, Expandoable<[K, V]>,
     }
 
     method add(k: K, v: V): Map<K, V>
-        requires !MapOps::s_map_has<K, V>(this, k);
+        requires MapOps::s_map_empty<K, V>(this) || !MapOps::s_map_has<K, V>(this, k);
     {
         if(MapOps::s_map_empty<K, V>(this)) {
             return Map<K, U>{[k, v]};
@@ -176,13 +176,13 @@ __internal entity Map<K grounded KeyType, V> provides Some, Expandoable<[K, V]>,
     }
 
     method set(k: K, v: V): Map<K, V> 
-        requires MapOps::s_map_has<K, V>(this, k);
+        requires !MapOps::s_map_empty<K, V>(this) && MapOps::s_map_has<K, V>(this, k);
     {
         return MapOps::s_map_set<K, V>(this, k, v);
     }
 
     method remove(k: K): Map<K, V> 
-        requires MapOps::s_map_has<K, V>(this, k);
+        requires !MapOps::s_map_empty<K, V>(this) && MapOps::s_map_has<K, V>(this, k);
     {
         return MapOps::s_map_remove<K, V>(this, k);
     }
