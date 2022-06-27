@@ -2530,89 +2530,110 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.find(std::make_pair(invk->binds.find("K")->second->tid, invk->binds.find("V")->second->tid))->second;
         
         auto rr = BSQMapOps::map_cons(mflavor, mflavor.tupletype, params);
-        MAP_STORE_RESULT_REPR(rr, params.size(), resultsl);
+        MAP_STORE_RESULT_REPR(rr, resultsl);
+        break;
+    }
+    case BSQPrimitiveImplTag::s_map_empty: {
+        SLPTR_STORE_CONTENTS_AS(BSQBool, resultsl, MAP_LOAD_DATA(params[0]) == nullptr);
         break;
     }
     case BSQPrimitiveImplTag::s_map_count: {
-        SLPTR_STORE_CONTENTS_AS(BSQNat, resultsl, MAP_LOAD_COUNT(params[0]));
+        SLPTR_STORE_CONTENTS_AS(BSQNat, resultsl, ((BSQMapTreeRepr*)MAP_LOAD_DATA(params[0]))->tcount);
         break;
     }
     case BSQPrimitiveImplTag::s_map_entries: {
-        xxxx;
-        break;;
+        const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.find(std::make_pair(invk->binds.find("K")->second->tid, invk->binds.find("V")->second->tid))->second;
+        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->resultType->tid)->second;
+
+        auto rr = BSQMapOps::s_entries_ne(mflavor, MAP_LOAD_DATA(params[0]), lflavor);
+        MAP_STORE_RESULT_REPR(rr, resultsl);
+        break;
     }
     case BSQPrimitiveImplTag::s_map_min_key: {
-        xxxx;
+        auto ttype = MAP_LOAD_REPR_TYPE(params[0]);
+        auto rr = ttype->minElem(MAP_LOAD_DATA(params[0]));
+        MAP_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
     case BSQPrimitiveImplTag::s_map_max_key: {
-        xxxx;
+        auto ttype = MAP_LOAD_REPR_TYPE(params[0]);
+        auto rr = ttype->maxElem(MAP_LOAD_DATA(params[0]));
+        MAP_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
     case BSQPrimitiveImplTag::s_map_has: {
-        auto rr = BSQMapOps::s_lookup_ne(MAP_LOAD_REPR(params[0]), MAP_LOAD_TYPE_INFO_REPR(params[0]), params[1], invk->binds.find("K")->second);
+        auto rr = BSQMapOps::s_lookup_ne(MAP_LOAD_DATA(params[0]), MAP_LOAD_REPR_TYPE(params[0]), params[1], invk->binds.find("K")->second);
         SLPTR_STORE_CONTENTS_AS(BSQBool, resultsl, (BSQBool)(rr != nullptr));
         break;
     }
-    case BSQPrimitiveImplTag::s_map_find: {
-        auto ttype = MAP_LOAD_TYPE_INFO_REPR(params[0]);
-        auto rr = BSQMapOps::s_lookup_ne(MAP_LOAD_REPR(params[0]), ttype, params[1], invk->binds.find("K")->second);
+    case BSQPrimitiveImplTag::s_map_get: {
+        auto ttype = MAP_LOAD_REPR_TYPE(params[0]);
+        auto rr = BSQMapOps::s_lookup_ne(MAP_LOAD_DATA(params[0]), ttype, params[1], invk->binds.find("K")->second);
         BSQ_INTERNAL_ASSERT(rr != nullptr);
 
-        invk->binds.find("K")->second->storeValue(resultsl, ttype->getValueLocation(rr));
+        invk->binds.find("V")->second->storeValue(resultsl, ttype->getValueLocation(rr));
+        break;
+    }
+    case BSQPrimitiveImplTag::s_map_find: {
+        const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.find(std::make_pair(invk->binds.find("K")->second->tid, invk->binds.find("V")->second->tid))->second;
+
+        auto ttype = MAP_LOAD_REPR_TYPE(params[0]);
+        auto rr = BSQMapOps::s_lookup_ne(MAP_LOAD_DATA(params[0]), ttype, params[1], invk->binds.find("K")->second);
+
+        void* value = (void*)resultsl;
+        BSQBool* flag = (BSQBool*)((uint8_t*)resultsl + mflavor.tupletype->allocinfo.inlinedatasize);
+        if(rr == nullptr)
+        {
+            *flag = BSQFALSE;
+        }
+        else
+        {
+            *flag = BSQTRUE;
+            GC_MEM_COPY(value, ttype->getKeyLocation(rr), mflavor.tupletype->allocinfo.inlinedatasize);
+        }
         break;
     }
     case BSQPrimitiveImplTag::s_map_union: {
         const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.find(std::make_pair(invk->binds.find("K")->second->tid, invk->binds.find("V")->second->tid))->second;
 
-        uint64_t count = MAP_LOAD_COUNT(params[0]) + MAP_LOAD_COUNT(params[1]);
-        auto rr = BSQMapOps::s_union_ne(mflavor, MAP_LOAD_REPR(params[0]), MAP_LOAD_TYPE_INFO_REPR(params[0]), MAP_LOAD_REPR(params[1]), MAP_LOAD_TYPE_INFO_REPR(params[1]), count);
-        MAP_STORE_RESULT_REPR(rr, count, resultsl);
+        auto rr = BSQMapOps::s_union_ne(mflavor, MAP_LOAD_DATA(params[0]), MAP_LOAD_REPR_TYPE(params[0]), MAP_LOAD_DATA(params[1]), MAP_LOAD_REPR_TYPE(params[1]));
+        MAP_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_map_union_fast: {
+    case BSQPrimitiveImplTag::s_map_submap: {
         const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.find(std::make_pair(invk->binds.find("K")->second->tid, invk->binds.find("V")->second->tid))->second;
 
-xxxx;
-        uint64_t count = MAP_LOAD_COUNT(params[0]) + MAP_LOAD_COUNT(params[1]);
-        auto rr = BSQMapOps::s_union_ne(mflavor, MAP_LOAD_REPR(params[0]), MAP_LOAD_TYPE_INFO_REPR(params[0]), MAP_LOAD_REPR(params[1]), MAP_LOAD_TYPE_INFO_REPR(params[1]), count);
-        MAP_STORE_RESULT_REPR(rr, count, resultsl);
+        auto rr = BSQMapOps::s_submap_ne(mflavor, eethunk, MAP_LOAD_DATA(params[0]), MAP_LOAD_REPR_TYPE(params[0]), invk->pcodes.find("p")->second, params);
+        MAP_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_map_submap_ne: {
-        const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.find(std::make_pair(invk->binds.find("K")->second->tid, invk->binds.find("V")->second->tid))->second;
-
-        auto rr = BSQMapOps::s_submap_ne(mflavor, eethunk, MAP_LOAD_REPR(params[0]), MAP_LOAD_TYPE_INFO_REPR(params[0]), invk->pcodes.find("p")->second, params);
-        MAP_STORE_RESULT_REPR(rr.first, rr.second, resultsl);
-        break;
-    }
-    case BSQPrimitiveImplTag::s_map_remap_ne: {
+    case BSQPrimitiveImplTag::s_map_remap: {
         const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.find(std::make_pair(invk->binds.find("K")->second->tid, invk->binds.find("V")->second->tid))->second;
         const BSQMapTypeFlavor& rflavor = BSQMapOps::g_flavormap.find(std::make_pair(invk->binds.find("K")->second->tid, invk->binds.find("U")->second->tid))->second;
 
-        auto rr = BSQMapOps::s_remap_ne(mflavor, eethunk, MAP_LOAD_REPR(params[0]), MAP_LOAD_TYPE_INFO_REPR(params[0]), invk->pcodes.find("f")->second, params, rflavor);
-        MAP_STORE_RESULT_REPR(rr, MAP_LOAD_COUNT(params[0]), resultsl);
+        auto rr = BSQMapOps::s_remap_ne(mflavor, eethunk, MAP_LOAD_DATA(params[0]), MAP_LOAD_REPR_TYPE(params[0]), invk->pcodes.find("f")->second, params, rflavor);
+        MAP_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_map_add_ne: {
+    case BSQPrimitiveImplTag::s_map_add: {
         const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.find(std::make_pair(invk->binds.find("K")->second->tid, invk->binds.find("V")->second->tid))->second;
 
-        auto rr = BSQMapOps::s_add_ne(mflavor, MAP_LOAD_REPR(params[0]), MAP_LOAD_TYPE_INFO_REPR(params[0]), params[1], params[2]);
-        MAP_STORE_RESULT_REPR(rr, MAP_LOAD_COUNT(params[0]) + 1, resultsl);
+        auto rr = BSQMapOps::s_add_ne(mflavor, MAP_LOAD_DATA(params[0]), MAP_LOAD_REPR_TYPE(params[0]), params[1], params[2]);
+        MAP_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_map_set_ne: {
+    case BSQPrimitiveImplTag::s_map_set: {
         const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.find(std::make_pair(invk->binds.find("K")->second->tid, invk->binds.find("V")->second->tid))->second;
 
-        auto rr = BSQMapOps::s_set_ne(mflavor, MAP_LOAD_REPR(params[0]), MAP_LOAD_TYPE_INFO_REPR(params[0]), params[1], params[2]);
-        MAP_STORE_RESULT_REPR(rr, MAP_LOAD_COUNT(params[0]), resultsl);
+        auto rr = BSQMapOps::s_set_ne(mflavor, MAP_LOAD_DATA(params[0]), MAP_LOAD_REPR_TYPE(params[0]), params[1], params[2]);
+        MAP_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_map_remove_ne: {
+    case BSQPrimitiveImplTag::s_map_remove: {
         const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.find(std::make_pair(invk->binds.find("K")->second->tid, invk->binds.find("V")->second->tid))->second;
 
-        auto rr = BSQMapOps::s_remove_ne(mflavor, MAP_LOAD_REPR(params[0]), MAP_LOAD_TYPE_INFO_REPR(params[0]), params[1]);
-        MAP_STORE_RESULT_REPR(rr, MAP_LOAD_COUNT(params[0]) - 1, resultsl);
+        auto rr = BSQMapOps::s_remove_ne(mflavor, MAP_LOAD_DATA(params[0]), MAP_LOAD_REPR_TYPE(params[0]), params[1]);
+        MAP_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
     default: {

@@ -1287,6 +1287,15 @@ void* BSQMapOps::s_submap_ne(const BSQMapTypeFlavor& mflavor, LambdaEvalThunk ee
     return res;
 }
 
+void* BSQMapOps::s_entries_ne(const BSQMapTypeFlavor& mflavor, void* t, const BSQListTypeFlavor& lflavor)
+{
+    void* rres = BSQMapOps::map_tree_transform(mflavor, t, [&](void* vv, void* ll, void* rr){
+        xxxx; //append the stuff here
+    });
+
+    return rres;
+}
+
 void* BSQMapOps::s_remap_ne(const BSQMapTypeFlavor& mflavor, LambdaEvalThunk ee, void* t, const BSQMapTreeType* ttype, const BSQPCode* fn, const std::vector<StorageLocationPtr>& params, const BSQMapTypeFlavor& resflavor)
 {
     const BSQInvokeBodyDecl* icall = dynamic_cast<const BSQInvokeBodyDecl*>(BSQInvokeDecl::g_invokes[fn->code]);
