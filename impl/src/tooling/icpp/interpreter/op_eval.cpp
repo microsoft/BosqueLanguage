@@ -2257,52 +2257,52 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         LIST_STORE_RESULT_REPR(rres, resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_emtpy: {
-        xxxx; ???;
+    case BSQPrimitiveImplTag::s_list_empty: {
+        void* ll = LIST_LOAD_DATA(params[0]);
+        SLPTR_STORE_CONTENTS_AS(BSQBool, resultsl, ll == nullptr); 
         break;
     }
     case BSQPrimitiveImplTag::s_list_size: {
-        xxxx;
-        void* ll = SLPTR_LOAD_CONTENTS_AS(void*, params[0]);
-        if(ll == nullptr) {
-            SLPTR_STORE_CONTENTS_AS(BSQNat, resultsl, 0); 
-        }
-        else {
-            auto count = SLPTR_LOAD_HEAP_TYPE_AS(BSQListReprType, params[0])->getCount(ll);
-        }
+        void* ll = LIST_LOAD_DATA(params[0]);
+        auto count = SLPTR_LOAD_HEAP_TYPE_AS(BSQListReprType, params[0])->getCount(ll);
+        SLPTR_STORE_CONTENTS_AS(BSQNat, resultsl, count);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_set_ne: {
+    case BSQPrimitiveImplTag::s_list_set: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
         auto ii = SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]);
         
-        auto rr = BSQListOps::s_set_ne(lflavor, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), ii, params[2]);
+        auto rr = BSQListOps::s_set_ne(lflavor, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), ii, params[2]);
         LIST_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_push_back_ne: {
+    case BSQPrimitiveImplTag::s_list_push_back: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
         
-        auto rr = BSQListOps::s_push_back_ne(lflavor, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), params[2]);
+        auto rr = BSQListOps::s_push_back_ne(lflavor, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), params[1]);
         LIST_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_push_front_ne: {
+    case BSQPrimitiveImplTag::s_list_push_front: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
         
-        auto rr = BSQListOps::s_push_front_ne(lflavor, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), params[2]);
+        auto rr = BSQListOps::s_push_front_ne(lflavor, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), params[1]);
         LIST_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
     case BSQPrimitiveImplTag::s_list_insert: {
-        xxxx;
-        break;
-    }
-    case BSQPrimitiveImplTag::s_list_remove_ne: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
         auto ii = SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]);
         
-        auto rr = BSQListOps::s_remove_ne(lflavor, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), ii);
+        auto rr = BSQListOps::s_insert_ne(lflavor, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), ii, params[2]);
+        LIST_STORE_RESULT_REPR(rr, resultsl);
+        break;
+    }
+    case BSQPrimitiveImplTag::s_list_remove: {
+        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
+        auto ii = SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]);
+        
+        auto rr = BSQListOps::s_remove_ne(lflavor, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), ii);
         LIST_STORE_RESULT_REPR(rr, resultsl);
         break;
     }

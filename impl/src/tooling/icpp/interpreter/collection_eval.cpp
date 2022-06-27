@@ -17,6 +17,7 @@ void* s_set_list_ne_rec(const BSQListTypeFlavor& lflavor, BSQListSpineIterator& 
         auto pvsize = BSQPartialVectorType::getPVCount(iter.lcurr);
         auto pvalloc = pvsize <= 4 ? lflavor.pv4type : lflavor.pv8type;
         
+        res = Allocator::GlobalAllocator.allocateDynamic(pvalloc);
         BSQPartialVectorType::setPVData(res, iter.lcurr, i, v, pvsize, pvalloc->entrysize);
     }
     else
@@ -214,6 +215,77 @@ void* BSQListOps::s_remove_ne(const BSQListTypeFlavor& lflavor, void* t, const B
 {
     BSQListSpineIterator iter(ttype, t);
     return s_remove_list_ne_rec(lflavor, iter, i);
+}
+
+void* s_insert_list_ne_rec(const BSQListTypeFlavor& lflavor, BSQListSpineIterator& iter, BSQNat i, StorageLocationPtr v)
+{
+    auto ttype = GET_TYPE_META_DATA_AS(BSQListReprType, iter.lcurr);
+    void** stck = (void**)GCStack::allocFrame(sizeof(void*) * 2);
+        
+    void* res = nullptr;
+    if(ttype->lkind != ListReprKind::TreeElement)
+    {
+        auto vsize = BSQPartialVectorType::getPVCount(iter.lcurr);
+        if(vsize < 8)
+        {
+            auto pvalloc = (vsize + 1) <= 4 ? lflavor.pv4type : lflavor.pv8type;
+            res = Allocator::GlobalAllocator.allocateDynamic(pvalloc);
+
+            BSQPartialVectorType::initializePVDataInsert(res, iter.lcurr, i, v, vsize, pvalloc->entrysize)
+        }
+        else
+        {
+            stck[0] = Allocator::GlobalAllocator.allocateDynamic(lflavor.pv8type);
+            stck[1] = Allocator::GlobalAllocator.allocateDynamic(lflavor.pv8type);
+
+xxxx;
+            BSQPartialVectorType::initializePVDataSingle(stck[0], v, lflavor.entrytype);
+
+            res = Allocator::GlobalAllocator.allocateDynamic(lflavor.treetype);
+            ((BSQListTreeRepr*)res)->l = static_cast<BSQListTreeRepr*>(iter.lcurr);
+            ((BSQListTreeRepr*)res)->r = stck[0];
+            ((BSQListTreeRepr*)res)->lcount = static_cast<BSQListTreeRepr*>(iter.lcurr)->lcount + 1;
+        }
+    }
+    else
+    {
+        auto trepr = static_cast<BSQListTreeRepr*>(iter.lcurr);
+        auto ll = trepr->l;
+        auto lltype = GET_TYPE_META_DATA_AS(BSQListReprType, ll);
+        auto llcount = lltype->getCount(ll);
+
+        if(i < llcount)
+        {
+            iter.moveLeft();
+            stck[0] = s_insert_list_ne_rec(lflavor, iter, i, v);
+            iter.pop();
+
+            res = Allocator::GlobalAllocator.allocateDynamic(lflavor.treetype);
+            ((BSQListTreeRepr*)res)->l = stck[0];
+            ((BSQListTreeRepr*)res)->r = static_cast<BSQListTreeRepr*>(iter.lcurr)->r;
+            ((BSQListTreeRepr*)res)->lcount = static_cast<BSQListTreeRepr*>(iter.lcurr)->lcount + 1;
+        }
+        else
+        {
+            iter.moveRight();
+            stck[0] = s_insert_list_ne_rec(lflavor, iter, i - llcount, v);
+            iter.pop();
+
+            res = Allocator::GlobalAllocator.allocateDynamic(lflavor.treetype);
+            ((BSQListTreeRepr*)res)->l = static_cast<BSQListTreeRepr*>(iter.lcurr)->l;
+            ((BSQListTreeRepr*)res)->r = stck[0];
+            ((BSQListTreeRepr*)res)->lcount = static_cast<BSQListTreeRepr*>(iter.lcurr)->lcount + 1;
+        }
+    }
+    GCStack::popFrame(sizeof(void*) * 2);
+
+    return res;
+}
+
+void* BSQListOps::s_insert_ne(const BSQListTypeFlavor& lflavor, void* t, const BSQListReprType* ttype, BSQNat i, StorageLocationPtr v)
+{
+    BSQListSpineIterator iter(ttype, t);
+    return s_insert_list_ne_rec(lflavor, iter, i, v);
 }
 
 void BSQListOps::s_range_ne(const BSQType* oftype, StorageLocationPtr start, StorageLocationPtr end, StorageLocationPtr count, StorageLocationPtr res)

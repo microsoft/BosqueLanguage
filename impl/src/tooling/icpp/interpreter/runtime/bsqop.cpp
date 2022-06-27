@@ -70,6 +70,7 @@ std::map<std::string, BSQPrimitiveImplTag> MarshalEnvironment::g_primitiveinvoke
     {"latlongcoordinate_create", BSQPrimitiveImplTag::latlongcoordinate_create},
 
     {"s_list_build_k", BSQPrimitiveImplTag::s_list_build_k},
+    {"s_list_empty", BSQPrimitiveImplTag::s_list_empty},
     {"s_list_size", BSQPrimitiveImplTag::s_list_size},
     {"s_list_set", BSQPrimitiveImplTag::s_list_set},
     {"s_list_push_back", BSQPrimitiveImplTag::s_list_push_back},

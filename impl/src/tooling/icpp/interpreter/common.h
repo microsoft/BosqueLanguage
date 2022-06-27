@@ -402,6 +402,7 @@ enum class BSQPrimitiveImplTag
     latlongcoordinate_create,
 
     s_list_build_k,
+    s_list_empty,
     s_list_size,
     s_list_set,
     s_list_push_back,
