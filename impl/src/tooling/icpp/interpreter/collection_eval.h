@@ -329,6 +329,57 @@ public:
         return res;
     }
 
+    static void* s_slice(const BSQListTypeFlavor& lflavor, BSQListSpineIterator& iter, const BSQListReprType* ttype, BSQNat start, BSQNat end) 
+    {
+        if(end == ttype->getCount(iter.lcurr))
+        {
+            return iter.lcurr;
+        }
+
+        void* res = nullptr;
+        if(ttype->lkind != ListReprKind::TreeElement)
+        {
+            res = Allocator::GlobalAllocator.allocateDynamic((end <= 4) ? lflavor.pv4type : lflavor.pv8type);
+            BSQPartialVectorType::slicePVData(res, iter.lcurr, start, end, lflavor.entrytype->allocinfo.inlinedatasize);
+        }
+        else
+        {
+            auto lltype = GET_TYPE_META_DATA_AS(BSQListReprType, static_cast<BSQListTreeRepr*>(iter.lcurr)->l);
+            auto rrtype = GET_TYPE_META_DATA_AS(BSQListReprType, static_cast<BSQListTreeRepr*>(iter.lcurr)->r);
+
+            auto llcount = lltype->getCount(static_cast<BSQListTreeRepr*>(iter.lcurr)->l);
+            if(end < llcount)
+            {
+                iter.moveLeft();
+                res = BSQListOps::s_slice(lflavor, iter, lltype, start, end);
+                iter.pop();
+            }
+            else if(start > llcount)
+            {
+                iter.moveRight();
+                res = BSQListOps::s_slice(lflavor, iter, rrtype, start - llcount, end);
+                iter.pop();
+            }
+            else
+            {
+                void** stck = (void**)GCStack::allocFrame(sizeof(void*) * 2);
+
+                iter.moveLeft();
+                stck[0] = (start == 0) ? iter.lcurr : BSQListOps::s_slice_start(lflavor, iter, lltype, start);
+                iter.pop();
+
+                iter.moveRight();
+                stck[1] = (end == llcount) ? iter.lcurr : BSQListOps::s_slice_end(lflavor, iter, rrtype, end - llcount);
+                iter.pop();
+
+                res = BSQListOps::list_append(lflavor, stck[0], stck[1]);
+
+                GCStack::popFrame(sizeof(void*) * 2);
+            }
+        }
+        return res;
+    }
+
     static void s_safe_get(void* t, const BSQListReprType* ttype, BSQNat idx, const BSQType* oftype, StorageLocationPtr res) 
     {
         if(ttype->lkind != ListReprKind::TreeElement)
@@ -369,10 +420,13 @@ public:
 
     static void* s_reverse_ne(const BSQListTypeFlavor& lflavor, void* reprnode);
 
-    static BSQNat s_find_pred_ne(LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* pred, const std::vector<StorageLocationPtr>& params);
-    static BSQNat s_find_pred_idx_ne(LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* pred, const std::vector<StorageLocationPtr>& params);
-    static BSQNat s_find_pred_last_ne(LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* pred, const std::vector<StorageLocationPtr>& params);
-    static BSQNat s_find_pred_last_idx_ne(LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* pred, const std::vector<StorageLocationPtr>& params);
+    static BSQInt s_find_value_ne(void* t, const BSQListReprType* ttype, StorageLocationPtr v);
+    static BSQInt s_find_value_last_ne(void* t, const BSQListReprType* ttype, StorageLocationPtr v);
+
+    static BSQInt s_find_pred_ne(LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* pred, const std::vector<StorageLocationPtr>& params);
+    static BSQInt s_find_pred_idx_ne(LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* pred, const std::vector<StorageLocationPtr>& params);
+    static BSQInt s_find_pred_last_ne(LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* pred, const std::vector<StorageLocationPtr>& params);
+    static BSQInt s_find_pred_last_idx_ne(LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* pred, const std::vector<StorageLocationPtr>& params);
 
     static void* s_filter_pred_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* pred, const std::vector<StorageLocationPtr>& params);
     static void* s_filter_pred_idx_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* pred, const std::vector<StorageLocationPtr>& params);

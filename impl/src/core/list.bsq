@@ -1853,7 +1853,8 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                 return ListOps::s_list_mask_select_cast<T, U>(this, mask);
             }
 #else
-            return ListOps::s_list_filter_cast<T, U>[recursive?](this, p);
+            //TODO: this might be one we want to specialize the implementation for (and also the Some, IOptionT, IResultT, and IResultE cases)
+            return ListOps::s_list_map_fn<T, U>(ListOps::s_filter_pred<T>(this, pred(v: T): Bool => v.is<U>()), fn(vv: T): U => s_safeAs<T, U>(vv));
 #endif
         }
     }
@@ -1879,7 +1880,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                 return ListOps::s_list_mask_select_cast<T, T!Some>(this, mask);
             }
 #else
-            return ListOps::s_list_filter_cast<T, T!Some>[recursive?](this, p);
+            return ListOps::s_list_map_fn<T, T!Some>(ListOps::s_filter_pred<T>(this, pred(v: T): Bool => v.is<T!Some>()), fn(vv: T): T!Some => s_safeAs<T, T!Some>(vv));
 #endif
         }
     }
@@ -1905,7 +1906,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                 return ListOps::s_list_mask_select_cast<T, T!IOptionT>(this, mask);
             }
 #else
-            return ListOps::s_list_filter_cast<T, T!IOptionT>[recursive?](this, p);
+            return ListOps::s_list_map_fn<T, T!IOptionT>(ListOps::s_filter_pred<T>(this, pred(v: T): Bool => v.is<T!IOptionT>()), fn(vv: T): T!IOptionT => s_safeAs<T, T!IOptionT>(vv));
 #endif
         }
     }
@@ -1931,7 +1932,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                 return ListOps::s_list_mask_select_cast<T, T!IResultT>(this, mask);
             }
 #else
-            return ListOps::s_list_filter_cast<T, T!IResultT>[recursive?](this, p);
+            return ListOps::s_list_map_fn<T, T!IResultT>(ListOps::s_filter_pred<T>(this, pred(v: T): Bool => v.is<T!IResultT>()), fn(vv: T): T!IResultT => s_safeAs<T, T!IResultT>(vv));
 #endif
         }
     }
@@ -1957,7 +1958,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                 return ListOps::s_list_mask_select_cast<T, T!IResultE>(this, mask);
             }
 #else
-            return ListOps::s_list_filter_cast<T, T!IResultE>[recursive?](this, p);
+            return ListOps::s_list_map_fn<T, T!IResultE>(ListOps::s_filter_pred<T>(this, pred(v: T): Bool => v.is<T!IResultE>()), fn(vv: T): T!IResultE => s_safeAs<T, T!IResultE>(vv));
 #endif
         }
     }

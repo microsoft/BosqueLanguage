@@ -2306,76 +2306,70 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         LIST_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_pop_back_ne: {
+    case BSQPrimitiveImplTag::s_list_pop_back: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
-        auto ii = LIST_LOAD_TYPE_INFO_REPR(params[0])->getCount(LIST_LOAD_DATA(params[0])) - 1;
+        auto ii = LIST_LOAD_REPR_TYPE(params[0])->getCount(LIST_LOAD_DATA(params[0])) - 1;
         
-        auto rr = BSQListOps::s_remove_ne(lflavor, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), ii);
+        auto rr = BSQListOps::s_remove_ne(lflavor, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), ii);
         LIST_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_pop_front_ne: {
+    case BSQPrimitiveImplTag::s_list_pop_front: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
         BSQNat ii = 0;
         
-        auto rr = BSQListOps::s_remove_ne(lflavor, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), ii);
+        auto rr = BSQListOps::s_remove_ne(lflavor, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), ii);
         LIST_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_reduce_ne: {
+    case BSQPrimitiveImplTag::s_list_reduce: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
 
         invk->binds.find("T")->second->storeValue(resultsl, params[1]); //store the initial acc in the result
-        BSQListOps::s_reduce_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), invk->pcodes.find("f")->second, params, resultsl);
+        BSQListOps::s_reduce_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.find("f")->second, params, resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_reduce_idx_ne: {
+    case BSQPrimitiveImplTag::s_list_reduce_idx: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
 
         invk->binds.find("T")->second->storeValue(resultsl, params[1]); //store the initial acc in the result
-        BSQListOps::s_reduce_idx_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), invk->pcodes.find("f")->second, params, resultsl);
+        BSQListOps::s_reduce_idx_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.find("f")->second, params, resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_transduce_ne: {
+    case BSQPrimitiveImplTag::s_list_transduce: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
         const BSQListTypeFlavor& uflavor = BSQListOps::g_flavormap.find(invk->binds.find("U")->second->tid)->second;
         const BSQType* envtype = invk->binds.find("E")->second;
 
-        BSQListOps::s_transduce_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), uflavor, envtype, invk->pcodes.find("op")->second, params, dynamic_cast<const BSQEphemeralListType*>(invk->resultType), resultsl);
+        BSQListOps::s_transduce_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), uflavor, envtype, invk->pcodes.find("op")->second, params, dynamic_cast<const BSQEphemeralListType*>(invk->resultType), resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_transduce_idx_ne: {
+    case BSQPrimitiveImplTag::s_list_transduce_idx: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
         const BSQListTypeFlavor& uflavor = BSQListOps::g_flavormap.find(invk->binds.find("U")->second->tid)->second;
         const BSQType* envtype = invk->binds.find("E")->second;
 
-        BSQListOps::s_transduce_idx_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), uflavor, envtype, invk->pcodes.find("op")->second, params, dynamic_cast<const BSQEphemeralListType*>(invk->resultType), resultsl);
+        BSQListOps::s_transduce_idx_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), uflavor, envtype, invk->pcodes.find("op")->second, params, dynamic_cast<const BSQEphemeralListType*>(invk->resultType), resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_range_ne: {
+    case BSQPrimitiveImplTag::s_list_range: {
         BSQListOps::s_range_ne(invk->binds.find("T")->second, params[0], params[1], params[3], resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_fill_ne: {
+    case BSQPrimitiveImplTag::s_list_fill: {
         BSQListOps::s_fill_ne(invk->binds.find("T")->second, params[1], params[0], resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_reverse_ne: {
+    case BSQPrimitiveImplTag::s_list_reverse: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
 
-        auto gcpoint = Allocator::GlobalAllocator.getCollectionNodeCurrentEnd();
-        auto rnode = Allocator::GlobalAllocator.registerCollectionNode(LIST_LOAD_DATA(params[0]));
-
-        auto rr = BSQListOps::s_reverse_ne(lflavor, rnode);
+        auto rr = BSQListOps::s_reverse_ne(lflavor, LIST_LOAD_DATA(params[0]));
         LIST_STORE_RESULT_REPR(rr, resultsl);
-
-        Allocator::GlobalAllocator.resetCollectionNodeEnd(gcpoint);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_append_ne: {
+    case BSQPrimitiveImplTag::s_list_append: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
 
-        Allocator::GlobalAllocator.ensureSpace(std::max(lflavor.pv8type->allocinfo.heapsize, lflavor.treetype->allocinfo.heapsize) + sizeof(GC_META_DATA_WORD));
         auto rr = BSQListOps::list_append(lflavor, LIST_LOAD_DATA(params[0]), LIST_LOAD_DATA(params[1]));
         LIST_STORE_RESULT_REPR(rr, resultsl);
         break;
@@ -2383,143 +2377,159 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
     case BSQPrimitiveImplTag::s_list_slice_start: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
 
-        BSQListSpineIterator liter(LIST_LOAD_TYPE_INFO_REPR(params[0]), LIST_LOAD_DATA(params[0]));
-        Allocator::GlobalAllocator.registerCollectionIterator(&liter);
+        BSQListSpineIterator liter(LIST_LOAD_REPR_TYPE(params[0]), LIST_LOAD_DATA(params[0]));
+        Allocator::GlobalAllocator.insertCollectionIter(&liter);
 
-        auto rr = BSQListOps::s_slice_start(lflavor, liter, LIST_LOAD_TYPE_INFO_REPR(params[0]), SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]), 0);
+        auto rr = BSQListOps::s_slice_start(lflavor, liter, LIST_LOAD_REPR_TYPE(params[0]), SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]));
         LIST_STORE_RESULT_REPR(rr, resultsl);
-        
-        Allocator::GlobalAllocator.releaseCollectionIterator(&liter);
+        Allocator::GlobalAllocator.removeCollectionIter(&liter);
         break;
     }
     case BSQPrimitiveImplTag::s_list_slice_end: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
 
-        BSQListSpineIterator liter(LIST_LOAD_TYPE_INFO_REPR(params[0]), LIST_LOAD_DATA(params[0]));
-        Allocator::GlobalAllocator.registerCollectionIterator(&liter);
+        BSQListSpineIterator liter(LIST_LOAD_REPR_TYPE(params[0]), LIST_LOAD_DATA(params[0]));
+        Allocator::GlobalAllocator.insertCollectionIter(&liter);
 
-        auto rr = BSQListOps::s_slice_end(lflavor, liter, LIST_LOAD_TYPE_INFO_REPR(params[0]), SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]), 0);
+        auto rr = BSQListOps::s_slice_end(lflavor, liter, LIST_LOAD_REPR_TYPE(params[0]), SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]));
         LIST_STORE_RESULT_REPR(rr, resultsl);
-        
-        Allocator::GlobalAllocator.releaseCollectionIterator(&liter);
+        Allocator::GlobalAllocator.removeCollectionIter(&liter);
         break;
     }
     case BSQPrimitiveImplTag::s_list_slice: {
-        xxxx;
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
 
-        BSQListSpineIterator liter(LIST_LOAD_TYPE_INFO_REPR(params[0]), LIST_LOAD_DATA(params[0]));
-        Allocator::GlobalAllocator.registerCollectionIterator(&liter);
+        BSQListSpineIterator siter(LIST_LOAD_REPR_TYPE(params[0]), LIST_LOAD_DATA(params[0]));
+        Allocator::GlobalAllocator.insertCollectionIter(&siter);
 
-        auto rr = BSQListOps::s_slice_end(lflavor, liter, LIST_LOAD_TYPE_INFO_REPR(params[0]), SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]), 0);
+        auto rr = BSQListOps::s_slice(lflavor, siter, LIST_LOAD_REPR_TYPE(params[0]), SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]), SLPTR_LOAD_CONTENTS_AS(BSQNat, params[2]));
         LIST_STORE_RESULT_REPR(rr, resultsl);
         
-        Allocator::GlobalAllocator.releaseCollectionIterator(&liter);
+        Allocator::GlobalAllocator.removeCollectionIter(&siter);
         break;
     }
     case BSQPrimitiveImplTag::s_list_get: {
-        BSQListOps::s_safe_get(LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]), invk->binds.find("T")->second, resultsl);
+        BSQListOps::s_safe_get(LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]), invk->binds.find("T")->second, resultsl);
         break;
     }
     case BSQPrimitiveImplTag::s_list_back: {
-        auto ii = LIST_LOAD_TYPE_INFO_REPR(params[0])->getCount(LIST_LOAD_DATA(params[0])) - 1;
-        BSQListOps::s_safe_get(LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), ii, invk->binds.find("T")->second, resultsl);
+        auto ii = LIST_LOAD_REPR_TYPE(params[0])->getCount(LIST_LOAD_DATA(params[0])) - 1;
+        BSQListOps::s_safe_get(LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), ii, invk->binds.find("T")->second, resultsl);
         break;
     }
     case BSQPrimitiveImplTag::s_list_front: {
         BSQNat ii = 0;
-        BSQListOps::s_safe_get(LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), ii, invk->binds.find("T")->second, resultsl);
+        BSQListOps::s_safe_get(LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), ii, invk->binds.find("T")->second, resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_find_pred_ne: {
-        auto pos = BSQListOps::s_find_pred_ne(eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), invk->pcodes.find("p")->second, params);
-        SLPTR_STORE_CONTENTS_AS(BSQNat, resultsl, pos);
+    case BSQPrimitiveImplTag::s_list_has_pred: {
+        auto pos = BSQListOps::s_find_pred_ne(eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.find("p")->second, params);
+        SLPTR_STORE_CONTENTS_AS(BSQBool, resultsl, pos != -1);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_find_pred_idx_ne: {
-        auto pos = BSQListOps::s_find_pred_idx_ne(eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), invk->pcodes.find("p")->second, params);
-        SLPTR_STORE_CONTENTS_AS(BSQNat, resultsl, pos);
+    case BSQPrimitiveImplTag::s_list_has_pred_idx: {
+        auto pos = BSQListOps::s_find_pred_ne(eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.find("p")->second, params);
+        SLPTR_STORE_CONTENTS_AS(BSQBool, resultsl, pos != -1);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_find_pred_last_ne: {
-        auto pos = BSQListOps::s_find_pred_last_ne(eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), invk->pcodes.find("p")->second, params);
-        SLPTR_STORE_CONTENTS_AS(BSQNat, resultsl, pos);
+    case BSQPrimitiveImplTag::s_list_find_pred: {
+        auto pos = BSQListOps::s_find_pred_ne(eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.find("p")->second, params);
+        SLPTR_STORE_CONTENTS_AS(BSQInt, resultsl, pos);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_find_pred_last_idx_ne: {
-        auto pos = BSQListOps::s_find_pred_last_idx_ne(eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), invk->pcodes.find("p")->second, params);
-        SLPTR_STORE_CONTENTS_AS(BSQNat, resultsl, pos);
+    case BSQPrimitiveImplTag::s_list_find_pred_idx: {
+        auto pos = BSQListOps::s_find_pred_idx_ne(eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.find("p")->second, params);
+        SLPTR_STORE_CONTENTS_AS(BSQInt, resultsl, pos);
+        break;
+    }
+    case BSQPrimitiveImplTag::s_list_find_pred_last: {
+        auto pos = BSQListOps::s_find_pred_last_ne(eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.find("p")->second, params);
+        SLPTR_STORE_CONTENTS_AS(BSQInt, resultsl, pos);
+        break;
+    }
+    case BSQPrimitiveImplTag::s_list_find_pred_last_idx: {
+        auto pos = BSQListOps::s_find_pred_last_idx_ne(eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.find("p")->second, params);
+        SLPTR_STORE_CONTENTS_AS(BSQInt, resultsl, pos);
         break;
     }
     case BSQPrimitiveImplTag::s_list_single_index_of: {
-        xxxx;
+        auto posfirst = BSQListOps::s_find_value_ne(LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), params[1]);
+        auto poslast = BSQListOps::s_find_value_last_ne(LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), params[1]);
+        SLPTR_STORE_CONTENTS_AS(BSQInt, resultsl, (posfirst == poslast ? posfirst : -1));
         break;
     }
-    case BSQPrimitiveImplTag::s_list_filter_pred_ne: {
+    case BSQPrimitiveImplTag::s_list_has: {
+        auto pos = BSQListOps::s_find_value_ne(LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), params[1]);
+        SLPTR_STORE_CONTENTS_AS(BSQBool, resultsl, pos != -1);
+        break;
+    }
+    case BSQPrimitiveImplTag::s_list_indexof: {
+        auto pos = BSQListOps::s_find_value_ne(LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), params[1]);
+        SLPTR_STORE_CONTENTS_AS(BSQInt, resultsl, pos);
+        break;
+    }
+    case BSQPrimitiveImplTag::s_list_last_indexof: {
+        auto pos = BSQListOps::s_find_value_last_ne(LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), params[1]);
+        SLPTR_STORE_CONTENTS_AS(BSQInt, resultsl, pos);
+        break;
+    }
+    case BSQPrimitiveImplTag::s_list_filter_pred: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
 
-        auto rr = BSQListOps::s_filter_pred_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), invk->pcodes.find("p")->second, params);
+        auto rr = BSQListOps::s_filter_pred_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.find("p")->second, params);
         LIST_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_filter_pred_idx_ne: {
+    case BSQPrimitiveImplTag::s_list_filter_pred_idx: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
 
-        auto rr = BSQListOps::s_filter_pred_idx_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), invk->pcodes.find("p")->second, params);
+        auto rr = BSQListOps::s_filter_pred_idx_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.find("p")->second, params);
         LIST_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_filter_cast: {
-        xxxx;
-        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
-
-        auto rr = BSQListOps::s_filter_pred_idx_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), invk->pcodes.find("p")->second, params);
-        LIST_STORE_RESULT_REPR(rr, resultsl);
-        break;
-    }
-    case BSQPrimitiveImplTag::s_list_map_ne: {
+    case BSQPrimitiveImplTag::s_list_map: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
         const BSQListTypeFlavor& rflavor = BSQListOps::g_flavormap.find(invk->binds.find("U")->second->tid)->second;
 
-        auto rr = BSQListOps::s_map_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), invk->pcodes.find("f")->second, params, rflavor);
+        auto rr = BSQListOps::s_map_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.find("f")->second, params, rflavor);
         LIST_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_map_idx_ne: {
+    case BSQPrimitiveImplTag::s_list_map_idx: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
         const BSQListTypeFlavor& rflavor = BSQListOps::g_flavormap.find(invk->binds.find("U")->second->tid)->second;
 
-        auto rr = BSQListOps::s_map_idx_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), invk->pcodes.find("f")->second, params, rflavor);
+        auto rr = BSQListOps::s_map_idx_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.find("f")->second, params, rflavor);
         LIST_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_map_sync_ne: {
+    case BSQPrimitiveImplTag::s_list_map_sync: {
         const BSQListTypeFlavor& lflavor1 = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
         const BSQListTypeFlavor& lflavor2 = BSQListOps::g_flavormap.find(invk->binds.find("U")->second->tid)->second;
         const BSQListTypeFlavor& rflavor = BSQListOps::g_flavormap.find(invk->binds.find("V")->second->tid)->second;
 
-        auto rr = BSQListOps::s_map_sync_ne(lflavor1, lflavor2, eethunk, SLPTR_LOAD_CONTENTS_AS(BSQNat, params[3]), LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), LIST_LOAD_DATA(params[1]), LIST_LOAD_TYPE_INFO_REPR(params[1]), invk->pcodes.find("f")->second, params, rflavor);
+        auto rr = BSQListOps::s_map_sync_ne(lflavor1, lflavor2, eethunk, SLPTR_LOAD_CONTENTS_AS(BSQNat, params[3]), LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), LIST_LOAD_DATA(params[1]), LIST_LOAD_REPR_TYPE(params[1]), invk->pcodes.find("f")->second, params, rflavor);
         LIST_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_sort_ne: {
+    case BSQPrimitiveImplTag::s_list_sort: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
 
-        auto rr = BSQListOps::s_sort_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), invk->pcodes.find("cmp")->second, params);
+        auto rr = BSQListOps::s_sort_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.find("cmp")->second, params);
         LIST_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
     case BSQPrimitiveImplTag::s_list_uniqueify: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
 
-        auto rr = BSQListOps::s_unique_from_sorted_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), invk->pcodes.find("eq")->second, params);
+        auto rr = BSQListOps::s_unique_from_sorted_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.find("eq")->second, params);
         LIST_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
      case BSQPrimitiveImplTag::s_map_build_k: {
         const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.find(std::make_pair(invk->binds.find("K")->second->tid, invk->binds.find("V")->second->tid))->second;
         
-        auto rr = BSQMapOps::map_cons(mflavor, params);
+        auto rr = BSQMapOps::map_cons(mflavor, mflavor.tupletype, params);
         MAP_STORE_RESULT_REPR(rr, params.size(), resultsl);
         break;
     }

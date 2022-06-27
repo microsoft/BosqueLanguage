@@ -181,6 +181,30 @@ public:
         *((uint64_t*)pvinto) = end;
     }
 
+    inline static void initializePVDataInsert(void* pvinto, void* pvfrom, int16_t ipos, StorageLocationPtr v, int16_t start, int16_t end, uint64_t entrysize)
+    {
+        auto intoloc = ((uint8_t*)pvinto) + sizeof(uint64_t);
+        auto fromloc = ((uint8_t*)pvfrom) + sizeof(uint64_t);
+        
+        int16_t jj = 0;
+        for(int16_t ii = start; ii < end; ++ii)
+        {
+            if(ii == ipos)
+            {
+                auto dstv = intoloc + (entrysize * jj);
+                GC_MEM_COPY(dstv, v, entrysize);
+
+                jj++;
+            }
+
+            auto src = fromloc + (entrysize * ii);
+            auto dst = intoloc + (entrysize * jj);
+            GC_MEM_COPY(dst, src, entrysize);
+        }
+
+        *((uint64_t*)pvinto) = (uint64_t)jj;
+    }
+
     inline static void removePVData(void* pvinto, void* pvfrom, int16_t idx, int16_t end, uint64_t entrysize)
     {
         auto intoloc = ((uint8_t*)pvinto) + sizeof(uint64_t);

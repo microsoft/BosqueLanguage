@@ -49,8 +49,6 @@ internal entity ListOps provides Some {
     internal recursive? function s_list_filter_pred<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): List<T> = s_list_filter_pred;
     internal recursive? function s_list_filter_pred_idx<T>(l: List<T>, p: recursive? pred(_: T, _: Nat) -> Bool): List<T> = s_list_filter_pred_idx;
 
-    internal recursive? function s_list_filter_cast<T, U>(l: List<T>, p: recursive? pred(_: T) -> Bool): List<U> = s_list_filter_cast;
-
     internal recursive? function s_list_map_fn<T, U>(l: List<T>, f: recursive? fn(_: T) -> U): List<U> = s_list_map;
     internal recursive? function s_list_map_fn_idx<T, U>(l: List<T>, f: recursive? fn(_: T, _: Nat) -> U): List<U> = s_list_map_idx;
     internal recursive? function s_list_map_fn_sync<T, U, V>(l1: List<T>, l2: List<U>, f: recursive? fn(_: T, _: U) -> V): List<V> = s_list_map_sync;

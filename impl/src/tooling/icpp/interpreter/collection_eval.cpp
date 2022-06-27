@@ -231,19 +231,30 @@ void* s_insert_list_ne_rec(const BSQListTypeFlavor& lflavor, BSQListSpineIterato
             auto pvalloc = (vsize + 1) <= 4 ? lflavor.pv4type : lflavor.pv8type;
             res = Allocator::GlobalAllocator.allocateDynamic(pvalloc);
 
-            BSQPartialVectorType::initializePVDataInsert(res, iter.lcurr, i, v, vsize, pvalloc->entrysize)
+            BSQPartialVectorType::initializePVDataInsert(res, iter.lcurr, i, v, 0, vsize, ((BSQPartialVectorType*)ttype)->entrysize);
         }
         else
         {
-            stck[0] = Allocator::GlobalAllocator.allocateDynamic(lflavor.pv8type);
-            stck[1] = Allocator::GlobalAllocator.allocateDynamic(lflavor.pv8type);
+            if(i < 4)
+            {
+                stck[0] = Allocator::GlobalAllocator.allocateDynamic(lflavor.pv8type);
+                stck[1] = Allocator::GlobalAllocator.allocateDynamic(lflavor.pv4type);
 
-xxxx;
-            BSQPartialVectorType::initializePVDataSingle(stck[0], v, lflavor.entrytype);
+                BSQPartialVectorType::initializePVDataInsert(stck[0], iter.lcurr, i, v, 0, 4, ((BSQPartialVectorType*)ttype)->entrysize);
+                BSQPartialVectorType::initializePVDataInsert(stck[1], iter.lcurr, vsize + 1, v, 4, vsize - 4, ((BSQPartialVectorType*)ttype)->entrysize);
+            }
+            else
+            {
+                stck[0] = Allocator::GlobalAllocator.allocateDynamic(lflavor.pv4type);
+                stck[1] = Allocator::GlobalAllocator.allocateDynamic(lflavor.pv8type);
+
+                BSQPartialVectorType::initializePVDataInsert(stck[0], iter.lcurr, vsize + 1, v, 0, 4, ((BSQPartialVectorType*)ttype)->entrysize);
+                BSQPartialVectorType::initializePVDataInsert(stck[1], iter.lcurr, vsize + 1, v, 4, vsize - 4, ((BSQPartialVectorType*)ttype)->entrysize);
+            }
 
             res = Allocator::GlobalAllocator.allocateDynamic(lflavor.treetype);
-            ((BSQListTreeRepr*)res)->l = static_cast<BSQListTreeRepr*>(iter.lcurr);
-            ((BSQListTreeRepr*)res)->r = stck[0];
+            ((BSQListTreeRepr*)res)->l = stck[0];
+            ((BSQListTreeRepr*)res)->r = stck[1];
             ((BSQListTreeRepr*)res)->lcount = static_cast<BSQListTreeRepr*>(iter.lcurr)->lcount + 1;
         }
     }
@@ -352,7 +363,67 @@ void* BSQListOps::s_reverse_ne(const BSQListTypeFlavor& lflavor, void* reprnode)
     return res;
 }
 
-BSQNat BSQListOps::s_find_pred_ne(LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* pred, const std::vector<StorageLocationPtr>& params)
+BSQInt BSQListOps::s_find_value_ne(void* t, const BSQListReprType* ttype, StorageLocationPtr v)
+{
+    BSQBool found = BSQFALSE;
+    int64_t idx = 0;
+
+    BSQListForwardIterator iter(ttype, t);
+    Allocator::GlobalAllocator.insertCollectionIter(&iter);
+
+    const BSQType* lentrytype = BSQType::g_typetable[ttype->entrytype];
+    {
+        while(iter.valid())
+        {
+            auto found = lentrytype->fpkeycmp(lentrytype, iter.getlocation(), v);
+            if(found)
+            {
+                break;
+            }
+
+            idx++;
+            iter.advance();
+        }
+
+        GCStack::popFrame(lentrytype->allocinfo.inlinedatasize);
+    }
+
+    Allocator::GlobalAllocator.removeCollectionIter(&iter);
+
+    return (BSQInt)(found ? idx : -1);
+}
+
+BSQInt BSQListOps::s_find_value_last_ne(void* t, const BSQListReprType* ttype, StorageLocationPtr v)
+{
+    BSQBool found = BSQFALSE;
+    int64_t idx = 0;
+
+    BSQListReverseIterator iter(ttype, t);
+    Allocator::GlobalAllocator.insertCollectionIter(&iter);
+
+    const BSQType* lentrytype = BSQType::g_typetable[ttype->entrytype];
+    {
+        while(iter.valid())
+        {
+            auto found = lentrytype->fpkeycmp(lentrytype, iter.getlocation(), v);
+            if(found)
+            {
+                break;
+            }
+
+            idx++;
+            iter.advance();
+        }
+
+        GCStack::popFrame(lentrytype->allocinfo.inlinedatasize);
+    }
+
+    Allocator::GlobalAllocator.removeCollectionIter(&iter);
+
+    return (BSQInt)(found ? idx : -1);
+}
+
+BSQInt BSQListOps::s_find_pred_ne(LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* pred, const std::vector<StorageLocationPtr>& params)
 {
     BSQBool found = BSQFALSE;
     int64_t idx = 0;
@@ -391,7 +462,7 @@ BSQNat BSQListOps::s_find_pred_ne(LambdaEvalThunk ee, void* t, const BSQListRepr
     return (BSQInt)(found ? idx : -1);
 }
 
-BSQNat BSQListOps::s_find_pred_idx_ne(LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* pred, const std::vector<StorageLocationPtr>& params)
+BSQInt BSQListOps::s_find_pred_idx_ne(LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* pred, const std::vector<StorageLocationPtr>& params)
 {
     BSQBool found = BSQFALSE;
     int64_t idx = 0;
@@ -430,7 +501,7 @@ BSQNat BSQListOps::s_find_pred_idx_ne(LambdaEvalThunk ee, void* t, const BSQList
     return (BSQInt)(found ? idx : -1);
 }
 
-BSQNat BSQListOps::s_find_pred_last_ne(LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* pred, const std::vector<StorageLocationPtr>& params)
+BSQInt BSQListOps::s_find_pred_last_ne(LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* pred, const std::vector<StorageLocationPtr>& params)
 {
     BSQBool found = BSQFALSE;
     int64_t icount = ttype->getCount(t);
@@ -470,7 +541,7 @@ BSQNat BSQListOps::s_find_pred_last_ne(LambdaEvalThunk ee, void* t, const BSQLis
     return (BSQInt)idx;
 }
 
-BSQNat BSQListOps::s_find_pred_last_idx_ne(LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* pred, const std::vector<StorageLocationPtr>& params)
+BSQInt BSQListOps::s_find_pred_last_idx_ne(LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* pred, const std::vector<StorageLocationPtr>& params)
 {
     BSQBool found = BSQFALSE;
     int64_t icount = ttype->getCount(t);
