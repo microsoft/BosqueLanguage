@@ -282,7 +282,7 @@ const BSQType* jsonLoadDeclOfType(json v)
 {
     auto ttype = j_tkey(v);
     auto tname = j_name(v);
-    auto oftypeid = MarshalEnvironment::g_typenameToIdMap.find(v["oftype"].get<std::string>())->second;
+    auto oftypeid = MarshalEnvironment::g_typenameToIdMap.find(v["basetype"].get<std::string>())->second;
 
     switch(oftypeid)
     {
