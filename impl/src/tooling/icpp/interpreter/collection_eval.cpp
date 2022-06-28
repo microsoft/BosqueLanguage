@@ -1297,23 +1297,35 @@ void s_entries_rec_ne(const BSQMapTypeFlavor& mflavor, BSQMapSpineIterator& ii, 
     }
     
     auto mtype = GET_TYPE_META_DATA_AS(BSQMapTreeType, ii.lcurr);
-    void** stck = (void**)GCStack::allocFrame(mflavor.tupletype->allocinfo.inlinedatasize);
-    GC_MEM_COPY((void*)stck, mtype->getKeyLocation(ii.lcurr), mflavor.tupletype->allocinfo.inlinedatasize);
-
-    auto tmpi = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(tnode);
     if(tnode == nullptr)
     {
+        void** tmpl = (void**)GCStack::allocFrame(sizeof(void*) + lflavor.entrytype->allocinfo.inlinedatasize);
+        void* data = nullptr;
+        if(lflavor.entrytype->tkind != BSQTypeLayoutKind::Struct)
+        {
+            *tmpl = Allocator::GlobalAllocator.allocateDynamic(lflavor.entrytype);
+            data = *tmpl;
+        }
+        else
+        {
+            data = tmpl + 1;
+        }
+
+        mflavor.keytype->storeValue(lflavor.entrytype->indexStorageLocationOffset(&data, 0), mtype->getKeyLocation(ii.lcurr));
+        mflavor.valuetype->storeValue(lflavor.entrytype->indexStorageLocationOffset(&data, mflavor.keytype->allocinfo.inlinedatasize), mtype->getValueLocation(ii.lcurr));
         auto vv = Allocator::GlobalAllocator.allocateDynamic(lflavor.pv4type);
-        BSQPartialVectorType::initializePVDataSingle(vv, stck, mflavor.tupletype);
+
+        BSQPartialVectorType::initializePVDataSingle(vv, data, lflavor.entrytype);
         SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(tnode, vv);
+
+        GCStack::popFrame(sizeof(void*) + lflavor.entrytype->allocinfo.inlinedatasize);
     }
     else 
     {
-
-        auto tmpr = BSQListOps::s_push_back_ne(lflavor, tmpi, GET_TYPE_META_DATA_AS(BSQListReprType, tmpi), stck);
+        auto tmpi = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(tnode);
+        auto tmpr = BSQListOps::s_push_back_ne(lflavor, tmpi, GET_TYPE_META_DATA_AS(BSQListReprType, tmpi), tnode);
         SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(tnode, tmpr);
     }
-    GCStack::popFrame(sizeof(void*) + mflavor.tupletype->allocinfo.inlinedatasize);
 
     if(BSQMapTreeType::getRight(ii.lcurr) != nullptr)
     {

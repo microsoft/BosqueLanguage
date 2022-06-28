@@ -135,12 +135,12 @@ Argument jsonParse_Argument(json j)
 
 TargetVar jsonParse_TargetVar(json j)
 {
-    return TargetVar{ j["kind"].get<ArgumentTag>(), j["offset"].get<uint32_t>() };
+    return TargetVar{ j["offset"].get<uint32_t>() };
 }
 
 ParameterInfo jsonParse_ParameterInfo(json j)
 {
-    return ParameterInfo{ j["kind"].get<ArgumentTag>(), j["poffset"].get<uint32_t>() };
+    return ParameterInfo{ j["poffset"].get<uint32_t>() };
 }
 
 SourceInfo jsonParse_SourceInfo(json j)

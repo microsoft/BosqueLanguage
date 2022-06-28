@@ -61,10 +61,10 @@ class ICPPBodyEmitter {
 
     private getStackInfoForTargetVar(vname: string, oftype: ICPPLayoutInfo): TargetVar {
         if (this.stackMap.has(vname)) {
-            return { kind: ArgumentTag.StackVal, offset: this.stackMap.get(vname) as number };
+            return { offset: this.stackMap.get(vname) as number };
         }
         else {
-            const trgt = { kind: ArgumentTag.StackVal, offset: this.stackSize };
+            const trgt = { offset: this.stackSize };
 
             this.stackLayout.push({ offset: this.stackSize, name: vname, storage: oftype });
             this.stackMap.set(vname, this.stackSize);
@@ -76,10 +76,10 @@ class ICPPBodyEmitter {
 
     private getStackInfoForArgumentVar(pname: string, oftype: ICPPLayoutInfo): ParameterInfo {
         if (this.stackMap.has(pname)) {
-            return { kind: ArgumentTag.StackVal, poffset: this.stackMap.get(pname) as number };
+            return { poffset: this.stackMap.get(pname) as number };
         }
         else {
-            const trgt = { kind: ArgumentTag.StackVal, poffset: this.stackSize };
+            const trgt = { poffset: this.stackSize };
 
             this.stackLayout.push({ offset: this.stackSize, name: pname, storage: oftype });
             this.stackMap.set(pname, this.stackSize);
@@ -90,7 +90,7 @@ class ICPPBodyEmitter {
     }
 
     private generateScratchVarInfo(oftype: ICPPLayoutInfo): [TargetVar, Argument] {
-        const trgt = { kind: ArgumentTag.StackVal, offset: this.stackSize };
+        const trgt = { offset: this.stackSize };
 
         const vname = `@scalar_scratch_${this.stackLayout.length}`;
         this.stackLayout.push({ offset: this.stackSize, name: vname, storage: oftype });
@@ -105,7 +105,7 @@ class ICPPBodyEmitter {
     }
 
     private getStorageTargetForPhi(vname: MIRRegisterArgument): TargetVar {
-        return { kind: ArgumentTag.StackVal, offset: this.stackMap.get(vname.nameID) as number };
+        return { offset: this.stackMap.get(vname.nameID) as number };
     }
 
     private generateVarInfoForHomeUpdate(homename: string, rname: string): [TargetVar, Argument, ICPPLayoutInfo] {
@@ -113,7 +113,7 @@ class ICPPBodyEmitter {
         const hnlocation = this.stackMap.get(homename) as number;
         const rlocation = this.stackMap.get(rname) as number;
 
-        return [{kind: ArgumentTag.StackVal, offset: hnlocation}, {kind: ArgumentTag.StackVal, location: rlocation}, oftype];
+        return [{offset: hnlocation}, {kind: ArgumentTag.StackVal, location: rlocation}, oftype];
     }
 
     private generateProjectVirtualTupleInvName(argflowtype: MIRType, indecies: number[], resulttype: MIRType): string {

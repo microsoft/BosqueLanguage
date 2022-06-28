@@ -108,8 +108,7 @@ public:
 
     const BSQInvokeDecl* invoke;
 
-    uint8_t* scalarbase;
-    uint8_t* mixedbase;
+    uint8_t* frameptr;
     BSQBool* argmask;
     BSQBool* masksbase;
 
@@ -140,13 +139,9 @@ public:
 
     inline StorageLocationPtr evalArgument(Argument arg)
     {
-        if(arg.kind == ArgumentTag::ScalarVal)
+        if(arg.kind == ArgumentTag::StackVal)
         {
-            return this->cframe->scalarbase + arg.location;
-        }
-        else if(arg.kind == ArgumentTag::MixedVal)
-        {
-            return this->cframe->mixedbase + arg.location;
+            return this->cframe->frameptr + arg.location;
         }
         else 
         {
@@ -156,26 +151,12 @@ public:
 
     inline StorageLocationPtr evalTargetVar(TargetVar trgt)
     {
-        if(trgt.kind == ArgumentTag::ScalarVal)
-        {
-            return this->cframe->scalarbase + trgt.offset;
-        }
-        else
-        {
-            return this->cframe->mixedbase + trgt.offset;
-        }
+        return this->cframe->frameptr + trgt.offset;
     }
 
-    static inline StorageLocationPtr evalParameterInfo(ParameterInfo pinfo, uint8_t* scalarbase, uint8_t* mixedbase)
+    static inline StorageLocationPtr evalParameterInfo(ParameterInfo pinfo, uint8_t* frameptr)
     {
-        if(pinfo.kind == ArgumentTag::ScalarVal)
-        {
-            return scalarbase + pinfo.poffset;
-        }
-        else 
-        {
-            return mixedbase + pinfo.poffset;
-        }
+        return frameptr + pinfo.poffset;
     }
 
 #ifdef BSQ_DEBUG_BUILD
@@ -320,7 +301,7 @@ private:
         Evaluator::g_callstack[this->cpos - 1].dbg_prevreturnbp = BreakPoint{-1, this->call_count, this->cframe->invoke, *this->cframe->cpos, this->cframe->dbg_currentline};
     }
 
-    inline void pushFrame(StepMode smode, const BreakPoint& callerpos, const BSQInvokeDecl* invk, uint8_t* scalarbase, uint8_t* mixedbase, BSQBool* argmask, BSQBool* masksbase, const std::vector<InterpOp*>* ops)
+    inline void pushFrame(StepMode smode, const BreakPoint& callerpos, const BSQInvokeDecl* invk, uint8_t* frameptr, BSQBool* argmask, BSQBool* masksbase, const std::vector<InterpOp*>* ops)
     {
         this->call_count++;
 
@@ -335,8 +316,7 @@ private:
         cf->dbg_step_mode = smode;
         
         cf->invoke = invk;
-        cf->scalarbase = scalarbase;
-        cf->mixedbase = mixedbase;
+        cf->frameptr = frameptr;
         cf->argmask = argmask;
         cf->masksbase = masksbase;
         cf->ops = ops;
@@ -347,14 +327,13 @@ private:
         this->cframe = Evaluator::g_callstack + this->cpos;
     }
 #else
-    inline void pushFrame(const BSQInvokeDecl* invk, uint8_t* scalarbase, uint8_t* mixedbase, BSQBool* argmask, BSQBool* masksbase, const std::vector<InterpOp*>* ops) 
+    inline void pushFrame(const BSQInvokeDecl* invk, uint8_t* frameptr, BSQBool* argmask, BSQBool* masksbase, const std::vector<InterpOp*>* ops) 
     {
         this->cpos++;
 
         auto cf = Evaluator::g_callstack + cpos;
         cf->invoke = invk;
-        cf->scalarbase = scalarbase;
-        cf->mixedbase = mixedbase;
+        cf->frameptr = frameptr;
         cf->argmask = argmask;
         cf->masksbase = masksbase;
         cf->ops = ops;
@@ -428,7 +407,7 @@ private:
     {
         assert(gvaroffset >= 0);
 
-        return this->cframe->scalarbase + gvaroffset;
+        return this->cframe->frameptr + gvaroffset;
     }
 
     inline BSQBool evalGuardStmt(const BSQGuard& guard)

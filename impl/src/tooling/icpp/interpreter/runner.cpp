@@ -65,9 +65,7 @@ std::pair<bool, json> run(Evaluator& runner, const APIModule* api, const std::st
 
     //Create a 0 stack frame that we can parse the arguments onto and that will keep them live (for reuse)
     // -- may need to revisit as it creates hidden sharing if/when we support mutation in place
-    uint8_t* istack = (uint8_t*)BSQ_STACK_SPACE_ALLOC(call->scalarstackBytes + call->mixedstackBytes);
-    GC_MEM_ZERO(istack, call->scalarstackBytes + call->mixedstackBytes);
-    GCStack::pushFrame((void**)(istack + call->scalarstackBytes), call->mixedMask);
+    uint8_t* istack = GCStack::allocFrame(call->stackBytes);
 
     if(setjmp(Evaluator::g_entrybuff) > 0)
     {
@@ -79,7 +77,7 @@ std::pair<bool, json> run(Evaluator& runner, const APIModule* api, const std::st
         for(size_t i = 0; i < args.size(); ++i)
         {
             auto itype = jsig.value()->argtypes[i];
-            StorageLocationPtr pv = Evaluator::evalParameterInfo(call->paraminfo[i], istack, istack + call->scalarstackBytes);
+            StorageLocationPtr pv = Evaluator::evalParameterInfo(call->paraminfo[i], istack);
             bool ok = itype->tparse(jloader, api, args[i], pv, runner);
             if(!ok)
             {
@@ -101,7 +99,7 @@ std::pair<bool, json> run(Evaluator& runner, const APIModule* api, const std::st
 #ifdef BSQ_DEBUG_BUILD
         if(runner.debuggerattached)
         {
-            auto result = BSQ_STACK_SPACE_ALLOC(call->resultType->allocinfo.inlinedatasize);
+            auto result = (StorageLocationPtr)GCStack::allocFrame(call->resultType->allocinfo.inlinedatasize);
             std::optional<json> res = std::nullopt;
 
             while(true)
@@ -146,7 +144,7 @@ std::pair<bool, json> run(Evaluator& runner, const APIModule* api, const std::st
         else
         {
 #endif
-            auto result = BSQ_STACK_SPACE_ALLOC(call->resultType->allocinfo.inlinedatasize);
+            auto result = (StorageLocationPtr)GCStack::allocFrame(call->resultType->allocinfo.inlinedatasize);
             runner.invokeMain(call, istack, result, call->resultType, call->resultArg);
 
             ICPPParseJSON jextract;

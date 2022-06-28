@@ -169,12 +169,10 @@ type Argument = {
 };
 
 type TargetVar = {
-    kind: ArgumentTag;
     offset: number;
 };
 
 type ParameterInfo = {
-    kind: ArgumentTag;
     poffset: number;
 };
 

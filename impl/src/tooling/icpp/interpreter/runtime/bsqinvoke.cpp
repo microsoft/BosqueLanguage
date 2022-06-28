@@ -538,13 +538,11 @@ BSQInvokeBodyDecl* BSQInvokeBodyDecl::jsonLoad(json v)
     std::vector<ParameterInfo> paraminfo;
     auto jparaminfo = v["paraminfo"];
     std::transform(jparaminfo.cbegin(), jparaminfo.cend(), std::back_inserter(paraminfo), [](json param) {
-        auto atag = param["kind"].get<ArgumentTag>();
         auto offset = param["poffset"].get<uint32_t>();
-        return ParameterInfo{atag, offset};
+        return ParameterInfo{offset};
     });
 
-    Argument resultArg = { v["resultArg"]["kind"].get<ArgumentTag>(), v["resultArg"]["location"].get<uint32_t>() }; 
-    const RefMask mask = jsonLoadRefMask(v["mixedStackMask"]);
+    Argument resultArg = { v["resultArg"]["kind"].get<ArgumentTag>(), v["resultArg"]["location"].get<uint32_t>() };
 
     std::vector<InterpOp*> body;
     auto jbody = v["body"];
@@ -552,7 +550,7 @@ BSQInvokeBodyDecl* BSQInvokeBodyDecl::jsonLoad(json v)
         return InterpOp::jparse(jop);
     });
 
-    return new BSQInvokeBodyDecl(j_name(v), ikey, srcfile, j_sinfoStart(v), j_sinfoEnd(v), recursive, params, rtype, paraminfo, resultArg, v["scalarStackBytes"].get<size_t>(), v["mixedStackBytes"].get<size_t>(), mask, v["maskSlots"].get<uint32_t>(), body, v["argmaskSize"].get<uint32_t>());
+    return new BSQInvokeBodyDecl(j_name(v), ikey, srcfile, j_sinfoStart(v), j_sinfoEnd(v), recursive, params, rtype, paraminfo, resultArg, v["stackBytes"].get<size_t>(), v["maskSlots"].get<uint32_t>(), body, v["argmaskSize"].get<uint32_t>());
 }
 
 BSQInvokePrimitiveDecl* BSQInvokePrimitiveDecl::jsonLoad(json v)
@@ -568,8 +566,6 @@ BSQInvokePrimitiveDecl* BSQInvokePrimitiveDecl::jsonLoad(json v)
         return BSQFunctionParameter{j_name(param), ptype};
     });
     auto rtype = BSQType::g_typetable[MarshalEnvironment::g_typenameToIdMap.find(v["resultType"].get<std::string>())->second];
-
-    const RefMask mask = jsonLoadRefMask(v["mixedStackMask"]);
 
     const BSQType* enclosingtype = nullptr;
     if(v.contains("enclosingtype") && v["enclosingtype"].is_string())
@@ -606,5 +602,5 @@ BSQInvokePrimitiveDecl* BSQInvokePrimitiveDecl::jsonLoad(json v)
         pcodes[name] = new BSQPCode(code, cargpos);
     });
 
-    return new BSQInvokePrimitiveDecl(j_name(v), ikey, srcfile, j_sinfoStart(v), j_sinfoEnd(v), recursive, params, rtype, v["scalarStackBytes"].get<size_t>(), v["mixedStackBytes"].get<size_t>(), mask, v["maskSlots"].get<uint32_t>(), enclosingtype, implkey, implkeyname, binds, pcodes);
+    return new BSQInvokePrimitiveDecl(j_name(v), ikey, srcfile, j_sinfoStart(v), j_sinfoEnd(v), recursive, params, rtype, v["stackBytes"].get<size_t>(), v["maskSlots"].get<uint32_t>(), enclosingtype, implkey, implkeyname, binds, pcodes);
 }

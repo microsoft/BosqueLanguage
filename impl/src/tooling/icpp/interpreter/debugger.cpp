@@ -351,7 +351,7 @@ void dbg_displayLocals(Evaluator* vv)
     for(size_t i = 0; i < params.size(); ++i)
     {
         auto binvoke = dynamic_cast<const BSQInvokeBodyDecl*>(vv->dbg_getCFrame()->invoke);
-        auto val = Evaluator::evalParameterInfo(binvoke->paraminfo[i], vv->dbg_getCFrame()->scalarbase, vv->dbg_getCFrame()->mixedbase);
+        auto val = Evaluator::evalParameterInfo(binvoke->paraminfo[i], vv->dbg_getCFrame()->frameptr);
         
         locals += "  " + params[i].name + ": " + params[i].ptype->fpDisplay(params[i].ptype, val, DisplayMode::CmdDebug) + "\n";
     }
@@ -657,7 +657,7 @@ void dbg_displayExp(Evaluator* vv, std::string vexp)
             auto binvoke = dynamic_cast<const BSQInvokeBodyDecl*>(vv->dbg_getCFrame()->invoke);
             auto pdist = std::distance(params.cbegin(), ppos);
             btype = ppos->ptype;
-            cpos = Evaluator::evalParameterInfo(binvoke->paraminfo[pdist], vv->dbg_getCFrame()->scalarbase, vv->dbg_getCFrame()->mixedbase);
+            cpos = Evaluator::evalParameterInfo(binvoke->paraminfo[pdist], vv->dbg_getCFrame()->frameptr);
         }
         else
         {

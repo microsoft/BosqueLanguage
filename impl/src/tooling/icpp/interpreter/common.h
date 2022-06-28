@@ -68,6 +68,12 @@ class BSQType;
 #define MEM_STATS_ARG(X)
 #endif
 
+#ifdef _WIN32
+#define BSQ_STACK_ALLOC(SIZE) ((SIZE) == 0 ? nullptr : _alloca(SIZE))
+#else
+#define BSQ_STACK_ALLOC(SIZE) ((SIZE) == 0 ? nullptr : alloca(SIZE))
+#endif
+
 //All struct/tuple/record objects must be smaller than this -- larger seems like a performance anti-pattern
 //If really needed we could try to always grab/release pages in chunks of 4. Large objects allocate into these and for small objs we just throw 3 pages in the spare list. Holes are a bit of a problem though.
 #define BSQ_ALLOC_MAX_OBJ_SIZE 496ul

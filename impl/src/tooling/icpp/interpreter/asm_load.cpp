@@ -49,11 +49,10 @@ BSQMapTypeFlavor jsonLoadMapFlavor(json v)
 
     const BSQType* keytype = BSQType::g_typetable[MarshalEnvironment::g_typenameToIdMap.find(v["keytype"].get<std::string>())->second];
     const BSQType* valuetype = BSQType::g_typetable[MarshalEnvironment::g_typenameToIdMap.find(v["valuetype"].get<std::string>())->second];
-    const BSQType* tupletype = BSQType::g_typetable[MarshalEnvironment::g_typenameToIdMap.find(v["tupletype"].get<std::string>())->second];
 xxxx;
     const BSQMapTreeType* treetype = dynamic_cast<const BSQMapTreeType*>(BSQType::g_typetable[MarshalEnvironment::g_typenameToIdMap.find(v["treetype"].get<std::string>())->second]);
 
-    return BSQMapTypeFlavor{mtype, mreprtype, keytype, valuetype, tupletype, treetype};   
+    return BSQMapTypeFlavor{mtype, mreprtype, keytype, valuetype, treetype};   
 }
 
 void initialize(size_t cbuffsize, const RefMask cmask)

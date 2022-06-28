@@ -527,8 +527,7 @@ class ICPPAssembly
             tkey: icpptype.tkey,
             name: edecl.tkey,
             ktype: edecl.getTypeK(),
-            vtype: edecl.getTypeV(),
-            etype: edecl.tupletype
+            vtype: edecl.getTypeV()
         };
     }
 
@@ -813,8 +812,7 @@ class ICPPAssembly
                 return {
                     ltype: mdcl.tkey,
                     keytype: mdcl.getTypeK().typeID,
-                    valuetype: mdcl.getTypeV().typeID,
-                    tupletype: mdcl.tupletype
+                    valuetype: mdcl.getTypeV().typeID
                 };
             }
             else {
