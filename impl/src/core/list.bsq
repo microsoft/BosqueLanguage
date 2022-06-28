@@ -2386,7 +2386,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                 let mv = MapOps::s_map_find<T, U>(v);
 
                 assert(mv.1);
-                return mv.0.1;
+                return mv.0;
             });
         }
     }
@@ -2403,7 +2403,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                     return none;
                 }
                 else {
-                    return mv.0.1;
+                    return mv.0;
                 }
             });
         }
@@ -2421,7 +2421,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                     return nothing;
                 }
                 else {
-                    something(return mv.0.1);
+                    something(return mv.0);
                 }
             });
         }

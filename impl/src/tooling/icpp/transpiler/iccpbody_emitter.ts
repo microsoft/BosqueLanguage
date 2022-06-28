@@ -50,7 +50,7 @@ class ICPPBodyEmitter {
     requiredUpdateEntityWithCheck: { inv: string, arglayouttype: MIRType, argflowtype: MIRType, updates: [MIRFieldKey, MIRResolvedTypeKey][], resulttype: MIRType }[] = [];
 
     requiredSingletonConstructorsList: { inv: string, argc: number, resulttype: MIRType }[] = [];
-    requiredSingletonConstructorsMap: { inv: string, argc: number, resulttype: MIRType }[] = [];
+    requiredSingletonConstructorsMap: { inv: string, argc: number, argtupletype: MIRTupleType, resulttype: MIRType }[] = [];
 
     requiredTupleAppend: { inv: string, args: {layout: MIRType, flow: MIRType}[], resulttype: MIRType }[] = [];
     requiredRecordMerge: { inv: string, args: {layout: MIRType, flow: MIRType}[], resulttype: MIRType }[] = [];
@@ -350,13 +350,12 @@ class ICPPBodyEmitter {
         return new ICPPInvokePrimitiveDecl(geninfo.inv, geninfo.inv, "[Generated]", new SourceInfo(-1, -1, -1 ,-1), new SourceInfo(-1, -1, -1 ,-1), false, params, geninfo.resulttype.typeID, geninfo.resulttype.typeID, "s_list_build_k", new Map<string, MIRResolvedTypeKey>().set("T", etype), new Map<string, ICPPPCode>());
     }
 
-    generateSingletonConstructorMap(geninfo: { inv: string, argc: number, resulttype: MIRType }): ICPPInvokeDecl {
+    generateSingletonConstructorMap(geninfo: { inv: string, argc: number, argtupletype: MIRTupleType, resulttype: MIRType }): ICPPInvokeDecl {
         const ldecl = this.assembly.entityDecls.get(geninfo.resulttype.typeID) as MIRPrimitiveMapEntityTypeDecl;
-        const etype = ldecl.tupletype;
 
         let params: ICPPFunctionParameter[] = [];
         for(let j = 0; j < geninfo.argc; ++j) {
-            params.push(new ICPPFunctionParameter(`arg${j}`, etype));
+            params.push(new ICPPFunctionParameter(`arg${j}`, geninfo.argtupletype.typeID));
         }
         
         return new ICPPInvokePrimitiveDecl(geninfo.inv, geninfo.inv, "[Generated]", new SourceInfo(-1, -1, -1 ,-1), new SourceInfo(-1, -1, -1 ,-1), false, params, geninfo.resulttype.typeID, geninfo.resulttype.typeID, "s_map_build_k", new Map<string, MIRResolvedTypeKey>().set("K", ldecl.getTypeK().typeID).set("V", ldecl.getTypeV().typeID), new Map<string, ICPPPCode>());
@@ -1154,7 +1153,7 @@ class ICPPBodyEmitter {
         }
     }
 
-    processConstructorPrimaryCollectionSingletonsList_Helper(op: MIRConstructorPrimaryCollectionSingletons, ltype: MIRPrimitiveListEntityTypeDecl, exps: Argument[]): ICPPOp {
+    processConstructorPrimaryCollectionSingletonsList_Helper(op: MIRConstructorPrimaryCollectionSingletons, exps: Argument[]): ICPPOp {
         const icall = this.generateSingletonConstructorsList(exps.length, this.typegen.getMIRType(op.tkey));
         if(this.requiredSingletonConstructorsList.findIndex((vv) => vv.inv === icall) === -1) {
             const geninfo = { inv: icall, argc: exps.length, resulttype: this.typegen.getMIRType(op.tkey) };
@@ -1164,10 +1163,10 @@ class ICPPBodyEmitter {
         return ICPPOpEmitter.genInvokeFixedFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.tkey), op.tkey, icall, exps, -1, ICPPOpEmitter.genNoStatmentGuard());
     }
 
-    processConstructorPrimaryCollectionSingletonsMap_Helper(op: MIRConstructorPrimaryCollectionSingletons, ltype: MIRPrimitiveMapEntityTypeDecl, exps: Argument[]): ICPPOp {
+    processConstructorPrimaryCollectionSingletonsMap_Helper(op: MIRConstructorPrimaryCollectionSingletons, argtupletype: MIRTupleType, exps: Argument[]): ICPPOp {
         const icall = this.generateSingletonConstructorsMap(exps.length, this.typegen.getMIRType(op.tkey));
         if(this.requiredSingletonConstructorsMap.findIndex((vv) => vv.inv === icall) === -1) {
-            const geninfo = { inv: icall, argc: exps.length, resulttype: this.typegen.getMIRType(op.tkey) };
+            const geninfo = { inv: icall, argc: exps.length, argtupletype: argtupletype, resulttype: this.typegen.getMIRType(op.tkey) };
             this.requiredSingletonConstructorsMap.push(geninfo);
         }
             
@@ -1179,7 +1178,7 @@ class ICPPBodyEmitter {
         const args = op.args.map((arg) => this.argToICPPLocation(arg[1]));
         
         if(constype instanceof MIRPrimitiveListEntityTypeDecl) {
-            return this.processConstructorPrimaryCollectionSingletonsList_Helper(op, constype, args);
+            return this.processConstructorPrimaryCollectionSingletonsList_Helper(op, args);
         }
         else if (constype instanceof MIRPrimitiveStackEntityTypeDecl) {
             return NOT_IMPLEMENTED("MIRPrimitiveStackEntityTypeDecl@cons");
@@ -1191,7 +1190,8 @@ class ICPPBodyEmitter {
             return NOT_IMPLEMENTED("MIRPrimitiveSetEntityTypeDecl@cons");
         }
         else {
-            return this.processConstructorPrimaryCollectionSingletonsMap_Helper(op, constype as MIRPrimitiveMapEntityTypeDecl, args);
+            const tupleargtype = (this.assembly.typeMap.get(op.args[0][0]) as MIRType).getUniqueTupleTargetType();
+            return this.processConstructorPrimaryCollectionSingletonsMap_Helper(op, tupleargtype, args);
         }
     }
 

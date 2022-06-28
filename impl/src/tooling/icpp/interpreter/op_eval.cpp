@@ -2567,6 +2567,7 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         break;
     }
     case BSQPrimitiveImplTag::s_map_get: {
+        xxxx;
         auto ttype = MAP_LOAD_REPR_TYPE(params[0]);
         auto rr = BSQMapOps::s_lookup_ne(MAP_LOAD_DATA(params[0]), ttype, params[1], invk->binds.find("K")->second);
         BSQ_INTERNAL_ASSERT(rr != nullptr);
@@ -2575,6 +2576,7 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         break;
     }
     case BSQPrimitiveImplTag::s_map_find: {
+        xxxx;
         const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.find(std::make_pair(invk->binds.find("K")->second->tid, invk->binds.find("V")->second->tid))->second;
 
         auto ttype = MAP_LOAD_REPR_TYPE(params[0]);

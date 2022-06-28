@@ -630,12 +630,8 @@ class MIRPrimitiveSetEntityTypeDecl extends MIRPrimitiveCollectionEntityTypeDecl
 }
 
 class MIRPrimitiveMapEntityTypeDecl extends MIRPrimitiveCollectionEntityTypeDecl {
-    readonly tupletype: MIRResolvedTypeKey;
-
-    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], binds: Map<string, MIRType>, tupletype: MIRResolvedTypeKey) {
+    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], binds: Map<string, MIRType>) {
         super(srcInfo, srcFile, tkey, attributes, ns, name, terms, provides, binds);
-
-        this.tupletype = tupletype;
     }
 
     getTypeK(): MIRType {
@@ -647,11 +643,11 @@ class MIRPrimitiveMapEntityTypeDecl extends MIRPrimitiveCollectionEntityTypeDecl
     }
 
     jemit(): object {
-        return { tag: "set", ...this.jemitcollection(), tupletype: this.tupletype };
+        return { tag: "set", ...this.jemitcollection() };
     }
 
     static jparse(jobj: any): MIRPrimitiveMapEntityTypeDecl {
-        return new MIRPrimitiveMapEntityTypeDecl(...MIRPrimitiveCollectionEntityTypeDecl.jparsecollection(jobj), jobj.tupletype);
+        return new MIRPrimitiveMapEntityTypeDecl(...MIRPrimitiveCollectionEntityTypeDecl.jparsecollection(jobj));
     }
 }
 
@@ -1215,7 +1211,7 @@ class MIRAssembly {
                 }
                 else {
                     const mentity = entity as MIRPrimitiveMapEntityTypeDecl;
-                    return {tag: APIEmitTypeTag.ContainerTag, name: tt.typeID, category: ContainerCategory.Map, tupletype: mentity.tupletype, ktype: mentity.getTypeK(), vtype: mentity.getTypeV()};
+                    return {tag: APIEmitTypeTag.ContainerTag, name: tt.typeID, category: ContainerCategory.Map, ktype: mentity.getTypeK(), vtype: mentity.getTypeV()};
                 }
             }
         }

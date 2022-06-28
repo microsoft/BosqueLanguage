@@ -17,8 +17,8 @@ internal entity MapOps provides Some {
     __safe internal function s_map_max_key<K grounded KeyType, V>(m: Map<K, V>): K = s_map_max_key; 
 
     __safe internal function s_map_has<K grounded KeyType, V>(m: Map<K, V>, k: K): Bool = s_map_has; 
-    __safe internal function s_map_get<K grounded KeyType, V>(m: Map<K, V>, k: K): [K, V] = s_map_get;
-    __safe internal function s_map_find<K grounded KeyType, V>(m: Map<K, V>, k: K): (|[K, V], Bool|) = s_map_find;
+    __safe internal function s_map_get<K grounded KeyType, V>(m: Map<K, V>, k: K): V = s_map_get;
+    __safe internal function s_map_find<K grounded KeyType, V>(m: Map<K, V>, k: K): (|V, Bool|) = s_map_find;
     
     __safe internal function s_map_union_fast<K grounded KeyType, V>(m1: Map<K, V>, m2: Map<K, V>): Map<K, V> = s_map_union_fast; 
 

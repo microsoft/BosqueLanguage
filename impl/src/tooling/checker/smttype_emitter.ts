@@ -705,7 +705,7 @@ class SMTTypeEmitter {
     }
 
     generateMapEntryTypeConsInfo(ttype: MIRType): {cons: string, keyf: string, valf: string} {
-        return {cons: `$MapEntry_${this.getSMTTypeFor(ttype).smttypename}@cons`, keyf: `$MapEntry_${this.getSMTTypeFor(ttype).smttypename}_key`, valf: `$MapEntry_${this.getSMTTypeFor(ttype).smttypename}_vtup`};
+        return {cons: `$MapEntry_${this.getSMTTypeFor(ttype).smttypename}@cons`, keyf: `$MapEntry_${this.getSMTTypeFor(ttype).smttypename}_key`, valf: `$MapEntry_${this.getSMTTypeFor(ttype).smttypename}_value`};
     }
 
     generateMapEntryTypeConstructor(ttype: MIRType, key: SMTExp, val: SMTExp): SMTExp {
@@ -718,7 +718,7 @@ class SMTTypeEmitter {
         return new SMTCallSimple(consinfo.keyf, [entry]);
     }
 
-    generateMapEntryTypeGetValueTuple(ttype: MIRType, entry: SMTExp): SMTExp {
+    generateMapEntryTypeGetValue(ttype: MIRType, entry: SMTExp): SMTExp {
         const consinfo = this.generateMapEntryTypeConsInfo(ttype);
         return new SMTCallSimple(consinfo.valf, [entry]);
     }
