@@ -2545,7 +2545,7 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.find(std::make_pair(invk->binds.find("K")->second->tid, invk->binds.find("V")->second->tid))->second;
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->resultType->tid)->second;
 
-        auto rr = BSQMapOps::s_entries_ne(mflavor, MAP_LOAD_DATA(params[0]), lflavor);
+        auto rr = BSQMapOps::s_entries_ne(mflavor, MAP_LOAD_DATA(params[0]), MAP_LOAD_REPR_TYPE(params[0]), lflavor);
         MAP_STORE_RESULT_REPR(rr, resultsl);
         break;
     }

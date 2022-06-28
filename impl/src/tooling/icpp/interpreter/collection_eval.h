@@ -472,7 +472,7 @@ public:
     static void* s_set_ne(const BSQMapTypeFlavor& mflavor, void* t, const BSQMapTreeType* ttype, StorageLocationPtr kl, StorageLocationPtr vl);
     static void* s_remove_ne(const BSQMapTypeFlavor& mflavor, void* t, const BSQMapTreeType* ttype, StorageLocationPtr kl);
 
-    static void* s_entries_ne(const BSQMapTypeFlavor& mflavor, void* t, const BSQListTypeFlavor& lflavor);
+    static void* s_entries_ne(const BSQMapTypeFlavor& mflavor, void* t, const BSQMapTreeType* ttype, const BSQListTypeFlavor& lflavor);
 
     template <typename OP_PV>
     static void* map_tree_transform(const BSQMapTypeFlavor& mflavor, void* reprnode, OP_PV fn_node)
