@@ -15,8 +15,11 @@ static std::regex re_fpdiverino("^[(]\\/\\s([-+]?([0-9]+\\.[0-9]+)([eE][-+]?[0-9
 
 static std::regex re_numberino_r("^[-+]?(0|[1-9][0-9]*)/([1-9][0-9]*)$");
 
-static std::regex re_utcisotime("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$");
-static std::regex re_lclisotime("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}z[a-zA-Z_/]*$");
+static std::regex re_apidatetime_TZ("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}z[a-zA-Z_/]*$");
+static std::regex re_apidatetime_UTC("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}Z$");
+static std::regex re_apidate("^[0-9]{4}-[0-9]{2}-[0-9]{2}$");
+static std::regex re_apitime("^[0-9]{2}:[0-9]{2}$");
+static std::regex re_isotimestamp("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$");
 
 static std::regex re_ticktime("^T(0|[1-9][0-9]*)ns$");
 
@@ -221,7 +224,7 @@ std::optional<std::pair<std::string, uint64_t>> JSONParseHelper::parseToRational
     }
 }
 
-bool parseToDateTimeRaw(json j, uint16_t& y, uint8_t& m, uint8_t& d, uint8_t& hh, uint8_t& mm)
+bool parseToDateTimeRaw(json j, uint16_t& y, uint8_t& m, uint8_t& d, uint8_t& hh, uint8_t& mm, bool tzok)
 {
     if(!j.is_string())
     {
@@ -229,20 +232,24 @@ bool parseToDateTimeRaw(json j, uint16_t& y, uint8_t& m, uint8_t& d, uint8_t& hh
     }
 
     std::string sstr = j.get<std::string>();
-    bool isutctime = std::regex_match(sstr, re_utcisotime);
-    bool islocaltime = std::regex_match(sstr, re_lclisotime);
+    bool isutctime = std::regex_match(sstr, re_apidatetime_UTC);
+    bool islocaltime = std::regex_match(sstr, re_apidatetime_TZ);
 
     if(!isutctime && !islocaltime)
     {
         return false;
     }
 
-    uint16_t yy = std::strtol(&sstr[0], nullptr, 10);
-    if(yy < 1900)
+    if(!tzok && islocaltime)
     {
         return false;
     }
-    y = yy - 1900;
+
+    uint16_t y = std::strtol(&sstr[0], nullptr, 10);
+    if(y < 1900)
+    {
+        return false;
+    }
 
     m = std::strtol(&sstr[5], nullptr, 10) - 1;
     if(m > 11)
@@ -271,6 +278,132 @@ bool parseToDateTimeRaw(json j, uint16_t& y, uint8_t& m, uint8_t& d, uint8_t& hh
     return true;
 }
 
+bool parseToCalendarDateRaw(json j, uint16_t& y, uint8_t& m, uint8_t& d)
+{
+    if(!j.is_string())
+    {
+        return false;
+    }
+
+    std::string sstr = j.get<std::string>();
+    bool isdate = std::regex_match(sstr, re_apidate);
+
+    if(!isdate)
+    {
+        return false;
+    }
+
+    uint16_t y = std::strtol(&sstr[0], nullptr, 10);
+    if(y < 1900)
+    {
+        return false;
+    }
+
+    m = std::strtol(&sstr[5], nullptr, 10) - 1;
+    if(m > 11)
+    {
+        return false;
+    }
+
+    d = std::strtol(&sstr[8], nullptr, 10);
+    if(d == 0 || d > 31)
+    {
+        return false;
+    }
+    
+    return true;
+}
+
+bool parseToRelativeTimeRaw(json j, uint8_t& hh, uint8_t& mm)
+{
+    if(!j.is_string())
+    {
+        return false;
+    }
+
+    std::string sstr = j.get<std::string>();
+    bool istime = std::regex_match(sstr, re_apitime);
+
+    if(!istime)
+    {
+        return false;
+    }
+
+    hh = std::strtol(&sstr[0], nullptr, 10);
+    if(hh > 23)
+    {
+        return false;
+    }
+
+    mm = std::strtol(&sstr[3], nullptr, 10);
+    if(mm > 59)
+    {
+        return false;
+    }
+    
+    return true;
+}
+
+bool parseToISOTimeStampRaw(json j, uint16_t& y, uint8_t& m, uint8_t& d, uint8_t& hh, uint8_t& mm, uint8_t& ss, uint16_t& millis)
+{
+    if(!j.is_string())
+    {
+        return false;
+    }
+
+    std::string sstr = j.get<std::string>();
+    bool ists = std::regex_match(sstr, re_isotimestamp);
+
+    if(!ists)
+    {
+        return false;
+    }
+
+    uint16_t y = std::strtol(&sstr[0], nullptr, 10);
+    if(y < 1900)
+    {
+        return false;
+    }
+
+    m = std::strtol(&sstr[5], nullptr, 10) - 1;
+    if(m > 11)
+    {
+        return false;
+    }
+
+    d = std::strtol(&sstr[8], nullptr, 10);
+    if(d == 0 || d > 31)
+    {
+        return false;
+    }
+
+    hh = std::strtol(&sstr[11], nullptr, 10);
+    if(hh > 23)
+    {
+        return false;
+    }
+
+    mm = std::strtol(&sstr[14], nullptr, 10);
+    if(mm > 59)
+    {
+        return false;
+    }
+
+    ss = std::strtol(&sstr[17], nullptr, 10);
+    if(ss > 60)
+    {
+        return false;
+    }
+
+    millis = std::strtol(&sstr[20], nullptr, 10);
+    if(millis > 999)
+    {
+        return false;
+    }
+    
+    return true;
+}
+
 std::optional<const char*> parseToDateTimeTZ(json j)
 {
     if(!j.is_string())
@@ -281,13 +414,13 @@ std::optional<const char*> parseToDateTimeTZ(json j)
     std::string sstr = j.get<std::string>();
     std::string tzstr = "UTC";
 
-    if(std::regex_match(sstr, re_utcisotime))
+    if(std::regex_match(sstr, re_apidatetime_UTC))
     {
         ;
     }
-    else if(std::regex_match(sstr, re_lclisotime))
+    else if(std::regex_match(sstr, re_apidatetime_TZ))
     {
-        tzstr = sstr.substr(20);
+        tzstr = sstr.substr(17);
     }
     else
     {
@@ -299,14 +432,14 @@ std::optional<const char*> parseToDateTimeTZ(json j)
     return std::make_optional(tz->c_str());
 }
 
-std::optional<DateTime> JSONParseHelper::parseToDateTime(json j)
+std::optional<APIDateTime> JSONParseHelper::parseToDateTime(json j)
 {
     if(!j.is_string()) {
         return std::nullopt;
     }
     
-    DateTime tinfo = {0, 0, 0, 0, 0, 0};
-    auto ok = parseToDateTimeRaw(j, tinfo.year, tinfo.month, tinfo.day, tinfo.hour, tinfo.min);
+    APIDateTime tinfo = {0, 0, 0, 0, 0, nullptr};
+    auto ok = parseToDateTimeRaw(j, tinfo.year, tinfo.month, tinfo.day, tinfo.hour, tinfo.min, true);
     if(!ok)
     {
         return std::nullopt;
@@ -318,6 +451,54 @@ std::optional<DateTime> JSONParseHelper::parseToDateTime(json j)
         return std::nullopt;
     }
     tinfo.tzdata = tzo.value();
+
+    return std::make_optional(tinfo);
+}
+
+std::optional<APIUTCDateTime> JSONParseHelper::parseToUTCDateTime(json j)
+{
+    if(!j.is_string()) {
+        return std::nullopt;
+    }
+    
+    APIUTCDateTime tinfo = {0, 0, 0, 0, 0};
+    auto ok = parseToDateTimeRaw(j, tinfo.year, tinfo.month, tinfo.day, tinfo.hour, tinfo.min, false);
+    if(!ok)
+    {
+        return std::nullopt;
+    }
+
+    return std::make_optional(tinfo);
+}
+
+std::optional<APICalendarDate> JSONParseHelper::parseToCalendarDate(json j)
+{
+    if(!j.is_string()) {
+        return std::nullopt;
+    }
+    
+    APICalendarDate tinfo = {0, 0, 0};
+    auto ok = parseToCalendarDateRaw(j, tinfo.year, tinfo.month, tinfo.day);
+    if(!ok)
+    {
+        return std::nullopt;
+    }
+
+    return std::make_optional(tinfo);
+}
+
+std::optional<APIRelativeTime> JSONParseHelper::parseToRelativeTime(json j)
+{
+    if(!j.is_string()) {
+        return std::nullopt;
+    }
+    
+    APIRelativeTime tinfo = {0, 0};
+    auto ok = parseToRelativeTimeRaw(j, tinfo.hour, tinfo.min);
+    if(!ok)
+    {
+        return std::nullopt;
+    }
 
     return std::make_optional(tinfo);
 }
@@ -374,7 +555,23 @@ std::optional<uint64_t> JSONParseHelper::parseToLogicalTime(json j)
     return nval;
 }
 
-std::optional<std::vector<uint8_t>> JSONParseHelper::parseUUID(json j)
+std::optional<APIISOTimeStamp> JSONParseHelper::parseToISOTimeStamp(json j)
+{
+    if(!j.is_string()) {
+        return std::nullopt;
+    }
+    
+    APIISOTimeStamp tinfo = {0, 0, 0, 0, 0, 0, 0};
+    auto ok = parseToISOTimeStampRaw(j, tinfo.year, tinfo.month, tinfo.day, tinfo.hour, tinfo.min, tinfo.sec, tinfo.millis);
+    if(!ok)
+    {
+        return std::nullopt;
+    }
+
+    return std::make_optional(tinfo);
+}
+
+std::optional<std::vector<uint8_t>> JSONParseHelper::parseUUID4(json j)
 {
     if(!j.is_string())
     {
@@ -406,7 +603,39 @@ std::optional<std::vector<uint8_t>> JSONParseHelper::parseUUID(json j)
     return std::make_optional(vv);
 }
 
-std::optional<std::vector<uint8_t>> JSONParseHelper::parseContentHash(json j)
+std::optional<std::vector<uint8_t>> JSONParseHelper::parseUUID7(json j)
+{
+    if(!j.is_string())
+    {
+        return std::nullopt;
+    }
+
+    std::string sstr = j.get<std::string>();
+    if(!std::regex_match(sstr, re_uuid))
+    {
+        return std::nullopt;
+    }
+
+    std::vector<uint8_t> vv;
+    auto iter = sstr.cbegin();
+    while(iter != sstr.cend())
+    {
+        if(*iter == '-')
+        {
+            iter++;
+        }
+
+        std::string sstr = {*iter, *(iter + 1)};
+        uint8_t bv = std::stoi(sstr, nullptr, 16);
+        
+        vv.push_back(bv);
+        iter += 2;
+    }
+
+    return std::make_optional(vv);
+}
+
+std::optional<std::vector<uint8_t>> JSONParseHelper::parseSHAContentHash(json j)
 {
     if(!j.is_string())
     {
@@ -431,6 +660,24 @@ std::optional<std::vector<uint8_t>> JSONParseHelper::parseContentHash(json j)
     }
 
     return std::make_optional(vv);
+}
+
+std::optional<std::pair<float, float>> JSONParseHelper::parseLatLongCoordinate(json j)
+{
+    if(!j.is_array() || j.size() != 2)
+    {
+        return std::nullopt;
+    }
+
+    if(!j[0].is_number_float() || !j[1].is_number_float())
+    {
+        return std::nullopt;
+    }
+
+    float latitude = j[0].get<float>();
+    float longitude = j[1].get<float>();
+
+    return std::make_optional(std::make_pair(latitude, longitude));
 }
 
 std::optional<json> JSONParseHelper::emitUnsignedNumber(uint64_t n)
@@ -498,7 +745,56 @@ std::string emitDateTimeRaw_d(uint16_t y, uint8_t m, uint8_t d, uint8_t hh, uint
     return res;
 }
 
-std::optional<json> JSONParseHelper::emitDateTime(DateTime t)
+std::string emitCalendarDateRaw_d(uint16_t y, uint8_t m, uint8_t d)
+{
+    struct tm dt = {0};
+    dt.tm_year = y;
+    dt.tm_mon = m;
+    dt.tm_mday = d;
+
+    char sstrt[20] = {0};
+    size_t dtlen = strftime(sstrt, 20, "%Y-%m-%d", &dt);
+    std::string res(sstrt, sstrt + dtlen);
+
+    return res;
+}
+
+std::string emitRelativeTimeRaw_d(uint8_t hh, uint8_t mm)
+{
+    struct tm dt = {0};
+    dt.tm_hour = hh;
+    dt.tm_min = mm;
+
+    char sstrt[20] = {0};
+    size_t dtlen = strftime(sstrt, 20, "%H:%M", &dt);
+    std::string res(sstrt, sstrt + dtlen);
+
+    return res;
+}
+
+
+std::string emitISOTimeStampRaw_d(uint16_t y, uint8_t m, uint8_t d, uint8_t hh, uint8_t mm, uint8_t ss, uint16_t millis)
+{
+    struct tm dt = {0};
+    dt.tm_year = y;
+    dt.tm_mon = m;
+    dt.tm_mday = d;
+    dt.tm_hour = hh;
+    dt.tm_min = mm;
+    dt.tm_sec = ss;
+
+    char sstrt[30] = {0};
+    size_t dtlen = strftime(sstrt, 30, "%Y-%m-%dT%H:%M:%S", &dt);
+    std::string res(sstrt, sstrt + dtlen);
+
+    char strmillis[5] = {0};
+    size_t mtlen = sprintf_s(strmillis, ".%.3u", millis);
+    std::string ms(strmillis, strmillis + mtlen);
+
+    return res + ms;
+}
+
+std::optional<json> JSONParseHelper::emitDateTime(APIDateTime t)
 {
     auto tzstr = std::string(t.tzdata);
     if(tzstr == "UTC")
@@ -508,9 +804,27 @@ std::optional<json> JSONParseHelper::emitDateTime(DateTime t)
     }
     else
     {
-        auto tstr = emitDateTimeRaw_d(t.year, t.month, t.day, t.hour, t.min) + " " + tzstr;
+        auto tstr = emitDateTimeRaw_d(t.year, t.month, t.day, t.hour, t.min) + "z" + tzstr;
         return std::make_optional(tstr);
     }
+}
+
+std::optional<json> JSONParseHelper::emitUTCDateTime(APIUTCDateTime t)
+{
+    auto tstr = emitDateTimeRaw_d(t.year, t.month, t.day, t.hour, t.min) + "Z"; 
+    return std::make_optional(tstr);
+}
+
+std::optional<json> JSONParseHelper::emitCalendarDate(APICalendarDate t)
+{
+    auto tstr = emitCalendarDateRaw_d(t.year, t.month, t.day); 
+    return std::make_optional(tstr);
+}
+
+std::optional<json> JSONParseHelper::emitRelativeTime(APIRelativeTime t)
+{
+    auto tstr = emitRelativeTimeRaw_d(t.hour, t.min); 
+    return std::make_optional(tstr);
 }
 
 std::optional<json> JSONParseHelper::emitTickTime(uint64_t t)
@@ -523,7 +837,13 @@ std::optional<json> JSONParseHelper::emitLogicalTime(uint64_t t)
     return "L" + std::to_string(t);
 }
 
-std::optional<json> JSONParseHelper::emitUUID(std::vector<uint8_t> uuid)
+std::optional<json> JSONParseHelper::emitISOTimeStamp(APIISOTimeStamp t)
+{
+    auto tstr = emitISOTimeStampRaw_d(t.year, t.month, t.day, t.hour, t.min, t.sec, t.millis) + "Z"; 
+    return std::make_optional(tstr);
+}
+
+std::optional<json> JSONParseHelper::emitUUID4(std::vector<uint8_t> uuid)
 {
     unsigned int bb4 = (unsigned int)(*reinterpret_cast<const uint32_t*>(&uuid[0]));
     unsigned int bb2_1 = (unsigned int)(*reinterpret_cast<const uint16_t*>(&uuid[4]));
@@ -538,7 +858,22 @@ std::optional<json> JSONParseHelper::emitUUID(std::vector<uint8_t> uuid)
     return res;
 }
 
-std::optional<json> JSONParseHelper::emitHash(std::vector<uint8_t> hash)
+std::optional<json> JSONParseHelper::emitUUID7(std::vector<uint8_t> uuid)
+{
+    unsigned int bb4 = (unsigned int)(*reinterpret_cast<const uint32_t*>(&uuid[0]));
+    unsigned int bb2_1 = (unsigned int)(*reinterpret_cast<const uint16_t*>(&uuid[4]));
+    unsigned int bb2_2 = (unsigned int)(*reinterpret_cast<const uint16_t*>(&uuid[6]));
+    unsigned int bb2_3 = (unsigned int)(*reinterpret_cast<const uint16_t*>(&uuid[8]));
+    unsigned int bb6 = (unsigned int)(*reinterpret_cast<const uint64_t*>(&uuid[10]) & 0xFFFFFFFFFFFF);
+    
+    char sstrt[64] = {0};
+    sprintf(sstrt, "%06x-%04x-%04x-%04x-%08x", bb4, bb2_1, bb2_2, bb2_3, bb6);
+    std::string res(sstrt, sstrt + 36);
+
+    return res;
+}
+
+std::optional<json> JSONParseHelper::emitSHAHash(std::vector<uint8_t> hash)
 {
     std::string rr = "0x";
     for(auto iter = hash.cbegin(); iter < hash.cend(); ++iter)
@@ -551,6 +886,15 @@ std::optional<json> JSONParseHelper::emitHash(std::vector<uint8_t> hash)
     }
 
     return rr;
+}
+
+std::optional<json> JSONParseHelper::emitLatLongCoordinate(std::pair<float, float> llcoord)
+{
+    auto jres = json::array();
+    jres.push_back(llcoord.first);
+    jres.push_back(llcoord.second);
+
+    return std::make_optional(jres);
 }
 
 std::optional<std::pair<std::string, std::string>> JSONParseHelper::checkEnumName(json j)

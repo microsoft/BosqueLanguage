@@ -1164,16 +1164,7 @@ class MIRAssembly {
                 }
             }
             else if (entity instanceof MIRConstructableInternalEntityTypeDecl) {
-                if (tt.typeID.startsWith("StringOf")) {
-                    return {tag: APIEmitTypeTag.StringOfTag, name: tt.typeID, validator: (entity.fromtype as MIRResolvedTypeKey)};
-                }
-                else if (tt.typeID.startsWith("DataString")) {
-                    return {tag: APIEmitTypeTag.DataStringTag, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey), chkinv: (entity as MIRDataStringInternalEntityTypeDecl).accepts};
-                }
-                else if (tt.typeID.startsWith("DataBuffer")) {
-                    return {tag: APIEmitTypeTag.DataBufferTag, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey), chkinv: (entity as MIRDataBufferInternalEntityTypeDecl).accepts};
-                }
-                else if (tt.typeID.startsWith("Something")) {
+                if (tt.typeID.startsWith("Something")) {
                     return {tag: APIEmitTypeTag.ConstructableOfType, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey), validatefunc: null};
                 }
                 else if (tt.typeID.startsWith("Result::Ok")) {
