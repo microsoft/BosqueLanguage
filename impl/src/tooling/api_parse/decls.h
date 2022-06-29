@@ -186,12 +186,12 @@ public:
     virtual bool parseStringImpl(const APIModule* apimodule, const IType* itype, std::string s, ValueRepr value, State& ctx) = 0;
     virtual bool parseByteBufferImpl(const APIModule* apimodule, const IType* itype, uint8_t compress, uint8_t format, std::vector<uint8_t>& data, ValueRepr value, State& ctx) = 0;
     virtual bool parseDateTimeImpl(const APIModule* apimodule, const IType* itype, APIDateTime t, ValueRepr value, State& ctx) = 0;
-    virtual bool parseUTCDateTimeImpl(const APIModule* apimodule, const IType* itype, APIUTCDateTime t, StorageLocationPtr value, Evaluator& ctx) = 0;
-    virtual bool parseCalendarDateImpl(const APIModule* apimodule, const IType* itype, APICalendarDate t, StorageLocationPtr value, Evaluator& ctx) = 0
-    virtual bool parseRelativeTimeImpl(const APIModule* apimodule, const IType* itype, APIRelativeTime t, StorageLocationPtr value, Evaluator& ctx) = 0;
+    virtual bool parseUTCDateTimeImpl(const APIModule* apimodule, const IType* itype, APIUTCDateTime t, ValueRepr value, State& ctx) = 0;
+    virtual bool parseCalendarDateImpl(const APIModule* apimodule, const IType* itype, APICalendarDate t, ValueRepr value, State& ctx) = 0;
+    virtual bool parseRelativeTimeImpl(const APIModule* apimodule, const IType* itype, APIRelativeTime t, ValueRepr value, State& ctx) = 0;
     virtual bool parseTickTimeImpl(const APIModule* apimodule, const IType* itype, uint64_t t, ValueRepr value, State& ctx) = 0;
     virtual bool parseLogicalTimeImpl(const APIModule* apimodule, const IType* itype, uint64_t j, ValueRepr value, State& ctx) = 0;
-    virtual bool parseISOTimeStampImpl(const APIModule* apimodule, const IType* itype, APIISOTimeStamp t, StorageLocationPtr value, Evaluator& ctx) = 0;
+    virtual bool parseISOTimeStampImpl(const APIModule* apimodule, const IType* itype, APIISOTimeStamp t, ValueRepr value, State& ctx) = 0;
     virtual bool parseUUID4Impl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, ValueRepr value, State& ctx) = 0;
     virtual bool parseUUID7Impl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, ValueRepr value, State& ctx) = 0;
     virtual bool parseSHAContentHashImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, ValueRepr value, State& ctx) = 0;
@@ -1270,12 +1270,12 @@ public:
 class ISOTimeStampType : public IGroundedType
 {
 public:
-    DateTimeType() : IGroundedType(TypeTag::DateTimeTag, "DateTime") {;}
-    virtual ~DateTimeType() {;}
+    ISOTimeStampType() : IGroundedType(TypeTag::ISOTimeStampTag, "ISOTimeStamp") {;}
+    virtual ~ISOTimeStampType() {;}
 
-    static DateTimeType* jparse(json j)
+    static ISOTimeStampType* jparse(json j)
     {
-        return new DateTimeType();
+        return new ISOTimeStampType();
     }
 
     virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
@@ -1283,8 +1283,8 @@ public:
         std::time_t tval = std::time(nullptr);
 
         auto utctime = std::gmtime(&tval);
-        char utcstr[20] = {0};
-        size_t utcsize = strftime(utcstr, 20, "%Y-%m-%dT%H:%MZ", utctime);
+        char utcstr[30] = {0};
+        size_t utcsize = strftime(utcstr, 30, "%Y-%m-%dT%H:%M:%S.000Z", utctime);
         std::string utcres(utcstr, utcstr + utcsize);
         
         return utcres;
@@ -1293,37 +1293,37 @@ public:
     template <typename ValueRepr, typename State>
     bool parse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
     {
-        auto t = JSONParseHelper::parseToDateTime(j);
+        auto t = JSONParseHelper::parseToISOTimeStamp(j);
         if(!t.has_value())
         {
             return false;
         }
 
-        return apimgr.parseDateTimeImpl(apimodule, this, t.value(), value, ctx);
+        return apimgr.parseISOTimeStampImpl(apimodule, this, t.value(), value, ctx);
     }
 
     template <typename ValueRepr, typename State>
     std::optional<json> extract(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
     {
-        auto tval = apimgr.extractDateTimeImpl(apimodule, this, value, ctx);
+        auto tval = apimgr.extractISOTimeStampImpl(apimodule, this, value, ctx);
         if(!tval.has_value())
         {
             return std::nullopt;
         }
 
-        return JSONParseHelper::emitDateTime(tval.value());
+        return JSONParseHelper::emitISOTimeStamp(tval.value());
     }
 };
 
 class UUID4Type : public IGroundedType
 {
 public:
-    UUIDType() : IGroundedType(TypeTag::UUIDTag, "UUID") {;}
-    virtual ~UUIDType() {;}
+    UUID4Type() : IGroundedType(TypeTag::UUID4Tag, "UUID4") {;}
+    virtual ~UUID4Type() {;}
 
-    static UUIDType* jparse(json j)
+    static UUID4Type* jparse(json j)
     {
-        return new UUIDType();
+        return new UUID4Type();
     }
 
     virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
@@ -1348,37 +1348,37 @@ public:
     template <typename ValueRepr, typename State>
     bool parse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
     {
-        auto uuid = JSONParseHelper::parseUUID(j);
+        auto uuid = JSONParseHelper::parseUUID4(j);
         if(!uuid.has_value())
         {
             return false;
         }
 
-        return apimgr.parseUUIDImpl(apimodule, this, uuid.value(), value, ctx);
+        return apimgr.parseUUID4Impl(apimodule, this, uuid.value(), value, ctx);
     }
 
     template <typename ValueRepr, typename State>
     std::optional<json> extract(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
     {
-        auto uval = apimgr.extractUUIDImpl(apimodule, this, value, ctx);
+        auto uval = apimgr.extractUUID4Impl(apimodule, this, value, ctx);
         if(!uval.has_value())
         {
             return std::nullopt;
         }
 
-        return JSONParseHelper::emitUUID(uval.value());
+        return JSONParseHelper::emitUUID4(uval.value());
     }
 };
 
 class UUID7Type : public IGroundedType
 {
 public:
-    UUIDType() : IGroundedType(TypeTag::UUIDTag, "UUID") {;}
-    virtual ~UUIDType() {;}
+    UUID7Type() : IGroundedType(TypeTag::UUID7Tag, "UUID7") {;}
+    virtual ~UUID7Type() {;}
 
-    static UUIDType* jparse(json j)
+    static UUID7Type* jparse(json j)
     {
-        return new UUIDType();
+        return new UUID7Type();
     }
 
     virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
@@ -1403,37 +1403,37 @@ public:
     template <typename ValueRepr, typename State>
     bool parse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
     {
-        auto uuid = JSONParseHelper::parseUUID(j);
+        auto uuid = JSONParseHelper::parseUUID7(j);
         if(!uuid.has_value())
         {
             return false;
         }
 
-        return apimgr.parseUUIDImpl(apimodule, this, uuid.value(), value, ctx);
+        return apimgr.parseUUID7Impl(apimodule, this, uuid.value(), value, ctx);
     }
 
     template <typename ValueRepr, typename State>
     std::optional<json> extract(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
     {
-        auto uval = apimgr.extractUUIDImpl(apimodule, this, value, ctx);
+        auto uval = apimgr.extractUUID7Impl(apimodule, this, value, ctx);
         if(!uval.has_value())
         {
             return std::nullopt;
         }
 
-        return JSONParseHelper::emitUUID(uval.value());
+        return JSONParseHelper::emitUUID7(uval.value());
     }
 };
 
 class SHAContentHashType : public IGroundedType
 {
 public:
-    ContentHashType() : IGroundedType(TypeTag::ContentHashTag, "ContentHash") {;}
-    virtual ~ContentHashType() {;}
+    SHAContentHashType() : IGroundedType(TypeTag::SHAContentHashTag, "SHAContentHash") {;}
+    virtual ~SHAContentHashType() {;}
 
-    static ContentHashType* jparse(json j)
+    static SHAContentHashType* jparse(json j)
     {
-        return new ContentHashType();
+        return new SHAContentHashType();
     }
 
     virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
@@ -1458,37 +1458,37 @@ public:
     template <typename ValueRepr, typename State>
     bool parse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
     {
-        auto hash = JSONParseHelper::parseContentHash(j);
+        auto hash = JSONParseHelper::parseSHAContentHash(j);
         if(!hash.has_value())
         {
             return false;
         }
 
-        return apimgr.parseContentHashImpl(apimodule, this, hash.value(), value, ctx);
+        return apimgr.parseSHAContentHashImpl(apimodule, this, hash.value(), value, ctx);
     }
 
     template <typename ValueRepr, typename State>
     std::optional<json> extract(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
     {
-        auto hash = apimgr.extractContentHashImpl(apimodule, this, value, ctx);
+        auto hash = apimgr.extractSHAContentHashImpl(apimodule, this, value, ctx);
         if(!hash.has_value())
         {
             return std::nullopt;
         }
 
-        return JSONParseHelper::emitHash(hash.value());
+        return JSONParseHelper::emitSHAHash(hash.value());
     }
 };
 
 class LatLongCoordinateType : public IGroundedType
 {
 public:
-    UUIDType() : IGroundedType(TypeTag::UUIDTag, "UUID") {;}
-    virtual ~UUIDType() {;}
+    LatLongCoordinateType() : IGroundedType(TypeTag::LatLongCoordinateTag, "LatLongCoordinate") {;}
+    virtual ~LatLongCoordinateType() {;}
 
-    static UUIDType* jparse(json j)
+    static LatLongCoordinateType* jparse(json j)
     {
-        return new UUIDType();
+        return new LatLongCoordinateType();
     }
 
     virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
@@ -1513,25 +1513,25 @@ public:
     template <typename ValueRepr, typename State>
     bool parse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
     {
-        auto uuid = JSONParseHelper::parseUUID(j);
+        auto uuid = JSONParseHelper::parseLatLongCoordinate(j);
         if(!uuid.has_value())
         {
             return false;
         }
 
-        return apimgr.parseUUIDImpl(apimodule, this, uuid.value(), value, ctx);
+        return apimgr.parseLatLongCoordinateImpl(apimodule, this, uuid.value(), value, ctx);
     }
 
     template <typename ValueRepr, typename State>
     std::optional<json> extract(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
     {
-        auto uval = apimgr.extractUUIDImpl(apimodule, this, value, ctx);
+        auto uval = apimgr.extractLatLongCoordinateImpl(apimodule, this, value, ctx);
         if(!uval.has_value())
         {
             return std::nullopt;
         }
 
-        return JSONParseHelper::emitUUID(uval.value());
+        return JSONParseHelper::emitLatLongCoordinate(uval.value());
     }
 };
 

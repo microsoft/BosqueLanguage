@@ -671,33 +671,70 @@ bool SMTParseJSON::parseByteBufferImpl(const APIModule* apimodule, const IType* 
     return true;
 }
 
-bool SMTParseJSON::parseDateTimeImpl(const APIModule* apimodule, const IType* itype, DateTime t, z3::expr value, z3::solver& ctx)
+bool SMTParseJSON::parseDateTimeImpl(const APIModule* apimodule, const IType* itype, APIDateTime t, z3::expr value, z3::solver& ctx)
 {
-    auto etime = extendContext(ctx.ctx(), value, 0);
-    auto etzo = extendContext(ctx.ctx(), value, 1);
-
-    auto elocaly = extendContext(ctx.ctx(), etime, 0);
     auto byearf = getArgContextConstructor(ctx.ctx(), "BDateYear@UFCons_API", ctx.ctx().int_sort());
-    ctx.add(byearf(elocaly) == ctx.ctx().int_val(t.year));
+    ctx.add(byearf(value) == ctx.ctx().int_val(t.year));
 
-    auto elocalm = extendContext(ctx.ctx(), etime, 1);
     auto bmonthf = getArgContextConstructor(ctx.ctx(), "BDateMonth@UFCons_API", ctx.ctx().int_sort());
-    ctx.add(bmonthf(elocalm) == ctx.ctx().int_val(t.month));
+    ctx.add(bmonthf(value) == ctx.ctx().int_val(t.month));
 
-    auto elocald = extendContext(ctx.ctx(), etime, 2);
     auto bdayf = getArgContextConstructor(ctx.ctx(), "BDateDay@UFCons_API", ctx.ctx().int_sort());
-    ctx.add(bdayf(elocald) == ctx.ctx().int_val(t.day));
+    ctx.add(bdayf(value) == ctx.ctx().int_val(t.day));
 
-    auto elocalh = extendContext(ctx.ctx(), etime, 3);
     auto bhourf = getArgContextConstructor(ctx.ctx(), "BDateHour@UFCons_API", ctx.ctx().int_sort());
-    ctx.add(bhourf(elocalh) == ctx.ctx().int_val(t.hour));
+    ctx.add(bhourf(value) == ctx.ctx().int_val(t.hour));
 
-    auto elocalmm = extendContext(ctx.ctx(), etime, 4);
     auto bminutef = getArgContextConstructor(ctx.ctx(), "BDateMinute@UFCons_API", ctx.ctx().int_sort());
-    ctx.add(bminutef(elocalmm) == ctx.ctx().int_val(t.min));
+    ctx.add(bminutef(value) == ctx.ctx().int_val(t.min));
 
-    auto btzf = getArgContextConstructor(ctx.ctx(), "BString@UFCons_API", ctx.ctx().string_sort());
-    ctx.add(btzf(etzo) == ctx.ctx().string_val(t.tzdata));
+    auto btzf = getArgContextConstructor(ctx.ctx(), "BDateTZName@UFCons_API", ctx.ctx().string_sort());
+    ctx.add(btzf(value) == ctx.ctx().string_val(t.tzdata));
+
+    return true;
+}
+
+bool SMTParseJSON::parseUTCDateTimeImpl(const APIModule* apimodule, const IType* itype, APIUTCDateTime t, z3::expr value, z3::solver& ctx)
+{
+    auto byearf = getArgContextConstructor(ctx.ctx(), "BDateYear@UFCons_API", ctx.ctx().int_sort());
+    ctx.add(byearf(value) == ctx.ctx().int_val(t.year));
+
+    auto bmonthf = getArgContextConstructor(ctx.ctx(), "BDateMonth@UFCons_API", ctx.ctx().int_sort());
+    ctx.add(bmonthf(value) == ctx.ctx().int_val(t.month));
+
+    auto bdayf = getArgContextConstructor(ctx.ctx(), "BDateDay@UFCons_API", ctx.ctx().int_sort());
+    ctx.add(bdayf(value) == ctx.ctx().int_val(t.day));
+
+    auto bhourf = getArgContextConstructor(ctx.ctx(), "BDateHour@UFCons_API", ctx.ctx().int_sort());
+    ctx.add(bhourf(value) == ctx.ctx().int_val(t.hour));
+
+    auto bminutef = getArgContextConstructor(ctx.ctx(), "BDateMinute@UFCons_API", ctx.ctx().int_sort());
+    ctx.add(bminutef(value) == ctx.ctx().int_val(t.min));
+
+    return true;
+}
+
+bool SMTParseJSON::parseCalendarDateImpl(const APIModule* apimodule, const IType* itype, APICalendarDate t, z3::expr value, z3::solver& ctx)
+{
+    auto byearf = getArgContextConstructor(ctx.ctx(), "BDateYear@UFCons_API", ctx.ctx().int_sort());
+    ctx.add(byearf(value) == ctx.ctx().int_val(t.year));
+
+    auto bmonthf = getArgContextConstructor(ctx.ctx(), "BDateMonth@UFCons_API", ctx.ctx().int_sort());
+    ctx.add(bmonthf(value) == ctx.ctx().int_val(t.month));
+
+    auto bdayf = getArgContextConstructor(ctx.ctx(), "BDateDay@UFCons_API", ctx.ctx().int_sort());
+    ctx.add(bdayf(value) == ctx.ctx().int_val(t.day));
+
+    return true;
+}
+
+bool SMTParseJSON::parseRelativeTimeImpl(const APIModule* apimodule, const IType* itype, APIRelativeTime t, z3::expr value, z3::solver& ctx)
+{
+    auto bhourf = getArgContextConstructor(ctx.ctx(), "BDateHour@UFCons_API", ctx.ctx().int_sort());
+    ctx.add(bhourf(value) == ctx.ctx().int_val(t.hour));
+
+    auto bminutef = getArgContextConstructor(ctx.ctx(), "BDateMinute@UFCons_API", ctx.ctx().int_sort());
+    ctx.add(bminutef(value) == ctx.ctx().int_val(t.min));
 
     return true;
 }
@@ -718,25 +755,76 @@ bool SMTParseJSON::parseLogicalTimeImpl(const APIModule* apimodule, const IType*
     return true;
 }
 
-bool SMTParseJSON::parseUUIDImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, z3::expr value, z3::solver& ctx)
+bool SMTParseJSON::parseISOTimeStampImpl(const APIModule* apimodule, const IType* itype, APIISOTimeStamp t, z3::expr value, z3::solver& ctx)
 {
-    auto bytesort = ctx.ctx().bv_sort(8);
-    auto bbf = getArgContextConstructor(ctx.ctx(), "BUUID@UFCons_API", ctx.ctx().seq_sort(bytesort));
+    auto byearf = getArgContextConstructor(ctx.ctx(), "BDateYear@UFCons_API", ctx.ctx().int_sort());
+    ctx.add(byearf(value) == ctx.ctx().int_val(t.year));
 
-    ctx.add(bbf(value).length() == ctx.ctx().int_val(16));
-    for(size_t i = 0; i < 16; ++i)
-    {
-        ctx.add(bbf(value).at(ctx.ctx().int_val((uint64_t)i)) == ctx.ctx().bv_val((int)v[i], 8));
-    }
+    auto bmonthf = getArgContextConstructor(ctx.ctx(), "BDateMonth@UFCons_API", ctx.ctx().int_sort());
+    ctx.add(bmonthf(value) == ctx.ctx().int_val(t.month));
+
+    auto bdayf = getArgContextConstructor(ctx.ctx(), "BDateDay@UFCons_API", ctx.ctx().int_sort());
+    ctx.add(bdayf(value) == ctx.ctx().int_val(t.day));
+
+    auto bhourf = getArgContextConstructor(ctx.ctx(), "BDateHour@UFCons_API", ctx.ctx().int_sort());
+    ctx.add(bhourf(value) == ctx.ctx().int_val(t.hour));
+
+    auto bminutef = getArgContextConstructor(ctx.ctx(), "BDateMinute@UFCons_API", ctx.ctx().int_sort());
+    ctx.add(bminutef(value) == ctx.ctx().int_val(t.min));
+
+    auto bsecondf = getArgContextConstructor(ctx.ctx(), "BDateSecond@UFCons_API", ctx.ctx().int_sort());
+    ctx.add(bsecondf(value) == ctx.ctx().int_val(t.min));
+
+    auto bmillif = getArgContextConstructor(ctx.ctx(), "BDateMillis@UFCons_API", ctx.ctx().int_sort());
+    ctx.add(bmillif(value) == ctx.ctx().int_val(t.min));
 
     return true;
 }
 
-bool SMTParseJSON::parseContentHashImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, z3::expr value, z3::solver& ctx)
+bool SMTParseJSON::parseUUID4Impl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, z3::expr value, z3::solver& ctx)
+{
+    auto bbf = getArgContextConstructor(ctx.ctx(), "BUUID@UFCons_API", ctx.ctx().string_sort());
+
+    unsigned int bb4 = (unsigned int)(*reinterpret_cast<const uint32_t*>(&v[0]));
+    unsigned int bb2_1 = (unsigned int)(*reinterpret_cast<const uint16_t*>(&v[4]));
+    unsigned int bb2_2 = (unsigned int)(*reinterpret_cast<const uint16_t*>(&v[6]));
+    unsigned int bb2_3 = (unsigned int)(*reinterpret_cast<const uint16_t*>(&v[8]));
+    unsigned int bb6 = (unsigned int)(*reinterpret_cast<const uint64_t*>(&v[10]) & 0xFFFFFFFFFFFF);
+    
+    char sstrt[64] = {0};
+    auto len = sprintf(sstrt, "%06x%04x%04x%04x%08x", bb4, bb2_1, bb2_2, bb2_3, bb6);
+    std::string res(sstrt, sstrt + len);
+
+    ctx.add(bbf(value).length() == ctx.ctx().string_const(res.c_str()));
+    
+    return true;
+}
+
+bool SMTParseJSON::parseUUID7Impl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, z3::expr value, z3::solver& ctx)
+{
+    auto bbf = getArgContextConstructor(ctx.ctx(), "BUUID@UFCons_API", ctx.ctx().string_sort());
+
+    unsigned int bb4 = (unsigned int)(*reinterpret_cast<const uint32_t*>(&v[0]));
+    unsigned int bb2_1 = (unsigned int)(*reinterpret_cast<const uint16_t*>(&v[4]));
+    unsigned int bb2_2 = (unsigned int)(*reinterpret_cast<const uint16_t*>(&v[6]));
+    unsigned int bb2_3 = (unsigned int)(*reinterpret_cast<const uint16_t*>(&v[8]));
+    unsigned int bb6 = (unsigned int)(*reinterpret_cast<const uint64_t*>(&v[10]) & 0xFFFFFFFFFFFF);
+    
+    char sstrt[64] = {0};
+    auto len = sprintf(sstrt, "%06x%04x%04x%04x%08x", bb4, bb2_1, bb2_2, bb2_3, bb6);
+    std::string res(sstrt, sstrt + len);
+
+    ctx.add(bbf(value).length() == ctx.ctx().string_const(res.c_str()));
+
+    return true;
+}
+
+bool SMTParseJSON::parseSHAContentHashImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, z3::expr value, z3::solver& ctx)
 {
     auto hashsort = ctx.ctx().bv_sort(16);
     auto bbf = getArgContextConstructor(ctx.ctx(), "BContentHash@UFCons_API", hashsort);
 
+xxxx;
     auto hhpos = std::find_if(this->hashhash.cbegin(), this->hashhash.cend(), [&v](const std::vector<uint8_t>& hh) {
         return std::equal(hh.cbegin(), hh.cend(), v.cbegin());
     });
@@ -757,6 +845,11 @@ bool SMTParseJSON::parseContentHashImpl(const APIModule* apimodule, const IType*
     return true;
 }
     
+bool SMTParseJSON::parseLatLongCoordinateImpl(const APIModule* apimodule, const IType* itype, float latitude, float longitude, ValueRepr value, State& ctx)
+{
+    xxxx;
+}
+
 void SMTParseJSON::prepareParseTuple(const APIModule* apimodule, const IType* itype, z3::solver& ctx)
 {
     ;

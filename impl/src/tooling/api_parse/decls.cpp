@@ -788,7 +788,7 @@ std::string emitISOTimeStampRaw_d(uint16_t y, uint8_t m, uint8_t d, uint8_t hh, 
     std::string res(sstrt, sstrt + dtlen);
 
     char strmillis[5] = {0};
-    size_t mtlen = sprintf_s(strmillis, ".%.3u", millis);
+    size_t mtlen = sprintf(strmillis, ".%.3u", millis);
     std::string ms(strmillis, strmillis + mtlen);
 
     return res + ms;
@@ -1045,15 +1045,26 @@ IType* IType::jparse(json j)
             return DataBufferType::jparse(j);
         case TypeTag::DateTimeTag:
             return DateTimeType::jparse(j);
+        case TypeTag::UTCDateTimeTag:
+            return UTCDateTimeType::jparse(j);
+        case TypeTag::CalendarDateTag:
+            return CalendarDateType::jparse(j);
+        case TypeTag::RelativeTimeTag:
+            return RelativeTimeType::jparse(j);
         case TypeTag::TickTimeTag:
             return TickTimeType::jparse(j);
         case TypeTag::LogicalTimeTag:
             return LogicalTimeType::jparse(j);
-        case TypeTag::UUIDTag:
-            return UUIDType::jparse(j);
-            xxxx;
-        case TypeTag::ContentHashTag:
-            return ContentHashType::jparse(j);
+        case TypeTag::ISOTimeStampTag:
+            return ISOTimeStampType::jparse(j);
+        case TypeTag::UUID4Tag:
+            return UUID4Type::jparse(j);
+        case TypeTag::UUID7Tag:
+            return UUID7Type::jparse(j);
+        case TypeTag::SHAContentHashTag:
+            return SHAContentHashType::jparse(j);
+        case TypeTag::LatLongCoordinateTag:
+            return LatLongCoordinateType::jparse(j);
         case TypeTag::ConstructableOfType:
             return ConstructableOfType::jparse(j);
         case TypeTag::TupleTag:
