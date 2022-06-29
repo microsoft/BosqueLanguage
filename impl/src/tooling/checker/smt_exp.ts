@@ -125,10 +125,6 @@ class SMTCallSimple extends SMTExp {
         return new SMTCallSimple(op, [lhs, rhs]);
     }
 
-    static makeIsTypeOp(smtname: string, exp: SMTExp): SMTExp {
-        return new SMTCallSimple(`(_ is ${smtname})`, [exp]);
-    }
-
     static makeNot(exp: SMTExp): SMTExp {
         return new SMTCallSimple("not", [exp]);
     }

@@ -608,7 +608,7 @@ class SMTEmitter {
         const smttype = this.temitter.getSMTTypeFor(mirtype);
 
         const consfuncs = this.temitter.getSMTConstructorName(mirtype);
-        const oftype = this.temitter.getSMTTypeFor(this.temitter.getMIRType(edecl.valuetype));
+        const oftype = this.temitter.getSMTTypeFor(this.temitter.getMIRType(edecl.basetype));
         const iskey = this.bemitter.assembly.subtypeOf(this.temitter.getMIRType(edecl.valuetype), this.temitter.getMIRType("KeyType"));
 
         const smtdecl = new SMTEntityOfTypeDecl(iskey, smttype.smttypename, smttype.smttypetag, consfuncs.box, consfuncs.bfield, oftype.smttypename);
