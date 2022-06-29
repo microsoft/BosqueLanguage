@@ -902,8 +902,14 @@ void SMTParseJSON::prepareParseContainer(const APIModule* apimodule, const IType
     ctx.add(bef(value) == ctx.ctx().int_val((uint64_t)count));
 }
 
-z3::expr SMTParseJSON::getValueForContainerElementParse(const APIModule* apimodule, const IType* itype, z3::expr value, size_t i, z3::solver& ctx)
+z3::expr SMTParseJSON::getValueForContainerElementParse_T(const APIModule* apimodule, const IType* itype, z3::expr value, size_t i, z3::solver& ctx)
 {
+    return extendContext(ctx.ctx(), value, i);
+}
+
+std::pair<z3::expr, z3::expr> SMTParseJSON::getValueForContainerElementParse_KV(const APIModule* apimodule, const IType* itype, z3::expr value, size_t i, z3::solver& ctx)
+{
+    xxxx;
     return extendContext(ctx.ctx(), value, i);
 }
 
@@ -1355,8 +1361,14 @@ std::optional<size_t> SMTParseJSON::extractLengthForContainer(const APIModule* a
     return expIntAsUIntSmall(ctx, bef(value));
 }
 
-z3::expr SMTParseJSON::extractValueForContainer(const APIModule* apimodule, const IType* itype, z3::expr value, size_t i, z3::solver& ctx)
+z3::expr SMTParseJSON::extractValueForContainer_T(const APIModule* apimodule, const IType* itype, z3::expr value, size_t i, z3::solver& ctx)
 {
+    return extendContext(ctx.ctx(), value, i);
+}
+
+std::pair<z3::expr, z3::expr> SMTParseJSON::extractValueForContainer_KV(const APIModule* apimodule, const IType* itype, z3::expr value, size_t i, z3::solver& ctx)
+{
+    xxxx;
     return extendContext(ctx.ctx(), value, i);
 }
 

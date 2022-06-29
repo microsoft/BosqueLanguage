@@ -589,7 +589,7 @@ private:
     std::vector<std::pair<void*, const BSQType*>> entitystack;
     std::vector<BSQBool*> entitymaskstack;
 
-    std::vector<std::pair<const BSQType*, uint64_t>> containerstack;
+    std::vector<std::pair<const BSQType*, std::pair<uint8_t*, uint64_t>>> containerstack;
 
     std::vector<std::list<StorageLocationPtr>> parsecontainerstack;
     std::vector<std::list<StorageLocationPtr>::iterator> parsecontainerstackiter;
@@ -636,7 +636,8 @@ public:
     virtual void completeParseRecord(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
 
     virtual void prepareParseContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t count, Evaluator& ctx) override final;
-    virtual StorageLocationPtr getValueForContainerElementParse(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t i, Evaluator& ctx) override final;
+    virtual StorageLocationPtr getValueForContainerElementParse_T(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t i, Evaluator& ctx) override final;
+    virtual std::pair<StorageLocationPtr, StorageLocationPtr> getValueForContainerElementParse_KV(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t i, Evaluator& ctx) override final;
     virtual void completeParseContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
 
     virtual void prepareParseEntity(const APIModule* apimodule, const IType* itype, Evaluator& ctx) override final;

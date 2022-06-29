@@ -114,7 +114,8 @@ enum class TypeTag
     ConstructableOfType,
     TupleTag,
     RecordTag,
-    ContainerTag,
+    ContainerTTag,
+    ContainerKVTag,
     EnumTag,
     EntityTag,
     UnionTag
@@ -206,7 +207,8 @@ public:
     virtual void completeParseRecord(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
 
     virtual void prepareParseContainer(const APIModule* apimodule, const IType* itype, ValueRepr value, size_t count, State& ctx) = 0;
-    virtual ValueRepr getValueForContainerElementParse(const APIModule* apimodule, const IType* itype, ValueRepr value, size_t i, State& ctx) = 0;
+    virtual ValueRepr getValueForContainerElementParse_T(const APIModule* apimodule, const IType* itype, ValueRepr value, size_t i, State& ctx) = 0;
+    virtual std::pair<ValueRepr, ValueRepr> getValueForContainerElementParse_KV(const APIModule* apimodule, const IType* itype, ValueRepr value, size_t i, State& ctx) = 0;
     virtual void completeParseContainer(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
 
     virtual void prepareParseEntity(const APIModule* apimodule, const IType* itype, State& ctx) = 0;
@@ -246,7 +248,8 @@ public:
 
     virtual void prepareExtractContainer(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
     virtual std::optional<size_t> extractLengthForContainer(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
-    virtual ValueRepr extractValueForContainer(const APIModule* apimodule, const IType* itype, ValueRepr value, size_t i, State& ctx) = 0;
+    virtual ValueRepr extractValueForContainer_T(const APIModule* apimodule, const IType* itype, ValueRepr value, size_t i, State& ctx) = 0;
+    virtual std::pair<ValueRepr, ValueRepr> extractValueForContainer_KV(const APIModule* apimodule, const IType* itype, ValueRepr value, size_t i, State& ctx) = 0;
     virtual void completeExtractContainer(const APIModule* apimodule, const IType* itype, State& ctx) = 0;
 
     virtual std::optional<size_t> extractUnionChoice(const APIModule* apimodule, const IType* itype, const std::vector<const IType*>& opttypes, ValueRepr intoloc, State& ctx) = 0;
@@ -1761,26 +1764,25 @@ enum class ContainerCategory
     List = 0x0,
     Stack,
     Queue,
-    Set,
-    Map
+    Set
 };
 
-class ContainerType : public IGroundedType
+class ContainerTType : public IGroundedType
 {
 public:
     const ContainerCategory category;
     const std::string elemtype;
 
-    ContainerType(std::string name, ContainerCategory category, std::string elemtype) : IGroundedType(TypeTag::ContainerTag, name), category(category), elemtype(elemtype) {;}
-    virtual ~ContainerType() {;}
+    ContainerTType(std::string name, ContainerCategory category, std::string elemtype) : IGroundedType(TypeTag::ContainerTTag, name), category(category), elemtype(elemtype) {;}
+    virtual ~ContainerTType() {;}
 
-    static ContainerType* jparse(json j)
+    static ContainerTType* jparse(json j)
     {
         auto name = j["name"].get<std::string>();
         auto category = j["category"].get<ContainerCategory>();
         auto elemtype = j["elemtype"].get<std::string>();
 
-        return new ContainerType(name, category, elemtype);
+        return new ContainerTType(name, category, elemtype);
     }
 
     virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
@@ -1810,7 +1812,7 @@ public:
         auto tt = apimodule->typemap.find(this->elemtype)->second;
         for(size_t i = 0; i < j.size(); ++i)
         {
-            ValueRepr vval = apimgr.getValueForContainerElementParse(apimodule, this, value, i, ctx);
+            ValueRepr vval = apimgr.getValueForContainerElementParse_T(apimodule, this, value, i, ctx);
             bool ok = tt->tparse(apimgr, apimodule, j[i], vval, ctx);
             if(!ok)
             {
@@ -1836,7 +1838,7 @@ public:
         auto tt = apimodule->typemap.find(this->elemtype)->second;
         for(size_t i = 0; i < clen.value(); ++i)
         {
-            ValueRepr vval = apimgr.extractValueForContainer(apimodule, this, value, i, ctx);
+            ValueRepr vval = apimgr.extractValueForContainer_T(apimodule, this, value, i, ctx);
             auto rr = tt->textract(apimgr, apimodule, vval, ctx);
             if(!rr.has_value())
             {
@@ -1844,6 +1846,100 @@ public:
             }
 
             jres.push_back(rr.value());
+        }
+        
+        apimgr.completeExtractContainer(apimodule, this, ctx);
+        return std::make_optional(jres);
+    }
+};
+
+class ContainerKVType : public IGroundedType
+{
+public:
+    const std::string ktype;
+    const std::string vtype;
+
+    ContainerKVType(std::string name, std::string ktype, std::string vtype) : IGroundedType(TypeTag::ContainerKVTag, name), ktype(ktype), vtype(vtype) {;}
+    virtual ~ContainerKVType() {;}
+
+    static ContainerKVType* jparse(json j)
+    {
+        auto name = j["name"].get<std::string>();
+        auto ktype = j["ktype"].get<std::string>();
+        auto vtype = j["vtype"].get<std::string>();
+
+        return new ContainerKVType(name, ktype, vtype);
+    }
+
+    virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
+    {
+        std::uniform_int_distribution<size_t> lgen(0, 64);
+
+        auto clen = lgen(rnd);
+        auto tj = json::array();
+        for(size_t i = 0; i < clen; ++i)
+        {
+            auto kval = apimodule->typemap.find(this->ktype)->second->jfuzz(apimodule, rnd);
+            auto vval = apimodule->typemap.find(this->vtype)->second->jfuzz(apimodule, rnd);
+
+            auto kventry = json::array({kval, vval});
+            tj.push_back(kventry);
+        }
+
+        return tj;
+    }
+
+    template <typename ValueRepr, typename State>
+    bool parse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
+    {
+        if(!j.is_array())
+        {
+            return false;
+        }
+
+        apimgr.prepareParseContainer(apimodule, this, value, j.size(), ctx);
+        auto kt = apimodule->typemap.find(this->ktype)->second;
+        auto vt = apimodule->typemap.find(this->vtype)->second;
+        for(size_t i = 0; i < j.size(); ++i)
+        {
+            std::pair<ValueRepr, ValueRepr> vval = apimgr.getValueForContainerElementParse_KV(apimodule, this, value, i, ctx);
+            bool kok = kt->tparse(apimgr, apimodule, j[i], vval.first, ctx);
+            bool vok = vt->tparse(apimgr, apimodule, j[i], vval.second, ctx);
+            if(!kok || !vok)
+            {
+                return false;
+            }
+        }
+        apimgr.completeParseContainer(apimodule, this, value, ctx);
+
+        return true;
+    }
+
+    template <typename ValueRepr, typename State>
+    std::optional<json> extract(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
+    {
+        apimgr.prepareExtractContainer(apimodule, this, value, ctx);
+        auto clen = apimgr.extractLengthForContainer(apimodule, this, value, ctx);
+        if(!clen.has_value())
+        {
+            return std::nullopt;
+        }
+
+        auto jres = json::array();
+        auto kt = apimodule->typemap.find(this->ktype)->second;
+        auto vt = apimodule->typemap.find(this->vtype)->second;
+        for(size_t i = 0; i < clen.value(); ++i)
+        {
+            std::pair<ValueRepr, ValueRepr> vval = apimgr.extractValueForContainer(apimodule, this, value, i, ctx);
+            auto kr = kt->textract(apimgr, apimodule, vval.first, ctx);
+            auto vr = vt->textract(apimgr, apimodule, vval.second, ctx);
+            if(!kr.has_value() || !vr.has_value())
+            {
+                return std::nullopt;
+            }
+
+            auto jentry = json::array({kr.value(), vr.value()});
+            jres.push_back(jentry);
         }
         
         apimgr.completeExtractContainer(apimodule, this, ctx);

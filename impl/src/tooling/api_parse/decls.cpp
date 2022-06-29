@@ -1071,8 +1071,10 @@ IType* IType::jparse(json j)
             return TupleType::jparse(j);
         case TypeTag::RecordTag:
             return RecordType::jparse(j);
-        case TypeTag::ContainerTag:
-            return ContainerType::jparse(j);
+        case TypeTag::ContainerTTag:
+            return ContainerTType::jparse(j);
+        case TypeTag::ContainerKVTag:
+            return ContainerKVType::jparse(j);
         case TypeTag::EnumTag:
             return EnumType::jparse(j);
         case TypeTag::EntityTag:

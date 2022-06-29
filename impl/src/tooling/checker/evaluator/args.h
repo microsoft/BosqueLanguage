@@ -67,7 +67,8 @@ public:
     virtual void completeParseRecord(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
 
     virtual void prepareParseContainer(const APIModule* apimodule, const IType* itype, z3::expr value, size_t count, z3::solver& ctx) override final;
-    virtual z3::expr getValueForContainerElementParse(const APIModule* apimodule, const IType* itype, z3::expr value, size_t i, z3::solver& ctx) override final;
+    virtual z3::expr getValueForContainerElementParse_T(const APIModule* apimodule, const IType* itype, z3::expr value, size_t i, z3::solver& ctx) override final;
+    virtual std::pair<z3::expr, z3::expr> getValueForContainerElementParse_KV(const APIModule* apimodule, const IType* itype, z3::expr value, size_t i, z3::solver& ctx) override final;
     virtual void completeParseContainer(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
 
     virtual void prepareParseEntity(const APIModule* apimodule, const IType* itype, z3::solver& ctx) override final;
@@ -107,7 +108,8 @@ public:
 
     virtual void prepareExtractContainer(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
     virtual std::optional<size_t> extractLengthForContainer(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
-    virtual z3::expr extractValueForContainer(const APIModule* apimodule, const IType* itype, z3::expr value, size_t i, z3::solver& ctx) override final;
+    virtual z3::expr extractValueForContainer_T(const APIModule* apimodule, const IType* itype, z3::expr value, size_t i, z3::solver& ctx) override final;
+    virtual std::pair<z3::expr, z3::expr> extractValueForContainer_KV(const APIModule* apimodule, const IType* itype, z3::expr value, size_t i, z3::solver& ctx) override final;
     virtual void completeExtractContainer(const APIModule* apimodule, const IType* itype, z3::solver& ctx) override final;
 
     virtual std::optional<size_t> extractUnionChoice(const APIModule* apimodule, const IType* itype, const std::vector<const IType*>& opttypes, z3::expr intoloc, z3::solver& ctx) override final;

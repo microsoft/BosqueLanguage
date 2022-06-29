@@ -3075,19 +3075,16 @@ void ICPPParseJSON::prepareParseTuple(const APIModule* apimodule, const IType* i
     const BSQType* tuptype = BSQType::g_typetable[tupid];
 
     void* tupmem = nullptr;
-    RefMask tupmask = nullptr;
     if(tuptype->tkind == BSQTypeLayoutKind::Struct)
     {
-        tupmem = zxalloc(tuptype->allocinfo.heapsize);
-        tupmask = tuptype->allocinfo.heapmask;
+        tupmem = GCStack::allocFrame(tuptype->allocinfo.inlinedatasize);
     }
     else
     {
-        tupmem = zxalloc(tuptype->allocinfo.inlinedatasize);
-        tupmask = tuptype->allocinfo.inlinedmask;
+        tupmem = GCStack::allocFrame(tuptype->allocinfo.heapsize);
     }
     
-    GCStack::pushFrame((void**)tupmem, tupmask);
+    
     this->tuplestack.push_back(std::make_pair(tupmem, tuptype));
 }
 
@@ -3120,9 +3117,8 @@ void ICPPParseJSON::completeParseTuple(const APIModule* apimodule, const IType* 
     }
 
     GC_MEM_COPY(trgt, tupmem, bytes);
-    xfree(tupmem);
 
-    GCStack::popFrame();
+    GCStack::popFrame(bytes);
     this->tuplestack.pop_back();
 }
 
@@ -3132,19 +3128,15 @@ void ICPPParseJSON::prepareParseRecord(const APIModule* apimodule, const IType* 
     const BSQType* rectype = BSQType::g_typetable[recid];
 
     void* recmem = nullptr;
-    RefMask recmask = nullptr;
     if(rectype->tkind == BSQTypeLayoutKind::Struct)
     {
-        recmem = zxalloc(rectype->allocinfo.heapsize);
-        recmask = rectype->allocinfo.heapmask;
+        recmem = GCStack::allocFrame(rectype->allocinfo.inlinedatasize);
     }
     else
     {
-        recmem = zxalloc(rectype->allocinfo.inlinedatasize);
-        recmask = rectype->allocinfo.inlinedmask;
+        recmem = GCStack::allocFrame(rectype->allocinfo.heapsize);
     }
     
-    GCStack::pushFrame((void**)recmem, recmask);
     this->recordstack.push_back(std::make_pair(recmem, rectype));
 }
 
@@ -3178,33 +3170,62 @@ void ICPPParseJSON::completeParseRecord(const APIModule* apimodule, const IType*
     }
 
     GC_MEM_COPY(trgt, recmem, bytes);
-    xfree(recmem);
 
-    GCStack::popFrame();
+    GCStack::popFrame(bytes);
     this->tuplestack.pop_back();
 }
 
 void ICPPParseJSON::prepareParseContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t count, Evaluator& ctx)
 {
-    auto ctype = dynamic_cast<const ContainerType*>(itype);
-    BSQTypeID containertypeid = MarshalEnvironment::g_typenameToIdMap.find(ctype->name)->second;
+    BSQTypeID containertypeid = MarshalEnvironment::g_typenameToIdMap.find(itype->name)->second;
     const BSQType* collectiontype = BSQType::g_typetable[containertypeid];
 
-    this->containerstack.push_back(std::make_pair(collectiontype, (uint64_t)count));
-    Allocator::GlobalAllocator.pushTempRootScope();
+    //TODO: right now we just assume we can stack alloc this space -- later we want to add special heap allocated frame support (like for global the object)
+    uint8_t* recmem = nullptr;
+
+    if(itype->tag == TypeTag::ContainerTTag)
+    {
+        auto ctype = dynamic_cast<const ContainerTType*>(itype);
+
+        if(ctype->category == ContainerCategory::List)
+        {
+            auto ttype = BSQType::g_typetable[dynamic_cast<const BSQListType*>(collectiontype)->etype];
+            recmem = GCStack::allocFrame(count * ttype->allocinfo.inlinedatasize);
+        }
+        else if(ctype->category == ContainerCategory::Stack)
+        {
+            BSQ_INTERNAL_ASSERT(false);
+        }
+        else if(ctype->category == ContainerCategory::Queue)
+        {
+            BSQ_INTERNAL_ASSERT(false);
+        }
+        else
+        {
+            BSQ_INTERNAL_ASSERT(false);
+        }
+    }
+    else
+    {
+        auto ktype = BSQType::g_typetable[dynamic_cast<const BSQMapType*>(collectiontype)->ktype];
+        auto vtype = BSQType::g_typetable[dynamic_cast<const BSQMapType*>(collectiontype)->vtype];
+
+        recmem = GCStack::allocFrame(count * (ktype->allocinfo.inlinedatasize + vtype->allocinfo.inlinedatasize));
+    }
+
+    this->containerstack.push_back(std::make_pair(collectiontype, std::make_pair(recmem, (uint64_t)count)));
 }
 
-StorageLocationPtr ICPPParseJSON::getValueForContainerElementParse(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t i, Evaluator& ctx)
+StorageLocationPtr ICPPParseJSON::getValueForContainerElementParse_T(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t i, Evaluator& ctx)
 {
-    const ContainerType* ctype = dynamic_cast<const ContainerType*>(itype);
+    const ContainerTType* ctype = dynamic_cast<const ContainerTType*>(itype);
     
     if(ctype->category == ContainerCategory::List)
     {
         const BSQListType* listtype = dynamic_cast<const BSQListType*>(this->containerstack.back().first);
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(listtype->etype)->second;
 
-        auto rr = Allocator::GlobalAllocator.registerTempRoot(lflavor.entrytype);
-        return rr->root;
+        return (StorageLocationPtr)(this->containerstack.back().second.first + (i * lflavor.entrytype->allocinfo.inlinedatasize));
     }
     else if(ctype->category == ContainerCategory::Stack)
     {
@@ -3216,20 +3237,23 @@ StorageLocationPtr ICPPParseJSON::getValueForContainerElementParse(const APIModu
         BSQ_INTERNAL_ASSERT(false);
         return nullptr;
     }
-    else if(ctype->category == ContainerCategory::Set)
+    else
     {
         BSQ_INTERNAL_ASSERT(false);
         return nullptr;
     }
-    else
-    {
-        const BSQMapType* maptype = dynamic_cast<const BSQMapType*>(this->containerstack.back().first);
-        const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.find(std::make_pair(maptype->ktype, maptype->vtype))->second;
+}
 
-        //We are very creative here and use the fact that the kv layout in the tree is identical to the kv layout in the tuple!
-        auto rr = Allocator::GlobalAllocator.registerTempRoot(mflavor.treetype);
-        return (void*)((uint8_t*)rr->root + mflavor.treetype->keyoffset);
-    }
+std::pair<StorageLocationPtr, StorageLocationPtr> ICPPParseJSON::getValueForContainerElementParse_KV(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t i, Evaluator& ctx)
+{
+    const BSQMapType* maptype = dynamic_cast<const BSQMapType*>(this->containerstack.back().first);
+    const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.find(std::make_pair(maptype->ktype, maptype->vtype))->second;
+
+    size_t ecount = (i * (mflavor.keytype->allocinfo.inlinedatasize + mflavor.valuetype->allocinfo.inlinedatasize));
+    auto kloc = (StorageLocationPtr)(this->containerstack.back().second.first + ecount);
+    auto vloc = (StorageLocationPtr)(this->containerstack.back().second.first + ecount + mflavor.keytype->allocinfo.inlinedatasize);
+    
+    return std::make_pair(kloc, vloc);
 }
 
 void ICPPParseJSON::completeParseContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
@@ -3309,19 +3333,15 @@ void ICPPParseJSON::prepareParseEntity(const APIModule* apimodule, const IType* 
     const BSQType* ootype = BSQType::g_typetable[ooid];
 
     void* oomem = nullptr;
-    RefMask oomask = nullptr;
     if(ootype->tkind == BSQTypeLayoutKind::Struct)
     {
-        oomem = zxalloc(ootype->allocinfo.heapsize);
-        oomask = ootype->allocinfo.heapmask;
+        oomem = GCStack::allocFrame(ootype->allocinfo.inlinedatasize);
     }
     else
     {
-        oomem = zxalloc(ootype->allocinfo.inlinedatasize);
-        oomask = ootype->allocinfo.inlinedmask;
+        oomem = GCStack::allocFrame(ootype->allocinfo.heapsize);
     }
     
-    GCStack::pushFrame((void**)oomem, oomask);
     this->entitystack.push_back(std::make_pair(oomem, ootype));
 }
 
@@ -3373,6 +3393,16 @@ void ICPPParseJSON::completeParseEntity(const APIModule* apimodule, const IType*
         BSQ_LANGUAGE_ASSERT(checkok, (&pfile), -1, "Input Data Validation Failed");
     }
 
+    uint64_t bytes = 0;
+    if(ootype->tkind == BSQTypeLayoutKind::Struct)
+    {
+        bytes = ootype->allocinfo.inlinedatasize;
+    }
+    else
+    {
+        bytes = ootype->allocinfo.heapsize;
+    }
+
     if(etype->consfunc.has_value())
     {
         auto consid = MarshalEnvironment::g_invokeToIdMap.find(etype->consfunc.value())->second;
@@ -3401,10 +3431,8 @@ void ICPPParseJSON::completeParseEntity(const APIModule* apimodule, const IType*
         GC_MEM_COPY(trgt, oomem, bytes);
     }
 
-    xfree(oomem);
     xfree(mask);
-
-    GCStack::popFrame();
+    GCStack::popFrame(bytes);
     this->tuplestack.pop_back();
 }
 
