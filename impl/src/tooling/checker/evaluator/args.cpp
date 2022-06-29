@@ -909,8 +909,11 @@ z3::expr SMTParseJSON::getValueForContainerElementParse_T(const APIModule* apimo
 
 std::pair<z3::expr, z3::expr> SMTParseJSON::getValueForContainerElementParse_KV(const APIModule* apimodule, const IType* itype, z3::expr value, size_t i, z3::solver& ctx)
 {
-    xxxx;
-    return extendContext(ctx.ctx(), value, i);
+    auto ictx = extendContext(ctx.ctx(), value, i);
+    auto kctx = extendContext(ctx.ctx(), ictx, 0);
+    auto vctx = extendContext(ctx.ctx(), ictx, 1);
+
+    return std::make_pair(kctx, vctx);
 }
 
 void SMTParseJSON::completeParseContainer(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
@@ -1368,8 +1371,11 @@ z3::expr SMTParseJSON::extractValueForContainer_T(const APIModule* apimodule, co
 
 std::pair<z3::expr, z3::expr> SMTParseJSON::extractValueForContainer_KV(const APIModule* apimodule, const IType* itype, z3::expr value, size_t i, z3::solver& ctx)
 {
-    xxxx;
-    return extendContext(ctx.ctx(), value, i);
+    auto ictx = extendContext(ctx.ctx(), value, i);
+    auto kctx = extendContext(ctx.ctx(), ictx, 0);
+    auto vctx = extendContext(ctx.ctx(), ictx, 1);
+
+    return std::make_pair(kctx, vctx);
 }
 
 void SMTParseJSON::completeExtractContainer(const APIModule* apimodule, const IType* itype, z3::solver& ctx)

@@ -155,7 +155,6 @@ public:
 struct BSQMapTypeFlavor
 {
     const BSQTypeID mtype;
-    const BSQTypeID mreprtype;
 
     const BSQType* keytype;
     const BSQType* valuetype;

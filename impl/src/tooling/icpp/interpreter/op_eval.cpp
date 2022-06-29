@@ -3258,73 +3258,81 @@ std::pair<StorageLocationPtr, StorageLocationPtr> ICPPParseJSON::getValueForCont
 
 void ICPPParseJSON::completeParseContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
 {
-    const ContainerType* ctype = dynamic_cast<const ContainerType*>(itype);
-
-    if(ctype->category == ContainerCategory::List)
+    if(itype->tag == TypeTag::ContainerTTag)
     {
-        const BSQListType* listtype = dynamic_cast<const BSQListType*>(this->containerstack.back().first);
-        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(listtype->etype)->second;
+        const ContainerTType* ctype = dynamic_cast<const ContainerTType*>(itype);
 
-        if(this->containerstack.back().second == 0)
+        if(ctype->category == ContainerCategory::List)
         {
-            LIST_STORE_RESULT_EMPTY(value);
-        }
-        else
-        {
-            auto lstart = Allocator::GlobalAllocator.getTempRootCurrScope().begin();
-            void* rres = BSQListOps::s_temp_root_to_list_rec(lflavor, lstart, this->containerstack.back().second);
+            const BSQListType* listtype = dynamic_cast<const BSQListType*>(this->containerstack.back().first);
+            const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(listtype->etype)->second;
 
-            LIST_STORE_RESULT_REPR(rres, value);
+            if(this->containerstack.back().second.second == 0)
+            {
+                LIST_STORE_RESULT_EMPTY(value);
+            }
+            else
+            {
+                std::vector<StorageLocationPtr> params;
+                for(size_t i = 0; i < this->containerstack.back().second.second; ++i)
+                {
+                    params.push_back(this->containerstack.back().second.first + (i * lflavor.entrytype->allocinfo.inlinedatasize));
+                }
+
+                void* rres = nullptr;
+                if(params.size() <= 8)
+                {
+                    rres = BSQListOps::list_consk(lflavor, params);
+                }
+                else
+                {
+                    assert(false);
+                    rres = nullptr;
+                }
+
+                LIST_STORE_RESULT_REPR(&rres, value);
+            }
+
+            GCStack::allocFrame(this->containerstack.back().second.second * lflavor.entrytype->allocinfo.inlinedatasize);
         }
-    }
-    else if(ctype->category == ContainerCategory::Stack)
-    {
-        BSQ_INTERNAL_ASSERT(false);
-    }
-    else if(ctype->category == ContainerCategory::Queue)
-    {
-        BSQ_INTERNAL_ASSERT(false);
-    }
-    else if(ctype->category == ContainerCategory::Set)
-    {
-        BSQ_INTERNAL_ASSERT(false);
+        else if(ctype->category == ContainerCategory::Stack)
+        {
+            BSQ_INTERNAL_ASSERT(false);
+        }
+        else if(ctype->category == ContainerCategory::Queue)
+        {
+            BSQ_INTERNAL_ASSERT(false);
+        }
+        else if(ctype->category == ContainerCategory::Set)
+        {
+            BSQ_INTERNAL_ASSERT(false);
+        }
     }
     else
     {
         const BSQMapType* maptype = dynamic_cast<const BSQMapType*>(this->containerstack.back().first);
         const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.find(std::make_pair(maptype->ktype, maptype->vtype))->second;
 
-        if(this->containerstack.back().second == 0)
+        if(this->containerstack.back().second.second == 0)
         {
             MAP_STORE_RESULT_EMPTY(value);
         }
+        else if(this->containerstack.back().second.second == 1)
+        {
+            BSQMapTreeRepr* mtr = (BSQMapTreeRepr*)Allocator::GlobalAllocator.allocateDynamic(mflavor.treetype);
+            mflavor.treetype->initializeLeaf(mtr, mflavor.treetype->getKeyLocation(mtr), mflavor.keytype, mflavor.treetype->getValueLocation(mtr), mflavor.valuetype);
+
+            MAP_STORE_RESULT_REPR(mtr, value);
+        }
         else
         {
-            std::list<BSQTempRootNode>& roots = Allocator::GlobalAllocator.getTempRootCurrScope();
-            std::vector<BSQTempRootNode> opv(roots.cbegin(), roots.cend());
-
-            std::stable_sort(opv.begin(), opv.end(), [&](const BSQTempRootNode& ln, const BSQTempRootNode& rn) {
-                return mflavor.keytype->fpkeycmp(mflavor.keytype, mflavor.treetype->getKeyLocation(ln.root), mflavor.treetype->getKeyLocation(rn.root)) < 0;
-            });
-
-            //check for dups in the input
-            auto fl = std::adjacent_find(opv.begin(), opv.end(), [&](const BSQTempRootNode& ln, const BSQTempRootNode& rn) {
-                return mflavor.keytype->fpkeycmp(mflavor.keytype, mflavor.treetype->getKeyLocation(ln.root), mflavor.treetype->getKeyLocation(rn.root)) == 0;
-            });
-
-            std::string fname("[JSON_PARSE]");
-            BSQ_LANGUAGE_ASSERT(fl != opv.end(), (&fname), -1, "Duplicate keys in map");
-
-            std::list<BSQTempRootNode> ltomap(opv.begin(), opv.end());
-            auto lstart = ltomap.begin();
-            void* rres = BSQMapOps::s_temp_root_to_map_rec(mflavor, lstart, this->containerstack.back().second);
-
-            MAP_STORE_RESULT_REPR(rres, this->containerstack.back().second, value);
+            assert(false);
         }
+
+        GCStack::allocFrame(this->containerstack.back().second.second * (mflavor.keytype->allocinfo.inlinedatasize + mflavor.keytype->allocinfo.inlinedatasize));
     }
     
     this->containerstack.pop_back();
-    Allocator::GlobalAllocator.popTempRootScope();
 }
 
 void ICPPParseJSON::prepareParseEntity(const APIModule* apimodule, const IType* itype, Evaluator& ctx)

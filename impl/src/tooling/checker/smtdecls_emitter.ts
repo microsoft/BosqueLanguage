@@ -466,11 +466,11 @@ class SMTEmitter {
         let optblock: SMTExp = new SMTLetMulti([
                 {
                     vname: `keyarg_${this.vopts.CONTAINER_MAX - 1}`, 
-                    value: this.temitter.generateHavocConstructorCall(tdecl.getTypeK(), this.temitter.generateHavocConstructorPathExtend(new SMTVar("path"), new SMTConst("0")), new SMTConst(`${this.vopts.CONTAINER_MAX - 1}`))
+                    value: this.temitter.generateHavocConstructorCall(tdecl.getTypeK(), this.temitter.generateHavocConstructorPathExtend(new SMTVar("path"), new SMTConst(`${this.vopts.CONTAINER_MAX - 1}`)), new SMTConst("0"))
                 },
                 {
                     vname: `valarg_${this.vopts.CONTAINER_MAX - 1}`, 
-                    value: this.temitter.generateHavocConstructorCall(tdecl.getTypeV(), this.temitter.generateHavocConstructorPathExtend(new SMTVar("path"), new SMTConst("1")), new SMTConst(`${this.vopts.CONTAINER_MAX - 1}`))
+                    value: this.temitter.generateHavocConstructorCall(tdecl.getTypeV(), this.temitter.generateHavocConstructorPathExtend(new SMTVar("path"), new SMTConst(`${this.vopts.CONTAINER_MAX - 1}`)), new SMTConst("1"))
                 },
             ],
             new SMTIf(
@@ -481,11 +481,11 @@ class SMTEmitter {
         );
             
         for (let i = this.vopts.CONTAINER_MAX - 1; i > 0; --i) {
-            const keyhavoc = this.temitter.generateHavocConstructorCall(tdecl.getTypeK(), this.temitter.generateHavocConstructorPathExtend(new SMTVar("path"), new SMTConst("0")), new SMTConst(`${i-1}`));
+            const keyhavoc = this.temitter.generateHavocConstructorCall(tdecl.getTypeK(), this.temitter.generateHavocConstructorPathExtend(new SMTVar("path"), new SMTConst(`${i-1}`)), new SMTConst("0"));
             const keyvar = `keyarg_${i-1}`;
             const keychk = this.temitter.generateResultIsErrorTest(tdecl.getTypeK(), new SMTVar(keyvar));
 
-            const valhavoc = this.temitter.generateHavocConstructorCall(tdecl.getTypeV(), this.temitter.generateHavocConstructorPathExtend(new SMTVar("path"), new SMTConst("1")), new SMTConst(`${i-1}`));
+            const valhavoc = this.temitter.generateHavocConstructorCall(tdecl.getTypeV(), this.temitter.generateHavocConstructorPathExtend(new SMTVar("path"), new SMTConst(`${i-1}`)), new SMTConst("1"));
             const valvar = `valarg_${i-1}`;
             const valchk = this.temitter.generateResultIsErrorTest(tdecl.getTypeV(), new SMTVar(valvar));
 
