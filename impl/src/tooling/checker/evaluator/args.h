@@ -57,7 +57,6 @@ public:
     virtual bool parseUUID7Impl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, z3::expr value, z3::solver& ctx) override final;
     virtual bool parseSHAContentHashImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, z3::expr value, z3::solver& ctx) override final;
     virtual bool parseLatLongCoordinateImpl(const APIModule* apimodule, const IType* itype, float latitude, float longitude, z3::expr value, z3::solver& ctx) override final;
-    xxxx;
     
     virtual void prepareParseTuple(const APIModule* apimodule, const IType* itype, z3::solver& ctx) override final;
     virtual z3::expr getValueForTupleIndex(const APIModule* apimodule, const IType* itype, z3::expr value, size_t i, z3::solver& ctx) override final;
@@ -90,12 +89,18 @@ public:
     virtual std::optional<std::pair<std::string, uint64_t>> extractRationalImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
     virtual std::optional<std::string> extractStringImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
     virtual std::optional<std::pair<std::vector<uint8_t>, std::pair<uint8_t, uint8_t>>> extractByteBufferImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
-    virtual std::optional<DateTime> extractDateTimeImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
+    virtual std::optional<APIDateTime> extractDateTimeImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
+    virtual std::optional<APIUTCDateTime> extractUTCDateTimeImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
+    virtual std::optional<APICalendarDate> extractCalendarDateImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
+    virtual std::optional<APIRelativeTime> extractRelativeTimeImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
     virtual std::optional<uint64_t> extractTickTimeImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
     virtual std::optional<uint64_t> extractLogicalTimeImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
-    virtual std::optional<std::vector<uint8_t>> extractUUIDImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
-    virtual std::optional<std::vector<uint8_t>> extractContentHashImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
-    
+    virtual std::optional<APIISOTimeStamp> extractISOTimeStampImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
+    virtual std::optional<std::vector<uint8_t>> extractUUID4Impl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
+    virtual std::optional<std::vector<uint8_t>> extractUUID7Impl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
+    virtual std::optional<std::vector<uint8_t>> extractSHAContentHashImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
+    virtual std::optional<std::pair<float, float>> extractLatLongCoordinateImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
+
     virtual z3::expr extractValueForTupleIndex(const APIModule* apimodule, const IType* itype, z3::expr value, size_t i, z3::solver& ctx) override final;
     virtual z3::expr extractValueForRecordProperty(const APIModule* apimodule, const IType* itype, z3::expr value, std::string pname, z3::solver& ctx) override final;
     virtual z3::expr extractValueForEntityField(const APIModule* apimodule, const IType* itype, z3::expr value, std::pair<std::string, std::string> fnamefkey, z3::solver& ctx) override final;

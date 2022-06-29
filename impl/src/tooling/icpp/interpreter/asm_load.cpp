@@ -295,12 +295,14 @@ void loadAssembly(json j, Evaluator& ee)
 
     auto lflavoflist = j["listflavors"];
     std::for_each(lflavoflist.cbegin(), lflavoflist.cend(), [](json fdecl) {
+        xxxx;
         auto lflavor = jsonLoadListFlavor(fdecl);
         BSQListOps::g_flavormap.emplace(lflavor.entrytype->tid, lflavor);
     });
 
     auto mflavorlist = j["mapflavors"];
     std::for_each(mflavorlist.cbegin(), mflavorlist.cend(), [](json fdecl) {
+        xxxx;
         auto mflavor = jsonLoadMapFlavor(fdecl);
         BSQMapOps::g_flavormap.emplace(std::make_pair(mflavor.keytype->tid, mflavor.valuetype->tid), mflavor);
     });

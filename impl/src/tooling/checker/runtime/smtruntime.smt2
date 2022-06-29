@@ -628,7 +628,7 @@
 )
 
 (define-fun _@@cons_ISOTimeStamp_entrypoint ((ctx HavocSequence)) $Result_BISOTimeStamp
-  (let ((y (BDateYear@UFCons_API ctx)) (m (BDateMonth@UFCons_API ctx)) (d (BDateDay@UFCons_API ctx)) (hh (BDateHour@UFCons_API ctx)) (mm (BDateMinute@UFCons_API ctx)) (mm (BDateMinute@UFCons_API ctx)) (ss (BDateSecond@UFCons_API ctx)) (millis (BDateMillis@UFCons_API ctx)))
+  (let ((y (BDateYear@UFCons_API ctx)) (m (BDateMonth@UFCons_API ctx)) (d (BDateDay@UFCons_API ctx)) (hh (BDateHour@UFCons_API ctx)) (mm (BDateMinute@UFCons_API ctx)) (ss (BDateSecond@UFCons_API ctx)) (millis (BDateMillis@UFCons_API ctx)))
     (ite (and (<= 1900 y) (<= y 2200) (<= 0 m) (<= m 11) (<= 1 d) (@@check_DayInMonth d m y) (<= 0 hh) (<= hh 23) (<= 0 mm) (<= mm 59) (<= 0 ss) (<= ss 60) (<= 0 millis) (<= millis 999))
       ($Result_BISOTimeStamp@success (BISOTimeStamp@cons y m d hh mm ss millis))
       ($Result_BISOTimeStamp@error ErrorID_AssumeCheck) 
@@ -656,6 +656,15 @@
 
 (define-fun _@@cons_ContentHash_entrypoint ((ctx HavocSequence)) $Result_BSHAContentHash
   ($Result_BSHAContentHash@success (BSHAContentHash@UFCons_API ctx))
+)
+
+(define-fun _@@cons_LatLongCoordinate_entrypoint ((ctx HavocSequence)) $Result_BLatLongCoordinate
+  (let ((lat (BFloat@UFCons_API (seq.++ ctx (seq.unit 0)))) (long (BFloat@UFCons_API (seq.++ ctx (seq.unit 1)))))
+    (ite (and (<= -90.0 lat) (<= lat 90.0) (< -180.0 long) (<= long 180.0))
+      ($Result_BLatLongCoordinate@success (Result_BLatLongCoordinate@cons lat long))
+      ($Result_BLatLongCoordinate@error ErrorID_AssumeCheck) 
+    )
+  )
 )
 
 (declare-fun @@SortedIntSeq@@Create (Int Int Int) (Seq Int))
