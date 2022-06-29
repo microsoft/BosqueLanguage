@@ -2903,6 +2903,10 @@ bool ICPPParseJSON::parseStringImpl(const APIModule* apimodule, const IType* ity
 
 bool ICPPParseJSON::parseByteBufferImpl(const APIModule* apimodule, const IType* itype, uint8_t compress, uint8_t format, std::vector<uint8_t>& data, StorageLocationPtr value, Evaluator& ctx)
 {
+    assert(false);
+    return false;
+
+    /*
     Allocator::GlobalAllocator.ensureSpace(BSQWellKnownType::g_typeByteBufferLeaf->allocinfo.heapsize + BSQWellKnownType::g_typeByteBufferNode->allocinfo.heapsize + (2 * sizeof(GC_META_DATA_WORD)));
     BSQByteBufferNode* cnode = (BSQByteBufferNode*)Allocator::GlobalAllocator.allocateSafe(BSQWellKnownType::g_typeByteBufferNode);
     cnode->bytecount = std::min((uint64_t)data.size(), (uint64_t)256);
@@ -2950,20 +2954,55 @@ bool ICPPParseJSON::parseByteBufferImpl(const APIModule* apimodule, const IType*
 
     GCStack::popFrame();
     return true;
+    */
 }
 
-bool ICPPParseJSON::parseDateTimeImpl(const APIModule* apimodule, const IType* itype, DateTime t, StorageLocationPtr value, Evaluator& ctx)
+bool ICPPParseJSON::parseDateTimeImpl(const APIModule* apimodule, const IType* itype, APIDateTime t, StorageLocationPtr value, Evaluator& ctx)
 {
-    Allocator::GlobalAllocator.ensureSpace(BSQWellKnownType::g_typeDateTime);
-    BSQDateTime* dt = (BSQDateTime*)Allocator::GlobalAllocator.allocateSafe(BSQWellKnownType::g_typeDateTime);
-    dt->year = t.year;
-    dt->month = t.month;
-    dt->day = t.day;
-    dt->hour = t.hour;
-    dt->month = t.min;
-    dt->tzdata = t.tzdata;
+    BSQDateTime dt = {0};
+    dt.year = t.year;
+    dt.month = t.month;
+    dt.day = t.day;
+    dt.hour = t.hour;
+    dt.min = t.min;
+    dt.tzdata = t.tzdata;
 
-    SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(value, dt);
+    SLPTR_STORE_CONTENTS_AS(BSQDateTime, value, dt);
+    return true;
+}
+
+bool ICPPParseJSON::parseUTCDateTimeImpl(const APIModule* apimodule, const IType* itype, APIUTCDateTime t, StorageLocationPtr value, Evaluator& ctx)
+{
+    BSQUTCDateTime dt = {0};
+    dt.year = t.year;
+    dt.month = t.month;
+    dt.day = t.day;
+    dt.hour = t.hour;
+    dt.min = t.min;
+
+    SLPTR_STORE_CONTENTS_AS(BSQUTCDateTime, value, dt);
+    return true;
+}
+
+bool ICPPParseJSON::parseCalendarDateImpl(const APIModule* apimodule, const IType* itype, APICalendarDate t, StorageLocationPtr value, Evaluator& ctx)
+{
+    BSQCalendarDate dt = {0};
+    dt.year = t.year;
+    dt.month = t.month;
+    dt.day = t.day;
+
+    SLPTR_STORE_CONTENTS_AS(BSQCalendarDate, value, dt);
+    return true;
+}
+
+bool ICPPParseJSON::parseRelativeTimeImpl(const APIModule* apimodule, const IType* itype, APIRelativeTime t, StorageLocationPtr value, Evaluator& ctx)
+{
+    BSQRelativeTime dt = {0};
+   
+    dt.hour = t.hour;
+    dt.min = t.min;
+
+    SLPTR_STORE_CONTENTS_AS(BSQRelativeTime, value, dt);
     return true;
 }
 
@@ -2979,7 +3018,22 @@ bool ICPPParseJSON::parseLogicalTimeImpl(const APIModule* apimodule, const IType
     return true;
 }
 
-bool ICPPParseJSON::parseUUIDImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, StorageLocationPtr value, Evaluator& ctx)
+bool ICPPParseJSON::parseISOTimeStampImpl(const APIModule* apimodule, const IType* itype, APIISOTimeStamp t, StorageLocationPtr value, Evaluator& ctx)
+{
+    BSQISOTimeStamp dt = {0};
+    dt.year = t.year;
+    dt.month = t.month;
+    dt.day = t.day;
+    dt.hour = t.hour;
+    dt.min = t.min;
+    dt.seconds = t.sec;
+    dt.millis = t.millis;
+
+    SLPTR_STORE_CONTENTS_AS(BSQISOTimeStamp, value, dt);
+    return true;
+}
+
+bool ICPPParseJSON::parseUUID4Impl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, StorageLocationPtr value, Evaluator& ctx)
 {
     BSQUUID uuid;
     std::copy(v.cbegin(), v.cbegin() + 16, uuid.bytes);
@@ -2988,17 +3042,33 @@ bool ICPPParseJSON::parseUUIDImpl(const APIModule* apimodule, const IType* itype
     return true;
 }
 
-bool ICPPParseJSON::parseContentHashImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, StorageLocationPtr value, Evaluator& ctx)
+bool ICPPParseJSON::parseUUID7Impl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, StorageLocationPtr value, Evaluator& ctx)
 {
-    Allocator::GlobalAllocator.ensureSpace(BSQWellKnownType::g_typeContentHash);
-    BSQContentHash* hash = (BSQContentHash*)Allocator::GlobalAllocator.allocateSafe(BSQWellKnownType::g_typeContentHash);
+    BSQUUID uuid;
+    std::copy(v.cbegin(), v.cbegin() + 16, uuid.bytes);
+    
+    SLPTR_STORE_CONTENTS_AS(BSQUUID, value, uuid);
+    return true;
+}
 
+bool ICPPParseJSON::parseSHAContentHashImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, StorageLocationPtr value, Evaluator& ctx)
+{
+    BSQSHAContentHash* hash = (BSQSHAContentHash*)Allocator::GlobalAllocator.allocateDynamic(BSQWellKnownType::g_typeSHAContentHash);
     std::copy(v.cbegin(), v.cbegin() + 64, hash->bytes);
     
     SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(value, hash);
     return true;
 }
-    
+
+bool ICPPParseJSON::parseLatLongCoordinateImpl(const APIModule* apimodule, const IType* itype, float latitude, float longitude, StorageLocationPtr value, Evaluator& ctx)
+{
+    BSQLatLongCoordinate llc = {0};
+    llc.latitude = latitude;
+    llc.longitude = longitude;
+
+    SLPTR_STORE_CONTENTS_AS(BSQLatLongCoordinate, value, llc);
+}
+
 void ICPPParseJSON::prepareParseTuple(const APIModule* apimodule, const IType* itype, Evaluator& ctx)
 {
     BSQTypeID tupid = MarshalEnvironment::g_typenameToIdMap.find(itype->name)->second;
