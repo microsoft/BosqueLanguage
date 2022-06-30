@@ -695,7 +695,7 @@ ReturnAssignOfConsOp* ReturnAssignOfConsOp::jparse(json v)
 
 VarLifetimeStartOp* VarLifetimeStartOp::jparse(json v)
 {
-    return new VarLifetimeStartOp(j_sinfo(v), jsonParse_Argument(v["homelocation"]), j_oftype(v), v["name"].get<std::string>());
+    return new VarLifetimeStartOp(j_sinfo(v), jsonParse_TargetVar(v["homelocation"]), j_oftype(v), v["name"].get<std::string>());
 }
 
 VarLifetimeEndOp* VarLifetimeEndOp::jparse(json v)

@@ -101,6 +101,7 @@ public:
         }
 
         GCStack::popFrame(sizeof(void*) * 2);
+        return res;
     }
 
     template <typename OP_PV>
@@ -142,8 +143,8 @@ public:
             void** stck = (void**)GCStack::allocFrame(sizeof(void*) * 3);
             stck[0] = reprnode;
         
-            stck[1] = list_tree_transform(lflavor, idx, static_cast<BSQListTreeRepr*>(stck[0])->l, fn_partialvector);
-            stck[2] = list_tree_transform(lflavor, idx + lsize, static_cast<BSQListTreeRepr*>(stck[0])->r, fn_partialvector);
+            stck[1] = list_tree_transform_idx(lflavor, static_cast<BSQListTreeRepr*>(stck[0])->l, idx, fn_partialvector);
+            stck[2] = list_tree_transform_idx(lflavor, static_cast<BSQListTreeRepr*>(stck[0])->r, idx + lsize, fn_partialvector);
             
             void* res = BSQListOps::list_append(lflavor, stck[1], stck[2]);
 
@@ -189,6 +190,7 @@ public:
         {
             res = Allocator::GlobalAllocator.allocateDynamic(lflavor.pv8type);
             BSQPartialVectorType::setPVCount(res, (int16_t)count);
+            T curr = start;
             for(int16_t i = 0; i < (int16_t)count; ++i)
             {
                 lflavor.entrytype->storeValue(lflavor.pv8type->get(res, i), &curr);

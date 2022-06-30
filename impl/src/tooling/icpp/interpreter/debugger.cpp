@@ -369,7 +369,7 @@ void dbg_displayLocals(Evaluator* vv)
 
         if(!isparam)
         {
-            auto val = vv->evalArgument(iter->second.location);
+            auto val = vv->evalTargetVar(iter->second.location);
             locals += "  " + iter->first + ": " + iter->second.vtype->fpDisplay(iter->second.vtype, val, DisplayMode::CmdDebug) + "\n";
         }
     }
@@ -674,7 +674,7 @@ void dbg_displayExp(Evaluator* vv, std::string vexp)
         else
         {
             btype = lpos->second.vtype;
-            cpos = vv->evalArgument(lpos->second.location);
+            cpos = vv->evalTargetVar(lpos->second.location);
         }
 
         vexp = np.value().second;

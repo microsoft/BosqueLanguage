@@ -576,7 +576,7 @@ class ICPPBodyEmitter {
     processVarLifetimeStart(op: MIRVarLifetimeStart): ICPPOp {
         const tv = this.getStackInfoForTargetVar(op.name, this.typegen.getICPPLayoutInfo(this.typegen.getMIRType(op.rtype)));
 
-        return ICPPOpEmitter.genVarLifetimeStartOp(op.sinfo, { kind: tv.kind, location: tv.offset }, op.rtype, op.name);
+        return ICPPOpEmitter.genVarLifetimeStartOp(op.sinfo, { offset: tv.offset }, op.rtype, op.name);
     }
     
     processVarLifetimeEnd(op: MIRVarLifetimeEnd): ICPPOp {

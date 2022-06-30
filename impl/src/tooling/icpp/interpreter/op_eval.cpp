@@ -2214,7 +2214,7 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
     }
     case BSQPrimitiveImplTag::relativetime_create: {
         BSQRelativeTime dt = {
-            (uint16_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[0]),
+            (uint8_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[0]),
             (uint8_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]),
             0
         };
@@ -3067,6 +3067,7 @@ bool ICPPParseJSON::parseLatLongCoordinateImpl(const APIModule* apimodule, const
     llc.longitude = longitude;
 
     SLPTR_STORE_CONTENTS_AS(BSQLatLongCoordinate, value, llc);
+    return true;
 }
 
 void ICPPParseJSON::prepareParseTuple(const APIModule* apimodule, const IType* itype, Evaluator& ctx)

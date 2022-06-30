@@ -1116,7 +1116,7 @@ public:
     template <typename ValueRepr, typename State>
     bool parse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
     {
-        auto t = JSONParseHelper::parseToCalendarDateType(j);
+        auto t = JSONParseHelper::parseToCalendarDate(j);
         if(!t.has_value())
         {
             return false;
@@ -1134,7 +1134,7 @@ public:
             return std::nullopt;
         }
 
-        return JSONParseHelper::emitCalendarDateType(tval.value());
+        return JSONParseHelper::emitCalendarDate(tval.value());
     }
 };
 
@@ -1516,13 +1516,13 @@ public:
     template <typename ValueRepr, typename State>
     bool parse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
     {
-        auto uuid = JSONParseHelper::parseLatLongCoordinate(j);
-        if(!uuid.has_value())
+        auto llv = JSONParseHelper::parseLatLongCoordinate(j);
+        if(!llv.has_value())
         {
             return false;
         }
 
-        return apimgr.parseLatLongCoordinateImpl(apimodule, this, uuid.value(), value, ctx);
+        return apimgr.parseLatLongCoordinateImpl(apimodule, this, llv.value().first, llv.value().second, value, ctx);
     }
 
     template <typename ValueRepr, typename State>
@@ -1930,7 +1930,7 @@ public:
         auto vt = apimodule->typemap.find(this->vtype)->second;
         for(size_t i = 0; i < clen.value(); ++i)
         {
-            std::pair<ValueRepr, ValueRepr> vval = apimgr.extractValueForContainer(apimodule, this, value, i, ctx);
+            std::pair<ValueRepr, ValueRepr> vval = apimgr.extractValueForContainer_KV(apimodule, this, value, i, ctx);
             auto kr = kt->textract(apimgr, apimodule, vval.first, ctx);
             auto vr = vt->textract(apimgr, apimodule, vval.second, ctx);
             if(!kr.has_value() || !vr.has_value())
@@ -2322,22 +2322,36 @@ bool IType::tparse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* ap
             return dynamic_cast<const DataBufferType*>(this)->parse(apimgr, apimodule, j, value, ctx);
         case TypeTag::DateTimeTag:
             return dynamic_cast<const DateTimeType*>(this)->parse(apimgr, apimodule, j, value, ctx);
+        case TypeTag::UTCDateTimeTag:
+            return dynamic_cast<const UTCDateTimeType*>(this)->parse(apimgr, apimodule, j, value, ctx);
+        case TypeTag::CalendarDateTag:
+            return dynamic_cast<const CalendarDateType*>(this)->parse(apimgr, apimodule, j, value, ctx);
+        case TypeTag::RelativeTimeTag:
+            return dynamic_cast<const RelativeTimeType*>(this)->parse(apimgr, apimodule, j, value, ctx);
         case TypeTag::TickTimeTag:
             return dynamic_cast<const TickTimeType*>(this)->parse(apimgr, apimodule, j, value, ctx);
         case TypeTag::LogicalTimeTag:
             return dynamic_cast<const LogicalTimeType*>(this)->parse(apimgr, apimodule, j, value, ctx);
-        case TypeTag::UUIDTag:
-            return dynamic_cast<const UUIDType*>(this)->parse(apimgr, apimodule, j, value, ctx);
-        case TypeTag::ContentHashTag:
-            return dynamic_cast<const ContentHashType*>(this)->parse(apimgr, apimodule, j, value, ctx);
+        case TypeTag::ISOTimeStampTag:
+            return dynamic_cast<const ISOTimeStampType*>(this)->parse(apimgr, apimodule, j, value, ctx);
+        case TypeTag::UUID4Tag:
+            return dynamic_cast<const UUID4Type*>(this)->parse(apimgr, apimodule, j, value, ctx);
+        case TypeTag::UUID7Tag:
+            return dynamic_cast<const UUID7Type*>(this)->parse(apimgr, apimodule, j, value, ctx);
+        case TypeTag::SHAContentHashTag:
+            return dynamic_cast<const SHAContentHashType*>(this)->parse(apimgr, apimodule, j, value, ctx);
+        case TypeTag::LatLongCoordinateTag:
+            return dynamic_cast<const LatLongCoordinateType*>(this)->parse(apimgr, apimodule, j, value, ctx);
         case TypeTag::ConstructableOfType:
             return dynamic_cast<const ConstructableOfType*>(this)->parse(apimgr, apimodule, j, value, ctx);
         case TypeTag::TupleTag:
             return dynamic_cast<const TupleType*>(this)->parse(apimgr, apimodule, j, value, ctx);
         case TypeTag::RecordTag:
             return dynamic_cast<const RecordType*>(this)->parse(apimgr, apimodule, j, value, ctx);
-        case TypeTag::ContainerTag:
-            return dynamic_cast<const ContainerType*>(this)->parse(apimgr, apimodule, j, value, ctx);
+        case TypeTag::ContainerTTag:
+            return dynamic_cast<const ContainerTType*>(this)->parse(apimgr, apimodule, j, value, ctx);
+        case TypeTag::ContainerKVTag:
+            return dynamic_cast<const ContainerKVType*>(this)->parse(apimgr, apimodule, j, value, ctx);
         case TypeTag::EnumTag:
             return dynamic_cast<const EnumType*>(this)->parse(apimgr, apimodule, j, value, ctx);
         case TypeTag::EntityTag:
@@ -2389,22 +2403,36 @@ std::optional<json> IType::textract(ApiManagerJSON<ValueRepr, State>& apimgr, co
             return dynamic_cast<const DataBufferType*>(this)->extract(apimgr, apimodule, value, ctx);
         case TypeTag::DateTimeTag:
             return dynamic_cast<const DateTimeType*>(this)->extract(apimgr, apimodule, value, ctx);
+        case TypeTag::UTCDateTimeTag:
+            return dynamic_cast<const UTCDateTimeType*>(this)->extract(apimgr, apimodule, value, ctx);
+        case TypeTag::CalendarDateTag:
+            return dynamic_cast<const CalendarDateType*>(this)->extract(apimgr, apimodule, value, ctx);
+        case TypeTag::RelativeTimeTag:
+            return dynamic_cast<const RelativeTimeType*>(this)->extract(apimgr, apimodule, value, ctx);
         case TypeTag::TickTimeTag:
             return dynamic_cast<const TickTimeType*>(this)->extract(apimgr, apimodule, value, ctx);
         case TypeTag::LogicalTimeTag:
             return dynamic_cast<const LogicalTimeType*>(this)->extract(apimgr, apimodule, value, ctx);
-        case TypeTag::UUIDTag:
-            return dynamic_cast<const UUIDType*>(this)->extract(apimgr, apimodule, value, ctx);
-        case TypeTag::ContentHashTag:
-            return dynamic_cast<const ContentHashType*>(this)->extract(apimgr, apimodule, value, ctx);
+        case TypeTag::ISOTimeStampTag:
+            return dynamic_cast<const ISOTimeStampType*>(this)->extract(apimgr, apimodule, value, ctx);
+        case TypeTag::UUID4Tag:
+            return dynamic_cast<const UUID4Type*>(this)->extract(apimgr, apimodule, value, ctx);
+        case TypeTag::UUID7Tag:
+            return dynamic_cast<const UUID7Type*>(this)->extract(apimgr, apimodule, value, ctx);
+        case TypeTag::SHAContentHashTag:
+            return dynamic_cast<const SHAContentHashType*>(this)->extract(apimgr, apimodule, value, ctx);
+        case TypeTag::LatLongCoordinateTag:
+            return dynamic_cast<const LatLongCoordinateType*>(this)->extract(apimgr, apimodule, value, ctx);
         case TypeTag::ConstructableOfType:
             return dynamic_cast<const ConstructableOfType*>(this)->extract(apimgr, apimodule, value, ctx);
         case TypeTag::TupleTag:
             return dynamic_cast<const TupleType*>(this)->extract(apimgr, apimodule, value, ctx);
         case TypeTag::RecordTag:
             return dynamic_cast<const RecordType*>(this)->extract(apimgr, apimodule, value, ctx);
-        case TypeTag::ContainerTag:
-            return dynamic_cast<const ContainerType*>(this)->extract(apimgr, apimodule, value, ctx);
+        case TypeTag::ContainerTTag:
+            return dynamic_cast<const ContainerTType*>(this)->extract(apimgr, apimodule, value, ctx);
+        case TypeTag::ContainerKVTag:
+            return dynamic_cast<const ContainerKVType*>(this)->extract(apimgr, apimodule, value, ctx);
         case TypeTag::EnumTag:
             return dynamic_cast<const EnumType*>(this)->extract(apimgr, apimodule, value, ctx);
         case TypeTag::EntityTag:

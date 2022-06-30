@@ -245,7 +245,7 @@ bool parseToDateTimeRaw(json j, uint16_t& y, uint8_t& m, uint8_t& d, uint8_t& hh
         return false;
     }
 
-    uint16_t y = std::strtol(&sstr[0], nullptr, 10);
+    y = std::strtol(&sstr[0], nullptr, 10);
     if(y < 1900)
     {
         return false;
@@ -293,7 +293,7 @@ bool parseToCalendarDateRaw(json j, uint16_t& y, uint8_t& m, uint8_t& d)
         return false;
     }
 
-    uint16_t y = std::strtol(&sstr[0], nullptr, 10);
+    y = std::strtol(&sstr[0], nullptr, 10);
     if(y < 1900)
     {
         return false;
@@ -359,7 +359,7 @@ bool parseToISOTimeStampRaw(json j, uint16_t& y, uint8_t& m, uint8_t& d, uint8_t
         return false;
     }
 
-    uint16_t y = std::strtol(&sstr[0], nullptr, 10);
+    y = std::strtol(&sstr[0], nullptr, 10);
     if(y < 1900)
     {
         return false;

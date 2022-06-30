@@ -22,7 +22,7 @@ else if(process.platform === "linux") {
     runconfig = "CXX=clang++ CC=clang python scripts/mk_make.py --staticlib";
 }
 else {
-    runconfig = "python scripts/mk_make.py --parallel=4";
+    runconfig = "python scripts/mk_make.py -x";
 }
 
 try {
@@ -30,7 +30,12 @@ try {
     proc.execSync(runconfig, {cwd: z3dir});
     
     process.stdout.write("Building...\n");
-    proc.execSync("make", {cwd: builddir});
+    if(process.platform === "darwin" || process.platform === "linux") {
+        proc.execSync("make", {cwd: builddir});
+    }
+    else {
+        proc.execSync("nmake", {cwd: builddir});
+    }
 
     process.stdout.write("Done!\n");
 }

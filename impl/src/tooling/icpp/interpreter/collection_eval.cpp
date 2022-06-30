@@ -972,7 +972,7 @@ void BSQListOps::s_transduce_idx_ne(const BSQListTypeFlavor& lflavor, LambdaEval
         });
         envtype->storeValue(envsl, params[1]);
 
-        rres = BSQListOps::list_tree_transform(lflavor, tmpl[0], [&](void* vv, const BSQPartialVectorType* reprtype, uint64_t idx) {
+        rres = BSQListOps::list_tree_transform_idx(lflavor, tmpl[0], 0, [&](void* vv, const BSQPartialVectorType* reprtype, uint64_t idx) {
             idxarg = idx;
             tmpl[1] = vv;
             int16_t vcount = reprtype->getPVCount(tmpl[1]);

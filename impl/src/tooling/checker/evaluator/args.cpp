@@ -850,13 +850,13 @@ bool SMTParseJSON::parseLatLongCoordinateImpl(const APIModule* apimodule, const 
 
     auto latctx = extendContext(ctx.ctx(), value, 0);
     char latstr[16] = {0};
-    auto lenlat = sprintf(latstr, "%1.9d", latitude);
+    auto lenlat = sprintf(latstr, "%1.9f", latitude);
     std::string latres(latstr, latstr + lenlat);
     ctx.add(bbf(latctx) == ctx.ctx().real_const(latres.c_str()));
 
     auto longctx = extendContext(ctx.ctx(), value, 1);
     char longstr[16] = {0};
-    auto lenlong = sprintf(longstr, "%1.9d", longitude);
+    auto lenlong = sprintf(longstr, "%1.9f", longitude);
     std::string longres(longstr, longstr + lenlong);
     ctx.add(bbf(value) == ctx.ctx().real_const(longres.c_str()));
     

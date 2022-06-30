@@ -90,7 +90,7 @@ class VariableHomeLocationInfo
 public:
     std::string vname;
     const BSQType* vtype;
-    Argument location;
+    TargetVar location;
 };
 
 class EvaluatorFrame

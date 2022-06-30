@@ -466,7 +466,7 @@ class ICPPOpEmitter
         return { tag: OpCodeTag.ReturnAssignOfConsOp, sinfo: sinfo, trgt: trgt, args: args, oftype: oftype };
     }
     
-    static genVarLifetimeStartOp(sinfo: SourceInfo, homelocation: Argument, oftype: MIRResolvedTypeKey, name: string): ICPPOp {
+    static genVarLifetimeStartOp(sinfo: SourceInfo, homelocation: TargetVar, oftype: MIRResolvedTypeKey, name: string): ICPPOp {
         return { tag: OpCodeTag.VarLifetimeStartOp, sinfo: sinfo, homelocation: homelocation, oftype: oftype, name: name };
     }
     

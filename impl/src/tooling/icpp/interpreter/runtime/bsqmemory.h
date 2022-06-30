@@ -8,7 +8,9 @@
 #include "../common.h"
 
 #ifdef _WIN32
-#include "memoryapi.h"
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+//I want thi for valloc but seems like I need to do windows.h (#include "memoryapi.h")
 #else
 #include <sys/mman.h>
 #endif
@@ -532,6 +534,7 @@ public:
         }
             
         btype->evacuatepage->allocinfo = AllocPageInfo_Ev;
+        return btype->evacuatepage;
     }
     
     PageInfo* processAndGetNewPageForAllocation(BSQType* btype)
@@ -540,7 +543,6 @@ public:
         {
             btype->allocpage = this->allocateFreePage(btype);
             btype->allocpage->allocinfo = AllocPageInfo_Alloc;
-            return;
         }
         else
         {
@@ -549,21 +551,23 @@ public:
 
             if(!btype->allocatedPages.low_utilization.empty())
             {
-                btype->evacuatepage = *(btype->allocatedPages.low_utilization.begin());
+                btype->allocpage = *(btype->allocatedPages.low_utilization.begin());
                 btype->allocatedPages.low_utilization.erase(btype->evacuatepage);
             }
             else if(!btype->allocatedPages.mid_utilization.empty())
             {
-                btype->evacuatepage = btype->allocatedPages.mid_utilization.front();
+                btype->allocpage = btype->allocatedPages.mid_utilization.front();
                 btype->allocatedPages.mid_utilization.pop_front();
             }
             else
             {
-                btype->evacuatepage = this->allocateFreePage(btype);
+                btype->allocpage = this->allocateFreePage(btype);
             }
 
-            btype->evacuatepage->allocinfo = btype->evacuatepage->allocinfo | AllocPageInfo_Alloc;
+            btype->allocpage->allocinfo = btype->allocpage->allocinfo | AllocPageInfo_Alloc;
         }
+
+        return btype->allocpage;
     }
 };
 
@@ -1239,8 +1243,8 @@ private:
         }
 //#endif
 
-        uint64_t live_bytes = std::accumulate(this->blockalloc.page_set.cbegin(), this->blockalloc.page_set.cend(), 0, [](uint64_t acc, PageInfo* p) {
-            return acc + (p->entry_size - p->freelist_count);
+        uint64_t live_bytes = std::accumulate(this->blockalloc.page_set.cbegin(), this->blockalloc.page_set.cend(), (uint64_t)0, [](uint64_t acc, PageInfo* p) {
+            return acc + (uint64_t)(p->entry_size - p->freelist_count);
         });
 
         return GeneralMemoryStats{this->blockalloc.page_set.size(), this->blockalloc.free_pages.size(), live_bytes};
@@ -1410,7 +1414,7 @@ public:
         PageInfo* pp = mdata->allocpage;
         if(pp->freelist == nullptr)
         {
-            this->allocate_slow(const_cast<BSQType*>(mdata));
+            pp = this->allocate_slow(const_cast<BSQType*>(mdata));
         }
         
         uint8_t* alloc = (uint8_t*)pp->freelist;
