@@ -21,7 +21,7 @@ Notes:
 #pragma once
 
 #include<cassert>
-#include<iostream>
+#include<ostream>
 #include<string>
 #include<sstream>
 #include<memory>
@@ -459,6 +459,7 @@ namespace z3 {
         }
         ~param_descrs() { Z3_param_descrs_dec_ref(ctx(), m_descrs); }
         static param_descrs simplify_param_descrs(context& c) { return param_descrs(c, Z3_simplify_get_param_descrs(c)); }
+        static param_descrs global_param_descrs(context& c) { return param_descrs(c, Z3_get_global_param_descrs(c)); }
 
         unsigned size() { return Z3_param_descrs_size(ctx(), m_descrs); }
         symbol name(unsigned i) { return symbol(ctx(), Z3_param_descrs_get_name(ctx(), m_descrs, i)); }
@@ -4156,6 +4157,11 @@ namespace z3 {
         virtual void created(expr const& /*e*/) {}
         
         virtual void decide(expr& /*val*/, unsigned& /*bit*/, Z3_lbool& /*is_pos*/) {}
+
+        void next_split(expr const & e, unsigned idx, Z3_lbool phase) {
+            assert(cb);
+            Z3_solver_next_split(ctx(), cb, e, idx, phase);
+        }
 
         /**
            \brief tracks \c e by a unique identifier that is returned by the call.
