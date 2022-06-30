@@ -48,8 +48,10 @@ BSQMapTypeFlavor jsonLoadMapFlavor(json v)
 
     const BSQType* keytype = BSQType::g_typetable[MarshalEnvironment::g_typenameToIdMap.find(v["keytype"].get<std::string>())->second];
     const BSQType* valuetype = BSQType::g_typetable[MarshalEnvironment::g_typenameToIdMap.find(v["valuetype"].get<std::string>())->second];
-xxxx;
-    const BSQMapTreeType* treetype = dynamic_cast<const BSQMapTreeType*>(BSQType::g_typetable[MarshalEnvironment::g_typenameToIdMap.find(v["treetype"].get<std::string>())->second]);
+
+    const BSQMapTreeType* treetype = new BSQMapTreeType(xxxx, uint64_t allocsize, RefMask heapmask, std::string name, BSQTypeID keytype, uint32_t keyoffset, BSQTypeID valuetype, uint32_t valueoffset);
+    
+    //const BSQMapTreeType* treetype = dynamic_cast<const BSQMapTreeType*>(BSQType::g_typetable[MarshalEnvironment::g_typenameToIdMap.find(v["treetype"].get<std::string>())->second]);
 
     return BSQMapTypeFlavor{mtype, keytype, valuetype, treetype};   
 }
@@ -71,10 +73,16 @@ void initialize(size_t cbuffsize, const RefMask cmask)
     MarshalEnvironment::g_typenameToIdMap["@ByteBufferNode"] = BSQ_TYPE_ID_BYTEBUFFER_NODE;
     MarshalEnvironment::g_typenameToIdMap["ByteBuffer"] = BSQ_TYPE_ID_BYTEBUFFER;
     MarshalEnvironment::g_typenameToIdMap["DateTime"] = BSQ_TYPE_ID_DATETIME;
+    MarshalEnvironment::g_typenameToIdMap["UTCDateTime"] = BSQ_TYPE_ID_UTC_DATETIME;
+    MarshalEnvironment::g_typenameToIdMap["CalendarDate"] = BSQ_TYPE_ID_CALENDAR_DATE;
+    MarshalEnvironment::g_typenameToIdMap["RelativeTime"] = BSQ_TYPE_ID_RELATIVE_TIME;
     MarshalEnvironment::g_typenameToIdMap["TickTime"] = BSQ_TYPE_ID_TICKTIME;
     MarshalEnvironment::g_typenameToIdMap["LogicalTime"] = BSQ_TYPE_ID_LOGICALTIME;
-    MarshalEnvironment::g_typenameToIdMap["UUID"] = BSQ_TYPE_ID_UUID;
-    MarshalEnvironment::g_typenameToIdMap["ContentHash"] = BSQ_TYPE_ID_CONTENTHASH;
+    MarshalEnvironment::g_typenameToIdMap["ISOTimeStamp"] = BSQ_TYPE_ID_ISO_TIMESTAMP;
+    MarshalEnvironment::g_typenameToIdMap["UUID4"] = BSQ_TYPE_ID_UUID4;
+    MarshalEnvironment::g_typenameToIdMap["UUID7"] = BSQ_TYPE_ID_UUID7;
+    MarshalEnvironment::g_typenameToIdMap["SHAContentHash"] = BSQ_TYPE_ID_SHA_CONTENT_HASH;
+    MarshalEnvironment::g_typenameToIdMap["LatLongCoordinate"] = BSQ_TYPE_ID_LAT_LONG_COORDINATE;
     MarshalEnvironment::g_typenameToIdMap["Regex"] = BSQ_TYPE_ID_REGEX;
 
     MarshalEnvironment::g_typenameToIdMap["@StringK16"] = BSQ_TYPE_ID_STRINGREPR_K16;
@@ -269,10 +277,16 @@ void loadAssembly(json j, Evaluator& ee)
     BSQType::g_typetable[BSQ_TYPE_ID_BYTEBUFFER_NODE] = BSQWellKnownType::g_typeByteBufferNode;
     BSQType::g_typetable[BSQ_TYPE_ID_BYTEBUFFER] = BSQWellKnownType::g_typeByteBuffer;
     BSQType::g_typetable[BSQ_TYPE_ID_DATETIME] = BSQWellKnownType::g_typeDateTime;
+    BSQType::g_typetable[BSQ_TYPE_ID_UTC_DATETIME] = BSQWellKnownType::g_typeUTCDateTime;
+    BSQType::g_typetable[BSQ_TYPE_ID_CALENDAR_DATE] = BSQWellKnownType::g_typeCalendarDate;
+    BSQType::g_typetable[BSQ_TYPE_ID_RELATIVE_TIME] = BSQWellKnownType::g_typeRelativeTime;
     BSQType::g_typetable[BSQ_TYPE_ID_TICKTIME] = BSQWellKnownType::g_typeTickTime;
     BSQType::g_typetable[BSQ_TYPE_ID_LOGICALTIME] = BSQWellKnownType::g_typeLogicalTime;
-    BSQType::g_typetable[BSQ_TYPE_ID_UUID] = BSQWellKnownType::g_typeUUID;
-    BSQType::g_typetable[BSQ_TYPE_ID_CONTENTHASH] = BSQWellKnownType::g_typeContentHash;
+    BSQType::g_typetable[BSQ_TYPE_ID_ISO_TIMESTAMP] = BSQWellKnownType::g_typeISOTimeStamp;
+    BSQType::g_typetable[BSQ_TYPE_ID_UUID4] = BSQWellKnownType::g_typeUUID4;
+    BSQType::g_typetable[BSQ_TYPE_ID_UUID7] = BSQWellKnownType::g_typeUUID7;
+    BSQType::g_typetable[BSQ_TYPE_ID_SHA_CONTENT_HASH] = BSQWellKnownType::g_typeSHAContentHash;
+    BSQType::g_typetable[BSQ_TYPE_ID_LAT_LONG_COORDINATE] = BSQWellKnownType::g_typeLatLongCoordinate;
     BSQType::g_typetable[BSQ_TYPE_ID_REGEX] = BSQWellKnownType::g_typeRegex;
 
     BSQType::g_typetable[BSQ_TYPE_ID_STRINGREPR_K16] = BSQWellKnownType::g_typeStringKRepr16;
@@ -294,14 +308,12 @@ void loadAssembly(json j, Evaluator& ee)
 
     auto lflavoflist = j["listflavors"];
     std::for_each(lflavoflist.cbegin(), lflavoflist.cend(), [](json fdecl) {
-        xxxx;
         auto lflavor = jsonLoadListFlavor(fdecl);
         BSQListOps::g_flavormap.emplace(lflavor.entrytype->tid, lflavor);
     });
 
     auto mflavorlist = j["mapflavors"];
     std::for_each(mflavorlist.cbegin(), mflavorlist.cend(), [](json fdecl) {
-        xxxx;
         auto mflavor = jsonLoadMapFlavor(fdecl);
         BSQMapOps::g_flavormap.emplace(std::make_pair(mflavor.keytype->tid, mflavor.valuetype->tid), mflavor);
     });

@@ -592,6 +592,7 @@ public:
         }
 
         ll.push_back(mflavor.treetype->getKeyLocation(tn));
+        ll.push_back(mflavor.treetype->getValueLocation(tn));
 
         if(BSQMapTreeType::getRight(tn) != nullptr)
         {

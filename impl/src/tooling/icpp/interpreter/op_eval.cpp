@@ -3553,20 +3553,58 @@ std::optional<std::pair<std::vector<uint8_t>, std::pair<uint8_t, uint8_t>>> ICPP
     return std::make_optional(std::make_pair(bytes, pprops));
 }
 
-std::optional<DateTime> ICPPParseJSON::extractDateTimeImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
+std::optional<APIDateTime> ICPPParseJSON::extractDateTimeImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
 {
-    BSQDateTime* t = (BSQDateTime*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(value);
+    BSQDateTime t = SLPTR_LOAD_CONTENTS_AS(BSQDateTime, value);
 
-    DateTime dt;
-    dt.year = t->year;
-    dt.month = t->month;
-    dt.day = t->day;
-    dt.hour = t->hour;
-    dt.min = t->min;
-    dt.tzdata = t->tzdata;
+    APIDateTime dt;
+    dt.year = t.year;
+    dt.month = t.month;
+    dt.day = t.day;
+    dt.hour = t.hour;
+    dt.min = t.min;
+    dt.tzdata = t.tzdata;
 
     return std::make_optional(dt);
 }
+
+std::optional<APIUTCDateTime> ICPPParseJSON::extractUTCDateTimeImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
+{
+    BSQUTCDateTime t = SLPTR_LOAD_CONTENTS_AS(BSQUTCDateTime, value);
+
+    APIUTCDateTime dt;
+    dt.year = t.year;
+    dt.month = t.month;
+    dt.day = t.day;
+    dt.hour = t.hour;
+    dt.min = t.min;
+
+    return std::make_optional(dt);
+}
+
+std::optional<APICalendarDate> ICPPParseJSON::extractCalendarDateImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
+{
+    BSQCalendarDate t = SLPTR_LOAD_CONTENTS_AS(BSQCalendarDate, value);
+
+    APICalendarDate dt;
+    dt.year = t.year;
+    dt.month = t.month;
+    dt.day = t.day;
+
+    return std::make_optional(dt);
+}
+
+std::optional<APIRelativeTime> ICPPParseJSON::extractRelativeTimeImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
+{
+    BSQRelativeTime t = SLPTR_LOAD_CONTENTS_AS(BSQRelativeTime, value);
+
+    APIRelativeTime dt;
+    dt.hour = t.hour;
+    dt.min = t.min;
+
+    return std::make_optional(dt);
+}
+    
 
 std::optional<uint64_t> ICPPParseJSON::extractTickTimeImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
 {
@@ -3578,7 +3616,23 @@ std::optional<uint64_t> ICPPParseJSON::extractLogicalTimeImpl(const APIModule* a
     return std::make_optional((uint64_t)SLPTR_LOAD_CONTENTS_AS(BSQLogicalTime, value));
 }
 
-std::optional<std::vector<uint8_t>> ICPPParseJSON::extractUUIDImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
+std::optional<APIISOTimeStamp> ICPPParseJSON::extractISOTimeStampImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
+{
+    BSQISOTimeStamp t = SLPTR_LOAD_CONTENTS_AS(BSQISOTimeStamp, value);
+
+    APIISOTimeStamp dt;
+    dt.year = t.year;
+    dt.month = t.month;
+    dt.day = t.day;
+    dt.hour = t.hour;
+    dt.min = t.min;
+    dt.sec = t.seconds;
+    dt.millis = t.millis;
+
+    return std::make_optional(dt);
+}
+
+std::optional<std::vector<uint8_t>> ICPPParseJSON::extractUUID4Impl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
 {
     auto uuid = SLPTR_LOAD_CONTENTS_AS(BSQUUID, value);
 
@@ -3588,14 +3642,31 @@ std::optional<std::vector<uint8_t>> ICPPParseJSON::extractUUIDImpl(const APIModu
     return std::make_optional(vv);
 }
 
-std::optional<std::vector<uint8_t>> ICPPParseJSON::extractContentHashImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
+std::optional<std::vector<uint8_t>> ICPPParseJSON::extractUUID7Impl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
 {
-    auto hash = (BSQContentHash*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(value);
+    auto uuid = SLPTR_LOAD_CONTENTS_AS(BSQUUID, value);
+
+    std::vector<uint8_t> vv;
+    std::copy(uuid.bytes, uuid.bytes + 16, std::back_inserter(vv));
+
+    return std::make_optional(vv);
+}
+
+std::optional<std::vector<uint8_t>> ICPPParseJSON::extractSHAContentHashImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
+{
+    auto hash = (BSQSHAContentHash*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(value);
 
     std::vector<uint8_t> vv;
     std::copy(hash->bytes, hash->bytes + 64, std::back_inserter(vv));
 
     return std::make_optional(vv);
+}
+
+std::optional<std::pair<float, float>> ICPPParseJSON::extractLatLongCoordinateImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
+{
+    auto llcoord = SLPTR_LOAD_CONTENTS_AS(BSQLatLongCoordinate, value);
+
+    return std::make_optional(std::make_pair(llcoord.latitude, llcoord.longitude));
 }
 
 StorageLocationPtr ICPPParseJSON::extractValueForTupleIndex(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t i, Evaluator& ctx)
@@ -3634,42 +3705,45 @@ StorageLocationPtr ICPPParseJSON::extractValueForEntityField(const APIModule* ap
 
 void ICPPParseJSON::prepareExtractContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
 {
-    auto ctype = dynamic_cast<const ContainerType*>(itype);
-    BSQTypeID containertypeid = MarshalEnvironment::g_typenameToIdMap.find(ctype->name)->second;
+    BSQTypeID containertypeid = MarshalEnvironment::g_typenameToIdMap.find(itype->name)->second;
     const BSQType* collectiontype = BSQType::g_typetable[containertypeid];
 
     this->parsecontainerstack.push_back({});
 
-    if(ctype->category == ContainerCategory::List)
+    if(itype->tag == TypeTag::ContainerTTag)
     {
-        if(LIST_LOAD_TYPE_INFO(value)->tid != BSQ_TYPE_ID_NONE)
+        auto ctype = dynamic_cast<const ContainerTType*>(itype);
+        if(ctype->category == ContainerCategory::List)
         {
-            const BSQListType* listtype = dynamic_cast<const BSQListType*>(collectiontype);
-            const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(listtype->etype)->second;
+            if(LIST_LOAD_DATA(value) != nullptr)
+            {
+                const BSQListType* listtype = dynamic_cast<const BSQListType*>(collectiontype);
+                const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(listtype->etype)->second;
 
-            BSQListOps::s_enumerate_for_extract(lflavor, LIST_LOAD_DATA(value), this->parsecontainerstack.back());
+                BSQListOps::s_enumerate_for_extract(lflavor, LIST_LOAD_DATA(value), this->parsecontainerstack.back());
+            }
         }
-    }
-    else if(ctype->category == ContainerCategory::Stack)
-    {
-        BSQ_INTERNAL_ASSERT(false);
-    }
-    else if(ctype->category == ContainerCategory::Queue)
-    {
-        BSQ_INTERNAL_ASSERT(false);
-    }
-    else if(ctype->category == ContainerCategory::Set)
-    {
-        BSQ_INTERNAL_ASSERT(false);
+        else if(ctype->category == ContainerCategory::Stack)
+        {
+            BSQ_INTERNAL_ASSERT(false);
+        }
+        else if(ctype->category == ContainerCategory::Queue)
+        {
+            BSQ_INTERNAL_ASSERT(false);
+        }
+        else
+        {
+            BSQ_INTERNAL_ASSERT(false);
+        }
     }
     else
     {
-        if(MAP_LOAD_TYPE_INFO(value)->tid != BSQ_TYPE_ID_NONE)
+        if(MAP_LOAD_DATA(value) != nullptr)
         {
             const BSQMapType* maptype = dynamic_cast<const BSQMapType*>(this->containerstack.back().first);
             const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.find(std::make_pair(maptype->ktype, maptype->vtype))->second;
 
-            BSQMapOps::s_enumerate_for_extract(mflavor, MAP_LOAD_REPR(value), this->parsecontainerstack.back());
+            BSQMapOps::s_enumerate_for_extract(mflavor, MAP_LOAD_DATA(value), this->parsecontainerstack.back());
         }
     }
 
@@ -3678,47 +3752,69 @@ void ICPPParseJSON::prepareExtractContainer(const APIModule* apimodule, const IT
 
 std::optional<size_t> ICPPParseJSON::extractLengthForContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
 {
-    const ContainerType* ctype = dynamic_cast<const ContainerType*>(itype);
-
-    if(ctype->category == ContainerCategory::List)
+    if(itype->tag == TypeTag::ContainerTTag)
     {
-        auto ttype = LIST_LOAD_TYPE_INFO(value);
-        if(ttype->tid == BSQ_TYPE_ID_NONE)
+        const ContainerTType* ctype = dynamic_cast<const ContainerTType*>(itype);
+
+        if(ctype->category == ContainerCategory::List)
         {
-            return 0;
+            if(LIST_LOAD_DATA(value) == nullptr)
+            {
+                return std::make_optional(0);
+            }
+            else
+            {
+                auto ttype = LIST_LOAD_REPR_TYPE(value);
+                return std::make_optional((size_t) ttype->getCount(LIST_LOAD_DATA(value)));
+            }
+        }
+        else if(ctype->category == ContainerCategory::Stack)
+        {
+            BSQ_INTERNAL_ASSERT(false);
+            return std::nullopt;
+        }
+        else if(ctype->category == ContainerCategory::Queue)
+        {
+            BSQ_INTERNAL_ASSERT(false);
+            return std::nullopt;
         }
         else
         {
-            return std::make_optional((size_t) dynamic_cast<const BSQListReprType*>(ttype)->getCount(LIST_LOAD_DATA(value)));
+            BSQ_INTERNAL_ASSERT(false);
+            return std::nullopt;
         }
-    }
-    else if(ctype->category == ContainerCategory::Stack)
-    {
-        BSQ_INTERNAL_ASSERT(false);
-        return std::nullopt;
-    }
-    else if(ctype->category == ContainerCategory::Queue)
-    {
-        BSQ_INTERNAL_ASSERT(false);
-        return std::nullopt;
-    }
-    else if(ctype->category == ContainerCategory::Set)
-    {
-        BSQ_INTERNAL_ASSERT(false);
-        return std::nullopt;
     }
     else
     {
-        return std::make_optional((size_t) MAP_LOAD_COUNT(value));
+        if(MAP_LOAD_DATA(value) == nullptr)
+        {
+            return std::make_optional(0);
+        }
+        else
+        {
+            auto ttype = MAP_LOAD_REPR_TYPE(value);
+            return std::make_optional((size_t) ((BSQMapTreeRepr*)(MAP_LOAD_DATA(value)))->tcount);
+        }
     }
 }
 
-StorageLocationPtr ICPPParseJSON::extractValueForContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t i, Evaluator& ctx)
+StorageLocationPtr ICPPParseJSON::extractValueForContainer_T(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t i, Evaluator& ctx)
 {
     auto loc = *(this->parsecontainerstackiter.back());
     this->parsecontainerstackiter.back()++;
 
     return loc;
+}
+
+std::pair<StorageLocationPtr, StorageLocationPtr> ICPPParseJSON::extractValueForContainer_KV(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t i, Evaluator& ctx)
+{
+    auto kloc = *(this->parsecontainerstackiter.back());
+    this->parsecontainerstackiter.back()++;
+
+    auto vloc = *(this->parsecontainerstackiter.back());
+    this->parsecontainerstackiter.back()++;
+    
+    return std::make_pair(kloc, vloc);
 }
 
 void ICPPParseJSON::completeExtractContainer(const APIModule* apimodule, const IType* itype, Evaluator& ctx)
