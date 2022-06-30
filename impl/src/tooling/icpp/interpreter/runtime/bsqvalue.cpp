@@ -18,11 +18,11 @@ const BSQType* BSQWellKnownType::g_typeFloat = CONS_BSQ_FLOAT_TYPE(BSQ_TYPE_ID_F
 const BSQType* BSQWellKnownType::g_typeDecimal = CONS_BSQ_DECIMAL_TYPE(BSQ_TYPE_ID_DECIMAL, "Decimal");
 const BSQType* BSQWellKnownType::g_typeRational = CONS_BSQ_RATIONAL_TYPE(BSQ_TYPE_ID_RATIONAL, "Rational");
 
-const BSQType* BSQWellKnownType::g_typeStringKRepr16 = new BSQStringKReprType<16>(BSQ_TYPE_ID_STRINGREPR_K16);
-const BSQType* BSQWellKnownType::g_typeStringKRepr32 = new BSQStringKReprType<32>(BSQ_TYPE_ID_STRINGREPR_K32); 
-const BSQType* BSQWellKnownType::g_typeStringKRepr64 = new BSQStringKReprType<64>(BSQ_TYPE_ID_STRINGREPR_K64);
-const BSQType* BSQWellKnownType::g_typeStringKRepr96 = new BSQStringKReprType<96>(BSQ_TYPE_ID_STRINGREPR_K96);
-const BSQType* BSQWellKnownType::g_typeStringKRepr128 = new BSQStringKReprType<128>(BSQ_TYPE_ID_STRINGREPR_K128);
+const BSQType* BSQWellKnownType::g_typeStringKRepr16 = new BSQStringKReprType<16>();
+const BSQType* BSQWellKnownType::g_typeStringKRepr32 = new BSQStringKReprType<32>(); 
+const BSQType* BSQWellKnownType::g_typeStringKRepr64 = new BSQStringKReprType<64>();
+const BSQType* BSQWellKnownType::g_typeStringKRepr96 = new BSQStringKReprType<96>();
+const BSQType* BSQWellKnownType::g_typeStringKRepr128 = new BSQStringKReprType<128>();
 const std::pair<size_t, const BSQType*> BSQWellKnownType::g_typeStringKCons[5] = {std::make_pair((size_t)16, BSQWellKnownType::g_typeStringKRepr16), std::make_pair((size_t)32, BSQWellKnownType::g_typeStringKRepr32), std::make_pair((size_t)64, BSQWellKnownType::g_typeStringKRepr64), std::make_pair((size_t)96, BSQWellKnownType::g_typeStringKRepr96), std::make_pair((size_t)128, BSQWellKnownType::g_typeStringKRepr128) };
 
 const BSQType* BSQWellKnownType::g_typeStringTreeRepr = new BSQStringTreeReprType();
@@ -500,7 +500,7 @@ void* BSQStringTreeReprType::slice(StorageLocationPtr data, uint64_t nstart, uin
 void initializeForwardIterRecProcess(int64_t pos, void* data, BSQStringForwardIterator* iter)
 {
     auto stype = GET_TYPE_META_DATA_AS(BSQStringReprType, data);
-    if(stype->tid != BSQ_TYPE_ID_STRINGREPR_TREE)
+    if(stype->isKReprNode())
     {
         iter->cbuff = BSQStringKReprTypeAbstract::getUTF8Bytes(data);
         iter->maxpos = (int16_t)BSQStringKReprTypeAbstract::getUTF8ByteCount(data);
@@ -556,7 +556,7 @@ void BSQStringForwardIterator::increment_utf8byte()
 void initializeReverseIterRecProcess(int64_t pos, void* data, BSQStringReverseIterator* iter)
 {
     auto stype = GET_TYPE_META_DATA_AS(BSQStringReprType, data);
-    if(stype->tid != BSQ_TYPE_ID_STRINGREPR_TREE)
+    if(stype->isKReprNode())
     {
         iter->cbuff = BSQStringKReprTypeAbstract::getUTF8Bytes(data);
         iter->cpos = (int16_t)pos;

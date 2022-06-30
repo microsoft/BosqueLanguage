@@ -220,6 +220,8 @@ struct BSQStatementGuard
 };
 BSQStatementGuard jsonParse_BSQStatementGuard(json j);
 
+RefMask internRefMask(std::string mstr);
+
 const BSQType* jsonParse_BSQType(json j);
 BSQRecordPropertyID jsonParse_BSQRecordPropertyID(json j);
 BSQFieldID jsonParse_BSQFieldID(json j);

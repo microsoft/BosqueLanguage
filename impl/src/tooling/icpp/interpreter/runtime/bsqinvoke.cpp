@@ -18,16 +18,7 @@ RefMask jsonLoadRefMask(json val)
     else
     {
         auto mstr = val.get<std::string>();
-        if (MarshalEnvironment::g_stringmaskToDeclMap.find(mstr) == MarshalEnvironment::g_stringmaskToDeclMap.cend())
-        {
-            auto rstr = (char*)malloc(mstr.size() + 1);
-            GC_MEM_COPY(rstr, mstr.c_str(), mstr.size());
-            rstr[mstr.size()] = '\0';
-
-            MarshalEnvironment::g_stringmaskToDeclMap[mstr] = rstr;
-        }
-
-        return MarshalEnvironment::g_stringmaskToDeclMap.find(mstr)->second;
+        return internRefMask(mstr);
     }
 }
 

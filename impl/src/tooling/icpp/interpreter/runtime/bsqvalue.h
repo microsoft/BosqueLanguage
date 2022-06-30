@@ -920,6 +920,8 @@ public:
 
     virtual ~BSQStringReprType() {;}
 
+    virtual bool isKReprNode() const = 0;
+
     virtual uint64_t utf8ByteCount(void* repr) const = 0;
     virtual void* slice(void* data, uint64_t nstart, uint64_t nend) const = 0;
 };
@@ -932,6 +934,8 @@ public:
     {;}
 
     virtual ~BSQStringKReprTypeAbstract() {;}
+
+    virtual bool isKReprNode() const override final { return true; }
 
     static uint64_t getUTF8ByteCount(void* repr)
     {
@@ -965,7 +969,7 @@ template <uint64_t k>
 class BSQStringKReprType : public BSQStringKReprTypeAbstract
 {
 public:
-    BSQStringKReprType(BSQTypeID tid): BSQStringKReprTypeAbstract(tid, k, "[Internal::StringKRepr]") 
+    BSQStringKReprType(): BSQStringKReprTypeAbstract(BSQ_TYPE_ID_INTERNAL, k, "[Internal::StringKRepr]") 
     {;}
 
     virtual ~BSQStringKReprType() {;}
@@ -983,10 +987,12 @@ struct BSQStringTreeRepr
 class BSQStringTreeReprType : public BSQStringReprType
 {
 public:
-    BSQStringTreeReprType(): BSQStringReprType(BSQ_TYPE_ID_STRINGREPR_TREE, sizeof(BSQStringTreeRepr), "22", "[Internal::StringConcatRepr]") 
+    BSQStringTreeReprType(): BSQStringReprType(BSQ_TYPE_ID_INTERNAL, sizeof(BSQStringTreeRepr), "22", "[Internal::StringConcatRepr]") 
     {;}
 
     virtual ~BSQStringTreeReprType() {;}
+
+    virtual bool isKReprNode() const override final { return false; }
 
     uint64_t utf8ByteCount(void* repr) const override final
     {
@@ -1295,8 +1301,8 @@ std::string entityByteBufferLeafDisplay_impl(const BSQType* btype, StorageLocati
 std::string entityByteBufferNodeDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode);
 std::string entityByteBufferDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode);
 
-#define CONS_BSQ_BYTE_BUFFER_LEAF_TYPE() (new BSQRefType(BSQ_TYPE_ID_BYTEBUFFER_LEAF, sizeof(BSQByteBufferLeaf), nullptr, {}, EMPTY_KEY_CMP, entityByteBufferLeafDisplay_impl, "ByteBufferLeaf"))
-#define CONS_BSQ_BYTE_BUFFER_NODE_TYPE() (new BSQRefType(BSQ_TYPE_ID_BYTEBUFFER_NODE, sizeof(BSQByteBufferNode), "22", {}, EMPTY_KEY_CMP, entityByteBufferNodeDisplay_impl, "ByteBufferNode"))
+#define CONS_BSQ_BYTE_BUFFER_LEAF_TYPE() (new BSQRefType(BSQ_TYPE_ID_INTERNAL, sizeof(BSQByteBufferLeaf), nullptr, {}, EMPTY_KEY_CMP, entityByteBufferLeafDisplay_impl, "ByteBufferLeaf"))
+#define CONS_BSQ_BYTE_BUFFER_NODE_TYPE() (new BSQRefType(BSQ_TYPE_ID_INTERNAL, sizeof(BSQByteBufferNode), "22", {}, EMPTY_KEY_CMP, entityByteBufferNodeDisplay_impl, "ByteBufferNode"))
 #define CONS_BSQ_BYTE_BUFFER_TYPE(TID, NAME) (new BSQRefType(TID, sizeof(BSQByteBuffer), "2", {}, EMPTY_KEY_CMP, entityByteBufferDisplay_impl, NAME))
 
 ////

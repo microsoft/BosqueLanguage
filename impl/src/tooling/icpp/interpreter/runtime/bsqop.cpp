@@ -158,6 +158,20 @@ BSQStatementGuard jsonParse_BSQStatementGuard(json j)
     return BSQStatementGuard{ jsonParse_BSQGuard(j["guard"]), jsonParse_Argument(j["defaultvar"]), j["usedefaulton"].get<bool>(), j["enabled"].get<bool>() };
 }
 
+RefMask internRefMask(std::string mstr)
+{
+    if (MarshalEnvironment::g_stringmaskToDeclMap.find(mstr) == MarshalEnvironment::g_stringmaskToDeclMap.cend())
+    {
+        auto rstr = (char*)malloc(mstr.size() + 1);
+        GC_MEM_COPY(rstr, mstr.c_str(), mstr.size());
+        rstr[mstr.size()] = '\0';
+
+        MarshalEnvironment::g_stringmaskToDeclMap[mstr] = rstr;
+    }
+
+    return MarshalEnvironment::g_stringmaskToDeclMap.find(mstr)->second;
+}
+
 const BSQType* jsonParse_BSQType(json j)
 {
     auto tname = j.get<std::string>();

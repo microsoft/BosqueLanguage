@@ -49,9 +49,14 @@ BSQMapTypeFlavor jsonLoadMapFlavor(json v)
     const BSQType* keytype = BSQType::g_typetable[MarshalEnvironment::g_typenameToIdMap.find(v["keytype"].get<std::string>())->second];
     const BSQType* valuetype = BSQType::g_typetable[MarshalEnvironment::g_typenameToIdMap.find(v["valuetype"].get<std::string>())->second];
 
-    const BSQMapTreeType* treetype = new BSQMapTreeType(xxxx, uint64_t allocsize, RefMask heapmask, std::string name, BSQTypeID keytype, uint32_t keyoffset, BSQTypeID valuetype, uint32_t valueoffset);
-    
-    //const BSQMapTreeType* treetype = dynamic_cast<const BSQMapTreeType*>(BSQType::g_typetable[MarshalEnvironment::g_typenameToIdMap.find(v["treetype"].get<std::string>())->second]);
+    uint64_t allocsize = sizeof(BSQMapTreeRepr) + keytype->allocinfo.inlinedatasize + valuetype->allocinfo.inlinedatasize;
+    uint32_t keyoffset = sizeof(BSQMapTreeRepr);
+    uint32_t valueoffset = sizeof(BSQMapTreeRepr) + keytype->allocinfo.inlinedatasize;
+
+    RefMask heapmask = internRefMask(std::string("221") + std::string(keytype->allocinfo.heapmask) + std::string(valuetype->allocinfo.heapmask));
+    std::string name = "[BSQMapTree]";
+
+    const BSQMapTreeType* treetype = new BSQMapTreeType(BSQ_TYPE_ID_INTERNAL, allocsize, heapmask, name, keytype->tid, keyoffset, valuetype->tid, valueoffset);
 
     return BSQMapTypeFlavor{mtype, keytype, valuetype, treetype};   
 }
@@ -69,8 +74,6 @@ void initialize(size_t cbuffsize, const RefMask cmask)
     MarshalEnvironment::g_typenameToIdMap["Decimal"] = BSQ_TYPE_ID_DECIMAL;
     MarshalEnvironment::g_typenameToIdMap["Rational"] = BSQ_TYPE_ID_RATIONAL;
     MarshalEnvironment::g_typenameToIdMap["String"] = BSQ_TYPE_ID_STRING;
-    MarshalEnvironment::g_typenameToIdMap["@ByteBufferLeaf"] = BSQ_TYPE_ID_BYTEBUFFER_LEAF;
-    MarshalEnvironment::g_typenameToIdMap["@ByteBufferNode"] = BSQ_TYPE_ID_BYTEBUFFER_NODE;
     MarshalEnvironment::g_typenameToIdMap["ByteBuffer"] = BSQ_TYPE_ID_BYTEBUFFER;
     MarshalEnvironment::g_typenameToIdMap["DateTime"] = BSQ_TYPE_ID_DATETIME;
     MarshalEnvironment::g_typenameToIdMap["UTCDateTime"] = BSQ_TYPE_ID_UTC_DATETIME;
@@ -84,13 +87,6 @@ void initialize(size_t cbuffsize, const RefMask cmask)
     MarshalEnvironment::g_typenameToIdMap["SHAContentHash"] = BSQ_TYPE_ID_SHA_CONTENT_HASH;
     MarshalEnvironment::g_typenameToIdMap["LatLongCoordinate"] = BSQ_TYPE_ID_LAT_LONG_COORDINATE;
     MarshalEnvironment::g_typenameToIdMap["Regex"] = BSQ_TYPE_ID_REGEX;
-
-    MarshalEnvironment::g_typenameToIdMap["@StringK16"] = BSQ_TYPE_ID_STRINGREPR_K16;
-    MarshalEnvironment::g_typenameToIdMap["@StringK32"] = BSQ_TYPE_ID_STRINGREPR_K32;
-    MarshalEnvironment::g_typenameToIdMap["@StringK64"] = BSQ_TYPE_ID_STRINGREPR_K64;
-    MarshalEnvironment::g_typenameToIdMap["@StringK96"] = BSQ_TYPE_ID_STRINGREPR_K96;
-    MarshalEnvironment::g_typenameToIdMap["@StringK128"] = BSQ_TYPE_ID_STRINGREPR_K128;
-    MarshalEnvironment::g_typenameToIdMap["@StringTree"] = BSQ_TYPE_ID_STRINGREPR_TREE;
 
     Evaluator::g_constantbuffer = (uint8_t*)zxalloc(cbuffsize);
     GC_MEM_ZERO(Evaluator::g_constantbuffer, cbuffsize);
@@ -273,8 +269,6 @@ void loadAssembly(json j, Evaluator& ee)
     BSQType::g_typetable[BSQ_TYPE_ID_DECIMAL] = BSQWellKnownType::g_typeDecimal;
     BSQType::g_typetable[BSQ_TYPE_ID_RATIONAL] = BSQWellKnownType::g_typeRational;
     BSQType::g_typetable[BSQ_TYPE_ID_STRING] = BSQWellKnownType::g_typeString;
-    BSQType::g_typetable[BSQ_TYPE_ID_BYTEBUFFER_LEAF] = BSQWellKnownType::g_typeByteBufferLeaf;
-    BSQType::g_typetable[BSQ_TYPE_ID_BYTEBUFFER_NODE] = BSQWellKnownType::g_typeByteBufferNode;
     BSQType::g_typetable[BSQ_TYPE_ID_BYTEBUFFER] = BSQWellKnownType::g_typeByteBuffer;
     BSQType::g_typetable[BSQ_TYPE_ID_DATETIME] = BSQWellKnownType::g_typeDateTime;
     BSQType::g_typetable[BSQ_TYPE_ID_UTC_DATETIME] = BSQWellKnownType::g_typeUTCDateTime;
@@ -288,13 +282,6 @@ void loadAssembly(json j, Evaluator& ee)
     BSQType::g_typetable[BSQ_TYPE_ID_SHA_CONTENT_HASH] = BSQWellKnownType::g_typeSHAContentHash;
     BSQType::g_typetable[BSQ_TYPE_ID_LAT_LONG_COORDINATE] = BSQWellKnownType::g_typeLatLongCoordinate;
     BSQType::g_typetable[BSQ_TYPE_ID_REGEX] = BSQWellKnownType::g_typeRegex;
-
-    BSQType::g_typetable[BSQ_TYPE_ID_STRINGREPR_K16] = BSQWellKnownType::g_typeStringKRepr16;
-    BSQType::g_typetable[BSQ_TYPE_ID_STRINGREPR_K32] = BSQWellKnownType::g_typeStringKRepr32;
-    BSQType::g_typetable[BSQ_TYPE_ID_STRINGREPR_K64] = BSQWellKnownType::g_typeStringKRepr64;
-    BSQType::g_typetable[BSQ_TYPE_ID_STRINGREPR_K96] = BSQWellKnownType::g_typeStringKRepr96;
-    BSQType::g_typetable[BSQ_TYPE_ID_STRINGREPR_K128] = BSQWellKnownType::g_typeStringKRepr128; 
-    BSQType::g_typetable[BSQ_TYPE_ID_STRINGREPR_TREE] = BSQWellKnownType::g_typeStringTreeRepr;
 
     auto tdlist = j["typedecls"];
     std::for_each(tdlist.cbegin(), tdlist.cend(), [](json tdecl) {
