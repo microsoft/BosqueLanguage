@@ -145,6 +145,11 @@ std::string ephemeralDisplay_impl(const BSQType* btype, StorageLocationPtr data,
     return res;
 }
 
+std::string globalObjectDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
+{
+    return std::string("[GlobalObject]");
+}
+
 std::string unionDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
     auto rtype = dynamic_cast<const BSQUnionType*>(btype)->getVType(data);

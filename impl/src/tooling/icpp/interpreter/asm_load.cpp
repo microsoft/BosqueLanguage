@@ -34,10 +34,21 @@ BSQListTypeFlavor jsonLoadListFlavor(json v)
     auto lreprtype = MarshalEnvironment::g_typenameToIdMap.find(v["reprtype"].get<std::string>())->second;
 
     const BSQType* entrytype = BSQType::g_typetable[MarshalEnvironment::g_typenameToIdMap.find(v["entrytype"].get<std::string>())->second];
-xxxx;
-    const BSQPartialVectorType* pv4type = dynamic_cast<const BSQPartialVectorType*>(BSQType::g_typetable[MarshalEnvironment::g_typenameToIdMap.find(v["pv4type"].get<std::string>())->second]);
-    const BSQPartialVectorType* pv8type = dynamic_cast<const BSQPartialVectorType*>(BSQType::g_typetable[MarshalEnvironment::g_typenameToIdMap.find(v["pv8type"].get<std::string>())->second]);
-    const BSQListTreeType* treetype = dynamic_cast<const BSQListTreeType*>(BSQType::g_typetable[MarshalEnvironment::g_typenameToIdMap.find(v["treetype"].get<std::string>())->second]);
+    uint64_t esize = entrytype->allocinfo.inlinedatasize;
+    std::string emask = std::string(entrytype->allocinfo.inlinedmask);
+
+    uint64_t pv4allocsize = sizeof(uint64_t) + (esize * 4);
+    RefMask pv4heapmask = internRefMask(std::string("1") + emask + emask + emask + emask);
+    std::string pv4name = "[PartialVector4]";
+    const BSQPartialVectorType* pv4type = new BSQPartialVectorType(BSQ_TYPE_ID_INTERNAL, pv4allocsize, pv4heapmask, pv4name, entrytype->tid, ListReprKind::PV4, esize);
+
+    uint64_t pv8allocsize = sizeof(uint64_t) + (esize * 8);
+    RefMask pv8heapmask = internRefMask(std::string("1") + emask + emask + emask + emask + emask + emask + emask + emask);
+    std::string pv8name = "[PartialVector8]";
+    const BSQPartialVectorType* pv8type = new BSQPartialVectorType(BSQ_TYPE_ID_INTERNAL, pv8allocsize, pv8heapmask, pv8name, entrytype->tid, ListReprKind::PV8, esize);
+
+    std::string listtreename = "[BSQListTree]";
+    const BSQListTreeType* treetype = new BSQListTreeType(BSQ_TYPE_ID_INTERNAL, listtreename, entrytype->tid);
    
     return BSQListTypeFlavor{ltype, lreprtype, entrytype, pv4type, pv8type, treetype};
 }
@@ -53,7 +64,7 @@ BSQMapTypeFlavor jsonLoadMapFlavor(json v)
     uint32_t keyoffset = sizeof(BSQMapTreeRepr);
     uint32_t valueoffset = sizeof(BSQMapTreeRepr) + keytype->allocinfo.inlinedatasize;
 
-    RefMask heapmask = internRefMask(std::string("221") + std::string(keytype->allocinfo.heapmask) + std::string(valuetype->allocinfo.heapmask));
+    RefMask heapmask = internRefMask(std::string("221") + std::string(keytype->allocinfo.inlinedmask) + std::string(valuetype->allocinfo.inlinedmask));
     std::string name = "[BSQMapTree]";
 
     const BSQMapTreeType* treetype = new BSQMapTreeType(BSQ_TYPE_ID_INTERNAL, allocsize, heapmask, name, keytype->tid, keyoffset, valuetype->tid, valueoffset);
@@ -88,10 +99,10 @@ void initialize(size_t cbuffsize, const RefMask cmask)
     MarshalEnvironment::g_typenameToIdMap["LatLongCoordinate"] = BSQ_TYPE_ID_LAT_LONG_COORDINATE;
     MarshalEnvironment::g_typenameToIdMap["Regex"] = BSQ_TYPE_ID_REGEX;
 
-    Evaluator::g_constantbuffer = (uint8_t*)zxalloc(cbuffsize);
-    GC_MEM_ZERO(Evaluator::g_constantbuffer, cbuffsize);
+    std::string globalname = "[GlobalObject]";
+    const BSQType* globaltype = new BSQGlobalObjectType(cbuffsize, cmask, globalname);
 
-    Allocator::GlobalAllocator.setGlobalsMemory(Evaluator::g_constantbuffer, cmask);
+    Allocator::GlobalAllocator.setGlobalsMemory(globaltype);
 }
 
 void initializeLiteral(size_t storageOffset, const BSQType* gtype, std::string& lval)

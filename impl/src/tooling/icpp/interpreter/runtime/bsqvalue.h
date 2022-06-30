@@ -440,6 +440,18 @@ public:
     virtual ~BSQEphemeralListType() {;}
 };
 
+std::string globalObjectDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode);
+
+class BSQGlobalObjectType : public BSQRefType
+{
+public:
+    BSQGlobalObjectType(uint64_t heapsize, const RefMask heapmask, std::string name):
+        BSQRefType(BSQ_TYPE_ID_INTERNAL, heapsize, heapmask, {}, EMPTY_KEY_CMP, globalObjectDisplay_impl, name)
+    {;}
+
+    virtual ~BSQGlobalObjectType() {;}
+};
+
 std::string unionDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode);
 int unionInlineKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
 int unionRefKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
