@@ -710,7 +710,7 @@ abstract class MIROp {
 
     abstract stringify(): string;
 
-    canRaise(implicitAssumesEnabled: boolean): boolean {
+    canRaise(): boolean {
         return false;
     }
 
@@ -906,7 +906,7 @@ class MIRAbort extends MIROp {
         return `abort -- ${this.info}`;
     }
 
-    canRaise(implicitAssumesEnabled: boolean): boolean {
+    canRaise(): boolean {
         return true;
     }
 
@@ -938,7 +938,7 @@ class MIRAssertCheck extends MIROp {
         return `assert ${this.arg.stringify()} -- ${this.info}`;
     }
 
-    canRaise(implicitAssumesEnabled: boolean): boolean {
+    canRaise(): boolean {
         return true;
     }
 
@@ -2318,13 +2318,19 @@ class MIRConstructorPrimaryCollectionSingletons extends MIROp {
     trgt: MIRRegisterArgument;
     readonly tkey: MIRResolvedTypeKey;
     args: [MIRResolvedTypeKey, MIRArgument][];
+    readonly isAssociativeContainer: boolean;
 
-    constructor(sinfo: SourceInfo, tkey: MIRResolvedTypeKey, args: [MIRResolvedTypeKey, MIRArgument][], trgt: MIRRegisterArgument) {
+    constructor(sinfo: SourceInfo, tkey: MIRResolvedTypeKey, args: [MIRResolvedTypeKey, MIRArgument][], trgt: MIRRegisterArgument, isAssociativeContainer: boolean) {
         super(MIROpTag.MIRConstructorPrimaryCollectionSingletons, sinfo);
 
         this.trgt = trgt;
         this.tkey = tkey;
         this.args = args;
+        this.isAssociativeContainer = isAssociativeContainer;
+    }
+
+    canRaise(): boolean {
+        return this.args.length > 1 && this.isAssociativeContainer;
     }
 
     getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper(this.args.map((arg) => arg[1])); }
@@ -2336,11 +2342,11 @@ class MIRConstructorPrimaryCollectionSingletons extends MIROp {
     }
 
     jemit(): object {
-        return { ...this.jbemit(), trgt: this.trgt.jemit(), tkey: this.tkey, args: this.args.map((arg) => [arg[0], arg[1].jemit()]) };
+        return { ...this.jbemit(), trgt: this.trgt.jemit(), tkey: this.tkey, args: this.args.map((arg) => [arg[0], arg[1].jemit()]), isAssociativeContainer: this.isAssociativeContainer };
     }
 
     static jparse(jobj: any): MIROp {
-        return new MIRConstructorPrimaryCollectionSingletons(jparsesinfo(jobj.sinfo), jobj.tkey, jobj.args.map((jarg: any) => [jarg[0], MIRArgument.jparse(jarg[1])]), MIRRegisterArgument.jparse(jobj.trgt));
+        return new MIRConstructorPrimaryCollectionSingletons(jparsesinfo(jobj.sinfo), jobj.tkey, jobj.args.map((jarg: any) => [jarg[0], MIRArgument.jparse(jarg[1])]), MIRRegisterArgument.jparse(jobj.trgt), jobj.isAssociativeContainer);
     }
 }
 
@@ -2348,22 +2354,23 @@ class MIRConstructorPrimaryCollectionCopies extends MIROp {
     trgt: MIRRegisterArgument;
     readonly tkey: MIRResolvedTypeKey;
     args: [MIRResolvedTypeKey, MIRArgument][];
+    readonly isAssociativeContainer: boolean;
 
-    constructor(sinfo: SourceInfo, tkey: MIRResolvedTypeKey, args: [MIRResolvedTypeKey, MIRArgument][], trgt: MIRRegisterArgument) {
+    constructor(sinfo: SourceInfo, tkey: MIRResolvedTypeKey, args: [MIRResolvedTypeKey, MIRArgument][], trgt: MIRRegisterArgument, isAssociativeContainer: boolean) {
         super(MIROpTag.MIRConstructorPrimaryCollectionCopies, sinfo);
 
         this.trgt = trgt;
         this.tkey = tkey;
         this.args = args;
+        this.isAssociativeContainer = isAssociativeContainer;
     }
 
     getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper(this.args.map((arg) => arg[1])); }
     getUsedGlobals(): MIRGlobalVariable[] { return globalsOnlyHelper(this.args.map((arg) => arg[1])); }
     getModVars(): MIRRegisterArgument[] { return [this.trgt]; }
 
-    canRaise(implicitAssumesEnabled: boolean): boolean {
-        //on map we fail on duplicate keys
-        return true;
+    canRaise(): boolean {
+        return this.isAssociativeContainer;
     }
 
     stringify(): string {
@@ -2371,11 +2378,11 @@ class MIRConstructorPrimaryCollectionCopies extends MIROp {
     }
 
     jemit(): object {
-        return { ...this.jbemit(), trgt: this.trgt.jemit(), tkey: this.tkey, args: this.args.map((arg) => [arg[0], arg[1].jemit()]) };
+        return { ...this.jbemit(), trgt: this.trgt.jemit(), tkey: this.tkey, args: this.args.map((arg) => [arg[0], arg[1].jemit()]), isAssociativeContainer: this.isAssociativeContainer };
     }
 
     static jparse(jobj: any): MIROp {
-        return new MIRConstructorPrimaryCollectionCopies(jparsesinfo(jobj.sinfo), jobj.tkey, jobj.args.map((jarg: any) => [jarg[0], MIRArgument.jparse(jarg[1])]), MIRRegisterArgument.jparse(jobj.trgt));
+        return new MIRConstructorPrimaryCollectionCopies(jparsesinfo(jobj.sinfo), jobj.tkey, jobj.args.map((jarg: any) => [jarg[0], MIRArgument.jparse(jarg[1])]), MIRRegisterArgument.jparse(jobj.trgt), jobj.isAssociativeContainer);
     }
 }
 
@@ -2383,13 +2390,15 @@ class MIRConstructorPrimaryCollectionMixed extends MIROp {
     trgt: MIRRegisterArgument;
     readonly tkey: MIRResolvedTypeKey;
     args: [boolean, MIRResolvedTypeKey, MIRArgument][];
+    readonly isAssociativeContainer: boolean;
 
-    constructor(sinfo: SourceInfo, tkey: MIRResolvedTypeKey, args: [boolean, MIRResolvedTypeKey, MIRArgument][], trgt: MIRRegisterArgument) {
+    constructor(sinfo: SourceInfo, tkey: MIRResolvedTypeKey, args: [boolean, MIRResolvedTypeKey, MIRArgument][], trgt: MIRRegisterArgument, isAssociativeContainer: boolean) {
         super(MIROpTag.MIRConstructorPrimaryCollectionMixed, sinfo,);
 
         this.trgt = trgt;
         this.tkey = tkey;
         this.args = args;
+        this.isAssociativeContainer = isAssociativeContainer;
     }
 
     getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper(this.args.map((tv) => tv[2])); }
@@ -2400,17 +2409,16 @@ class MIRConstructorPrimaryCollectionMixed extends MIROp {
         return `${this.trgt.stringify()} = ${this.tkey}{${this.args.map((arg) => arg[0] ? `expand(${arg[2].stringify()})` : arg[2].stringify()).join(", ")}}`;
     }
 
-    canRaise(implicitAssumesEnabled: boolean): boolean {
-        //on map we fail on duplicate keys
-        return true;
+    canRaise(): boolean {
+        return this.isAssociativeContainer;
     }
 
     jemit(): object {
-        return { ...this.jbemit(), trgt: this.trgt.jemit(), tkey: this.tkey, args: this.args.map((arg) => [arg[0], arg[1], arg[2].jemit()]) };
+        return { ...this.jbemit(), trgt: this.trgt.jemit(), tkey: this.tkey, args: this.args.map((arg) => [arg[0], arg[1], arg[2].jemit()]), isAssociativeContainer: this.isAssociativeContainer };
     }
 
     static jparse(jobj: any): MIROp {
-        return new MIRConstructorPrimaryCollectionMixed(jparsesinfo(jobj.sinfo), jobj.tkey, jobj.args.map((jarg: any) => [jarg[0], jarg[1], MIRArgument.jparse(jarg[2])]), MIRRegisterArgument.jparse(jobj.trgt));
+        return new MIRConstructorPrimaryCollectionMixed(jparsesinfo(jobj.sinfo), jobj.tkey, jobj.args.map((jarg: any) => [jarg[0], jarg[1], MIRArgument.jparse(jarg[2])]), MIRRegisterArgument.jparse(jobj.trgt), jobj.isAssociativeContainer);
     }
 }
 

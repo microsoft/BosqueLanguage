@@ -9,12 +9,11 @@
 
 #include <bitset>
 
-#define LIST_LOAD_TYPE_INFO(SL) SLPTR_LOAD_UNION_INLINE_TYPE(SL)
-#define LIST_LOAD_TYPE_INFO_REPR(SL) SLPTR_LOAD_UNION_INLINE_TYPE_AS(BSQListReprType, SL)
-#define LIST_LOAD_DATA(SL) SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(SLPTR_LOAD_UNION_INLINE_DATAPTR(SL))
+#define LIST_LOAD_DATA(SL) SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(SL)
+#define LIST_LOAD_REPR_TYPE(SL) SLPTR_LOAD_HEAP_TYPE_AS(BSQListReprType, SL)
 
-#define LIST_STORE_RESULT_REPR(R, SL) SLPTR_STORE_UNION_INLINE_TYPE(GET_TYPE_META_DATA(R), SL); SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(SLPTR_LOAD_UNION_INLINE_DATAPTR(SL), R)
-#define LIST_STORE_RESULT_EMPTY(SL) SLPTR_STORE_UNION_INLINE_TYPE(BSQWellKnownType::g_typeNone, SL)
+#define LIST_STORE_RESULT_REPR(R, SL) SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(SL, R)
+#define LIST_STORE_RESULT_EMPTY(SL) SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(SL, nullptr)
 
 enum class ListReprKind
 {
@@ -182,6 +181,30 @@ public:
         *((uint64_t*)pvinto) = end;
     }
 
+    inline static void initializePVDataInsert(void* pvinto, void* pvfrom, int16_t ipos, StorageLocationPtr v, int16_t start, int16_t end, uint64_t entrysize)
+    {
+        auto intoloc = ((uint8_t*)pvinto) + sizeof(uint64_t);
+        auto fromloc = ((uint8_t*)pvfrom) + sizeof(uint64_t);
+        
+        int16_t jj = 0;
+        for(int16_t ii = start; ii < end; ++ii)
+        {
+            if(ii == ipos)
+            {
+                auto dstv = intoloc + (entrysize * jj);
+                GC_MEM_COPY(dstv, v, entrysize);
+
+                jj++;
+            }
+
+            auto src = fromloc + (entrysize * ii);
+            auto dst = intoloc + (entrysize * jj);
+            GC_MEM_COPY(dst, src, entrysize);
+        }
+
+        *((uint64_t*)pvinto) = (uint64_t)jj;
+    }
+
     inline static void removePVData(void* pvinto, void* pvfrom, int16_t idx, int16_t end, uint64_t entrysize)
     {
         auto intoloc = ((uint8_t*)pvinto) + sizeof(uint64_t);
@@ -208,7 +231,8 @@ struct BSQListTreeRepr
 {
     void* l;
     void* r;
-    uint64_t size;
+    uint32_t lcount;
+    uint32_t color; //TODO: when we balance
 };
 
 std::string entityListTreeDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode);
@@ -224,7 +248,7 @@ public:
 
     virtual uint64_t getCount(void* repr) const override final
     {
-        return ((BSQListTreeRepr*)repr)->size;
+        return ((BSQListTreeRepr*)repr)->lcount;
     }
 };
 
@@ -468,7 +492,7 @@ public:
     const BSQTypeID etype; //type of entries in the list
 
     BSQListType(BSQTypeID tid, DisplayFP fpDisplay, std::string name, BSQTypeID etype): 
-        BSQType(tid, BSQTypeLayoutKind::Struct, {16, 16, 16, nullptr, "12"}, STRUCT_STD_GC_FUNCTOR_SET, {}, EMPTY_KEY_CMP, fpDisplay, name),
+        BSQType(tid, BSQTypeLayoutKind::Collection, {8, 8, 8, nullptr, "5"}, {gcProcessHeapOperator_collectionImpl, gcDecOperator_collectionImpl, gcEvacuateOperator_collectionImpl}, {}, EMPTY_KEY_CMP, fpDisplay, name),
         etype(etype)
     {;}
 
@@ -476,12 +500,12 @@ public:
 
     void clearValue(StorageLocationPtr trgt) const override final
     {
-        GC_MEM_ZERO(trgt, 16);
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, nullptr);
     }
 
     void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override final
     {
-        BSQ_MEM_COPY(trgt, src, 16);
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, src);
     }
 
     StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override final

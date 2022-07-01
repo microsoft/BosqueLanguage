@@ -1,0 +1,4 @@
+namespace ImperialUnits;
+
+orderable algebraic typedecl MPH = Int;
+orderable algebraic typedecl Fahrenheit = Int;

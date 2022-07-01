@@ -7,18 +7,18 @@
 
 #include "bsqvalue.h"
 
-#define MAP_LOAD_TYPE_INFO(SL) SLPTR_LOAD_UNION_INLINE_TYPE(SL)
-#define MAP_LOAD_TYPE_INFO_REPR(SL) SLPTR_LOAD_UNION_INLINE_TYPE_AS(BSQMapTreeType, SL)
-#define MAP_LOAD_COUNT(SL) SLPTR_LOAD_CONTENTS_AS(BSQNat, SLPTR_LOAD_UNION_INLINE_DATAPTR(SL))
-#define MAP_LOAD_REPR(SL) SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(SLPTR_LOAD_UNION_INLINE_DATAPTR(SL) + 8)
+#define MAP_LOAD_DATA(SL) SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(SL)
+#define MAP_LOAD_REPR_TYPE(SL) SLPTR_LOAD_HEAP_TYPE_AS(BSQMapTreeType, SL)
 
-#define MAP_STORE_RESULT_REPR(R, COUNT, SL) SLPTR_STORE_UNION_INLINE_TYPE(GET_TYPE_META_DATA(R), SL); SLPTR_STORE_CONTENTS_AS(BSQNat, SLPTR_LOAD_UNION_INLINE_DATAPTR(SL), COUNT); SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(SLPTR_LOAD_UNION_INLINE_DATAPTR(SL) + 8, R)
-#define MAP_STORE_RESULT_EMPTY(SL) SLPTR_STORE_UNION_INLINE_TYPE(BSQWellKnownType::g_typeNone, SL); SLPTR_STORE_CONTENTS_AS(BSQNat, SLPTR_LOAD_UNION_INLINE_DATAPTR(SL), 0)
+#define MAP_STORE_RESULT_REPR(R, SL) SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(SL, R)
+#define MAP_STORE_RESULT_EMPTY(SL) SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(SL, nullptr)
 
 struct BSQMapTreeRepr
 {
     void* l;
     void* r;
+    uint32_t tcount;
+    uint32_t color; //TODO: when we balance
 };
 
 class BSQMapTreeType : public BSQRefType
@@ -40,6 +40,7 @@ public:
     {
         ((BSQMapTreeRepr*)repr)->l = nullptr;
         ((BSQMapTreeRepr*)repr)->r = nullptr;
+        ((BSQMapTreeRepr*)repr)->tcount = 1;
 
         ktype->storeValue((StorageLocationPtr)((uint8_t*)repr + this->keyoffset), ksl);
         vtype->storeValue((StorageLocationPtr)((uint8_t*)repr + this->valueoffset), vsl);
@@ -49,6 +50,11 @@ public:
     {
         ((BSQMapTreeRepr*)repr)->l = l;
         ((BSQMapTreeRepr*)repr)->r = r;
+
+        auto lcount = (((BSQMapTreeRepr*)repr)->l != nullptr) ? ((BSQMapTreeRepr*)((BSQMapTreeRepr*)repr)->l)->tcount : 0;
+        auto rcount = (((BSQMapTreeRepr*)repr)->r != nullptr) ? ((BSQMapTreeRepr*)((BSQMapTreeRepr*)repr)->r)->tcount : 0;
+
+        ((BSQMapTreeRepr*)repr)->tcount = 1 + lcount + rcount;
 
         ktype->storeValue((StorageLocationPtr)((uint8_t*)repr + this->keyoffset), ksl);
         vtype->storeValue((StorageLocationPtr)((uint8_t*)repr + this->valueoffset), vsl);
@@ -149,11 +155,9 @@ public:
 struct BSQMapTypeFlavor
 {
     const BSQTypeID mtype;
-    const BSQTypeID mreprtype;
 
     const BSQType* keytype;
     const BSQType* valuetype;
-    const BSQType* tupletype;
 
     const BSQMapTreeType* treetype;
 };
@@ -164,23 +168,22 @@ class BSQMapType : public BSQType
 public:
     const BSQTypeID ktype; //type of K in the map
     const BSQTypeID vtype; //type of V in the map
-    const BSQTypeID etype; //type of [K, V]
 
-    BSQMapType(BSQTypeID tid, DisplayFP fpDisplay, std::string name, BSQTypeID ktype, BSQTypeID vtype, BSQTypeID etype): 
-        BSQType(tid, BSQTypeLayoutKind::Struct, {24, 24, 24, nullptr, "112"}, STRUCT_STD_GC_FUNCTOR_SET, {}, EMPTY_KEY_CMP, fpDisplay, name),
-        ktype(ktype), vtype(vtype), etype(etype)
+    BSQMapType(BSQTypeID tid, DisplayFP fpDisplay, std::string name, BSQTypeID ktype, BSQTypeID vtype): 
+        BSQType(tid, BSQTypeLayoutKind::Collection, {8, 8, 8, nullptr, "5"}, {gcProcessHeapOperator_collectionImpl, gcDecOperator_collectionImpl, gcEvacuateOperator_collectionImpl}, {}, EMPTY_KEY_CMP, fpDisplay, name),
+        ktype(ktype), vtype(vtype) 
     {;}
 
     virtual ~BSQMapType() {;}
 
     void clearValue(StorageLocationPtr trgt) const override final
     {
-        GC_MEM_ZERO(trgt, 16);
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, nullptr);
     }
 
     void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override final
     {
-        BSQ_MEM_COPY(trgt, src, 16);
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, src);
     }
 
     StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override final

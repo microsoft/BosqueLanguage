@@ -8,27 +8,28 @@ namespace Core;
 
 #if CHECK_LIBS
 internal entity ListOps provides Some {
-    internal function s_blockingfailure<T>(): T = s_blockingfailure; 
-
-    internal function s_list_index_int(start: Int, end: Int, len: Int): List<Int> = s_list_index;
-    internal function s_list_index_nat(start: Nat, end: Nat, len: Nat): List<Nat> = s_list_index;
+    __safe internal function s_list_index_int(start: Int, end: Int, len: Int): List<Int> = s_list_index;
+    __safe internal function s_list_index_nat(start: Nat, end: Nat, len: Nat): List<Nat> = s_list_index;
 
     __safe internal function s_list_empty<T>(l: List<T>): Bool = s_list_empty; 
     __safe internal function s_list_size<T>(l: List<T>): Nat = s_list_size; 
 
+    __safe internal function s_list_fill<T>(count: Nat, v: T): List<T> = s_list_fill;
+
     __safe internal function s_list_append<T>(l: List<T>, r: List<T>): List<T> = s_list_append;
+
+    __safe internal function s_list_get<T>(l: List<T>, idx: Nat): T = s_list_get; 
+    __safe internal function s_list_back<T>(l: List<T>): T = s_list_get_back; 
+    __safe internal function s_list_front<T>(l: List<T>): T = s_list_get_front; 
 
     __safe internal function s_list_slice_front<T>(l: List<T>, idx: Nat): List<T> = s_list_slice_front; 
     __safe internal function s_list_slice_end<T>(l: List<T>, idx: Nat): List<T> = s_list_slice_end;
     __safe internal function s_list_slice<T>(l: List<T>, start: Nat, length: Nat): List<T> = s_list_slice; 
 
-    __safe internal function s_list_get<T>(l: List<T>, idx: Nat): T = s_list_get; 
-    __safe internal function s_list_get_back<T>(l: List<T>): T = s_list_get_back; 
-    __safe internal function s_list_get_front<T>(l: List<T>): T = s_list_get_front; 
-
     __safe internal function s_list_set<T>(l: List<T>, idx: Nat, v: T): List<T> = s_list_set; 
     __safe internal function s_list_push_back<T>(l: List<T>, v: T): List<T> = s_list_push_back; 
     __safe internal function s_list_push_front<T>(l: List<T>, v: T): List<T> = s_list_push_front; 
+    __safe internal function s_list_insert<T>(l: List<T>, idx: Nat, v: T): List<T> = s_list_insert;
 
     __safe internal function s_list_remove<T>(l: List<T>, idx: Nat): List<T> = s_list_remove; 
     __safe internal function s_list_pop_back<T>(l: List<T>): List<T> = s_list_pop_back; 
@@ -38,19 +39,35 @@ internal entity ListOps provides Some {
     __conditional_safe internal recursive? function s_list_map_pred_idx<T>(l: List<T>, p: recursive? pred(_: T, _: Nat) -> Bool): List<Bool> = s_list_map_pred_idx;
     __conditional_safe internal recursive? function s_list_map_fn<T, U>(l: List<T>, f: recursive? fn(_: T) -> U): List<U> = s_list_map_fn;
     __conditional_safe internal recursive? function s_list_map_fn_idx<T, U>(l: List<T>, p: recursive? pred(_: T, _: Nat) -> U): List<U> = s_list_map_fn_idx;
+    __conditional_safe internal recursive? function s_list_map_fn_sync<T, U, V>(l1: List<T>, l2: List<U>, f: recursive? fn(_: T, _: U) -> V): List<V> = s_list_map_sync;
 
     __safe internal function s_list_has<T>(l: List<T>, v: T): Bool = s_list_has; 
     __safe internal function s_list_indexof<T>(l: List<T>, v: T): Int = s_list_indexof; 
     __safe internal function s_list_last_indexof<T>(l: List<T>, v: T): Int = s_list_last_indexof; 
 
     __safe internal function s_list_has_true(l: List<Bool>): Bool = s_list_has_true; 
-    __safe internal function s_list_has_false(l: List<Bool>): Bool = s_list_has_false; 
+    __safe internal function s_list_has_false(l: List<Bool>): Bool = s_list_has_false;
+
+    __safe internal function s_list_all_true(l: List<Bool>): Bool = s_list_all_true; 
+    __safe internal function s_list_all_false(l: List<Bool>): Bool = s_list_all_false; 
+
     __safe internal function s_list_single_true(l: List<Bool>): Bool = s_list_single_true; 
     __safe internal function s_list_single_indexof_true(l: List<Bool>): Int = s_list_single_indexof_true; 
 
     __safe internal function s_list_indexof_true(l: List<T>): Int = s_list_indexof_true; 
     __safe internal function s_list_last_indexof_true(l: List<T>): Int = s_list_last_indexof_true;
 
+    __safe internal function s_list_mask_select<T>(l: List<T>, mask: List<Bool>): List<T> = s_list_mask_select;
+    __safe internal function s_list_cast<T, U>(l: List<T>): List<U> = s_list_cast;
+    __safe internal function s_list_mask_select_cast<T, U>(l: List<T>, mask: List<Bool>): List<U> = s_list_mask_select_cast;
+
+    __conditional_safe internal recursive? function s_list_is_sorted<T>(l: List<T>, cmp: recursive? pred(_: T, _: T) -> Bool): Bool = s_list_is_sorted;
+    __conditional_safe internal recursive? function s_list_is_unique<T>(l: List<T>, eq: recursive? pred(_: T, _: T) -> Bool): List<T> = s_list_is_unique;
+
     __conditional_safe internal recursive? function s_list_reduce<T, U>(l: List<T>, init: U, f: recursive? fn(_: U, _: T) -> U): U = s_list_reduce;
+    __conditional_safe internal recursive? function s_list_reduce_idx<T, U>(l: List<T>, init: U, f: recursive? fn(_: U, _: T, _: Nat) -> U): U = s_list_reduce_idx;
+
+    __conditional_safe internal recursive? function s_list_transduce<T, E, U>(l: List<T>, env: E, op: recursive? fn(_: E, _: T) -> (|E, U|)): (|E, List<U>|) = s_list_transduce;
+    __conditional_safe internal recursive? function s_list_transduce_idx<T, E, U>(l: List<T>, env: E, op: recursive? fn(_: E, _: T, _: Nat) -> (|E, U|)): (|E, List<U>|) = s_list_transduce_idx;
 }
 #endif

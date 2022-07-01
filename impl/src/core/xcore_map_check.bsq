@@ -8,19 +8,27 @@ namespace Core;
 
 #if CHECK_LIBS
 internal entity MapOps provides Some {
-    internal function s_blockingfailure<T>(): T = s_blockingfailure;
-
     __safe internal function s_map_empty<K grounded KeyType, V>(m: Map<K, V>): Bool = s_map_empty; 
     __safe internal function s_map_count<K grounded KeyType, V>(m: Map<K, V>): Nat = s_map_count; 
 
-    __safe internal function s_map_has<K grounded KeyType, V>(m: Map<K, V>, k: K): Bool = s_map_has; 
-    __safe internal function s_map_get<K grounded KeyType, V>(m: Map<K, V>, k: K): [K, V] = s_map_get; 
-    
-    __safe internal function s_map_disjoint<K grounded KeyType, V>(m1: Map<K, V>, m2: Map<K, V>): Bool = s_map_disjoint;
-    __safe internal function s_map_union<K grounded KeyType, V>(m1: Map<K, V>, m2: Map<K, V>): Map<K, V> = s_map_union; 
+    __safe internal function s_map_entries<K grounded KeyType, V>(m: Map<K, V>): List<[K, V]> = s_map_entries;
 
-    __safe internal function s_map_add<K grounded KeyType, V>(m: Map<K, V>, k: K, vtup: [K, V]): Map<K, V> = s_large_map_add; 
-    __safe internal function s_map_set<K grounded KeyType, V>(m: Map<K, V>, k: K, vtup: [K, V]): Map<K, V> = s_large_map_set;
-    __safe internal function s_map_remove<K grounded KeyType, V>(m: Map<K, V>, k: K): Map<K, V> = s_large_map_remove;  
+    __safe internal function s_map_min_key<K grounded KeyType, V>(m: Map<K, V>): K = s_map_min_key;
+    __safe internal function s_map_max_key<K grounded KeyType, V>(m: Map<K, V>): K = s_map_max_key; 
+
+    __safe internal function s_map_has<K grounded KeyType, V>(m: Map<K, V>, k: K): Bool = s_map_has; 
+    __safe internal function s_map_get<K grounded KeyType, V>(m: Map<K, V>, k: K): V = s_map_get;
+    __safe internal function s_map_find<K grounded KeyType, V>(m: Map<K, V>, k: K): (|V, Bool|) = s_map_find;
+    
+    __safe internal function s_map_union_fast<K grounded KeyType, V>(m1: Map<K, V>, m2: Map<K, V>): Map<K, V> = s_map_union_fast; 
+
+    __conditional_safe internal recursive? function s_map_map_pred<K grounded KeyType, V>(m: Map<K, V>, p: recursive? pred(_: K, _: V) -> Bool): List<Bool> = s_map_map_pred;
+    __safe internal function s_map_mask_select<K grounded KeyType, V>(m: Map<K, V>, mask: List<Bool>): Map<K, V> = s_map_mask_select;
+
+    __conditional_safe internal recursive? function s_map_remap<K grounded KeyType, V, U>(m: Map<K, V>, f: recursive? fn(k: K, v: V) -> U): Map<K, U> = s_map_remap;
+
+    __safe internal function s_map_add<K grounded KeyType, V>(m: Map<K, V>, k: K, vtup: [K, V]): Map<K, V> = s_map_add; 
+    __safe internal function s_map_set<K grounded KeyType, V>(m: Map<K, V>, k: K, vtup: [K, V]): Map<K, V> = s_map_set;
+    __safe internal function s_map_remove<K grounded KeyType, V>(m: Map<K, V>, k: K): Map<K, V> = s_map_remove;  
 }
 #endif

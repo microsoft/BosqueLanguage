@@ -8,15 +8,36 @@ namespace Core;
 
 #if EXEC_LIBS
 internal entity StringOps provides Some {
-    function s_strconcat_ne(l: ListRepr<String>): String = s_strconcat_ne;
-    function s_strjoin_ne(l: ListRepr<String>, sep: String): Nat = s_strjoin_ne;
-
     function s_strconcat(l: List<String>): String {
-        return "[UNIMPLEMENTED]";
+        if(ListOps::s_list_empty<String>(l)) {
+            return "";
+        }
+        else {
+            let istr = ListOps::s_list_front<String>(l);
+            let tl = ListOps::s_list_pop_front<String>(l);
+            if(ListOps::s_list_empty<String>(tl)) {
+                return istr;
+            }
+            else {
+                return ListOps::s_list_reduce<String, String>(tl, istr, fn(acc: String, s: String): String => String::s_concat2(acc, s));
+            }
+        }
     }
 
     function s_strjoin(l: List<String>, sep: String): String {
-        return "[UNIMPLEMENTED]";
+        if(ListOps::s_empty<String>(l)) {
+            return "";
+        }
+        else {
+            let istr = ListOps::s_list_front<String>(l);
+            let tl = ListOps::s_list_pop_front<String>(l);
+            if(ListOps::s_list_empty<String>(tl)) {
+                return istr;
+            }
+            else {
+                return ListOps::s_list_reduce<String, String>(tl, istr, fn(acc: String, s: String): String => String::s_concat2(String::s_concat2(acc, sep), s));
+            }
+        }
     }
 }
 #endif

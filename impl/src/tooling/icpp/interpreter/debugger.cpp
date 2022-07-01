@@ -319,7 +319,7 @@ void dbg_processReverseStep(Evaluator* vv)
 
 void dbg_processReverseStepInto(Evaluator* vv)
 {
-    if(vv->dbg_getCFrame()->dbg_prevreturnbp.first == -1)
+    if(!vv->dbg_getCFrame()->dbg_prevreturnbp.isValid())
     {
         if(vv->dbg_getCFrame()->dbg_prevbp.isValid())
         {
@@ -328,10 +328,7 @@ void dbg_processReverseStepInto(Evaluator* vv)
     }
     else
     {
-        if(vv->dbg_getCFrame()->dbg_prevreturnbp.first == vv->dbg_getCFrame()->dbg_currentline || vv->dbg_getCFrame()->dbg_prevreturnbp.first == vv->dbg_getCFrame()->dbg_prevbp.line)
-        {
-            throw DebuggerException::CreateMoveToBP(vv->dbg_getCFrame()->dbg_prevreturnbp.second);
-        }
+        throw DebuggerException::CreateMoveToBP(vv->dbg_getCFrame()->dbg_prevreturnbp);
     }
 }
 
@@ -351,7 +348,7 @@ void dbg_displayLocals(Evaluator* vv)
     for(size_t i = 0; i < params.size(); ++i)
     {
         auto binvoke = dynamic_cast<const BSQInvokeBodyDecl*>(vv->dbg_getCFrame()->invoke);
-        auto val = Evaluator::evalParameterInfo(binvoke->paraminfo[i], vv->dbg_getCFrame()->scalarbase, vv->dbg_getCFrame()->mixedbase);
+        auto val = Evaluator::evalParameterInfo(binvoke->paraminfo[i], vv->dbg_getCFrame()->frameptr);
         
         locals += "  " + params[i].name + ": " + params[i].ptype->fpDisplay(params[i].ptype, val, DisplayMode::CmdDebug) + "\n";
     }
@@ -372,7 +369,7 @@ void dbg_displayLocals(Evaluator* vv)
 
         if(!isparam)
         {
-            auto val = vv->evalArgument(iter->second.location);
+            auto val = vv->evalTargetVar(iter->second.location);
             locals += "  " + iter->first + ": " + iter->second.vtype->fpDisplay(iter->second.vtype, val, DisplayMode::CmdDebug) + "\n";
         }
     }
@@ -525,14 +522,19 @@ bool dbg_processNumberKey(Evaluator* vv, const BSQType*& btype, StorageLocationP
     const BSQListType* ltype = dynamic_cast<const BSQListType*>(btype);
     if(ltype != nullptr)
     {
-        auto count = LIST_LOAD_TYPE_INFO_REPR(cpos)->getCount(LIST_LOAD_DATA(cpos));
+        if(LIST_LOAD_DATA(cpos) == nullptr)
+        {
+            return false;
+        }
+
+        auto count = LIST_LOAD_REPR_TYPE(cpos)->getCount(LIST_LOAD_DATA(cpos));
         if(idx >= count)
         {
             return false;
         }
 
         btype = BSQType::g_typetable[ltype->etype];
-        BSQListOps::s_safe_get(LIST_LOAD_DATA(cpos), LIST_LOAD_TYPE_INFO_REPR(cpos), idx, btype, cpos);
+        BSQListOps::s_safe_get(LIST_LOAD_DATA(cpos), LIST_LOAD_REPR_TYPE(cpos), idx, btype, cpos);
     }
     else
     {
@@ -542,14 +544,19 @@ bool dbg_processNumberKey(Evaluator* vv, const BSQType*& btype, StorageLocationP
             return false;
         }
 
-        auto reprtype = MAP_LOAD_TYPE_INFO_REPR(cpos);
+        if(MAP_LOAD_DATA(cpos) == nullptr)
+        {
+            return false;
+        }
+
+        auto reprtype = MAP_LOAD_REPR_TYPE(cpos);
         auto ktype = BSQType::g_typetable[mtype->ktype];
         if(ktype->tid != BSQ_TYPE_ID_INT && ktype->tid != BSQ_TYPE_ID_NAT)
         {
             return false;
         }
 
-        auto res = BSQMapOps::s_lookup_ne(MAP_LOAD_REPR(cpos), reprtype, &idx, ktype);
+        auto res = BSQMapOps::s_lookup_ne(MAP_LOAD_DATA(cpos), reprtype, &idx, ktype);
         if(res == nullptr)
         {
             return false;
@@ -570,7 +577,12 @@ bool dbg_processStringKey(Evaluator* vv, const BSQType*& btype, StorageLocationP
         return false;
     }
 
-    auto reprtype = MAP_LOAD_TYPE_INFO_REPR(cpos);
+    if(MAP_LOAD_DATA(cpos) == nullptr)
+    {
+        return false;
+    }
+
+    auto reprtype = MAP_LOAD_REPR_TYPE(cpos);
     auto ktype = BSQType::g_typetable[mtype->ktype];
     if(ktype->tid != BSQ_TYPE_ID_STRING)
     {
@@ -585,7 +597,7 @@ bool dbg_processStringKey(Evaluator* vv, const BSQType*& btype, StorageLocationP
 
     BSQString kstr;
     kstr.u_inlineString = BSQInlineString::create((const uint8_t*)key.c_str(), key.size());
-    auto res = BSQMapOps::s_lookup_ne(MAP_LOAD_REPR(cpos), reprtype, &kstr, ktype);
+    auto res = BSQMapOps::s_lookup_ne(MAP_LOAD_DATA(cpos), reprtype, &kstr, ktype);
     if(res == nullptr)
     {
         return false;
@@ -657,12 +669,12 @@ void dbg_displayExp(Evaluator* vv, std::string vexp)
             auto binvoke = dynamic_cast<const BSQInvokeBodyDecl*>(vv->dbg_getCFrame()->invoke);
             auto pdist = std::distance(params.cbegin(), ppos);
             btype = ppos->ptype;
-            cpos = Evaluator::evalParameterInfo(binvoke->paraminfo[pdist], vv->dbg_getCFrame()->scalarbase, vv->dbg_getCFrame()->mixedbase);
+            cpos = Evaluator::evalParameterInfo(binvoke->paraminfo[pdist], vv->dbg_getCFrame()->frameptr);
         }
         else
         {
             btype = lpos->second.vtype;
-            cpos = vv->evalArgument(lpos->second.location);
+            cpos = vv->evalTargetVar(lpos->second.location);
         }
 
         vexp = np.value().second;
@@ -814,8 +826,10 @@ void dbg_bpAdd(Evaluator* vv, std::string bpstr)
         }
         else
         {
-            BreakPoint bp{iid, ll, -1};
-            vv->breakpoints.push_back(bp);
+            //TODO: need to get opcode to set here as well
+
+            //BreakPoint bp{-1, -1, iid, ll, -1};
+            //vv->breakpoints.push_back(bp);
         }
     }
 }

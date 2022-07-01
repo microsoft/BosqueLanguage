@@ -1,0 +1,10 @@
+namespace CosmosDB;
+
+/*
+ *   Lots of Decls...
+ */
+
+
+entrypoint function read<T>(id: ItemID): ReadResult<T>;
+
+entrypoint function updateAtomic<T>(id: ItemID, item: T, etag: ETag): UpdateResult;

@@ -9,10 +9,10 @@ import { MIRResolvedTypeKey } from "../../compiler/mir_ops";
 type VerifierOptions = {
     INT_MIN: number,
     INT_MAX: number,
+    NAT_MAX: number,
     SLEN_MAX: number,
     BLEN_MAX: number,
 
-    ARRAY_MODE: "Seq" | "Array";
     CONTAINER_MAX: number,
 
     ActionMode: SymbolicActionMode
@@ -123,10 +123,6 @@ class SMTCallSimple extends SMTExp {
 
     static makeBinOp(op: string, lhs: SMTExp, rhs: SMTExp): SMTExp {
         return new SMTCallSimple(op, [lhs, rhs]);
-    }
-
-    static makeIsTypeOp(smtname: string, exp: SMTExp): SMTExp {
-        return new SMTCallSimple(`(_ is ${smtname})`, [exp]);
     }
 
     static makeNot(exp: SMTExp): SMTExp {

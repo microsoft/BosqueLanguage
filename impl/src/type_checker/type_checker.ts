@@ -1267,6 +1267,7 @@ class TypeChecker {
         }
 
         const resulttype = ResolvedType.createSingle(oftype);
+        const isassociative = oftype.object.isMapType() || oftype.object.isSetType();
 
         const tkey = this.m_emitter.registerResolvedTypeReference(resulttype).typeID;
         this.m_emitter.registerResolvedTypeReference(entrytype);
@@ -1275,7 +1276,7 @@ class TypeChecker {
         }
         else {
             if (eargs.every((v) => !v[1])) {
-                this.m_emitter.emitConstructorPrimaryCollectionSingletons(sinfo, tkey, eargs.map<[MIRType, MIRArgument]>((arg) => [this.m_emitter.registerResolvedTypeReference(arg[0]), arg[2]]), trgt);
+                this.m_emitter.emitConstructorPrimaryCollectionSingletons(sinfo, tkey, eargs.map<[MIRType, MIRArgument]>((arg) => [this.m_emitter.registerResolvedTypeReference(arg[0]), arg[2]]), trgt, isassociative);
             }
             else if (eargs.every((v) => v[1])) {
                 if(eargs.length === 1 && eargs[0][0].isSameType(resulttype)) {
@@ -1283,11 +1284,11 @@ class TypeChecker {
                     this.m_emitter.emitRegisterStore(sinfo, eargs[0][2], trgt, this.m_emitter.registerResolvedTypeReference(eargs[0][0]), undefined);
                 }
                 else {
-                    this.m_emitter.emitConstructorPrimaryCollectionCopies(sinfo, tkey, eargs.map<[MIRType, MIRArgument]>((arg) => [this.m_emitter.registerResolvedTypeReference(arg[0]), arg[2]]), trgt);
+                    this.m_emitter.emitConstructorPrimaryCollectionCopies(sinfo, tkey, eargs.map<[MIRType, MIRArgument]>((arg) => [this.m_emitter.registerResolvedTypeReference(arg[0]), arg[2]]), trgt, isassociative);
                 }
             }
             else {
-                this.m_emitter.emitConstructorPrimaryCollectionMixed(sinfo, tkey, eargs.map<[boolean, MIRType, MIRArgument]>((arg) => [arg[1], this.m_emitter.registerResolvedTypeReference(arg[0]), arg[2]]), trgt);
+                this.m_emitter.emitConstructorPrimaryCollectionMixed(sinfo, tkey, eargs.map<[boolean, MIRType, MIRArgument]>((arg) => [arg[1], this.m_emitter.registerResolvedTypeReference(arg[0]), arg[2]]), trgt, isassociative);
             }
         }
 
@@ -6707,7 +6708,16 @@ class TypeChecker {
                 }
                 else if(tdecl.attributes.includes("__typedprimitive")) {
                     const rrtype = (tdecl.memberMethods.find((mm) => mm.name === "value") as MemberMethodDecl).invoke.resultType;
-                    const oftype = this.resolveAndEnsureTypeOnly(tdecl.sourceLocation, rrtype, binds);
+                    let oftype = this.resolveAndEnsureTypeOnly(tdecl.sourceLocation, rrtype, binds);
+
+                    let basetype = oftype;
+                    let basetypedecl = basetype.getUniqueCallTargetType().object;
+                    while(!basetypedecl.attributes.includes("__typebase")) {
+                        const uutype = (basetypedecl.memberMethods.find((mm) => mm.name === "value") as MemberMethodDecl).invoke.resultType;
+
+                        basetype = this.resolveAndEnsureTypeOnly(tdecl.sourceLocation, uutype, basetype.getUniqueCallTargetType().binds);
+                        basetypedecl = basetype.getUniqueCallTargetType().object;
+                    }
 
                     let validatekey: string | undefined = undefined;
                     let conskey: string | undefined = undefined;
@@ -6726,7 +6736,8 @@ class TypeChecker {
                             conskey = conskeyid.keyid;
                         }
                     }
-                    const mirentity = new MIRConstructableEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, oftype.typeID, validatekey, conskey);
+                    
+                    const mirentity = new MIRConstructableEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, oftype.typeID, validatekey, conskey, basetype.typeID);
                     this.m_emitter.masm.entityDecls.set(tkey, mirentity);
                 }
                 else if(tdecl.attributes.includes("__stringof_type") || tdecl.attributes.includes("__datastring_type")) {
@@ -6808,10 +6819,7 @@ class TypeChecker {
                 else if(tdecl.attributes.includes("__map_type")) {
                     const mirbinds = new Map<string, MIRType>().set("K", this.m_emitter.registerResolvedTypeReference(binds.get("K") as ResolvedType)).set("V", this.m_emitter.registerResolvedTypeReference(binds.get("V") as ResolvedType));
 
-                    const tupletype = ResolvedType.createSingle(ResolvedTupleAtomType.create([binds.get("K") as ResolvedType, binds.get("V") as ResolvedType]));
-                    const mirtupletype = this.m_emitter.registerResolvedTypeReference(tupletype);
-
-                    const mirentity = new MIRPrimitiveMapEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, mirbinds, mirtupletype.typeID);
+                    const mirentity = new MIRPrimitiveMapEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, mirbinds);
                     this.m_emitter.masm.entityDecls.set(tkey, mirentity);
                 }
                 else if(tdecl.attributes.includes("__internal")) { 

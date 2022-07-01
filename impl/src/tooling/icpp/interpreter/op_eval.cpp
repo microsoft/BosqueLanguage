@@ -85,7 +85,7 @@ void Evaluator::evalAbortOp(const AbortOp *op)
 {
     if(this->debuggerattached)
     {
-        throw DebuggerException::CreateErrorAbortRequest({this->cframe->invoke, this->cframe->dbg_currentline, this->call_count});
+        throw DebuggerException::CreateErrorAbortRequest({-1, this->call_count, this->cframe->invoke, op, this->cframe->dbg_currentline});
     }
     else
     {
@@ -99,7 +99,7 @@ void Evaluator::evalAssertCheckOp(const AssertOp *op)
     {
         if(this->debuggerattached)
         {
-            throw DebuggerException::CreateErrorAbortRequest({this->cframe->invoke, this->cframe->dbg_currentline, this->call_count});
+            throw DebuggerException::CreateErrorAbortRequest({-1, this->call_count, this->cframe->invoke, op, this->cframe->dbg_currentline});
         }
         else
         {
@@ -465,122 +465,119 @@ void Evaluator::evalProjectEntityOp(const ProjectEntityOp* op)
 
 void Evaluator::evalUpdateTupleOp(const UpdateTupleOp* op)
 {
-    Allocator::GlobalAllocator.ensureSpace(op->trgttype->allocinfo.heapsize);
-    
     StorageLocationPtr src = this->evalArgument(op->arg);
+    void** stck = (void**)GCStack::allocFrame(sizeof(void*) * 2);
 
-    void* sl = nullptr;
     if(op->layouttype->tkind == BSQTypeLayoutKind::Struct)
     {
-        sl = src;
+        stck[0] = src;
     }
     else if(op->layouttype->tkind == BSQTypeLayoutKind::Ref)
     {
-        sl = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src);
+        stck[0] = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src);
     }
     else
     {
-        sl = dynamic_cast<const BSQUnionType*>(op->layouttype)->getVData_NoAlloc(src);
+        stck[0] = dynamic_cast<const BSQUnionType*>(op->layouttype)->getVData_NoAlloc(src);
     }
 
-    void* trgtl = nullptr;
     if(op->trgttype->tkind == BSQTypeLayoutKind::Struct)
     {
-        trgtl = this->evalTargetVar(op->trgt);
-        GC_MEM_COPY(trgtl, sl, op->trgttype->allocinfo.heapsize);
+        stck[1] = this->evalTargetVar(op->trgt);
+        GC_MEM_COPY(stck[1], stck[0], op->trgttype->allocinfo.heapsize);
     }
     else
     {
-        trgtl = Allocator::GlobalAllocator.allocateSafe(op->trgttype);
-        GC_MEM_COPY(trgtl, sl, op->trgttype->allocinfo.heapsize);
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalTargetVar(op->trgt), trgtl);
+        stck[1] = Allocator::GlobalAllocator.allocateDynamic(op->trgttype);
+        GC_MEM_COPY(stck[1], stck[0], op->trgttype->allocinfo.heapsize);
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalTargetVar(op->trgt), stck[1]);
     }
 
     for(size_t i = 0; i < op->updates.size(); ++i)
     {
-        auto dst = SLPTR_INDEX_DATAPTR(trgtl, std::get<1>(op->updates[i]));
+        auto dst = SLPTR_INDEX_DATAPTR(stck[1], std::get<1>(op->updates[i]));
         std::get<2>(op->updates[i])->storeValue(dst, this->evalArgument(std::get<3>(op->updates[i])));
     }
+
+    GCStack::popFrame(sizeof(void*) * 2);
 }
 
 void Evaluator::evalUpdateRecordOp(const UpdateRecordOp* op)
 {
-    Allocator::GlobalAllocator.ensureSpace(op->trgttype->allocinfo.heapsize);
-    
     StorageLocationPtr src = this->evalArgument(op->arg);
+    void** stck = (void**)GCStack::allocFrame(sizeof(void*) * 2);
 
-    void* sl = nullptr;
     if(op->layouttype->tkind == BSQTypeLayoutKind::Struct)
     {
-        sl = src;
+        stck[0] = src;
     }
     else if(op->layouttype->tkind == BSQTypeLayoutKind::Ref)
     {
-        sl = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src);
+        stck[0] = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src);
     }
     else
     {
-        sl = dynamic_cast<const BSQUnionType*>(op->layouttype)->getVData_NoAlloc(src);
+        stck[0] = dynamic_cast<const BSQUnionType*>(op->layouttype)->getVData_NoAlloc(src);
     }
 
-    void* trgtl = nullptr;
     if(op->trgttype->tkind == BSQTypeLayoutKind::Struct)
     {
-        trgtl = this->evalTargetVar(op->trgt);
-        GC_MEM_COPY(trgtl, sl, op->trgttype->allocinfo.heapsize);
+        stck[1] = this->evalTargetVar(op->trgt);
+        GC_MEM_COPY(stck[1], stck[0], op->trgttype->allocinfo.heapsize);
     }
     else
     {
-        trgtl = Allocator::GlobalAllocator.allocateSafe(op->trgttype);
-        GC_MEM_COPY(trgtl, sl, op->trgttype->allocinfo.heapsize);
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalTargetVar(op->trgt), trgtl);
+        stck[1] = Allocator::GlobalAllocator.allocateDynamic(op->trgttype);
+        GC_MEM_COPY(stck[1], stck[0], op->trgttype->allocinfo.heapsize);
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalTargetVar(op->trgt), stck[1]);
     }
 
     for(size_t i = 0; i < op->updates.size(); ++i)
     {
-        auto dst = SLPTR_INDEX_DATAPTR(trgtl, std::get<1>(op->updates[i]));
+        auto dst = SLPTR_INDEX_DATAPTR(stck[1], std::get<1>(op->updates[i]));
         std::get<2>(op->updates[i])->storeValue(dst, this->evalArgument(std::get<3>(op->updates[i])));
     }
+
+    GCStack::popFrame(sizeof(void*) * 2);
 }
 
 void Evaluator::evalUpdateEntityOp(const UpdateEntityOp* op)
 {
-    Allocator::GlobalAllocator.ensureSpace(op->trgttype->allocinfo.heapsize);
-    
     StorageLocationPtr src = this->evalArgument(op->arg);
+    void** stck = (void**)GCStack::allocFrame(sizeof(void*) * 2);
 
-    void* sl = nullptr;
     if(op->layouttype->tkind == BSQTypeLayoutKind::Struct)
     {
-        sl = src;
+        stck[0] = src;
     }
     else if(op->layouttype->tkind == BSQTypeLayoutKind::Ref)
     {
-        sl = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src);
+        stck[0] = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src);
     }
     else
     {
-        sl = dynamic_cast<const BSQUnionType*>(op->layouttype)->getVData_NoAlloc(src);
+        stck[0] = dynamic_cast<const BSQUnionType*>(op->layouttype)->getVData_NoAlloc(src);
     }
 
-    void* trgtl = nullptr;
     if(op->trgttype->tkind == BSQTypeLayoutKind::Struct)
     {
-        trgtl = this->evalTargetVar(op->trgt);
-        GC_MEM_COPY(trgtl, sl, op->trgttype->allocinfo.heapsize);
+        stck[1] = this->evalTargetVar(op->trgt);
+        GC_MEM_COPY(stck[1], stck[0], op->trgttype->allocinfo.heapsize);
     }
     else
     {
-        trgtl = Allocator::GlobalAllocator.allocateSafe(op->trgttype);
-        GC_MEM_COPY(trgtl, sl, op->trgttype->allocinfo.heapsize);
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalTargetVar(op->trgt), trgtl);
+        stck[1] = Allocator::GlobalAllocator.allocateDynamic(op->trgttype);
+        GC_MEM_COPY(stck[1], stck[0], op->trgttype->allocinfo.heapsize);
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(this->evalTargetVar(op->trgt), stck[1]);
     }
 
     for(size_t i = 0; i < op->updates.size(); ++i)
     {
-        auto dst = SLPTR_INDEX_DATAPTR(trgtl, std::get<1>(op->updates[i]));
+        auto dst = SLPTR_INDEX_DATAPTR(stck[1], std::get<1>(op->updates[i]));
         std::get<2>(op->updates[i])->storeValue(dst, this->evalArgument(std::get<3>(op->updates[i])));
     }
+
+    GCStack::popFrame(sizeof(void*) * 2);
 }
 
 void Evaluator::evalLoadFromEpehmeralListOp(const LoadFromEpehmeralListOp* op)
@@ -1863,7 +1860,7 @@ void Evaluator::evaluateOpCodeBlocks()
 #ifdef BSQ_DEBUG_BUILD
         if(this->debuggerattached)
         {
-            if(this->advanceLineAndProcsssBP(op))
+            if(this->advanceOpAndProcsssBP(op))
             {
                 Evaluator::fpDebuggerAction(this);
             }
@@ -1918,70 +1915,69 @@ void Evaluator::invoke(const BSQInvokeDecl* call, const std::vector<Argument>& a
     {
         const BSQInvokeBodyDecl* idecl = (const BSQInvokeBodyDecl*)call;
 
-        size_t cssize = idecl->scalarstackBytes + idecl->mixedstackBytes;
-        uint8_t* cstack = (uint8_t*)BSQ_STACK_SPACE_ALLOC(cssize);
-        GC_MEM_ZERO(cstack, cssize);
+        size_t cssize = idecl->stackBytes;
+        uint8_t* cstack = GCStack::allocFrame(cssize);
 
         for(size_t i = 0; i < args.size(); ++i)
         {
             StorageLocationPtr argv = this->evalArgument(args[i]);
-            StorageLocationPtr pv = Evaluator::evalParameterInfo(idecl->paraminfo[i], cstack, cstack + idecl->scalarstackBytes);
+            StorageLocationPtr pv = Evaluator::evalParameterInfo(idecl->paraminfo[i], cstack);
             
             idecl->params[i].ptype->storeValue(pv, argv);
         }
 
         size_t maskslotbytes = idecl->maskSlots * sizeof(BSQBool);
-        BSQBool* maskslots = (BSQBool*)BSQ_STACK_SPACE_ALLOC(maskslotbytes);
+        BSQBool* maskslots = (BSQBool*)BSQ_STACK_ALLOC(maskslotbytes);
         GC_MEM_ZERO(maskslots, maskslotbytes);
 
         this->invokePrelude(idecl, cstack, maskslots, optmask);
         this->evaluateBody(resultsl, idecl->resultType, idecl->resultArg);
         this->invokePostlude();
+
+        GCStack::popFrame(cssize);
     }
 }
 
 void Evaluator::vinvoke(const BSQInvokeBodyDecl* idecl, StorageLocationPtr rcvr, const std::vector<Argument>& args, StorageLocationPtr resultsl, BSQBool* optmask)
 {
-    size_t cssize = idecl->scalarstackBytes + idecl->mixedstackBytes;
-    uint8_t* cstack = (uint8_t*)BSQ_STACK_SPACE_ALLOC(cssize);
+    size_t cssize = idecl->stackBytes;
+    uint8_t* cstack = GCStack::allocFrame(cssize);
     GC_MEM_ZERO(cstack, cssize);
 
-    StorageLocationPtr pv = Evaluator::evalParameterInfo(idecl->paraminfo[0], cstack, cstack + idecl->scalarstackBytes);
+    StorageLocationPtr pv = Evaluator::evalParameterInfo(idecl->paraminfo[0], cstack);
     idecl->params[0].ptype->storeValue(pv, rcvr);
 
     for(size_t i = 1; i < args.size(); ++i)
     {
         StorageLocationPtr argv = this->evalArgument(args[i]);
-        StorageLocationPtr pv = Evaluator::evalParameterInfo(idecl->paraminfo[i], cstack, cstack + idecl->scalarstackBytes);
+        StorageLocationPtr pv = Evaluator::evalParameterInfo(idecl->paraminfo[i], cstack);
             
         idecl->params[i].ptype->storeValue(pv, argv);
     }
 
     size_t maskslotbytes = idecl->maskSlots * sizeof(BSQBool);
-    BSQBool* maskslots = (BSQBool*)BSQ_STACK_SPACE_ALLOC(maskslotbytes);
+    BSQBool* maskslots = (BSQBool*)BSQ_STACK_ALLOC(maskslotbytes);
     GC_MEM_ZERO(maskslots, maskslotbytes);
 
     this->invokePrelude(idecl, cstack, maskslots, optmask);
     this->evaluateBody(resultsl, idecl->resultType, idecl->resultArg);
     this->invokePostlude();
+
+    GCStack::popFrame(cssize);
 }
 
 void Evaluator::invokePrelude(const BSQInvokeBodyDecl* invk, uint8_t* cstack, uint8_t* maskslots, BSQBool* optmask)
 {
-    uint8_t* mixedslots = cstack + invk->scalarstackBytes;
-
-    GCStack::pushFrame((void**)mixedslots, invk->mixedMask);
 #ifdef BSQ_DEBUG_BUILD
-    this->pushFrame(this->computeCallIntoStepMode(), this->computeCurrentBreakpoint(), invk, cstack, mixedslots, optmask, maskslots, &invk->body);
+    this->pushFrame(this->computeCallIntoStepMode(), this->computeCurrentBreakpoint(), invk, cstack, optmask, maskslots, &invk->body);
 #else
-    this->pushFrame(invk, cstack, mixedslots, optmask, maskslots, &invk->body);
+    this->pushFrame(invk, cstack, optmask, maskslots, &invk->body);
 #endif
 }
     
 void Evaluator::invokePostlude()
 {
     this->popFrame();
-    GCStack::popFrame();
 }
 
 void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const std::vector<StorageLocationPtr>& params, StorageLocationPtr resultsl, const BSQType* restype)
@@ -2000,7 +1996,7 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
     }
     case BSQPrimitiveImplTag::number_nattoint: {
         BSQNat nn = SLPTR_LOAD_CONTENTS_AS(BSQNat, params[0]);
-        BSQ_LANGUAGE_ASSERT(nn <= (BSQNat)std::numeric_limits<BSQInt>::max(), &invk->srcFile, 0, "Out-of-bounds Nat to Int");
+        BSQ_LANGUAGE_ASSERT(nn <= (BSQNat)UINT64_MAX, &invk->srcFile, 0, "Out-of-bounds Nat to Int");
         
         SLPTR_STORE_CONTENTS_AS(BSQInt, resultsl, (BSQInt)nn);
         break;
@@ -2022,14 +2018,14 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
     }
     case BSQPrimitiveImplTag::number_bignattonat: {
         BSQBigNat nn = SLPTR_LOAD_CONTENTS_AS(BSQBigNat, params[0]);
-        BSQ_LANGUAGE_ASSERT(nn <= (BSQBigNat)std::numeric_limits<BSQNat>::max(), &invk->srcFile, 0, "Out-of-bounds BigNat to Nat");
+        BSQ_LANGUAGE_ASSERT(nn <= (BSQBigNat)UINT64_MAX, &invk->srcFile, 0, "Out-of-bounds BigNat to Nat");
         
         SLPTR_STORE_CONTENTS_AS(BSQNat, resultsl, (BSQNat)nn);
         break;
     }
     case BSQPrimitiveImplTag::number_biginttoint: {
         BSQBigInt ii = SLPTR_LOAD_CONTENTS_AS(BSQBigInt, params[0]);
-        BSQ_LANGUAGE_ASSERT((BSQBigInt)std::numeric_limits<BSQInt>::lowest() <= ii && ii <= (BSQBigInt)std::numeric_limits<BSQInt>::max(), &invk->srcFile, 0, "Out-of-bounds BigInt to Int");
+        BSQ_LANGUAGE_ASSERT((BSQBigInt)INT64_MIN <= ii && ii <= (BSQBigInt)INT64_MAX, &invk->srcFile, 0, "Out-of-bounds BigInt to Int");
         
         SLPTR_STORE_CONTENTS_AS(BSQInt, resultsl, (BSQInt)ii);
         break;
@@ -2142,6 +2138,10 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         SLPTR_STORE_CONTENTS_AS(BSQDecimal, resultsl, std::pow(SLPTR_LOAD_CONTENTS_AS(BSQDecimal, params[0]), SLPTR_LOAD_CONTENTS_AS(BSQDecimal, params[1])));
         break;
     }
+    case BSQPrimitiveImplTag::nat_mod: {
+        SLPTR_STORE_CONTENTS_AS(BSQNat, resultsl, SLPTR_LOAD_CONTENTS_AS(BSQNat, params[0]) % SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]));
+        break;
+    }
     case BSQPrimitiveImplTag::string_empty: {
         BSQString str = SLPTR_LOAD_CONTENTS_AS(BSQString, params[0]);
 
@@ -2150,18 +2150,6 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
     }
     case BSQPrimitiveImplTag::string_append: {
         BSQString res = BSQStringImplType::concat2(params[0], params[1]);
-
-        SLPTR_STORE_CONTENTS_AS(BSQString, resultsl, res);
-        break;
-    }
-    case BSQPrimitiveImplTag::s_strconcat_ne: {
-        BSQString res = BSQListOps::s_strconcat_ne(LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]));
-
-        SLPTR_STORE_CONTENTS_AS(BSQString, resultsl, res);
-        break;
-    }
-    case BSQPrimitiveImplTag::s_strjoin_ne: {
-        BSQString res = BSQListOps::s_strjoin_ne(LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), params[1]);
 
         SLPTR_STORE_CONTENTS_AS(BSQString, resultsl, res);
         break;
@@ -2193,10 +2181,72 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
             (uint8_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[2]),
             (uint8_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[3]),
             (uint8_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[4]),
+            0, //padding
             tziter.first->c_str()
         };
 
         SLPTR_STORE_CONTENTS_AS(BSQDateTime, resultsl, dt);
+        break;
+    }
+    case BSQPrimitiveImplTag::utcdatetime_create: {
+        BSQUTCDateTime dt = {
+            (uint16_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[0]),
+            (uint8_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]),
+            (uint8_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[2]),
+            (uint8_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[3]),
+            (uint8_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[4]),
+            0 //padding
+        };
+
+        SLPTR_STORE_CONTENTS_AS(BSQUTCDateTime, resultsl, dt);
+        break;
+    }
+    case BSQPrimitiveImplTag::calendardate_create: {
+        BSQCalendarDate dt = {
+            (uint16_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[0]),
+            (uint8_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]),
+            (uint8_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[2]),
+            0
+        };
+
+        SLPTR_STORE_CONTENTS_AS(BSQCalendarDate, resultsl, dt);
+        break;
+    }
+    case BSQPrimitiveImplTag::relativetime_create: {
+        BSQRelativeTime dt = {
+            (uint8_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[0]),
+            (uint8_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]),
+            0
+        };
+
+        SLPTR_STORE_CONTENTS_AS(BSQRelativeTime, resultsl, dt);
+        break;
+    }
+    case BSQPrimitiveImplTag::isotimestamp_create: {
+        BSQISOTimeStamp its = {
+            (uint16_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[0]),
+            (uint8_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]),
+            (uint8_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[2]),
+            (uint8_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[3]),
+            (uint8_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[4]),
+
+            (uint8_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[5]),
+            (uint8_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[6]),
+
+            0, //padding
+            0 //more padding
+        };
+
+        SLPTR_STORE_CONTENTS_AS(BSQISOTimeStamp, resultsl, its);
+        break;
+    }
+    case BSQPrimitiveImplTag::latlongcoordinate_create: {
+        BSQLatLongCoordinate llc = {
+            (float)SLPTR_LOAD_CONTENTS_AS(double, params[0]),
+            (float)SLPTR_LOAD_CONTENTS_AS(double, params[1])
+        };
+
+        SLPTR_STORE_CONTENTS_AS(BSQLatLongCoordinate, resultsl, llc);
         break;
     }
     case BSQPrimitiveImplTag::s_list_build_k: {
@@ -2206,112 +2256,119 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         LIST_STORE_RESULT_REPR(rres, resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_size_ne: {
-        auto count = LIST_LOAD_TYPE_INFO_REPR(params[0])->getCount(LIST_LOAD_DATA(params[0]));
-        
+    case BSQPrimitiveImplTag::s_list_empty: {
+        void* ll = LIST_LOAD_DATA(params[0]);
+        SLPTR_STORE_CONTENTS_AS(BSQBool, resultsl, ll == nullptr); 
+        break;
+    }
+    case BSQPrimitiveImplTag::s_list_size: {
+        void* ll = LIST_LOAD_DATA(params[0]);
+        auto count = SLPTR_LOAD_HEAP_TYPE_AS(BSQListReprType, params[0])->getCount(ll);
         SLPTR_STORE_CONTENTS_AS(BSQNat, resultsl, count);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_set_ne: {
+    case BSQPrimitiveImplTag::s_list_set: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
         auto ii = SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]);
         
-        auto rr = BSQListOps::s_set_ne(lflavor, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), ii, params[2]);
+        auto rr = BSQListOps::s_set_ne(lflavor, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), ii, params[2]);
         LIST_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_push_back_ne: {
+    case BSQPrimitiveImplTag::s_list_push_back: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
         
-        auto rr = BSQListOps::s_push_back_ne(lflavor, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), params[2]);
+        auto rr = BSQListOps::s_push_back_ne(lflavor, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), params[1]);
         LIST_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_push_front_ne: {
+    case BSQPrimitiveImplTag::s_list_push_front: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
         
-        auto rr = BSQListOps::s_push_front_ne(lflavor, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), params[2]);
+        auto rr = BSQListOps::s_push_front_ne(lflavor, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), params[1]);
         LIST_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_remove_ne: {
+    case BSQPrimitiveImplTag::s_list_insert: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
         auto ii = SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]);
         
-        auto rr = BSQListOps::s_remove_ne(lflavor, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), ii);
+        auto rr = BSQListOps::s_insert_ne(lflavor, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), ii, params[2]);
         LIST_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_pop_back_ne: {
+    case BSQPrimitiveImplTag::s_list_remove: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
-        auto ii = LIST_LOAD_TYPE_INFO_REPR(params[0])->getCount(LIST_LOAD_DATA(params[0])) - 1;
+        auto ii = SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]);
         
-        auto rr = BSQListOps::s_remove_ne(lflavor, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), ii);
+        auto rr = BSQListOps::s_remove_ne(lflavor, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), ii);
         LIST_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_pop_front_ne: {
+    case BSQPrimitiveImplTag::s_list_pop_back: {
+        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
+        auto ii = LIST_LOAD_REPR_TYPE(params[0])->getCount(LIST_LOAD_DATA(params[0])) - 1;
+        
+        auto rr = BSQListOps::s_remove_ne(lflavor, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), ii);
+        LIST_STORE_RESULT_REPR(rr, resultsl);
+        break;
+    }
+    case BSQPrimitiveImplTag::s_list_pop_front: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
         BSQNat ii = 0;
         
-        auto rr = BSQListOps::s_remove_ne(lflavor, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), ii);
+        auto rr = BSQListOps::s_remove_ne(lflavor, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), ii);
         LIST_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_reduce_ne: {
+    case BSQPrimitiveImplTag::s_list_reduce: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
 
         invk->binds.find("T")->second->storeValue(resultsl, params[1]); //store the initial acc in the result
-        BSQListOps::s_reduce_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), invk->pcodes.find("f")->second, params, resultsl);
+        BSQListOps::s_reduce_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.find("f")->second, params, resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_reduce_idx_ne: {
+    case BSQPrimitiveImplTag::s_list_reduce_idx: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
 
         invk->binds.find("T")->second->storeValue(resultsl, params[1]); //store the initial acc in the result
-        BSQListOps::s_reduce_idx_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), invk->pcodes.find("f")->second, params, resultsl);
+        BSQListOps::s_reduce_idx_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.find("f")->second, params, resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_transduce_ne: {
+    case BSQPrimitiveImplTag::s_list_transduce: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
         const BSQListTypeFlavor& uflavor = BSQListOps::g_flavormap.find(invk->binds.find("U")->second->tid)->second;
         const BSQType* envtype = invk->binds.find("E")->second;
 
-        BSQListOps::s_transduce_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), uflavor, envtype, invk->pcodes.find("op")->second, params, dynamic_cast<const BSQEphemeralListType*>(invk->resultType), resultsl);
+        BSQListOps::s_transduce_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), uflavor, envtype, invk->pcodes.find("op")->second, params, dynamic_cast<const BSQEphemeralListType*>(invk->resultType), resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_transduce_idx_ne: {
+    case BSQPrimitiveImplTag::s_list_transduce_idx: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
         const BSQListTypeFlavor& uflavor = BSQListOps::g_flavormap.find(invk->binds.find("U")->second->tid)->second;
         const BSQType* envtype = invk->binds.find("E")->second;
 
-        BSQListOps::s_transduce_idx_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), uflavor, envtype, invk->pcodes.find("op")->second, params, dynamic_cast<const BSQEphemeralListType*>(invk->resultType), resultsl);
+        BSQListOps::s_transduce_idx_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), uflavor, envtype, invk->pcodes.find("op")->second, params, dynamic_cast<const BSQEphemeralListType*>(invk->resultType), resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_range_ne: {
+    case BSQPrimitiveImplTag::s_list_range: {
         BSQListOps::s_range_ne(invk->binds.find("T")->second, params[0], params[1], params[3], resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_fill_ne: {
+    case BSQPrimitiveImplTag::s_list_fill: {
         BSQListOps::s_fill_ne(invk->binds.find("T")->second, params[1], params[0], resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_reverse_ne: {
+    case BSQPrimitiveImplTag::s_list_reverse: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
 
-        auto gcpoint = Allocator::GlobalAllocator.getCollectionNodeCurrentEnd();
-        auto rnode = Allocator::GlobalAllocator.registerCollectionNode(LIST_LOAD_DATA(params[0]));
-
-        auto rr = BSQListOps::s_reverse_ne(lflavor, rnode);
+        auto rr = BSQListOps::s_reverse_ne(lflavor, LIST_LOAD_DATA(params[0]));
         LIST_STORE_RESULT_REPR(rr, resultsl);
-
-        Allocator::GlobalAllocator.resetCollectionNodeEnd(gcpoint);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_append_ne: {
+    case BSQPrimitiveImplTag::s_list_append: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
 
-        Allocator::GlobalAllocator.ensureSpace(std::max(lflavor.pv8type->allocinfo.heapsize, lflavor.treetype->allocinfo.heapsize) + sizeof(GC_META_DATA_WORD));
         auto rr = BSQListOps::list_append(lflavor, LIST_LOAD_DATA(params[0]), LIST_LOAD_DATA(params[1]));
         LIST_STORE_RESULT_REPR(rr, resultsl);
         break;
@@ -2319,180 +2376,263 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
     case BSQPrimitiveImplTag::s_list_slice_start: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
 
-        BSQListSpineIterator liter(LIST_LOAD_TYPE_INFO_REPR(params[0]), LIST_LOAD_DATA(params[0]));
-        Allocator::GlobalAllocator.registerCollectionIterator(&liter);
+        BSQListSpineIterator liter(LIST_LOAD_REPR_TYPE(params[0]), LIST_LOAD_DATA(params[0]));
+        Allocator::GlobalAllocator.insertCollectionIter(&liter);
 
-        auto rr = BSQListOps::s_slice_start(lflavor, liter, LIST_LOAD_TYPE_INFO_REPR(params[0]), SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]), 0);
+        auto rr = BSQListOps::s_slice_start(lflavor, liter, LIST_LOAD_REPR_TYPE(params[0]), SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]));
         LIST_STORE_RESULT_REPR(rr, resultsl);
-        
-        Allocator::GlobalAllocator.releaseCollectionIterator(&liter);
+        Allocator::GlobalAllocator.removeCollectionIter(&liter);
         break;
     }
     case BSQPrimitiveImplTag::s_list_slice_end: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
 
-        BSQListSpineIterator liter(LIST_LOAD_TYPE_INFO_REPR(params[0]), LIST_LOAD_DATA(params[0]));
-        Allocator::GlobalAllocator.registerCollectionIterator(&liter);
+        BSQListSpineIterator liter(LIST_LOAD_REPR_TYPE(params[0]), LIST_LOAD_DATA(params[0]));
+        Allocator::GlobalAllocator.insertCollectionIter(&liter);
 
-        auto rr = BSQListOps::s_slice_end(lflavor, liter, LIST_LOAD_TYPE_INFO_REPR(params[0]), SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]), 0);
+        auto rr = BSQListOps::s_slice_end(lflavor, liter, LIST_LOAD_REPR_TYPE(params[0]), SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]));
+        LIST_STORE_RESULT_REPR(rr, resultsl);
+        Allocator::GlobalAllocator.removeCollectionIter(&liter);
+        break;
+    }
+    case BSQPrimitiveImplTag::s_list_slice: {
+        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
+
+        BSQListSpineIterator siter(LIST_LOAD_REPR_TYPE(params[0]), LIST_LOAD_DATA(params[0]));
+        Allocator::GlobalAllocator.insertCollectionIter(&siter);
+
+        auto rr = BSQListOps::s_slice(lflavor, siter, LIST_LOAD_REPR_TYPE(params[0]), SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]), SLPTR_LOAD_CONTENTS_AS(BSQNat, params[2]));
         LIST_STORE_RESULT_REPR(rr, resultsl);
         
-        Allocator::GlobalAllocator.releaseCollectionIterator(&liter);
+        Allocator::GlobalAllocator.removeCollectionIter(&siter);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_safe_get: {
-        BSQListOps::s_safe_get(LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]), invk->binds.find("T")->second, resultsl);
+    case BSQPrimitiveImplTag::s_list_get: {
+        BSQListOps::s_safe_get(LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]), invk->binds.find("T")->second, resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_safe_back: {
-        auto ii = LIST_LOAD_TYPE_INFO_REPR(params[0])->getCount(LIST_LOAD_DATA(params[0])) - 1;
-        BSQListOps::s_safe_get(LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), ii, invk->binds.find("T")->second, resultsl);
+    case BSQPrimitiveImplTag::s_list_back: {
+        auto ii = LIST_LOAD_REPR_TYPE(params[0])->getCount(LIST_LOAD_DATA(params[0])) - 1;
+        BSQListOps::s_safe_get(LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), ii, invk->binds.find("T")->second, resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_safe_front: {
+    case BSQPrimitiveImplTag::s_list_front: {
         BSQNat ii = 0;
-        BSQListOps::s_safe_get(LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), ii, invk->binds.find("T")->second, resultsl);
+        BSQListOps::s_safe_get(LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), ii, invk->binds.find("T")->second, resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_find_pred_ne: {
-        auto pos = BSQListOps::s_find_pred_ne(eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), invk->pcodes.find("p")->second, params);
-        SLPTR_STORE_CONTENTS_AS(BSQNat, resultsl, pos);
+    case BSQPrimitiveImplTag::s_list_has_pred: {
+        auto pos = BSQListOps::s_find_pred_ne(eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.find("p")->second, params);
+        SLPTR_STORE_CONTENTS_AS(BSQBool, resultsl, pos != -1);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_find_pred_idx_ne: {
-        auto pos = BSQListOps::s_find_pred_idx_ne(eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), invk->pcodes.find("p")->second, params);
-        SLPTR_STORE_CONTENTS_AS(BSQNat, resultsl, pos);
+    case BSQPrimitiveImplTag::s_list_has_pred_idx: {
+        auto pos = BSQListOps::s_find_pred_ne(eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.find("p")->second, params);
+        SLPTR_STORE_CONTENTS_AS(BSQBool, resultsl, pos != -1);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_find_pred_last_ne: {
-        auto pos = BSQListOps::s_find_pred_last_ne(eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), invk->pcodes.find("p")->second, params);
-        SLPTR_STORE_CONTENTS_AS(BSQNat, resultsl, pos);
+    case BSQPrimitiveImplTag::s_list_find_pred: {
+        auto pos = BSQListOps::s_find_pred_ne(eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.find("p")->second, params);
+        SLPTR_STORE_CONTENTS_AS(BSQInt, resultsl, pos);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_find_pred_last_idx_ne: {
-        auto pos = BSQListOps::s_find_pred_last_idx_ne(eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), invk->pcodes.find("p")->second, params);
-        SLPTR_STORE_CONTENTS_AS(BSQNat, resultsl, pos);
+    case BSQPrimitiveImplTag::s_list_find_pred_idx: {
+        auto pos = BSQListOps::s_find_pred_idx_ne(eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.find("p")->second, params);
+        SLPTR_STORE_CONTENTS_AS(BSQInt, resultsl, pos);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_filter_pred_ne: {
+    case BSQPrimitiveImplTag::s_list_find_pred_last: {
+        auto pos = BSQListOps::s_find_pred_last_ne(eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.find("p")->second, params);
+        SLPTR_STORE_CONTENTS_AS(BSQInt, resultsl, pos);
+        break;
+    }
+    case BSQPrimitiveImplTag::s_list_find_pred_last_idx: {
+        auto pos = BSQListOps::s_find_pred_last_idx_ne(eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.find("p")->second, params);
+        SLPTR_STORE_CONTENTS_AS(BSQInt, resultsl, pos);
+        break;
+    }
+    case BSQPrimitiveImplTag::s_list_single_index_of: {
+        auto posfirst = BSQListOps::s_find_value_ne(LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), params[1]);
+        auto poslast = BSQListOps::s_find_value_last_ne(LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), params[1]);
+        SLPTR_STORE_CONTENTS_AS(BSQInt, resultsl, (posfirst == poslast ? posfirst : -1));
+        break;
+    }
+    case BSQPrimitiveImplTag::s_list_has: {
+        auto pos = BSQListOps::s_find_value_ne(LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), params[1]);
+        SLPTR_STORE_CONTENTS_AS(BSQBool, resultsl, pos != -1);
+        break;
+    }
+    case BSQPrimitiveImplTag::s_list_indexof: {
+        auto pos = BSQListOps::s_find_value_ne(LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), params[1]);
+        SLPTR_STORE_CONTENTS_AS(BSQInt, resultsl, pos);
+        break;
+    }
+    case BSQPrimitiveImplTag::s_list_last_indexof: {
+        auto pos = BSQListOps::s_find_value_last_ne(LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), params[1]);
+        SLPTR_STORE_CONTENTS_AS(BSQInt, resultsl, pos);
+        break;
+    }
+    case BSQPrimitiveImplTag::s_list_filter_pred: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
 
-        auto rr = BSQListOps::s_filter_pred_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), invk->pcodes.find("p")->second, params);
+        auto rr = BSQListOps::s_filter_pred_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.find("p")->second, params);
         LIST_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_filter_pred_idx_ne: {
+    case BSQPrimitiveImplTag::s_list_filter_pred_idx: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
 
-        auto rr = BSQListOps::s_filter_pred_idx_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), invk->pcodes.find("p")->second, params);
+        auto rr = BSQListOps::s_filter_pred_idx_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.find("p")->second, params);
         LIST_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_map_ne: {
+    case BSQPrimitiveImplTag::s_list_map: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
         const BSQListTypeFlavor& rflavor = BSQListOps::g_flavormap.find(invk->binds.find("U")->second->tid)->second;
 
-        auto rr = BSQListOps::s_map_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), invk->pcodes.find("f")->second, params, rflavor);
+        auto rr = BSQListOps::s_map_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.find("f")->second, params, rflavor);
         LIST_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_map_idx_ne: {
+    case BSQPrimitiveImplTag::s_list_map_idx: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
         const BSQListTypeFlavor& rflavor = BSQListOps::g_flavormap.find(invk->binds.find("U")->second->tid)->second;
 
-        auto rr = BSQListOps::s_map_idx_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), invk->pcodes.find("f")->second, params, rflavor);
+        auto rr = BSQListOps::s_map_idx_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.find("f")->second, params, rflavor);
         LIST_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_map_sync_ne: {
+    case BSQPrimitiveImplTag::s_list_map_sync: {
         const BSQListTypeFlavor& lflavor1 = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
         const BSQListTypeFlavor& lflavor2 = BSQListOps::g_flavormap.find(invk->binds.find("U")->second->tid)->second;
         const BSQListTypeFlavor& rflavor = BSQListOps::g_flavormap.find(invk->binds.find("V")->second->tid)->second;
 
-        auto rr = BSQListOps::s_map_sync_ne(lflavor1, lflavor2, eethunk, SLPTR_LOAD_CONTENTS_AS(BSQNat, params[3]), LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), LIST_LOAD_DATA(params[1]), LIST_LOAD_TYPE_INFO_REPR(params[1]), invk->pcodes.find("f")->second, params, rflavor);
+        auto rr = BSQListOps::s_map_sync_ne(lflavor1, lflavor2, eethunk, SLPTR_LOAD_CONTENTS_AS(BSQNat, params[3]), LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), LIST_LOAD_DATA(params[1]), LIST_LOAD_REPR_TYPE(params[1]), invk->pcodes.find("f")->second, params, rflavor);
         LIST_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_sort_ne: {
+    case BSQPrimitiveImplTag::s_list_sort: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
 
-        auto rr = BSQListOps::s_sort_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), invk->pcodes.find("cmp")->second, params);
+        auto rr = BSQListOps::s_sort_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.find("cmp")->second, params);
         LIST_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_unique_from_sorted_ne: {
+    case BSQPrimitiveImplTag::s_list_uniqueify: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
 
-        auto rr = BSQListOps::s_unique_from_sorted_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_TYPE_INFO_REPR(params[0]), invk->pcodes.find("eq")->second, params);
+        auto rr = BSQListOps::s_unique_from_sorted_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.find("eq")->second, params);
         LIST_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
      case BSQPrimitiveImplTag::s_map_build_k: {
         const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.find(std::make_pair(invk->binds.find("K")->second->tid, invk->binds.find("V")->second->tid))->second;
         
-        auto rr = BSQMapOps::map_cons(mflavor, params);
-        MAP_STORE_RESULT_REPR(rr, params.size(), resultsl);
+        auto rr = BSQMapOps::map_cons(mflavor, invk->params[0].ptype, params);
+        MAP_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_map_size_ne: {
-        SLPTR_STORE_CONTENTS_AS(BSQNat, resultsl, MAP_LOAD_COUNT(params[0]));
+    case BSQPrimitiveImplTag::s_map_empty: {
+        SLPTR_STORE_CONTENTS_AS(BSQBool, resultsl, MAP_LOAD_DATA(params[0]) == nullptr);
         break;
     }
-    case BSQPrimitiveImplTag::s_map_has_ne: {
-        auto rr = BSQMapOps::s_lookup_ne(MAP_LOAD_REPR(params[0]), MAP_LOAD_TYPE_INFO_REPR(params[0]), params[1], invk->binds.find("K")->second);
+    case BSQPrimitiveImplTag::s_map_count: {
+        SLPTR_STORE_CONTENTS_AS(BSQNat, resultsl, ((BSQMapTreeRepr*)MAP_LOAD_DATA(params[0]))->tcount);
+        break;
+    }
+    case BSQPrimitiveImplTag::s_map_entries: {
+        const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.find(std::make_pair(invk->binds.find("K")->second->tid, invk->binds.find("V")->second->tid))->second;
+        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->resultType->tid)->second;
+
+        auto rr = BSQMapOps::s_entries_ne(mflavor, MAP_LOAD_DATA(params[0]), MAP_LOAD_REPR_TYPE(params[0]), lflavor);
+        MAP_STORE_RESULT_REPR(rr, resultsl);
+        break;
+    }
+    case BSQPrimitiveImplTag::s_map_min_key: {
+        auto ttype = MAP_LOAD_REPR_TYPE(params[0]);
+        auto rr = ttype->minElem(MAP_LOAD_DATA(params[0]));
+        MAP_STORE_RESULT_REPR(rr, resultsl);
+        break;
+    }
+    case BSQPrimitiveImplTag::s_map_max_key: {
+        auto ttype = MAP_LOAD_REPR_TYPE(params[0]);
+        auto rr = ttype->maxElem(MAP_LOAD_DATA(params[0]));
+        MAP_STORE_RESULT_REPR(rr, resultsl);
+        break;
+    }
+    case BSQPrimitiveImplTag::s_map_has: {
+        auto rr = BSQMapOps::s_lookup_ne(MAP_LOAD_DATA(params[0]), MAP_LOAD_REPR_TYPE(params[0]), params[1], invk->binds.find("K")->second);
         SLPTR_STORE_CONTENTS_AS(BSQBool, resultsl, (BSQBool)(rr != nullptr));
         break;
     }
-    case BSQPrimitiveImplTag::s_map_find_ne: {
-        auto ttype = MAP_LOAD_TYPE_INFO_REPR(params[0]);
-        auto rr = BSQMapOps::s_lookup_ne(MAP_LOAD_REPR(params[0]), ttype, params[1], invk->binds.find("K")->second);
+    case BSQPrimitiveImplTag::s_map_get: {
+        auto ttype = MAP_LOAD_REPR_TYPE(params[0]);
+        auto rr = BSQMapOps::s_lookup_ne(MAP_LOAD_DATA(params[0]), ttype, params[1], invk->binds.find("K")->second);
         BSQ_INTERNAL_ASSERT(rr != nullptr);
 
-        invk->binds.find("K")->second->storeValue(resultsl, ttype->getValueLocation(rr));
+        invk->binds.find("V")->second->storeValue(resultsl, ttype->getValueLocation(rr));
         break;
     }
-    case BSQPrimitiveImplTag::s_map_union_ne: {
+    case BSQPrimitiveImplTag::s_map_find: {
         const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.find(std::make_pair(invk->binds.find("K")->second->tid, invk->binds.find("V")->second->tid))->second;
 
-        uint64_t count = MAP_LOAD_COUNT(params[0]) + MAP_LOAD_COUNT(params[1]);
-        auto rr = BSQMapOps::s_union_ne(mflavor, MAP_LOAD_REPR(params[0]), MAP_LOAD_TYPE_INFO_REPR(params[0]), MAP_LOAD_REPR(params[1]), MAP_LOAD_TYPE_INFO_REPR(params[1]), count);
-        MAP_STORE_RESULT_REPR(rr, count, resultsl);
+        auto ttype = MAP_LOAD_REPR_TYPE(params[0]);
+        auto rr = BSQMapOps::s_lookup_ne(MAP_LOAD_DATA(params[0]), ttype, params[1], invk->binds.find("K")->second);
+
+        void* value = (void*)resultsl;
+        BSQBool* flag = (BSQBool*)((uint8_t*)resultsl + mflavor.valuetype->allocinfo.inlinedatasize);
+        if(rr == nullptr)
+        {
+            *flag = BSQFALSE;
+        }
+        else
+        {
+            *flag = BSQTRUE;
+            GC_MEM_COPY(value, ttype->getValueLocation(rr), mflavor.valuetype->allocinfo.inlinedatasize);
+        }
         break;
     }
-    case BSQPrimitiveImplTag::s_map_submap_ne: {
+    case BSQPrimitiveImplTag::s_map_union: {
         const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.find(std::make_pair(invk->binds.find("K")->second->tid, invk->binds.find("V")->second->tid))->second;
 
-        auto rr = BSQMapOps::s_submap_ne(mflavor, eethunk, MAP_LOAD_REPR(params[0]), MAP_LOAD_TYPE_INFO_REPR(params[0]), invk->pcodes.find("p")->second, params);
-        MAP_STORE_RESULT_REPR(rr.first, rr.second, resultsl);
+        auto rr = BSQMapOps::s_union_ne(mflavor, MAP_LOAD_DATA(params[0]), MAP_LOAD_REPR_TYPE(params[0]), MAP_LOAD_DATA(params[1]), MAP_LOAD_REPR_TYPE(params[1]));
+        MAP_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_map_remap_ne: {
+    case BSQPrimitiveImplTag::s_map_submap: {
+        const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.find(std::make_pair(invk->binds.find("K")->second->tid, invk->binds.find("V")->second->tid))->second;
+
+        auto rr = BSQMapOps::s_submap_ne(mflavor, eethunk, MAP_LOAD_DATA(params[0]), MAP_LOAD_REPR_TYPE(params[0]), invk->pcodes.find("p")->second, params);
+        MAP_STORE_RESULT_REPR(rr, resultsl);
+        break;
+    }
+    case BSQPrimitiveImplTag::s_map_remap: {
         const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.find(std::make_pair(invk->binds.find("K")->second->tid, invk->binds.find("V")->second->tid))->second;
         const BSQMapTypeFlavor& rflavor = BSQMapOps::g_flavormap.find(std::make_pair(invk->binds.find("K")->second->tid, invk->binds.find("U")->second->tid))->second;
 
-        auto rr = BSQMapOps::s_remap_ne(mflavor, eethunk, MAP_LOAD_REPR(params[0]), MAP_LOAD_TYPE_INFO_REPR(params[0]), invk->pcodes.find("f")->second, params, rflavor);
-        MAP_STORE_RESULT_REPR(rr, MAP_LOAD_COUNT(params[0]), resultsl);
+        auto rr = BSQMapOps::s_remap_ne(mflavor, eethunk, MAP_LOAD_DATA(params[0]), MAP_LOAD_REPR_TYPE(params[0]), invk->pcodes.find("f")->second, params, rflavor);
+        MAP_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_map_add_ne: {
+    case BSQPrimitiveImplTag::s_map_add: {
         const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.find(std::make_pair(invk->binds.find("K")->second->tid, invk->binds.find("V")->second->tid))->second;
 
-        auto rr = BSQMapOps::s_add_ne(mflavor, MAP_LOAD_REPR(params[0]), MAP_LOAD_TYPE_INFO_REPR(params[0]), params[1], params[2]);
-        MAP_STORE_RESULT_REPR(rr, MAP_LOAD_COUNT(params[0]) + 1, resultsl);
+        auto rr = BSQMapOps::s_add_ne(mflavor, MAP_LOAD_DATA(params[0]), MAP_LOAD_REPR_TYPE(params[0]), params[1], params[2]);
+        MAP_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_map_set_ne: {
+    case BSQPrimitiveImplTag::s_map_set: {
         const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.find(std::make_pair(invk->binds.find("K")->second->tid, invk->binds.find("V")->second->tid))->second;
 
-        auto rr = BSQMapOps::s_set_ne(mflavor, MAP_LOAD_REPR(params[0]), MAP_LOAD_TYPE_INFO_REPR(params[0]), params[1], params[2]);
-        MAP_STORE_RESULT_REPR(rr, MAP_LOAD_COUNT(params[0]), resultsl);
+        auto rr = BSQMapOps::s_set_ne(mflavor, MAP_LOAD_DATA(params[0]), MAP_LOAD_REPR_TYPE(params[0]), params[1], params[2]);
+        MAP_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_map_remove_ne: {
+    case BSQPrimitiveImplTag::s_map_remove: {
         const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.find(std::make_pair(invk->binds.find("K")->second->tid, invk->binds.find("V")->second->tid))->second;
 
-        auto rr = BSQMapOps::s_remove_ne(mflavor, MAP_LOAD_REPR(params[0]), MAP_LOAD_TYPE_INFO_REPR(params[0]), params[1]);
-        MAP_STORE_RESULT_REPR(rr, MAP_LOAD_COUNT(params[0]) - 1, resultsl);
+        auto rr = BSQMapOps::s_remove_ne(mflavor, MAP_LOAD_DATA(params[0]), MAP_LOAD_REPR_TYPE(params[0]), params[1]);
+        MAP_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
     default: {
@@ -2504,70 +2644,76 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
 
 void Evaluator::invokeGlobalCons(const BSQInvokeBodyDecl* invk, StorageLocationPtr resultsl, const BSQType* restype, Argument resarg)
 {
-    size_t cssize = invk->scalarstackBytes + invk->mixedstackBytes;
-    uint8_t* cstack = (uint8_t*)BSQ_STACK_SPACE_ALLOC(cssize);
+    size_t cssize = invk->stackBytes;
+    uint8_t* cstack = (uint8_t*)GCStack::allocFrame(cssize);
     GC_MEM_ZERO(cstack, cssize);
 
     size_t maskslotbytes = invk->maskSlots * sizeof(BSQBool);
-    BSQBool* maskslots = (BSQBool*)BSQ_STACK_SPACE_ALLOC(maskslotbytes);
+    BSQBool* maskslots = (BSQBool*)BSQ_STACK_ALLOC(maskslotbytes);
     GC_MEM_ZERO(maskslots, maskslotbytes);
 
 
     this->invokePrelude(invk, cstack, maskslots, nullptr);
     this->evaluateBody(resultsl, restype, resarg);
     this->invokePostlude();
+
+    GCStack::popFrame(cssize);
 }
 
 void Evaluator::invokeMain(const BSQInvokeBodyDecl* invk, uint8_t* istack, StorageLocationPtr resultsl, const BSQType* restype, Argument resarg)
 {
-    size_t cssize = invk->scalarstackBytes + invk->mixedstackBytes;
-    uint8_t* cstack = (uint8_t*)BSQ_STACK_SPACE_ALLOC(cssize);
+    size_t cssize = invk->stackBytes;
+    uint8_t* cstack = (uint8_t*)GCStack::allocFrame(cssize);
     GC_MEM_COPY(cstack, istack, cssize);
 
     size_t maskslotbytes = invk->maskSlots * sizeof(BSQBool);
-    BSQBool* maskslots = (BSQBool*)zxalloc(maskslotbytes);
+    BSQBool* maskslots = (BSQBool*)BSQ_STACK_ALLOC(maskslotbytes);
     GC_MEM_ZERO(maskslots, maskslotbytes);
 
     this->invokePrelude(invk, cstack, maskslots, nullptr);
     this->evaluateBody(resultsl, restype, resarg);
     this->invokePostlude();
+
+    GCStack::popFrame(cssize);
 }
 
 void Evaluator::linvoke(const BSQInvokeBodyDecl* call, const std::vector<StorageLocationPtr>& args, StorageLocationPtr resultsl)
 {
-    size_t cssize = call->scalarstackBytes + call->mixedstackBytes;
-    uint8_t* cstack = (uint8_t*)BSQ_STACK_SPACE_ALLOC(cssize);
+    size_t cssize = call->stackBytes;
+    uint8_t* cstack = (uint8_t*)GCStack::allocFrame(cssize);
     GC_MEM_ZERO(cstack, cssize);
 
     for(size_t i = 0; i < args.size(); ++i)
     {
-        StorageLocationPtr pv = Evaluator::evalParameterInfo(call->paraminfo[i], cstack, cstack + call->scalarstackBytes);
+        StorageLocationPtr pv = Evaluator::evalParameterInfo(call->paraminfo[i], cstack);
         call->params[i].ptype->storeValue(pv, args[i]);
     }
 
     size_t maskslotbytes = call->maskSlots * sizeof(BSQBool);
-    BSQBool* maskslots = (BSQBool*)BSQ_STACK_SPACE_ALLOC(maskslotbytes);
+    BSQBool* maskslots = (BSQBool*)BSQ_STACK_ALLOC(maskslotbytes);
     GC_MEM_ZERO(maskslots, maskslotbytes);
 
     this->invokePrelude(call, cstack, maskslots, nullptr);
     this->evaluateBody(resultsl, call->resultType, call->resultArg);
     this->invokePostlude();
+
+    GCStack::popFrame(cssize);
 }
 
 bool Evaluator::iinvoke(const BSQInvokeBodyDecl* call, const std::vector<StorageLocationPtr>& args, BSQBool* optmask)
 {
-    size_t cssize = call->scalarstackBytes + call->mixedstackBytes;
-    uint8_t* cstack = (uint8_t*)BSQ_STACK_SPACE_ALLOC(cssize);
+    size_t cssize = call->stackBytes;
+    uint8_t* cstack = (uint8_t*)GCStack::allocFrame(cssize);
     GC_MEM_ZERO(cstack, cssize);
 
     for(size_t i = 0; i < args.size(); ++i)
     {
-        StorageLocationPtr pv = Evaluator::evalParameterInfo(call->paraminfo[i], cstack, cstack + call->scalarstackBytes);
+        StorageLocationPtr pv = Evaluator::evalParameterInfo(call->paraminfo[i], cstack);
         call->params[i].ptype->storeValue(pv, args[i]);
     }
 
     size_t maskslotbytes = call->maskSlots * sizeof(BSQBool);
-    BSQBool* maskslots = (BSQBool*)BSQ_STACK_SPACE_ALLOC(maskslotbytes);
+    BSQBool* maskslots = (BSQBool*)BSQ_STACK_ALLOC(maskslotbytes);
     GC_MEM_ZERO(maskslots, maskslotbytes);
 
     BSQBool ok = BSQFALSE;
@@ -2575,28 +2721,31 @@ bool Evaluator::iinvoke(const BSQInvokeBodyDecl* call, const std::vector<Storage
     this->evaluateBody(&ok, call->resultType, call->resultArg);
     this->invokePostlude();
 
+    GCStack::popFrame(cssize);
     return (bool)ok;
 }
 
 void Evaluator::cinvoke(const BSQInvokeBodyDecl* call, const std::vector<StorageLocationPtr>& args, BSQBool* optmask, StorageLocationPtr resultsl)
 {
-    size_t cssize = call->scalarstackBytes + call->mixedstackBytes;
-    uint8_t* cstack = (uint8_t*)BSQ_STACK_SPACE_ALLOC(cssize);
+    size_t cssize = call->stackBytes;
+    uint8_t* cstack = (uint8_t*)GCStack::allocFrame(cssize);
     GC_MEM_ZERO(cstack, cssize);
 
     for(size_t i = 0; i < args.size(); ++i)
     {
-        StorageLocationPtr pv = Evaluator::evalParameterInfo(call->paraminfo[i], cstack, cstack + call->scalarstackBytes);
+        StorageLocationPtr pv = Evaluator::evalParameterInfo(call->paraminfo[i], cstack);
         call->params[i].ptype->storeValue(pv, args[i]);
     }
 
     size_t maskslotbytes = call->maskSlots * sizeof(BSQBool);
-    BSQBool* maskslots = (BSQBool*)BSQ_STACK_SPACE_ALLOC(maskslotbytes);
+    BSQBool* maskslots = (BSQBool*)BSQ_STACK_ALLOC(maskslotbytes);
     GC_MEM_ZERO(maskslots, maskslotbytes);
 
     this->invokePrelude(call, cstack, maskslots, optmask);
     this->evaluateBody(resultsl, call->resultType, call->resultArg);
     this->invokePostlude();
+
+    GCStack::popFrame(cssize);
 }
 
 void LambdaEvalThunk::invoke(const BSQInvokeBodyDecl* call, const std::vector<StorageLocationPtr>& args, StorageLocationPtr resultsl)
@@ -2754,6 +2903,10 @@ bool ICPPParseJSON::parseStringImpl(const APIModule* apimodule, const IType* ity
 
 bool ICPPParseJSON::parseByteBufferImpl(const APIModule* apimodule, const IType* itype, uint8_t compress, uint8_t format, std::vector<uint8_t>& data, StorageLocationPtr value, Evaluator& ctx)
 {
+    assert(false);
+    return false;
+
+    /*
     Allocator::GlobalAllocator.ensureSpace(BSQWellKnownType::g_typeByteBufferLeaf->allocinfo.heapsize + BSQWellKnownType::g_typeByteBufferNode->allocinfo.heapsize + (2 * sizeof(GC_META_DATA_WORD)));
     BSQByteBufferNode* cnode = (BSQByteBufferNode*)Allocator::GlobalAllocator.allocateSafe(BSQWellKnownType::g_typeByteBufferNode);
     cnode->bytecount = std::min((uint64_t)data.size(), (uint64_t)256);
@@ -2801,20 +2954,55 @@ bool ICPPParseJSON::parseByteBufferImpl(const APIModule* apimodule, const IType*
 
     GCStack::popFrame();
     return true;
+    */
 }
 
-bool ICPPParseJSON::parseDateTimeImpl(const APIModule* apimodule, const IType* itype, DateTime t, StorageLocationPtr value, Evaluator& ctx)
+bool ICPPParseJSON::parseDateTimeImpl(const APIModule* apimodule, const IType* itype, APIDateTime t, StorageLocationPtr value, Evaluator& ctx)
 {
-    Allocator::GlobalAllocator.ensureSpace(BSQWellKnownType::g_typeDateTime);
-    BSQDateTime* dt = (BSQDateTime*)Allocator::GlobalAllocator.allocateSafe(BSQWellKnownType::g_typeDateTime);
-    dt->year = t.year;
-    dt->month = t.month;
-    dt->day = t.day;
-    dt->hour = t.hour;
-    dt->month = t.min;
-    dt->tzdata = t.tzdata;
+    BSQDateTime dt = {0};
+    dt.year = t.year;
+    dt.month = t.month;
+    dt.day = t.day;
+    dt.hour = t.hour;
+    dt.min = t.min;
+    dt.tzdata = t.tzdata;
 
-    SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(value, dt);
+    SLPTR_STORE_CONTENTS_AS(BSQDateTime, value, dt);
+    return true;
+}
+
+bool ICPPParseJSON::parseUTCDateTimeImpl(const APIModule* apimodule, const IType* itype, APIUTCDateTime t, StorageLocationPtr value, Evaluator& ctx)
+{
+    BSQUTCDateTime dt = {0};
+    dt.year = t.year;
+    dt.month = t.month;
+    dt.day = t.day;
+    dt.hour = t.hour;
+    dt.min = t.min;
+
+    SLPTR_STORE_CONTENTS_AS(BSQUTCDateTime, value, dt);
+    return true;
+}
+
+bool ICPPParseJSON::parseCalendarDateImpl(const APIModule* apimodule, const IType* itype, APICalendarDate t, StorageLocationPtr value, Evaluator& ctx)
+{
+    BSQCalendarDate dt = {0};
+    dt.year = t.year;
+    dt.month = t.month;
+    dt.day = t.day;
+
+    SLPTR_STORE_CONTENTS_AS(BSQCalendarDate, value, dt);
+    return true;
+}
+
+bool ICPPParseJSON::parseRelativeTimeImpl(const APIModule* apimodule, const IType* itype, APIRelativeTime t, StorageLocationPtr value, Evaluator& ctx)
+{
+    BSQRelativeTime dt = {0};
+   
+    dt.hour = t.hour;
+    dt.min = t.min;
+
+    SLPTR_STORE_CONTENTS_AS(BSQRelativeTime, value, dt);
     return true;
 }
 
@@ -2830,7 +3018,22 @@ bool ICPPParseJSON::parseLogicalTimeImpl(const APIModule* apimodule, const IType
     return true;
 }
 
-bool ICPPParseJSON::parseUUIDImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, StorageLocationPtr value, Evaluator& ctx)
+bool ICPPParseJSON::parseISOTimeStampImpl(const APIModule* apimodule, const IType* itype, APIISOTimeStamp t, StorageLocationPtr value, Evaluator& ctx)
+{
+    BSQISOTimeStamp dt = {0};
+    dt.year = t.year;
+    dt.month = t.month;
+    dt.day = t.day;
+    dt.hour = t.hour;
+    dt.min = t.min;
+    dt.seconds = t.sec;
+    dt.millis = t.millis;
+
+    SLPTR_STORE_CONTENTS_AS(BSQISOTimeStamp, value, dt);
+    return true;
+}
+
+bool ICPPParseJSON::parseUUID4Impl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, StorageLocationPtr value, Evaluator& ctx)
 {
     BSQUUID uuid;
     std::copy(v.cbegin(), v.cbegin() + 16, uuid.bytes);
@@ -2839,36 +3042,50 @@ bool ICPPParseJSON::parseUUIDImpl(const APIModule* apimodule, const IType* itype
     return true;
 }
 
-bool ICPPParseJSON::parseContentHashImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, StorageLocationPtr value, Evaluator& ctx)
+bool ICPPParseJSON::parseUUID7Impl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, StorageLocationPtr value, Evaluator& ctx)
 {
-    Allocator::GlobalAllocator.ensureSpace(BSQWellKnownType::g_typeContentHash);
-    BSQContentHash* hash = (BSQContentHash*)Allocator::GlobalAllocator.allocateSafe(BSQWellKnownType::g_typeContentHash);
+    BSQUUID uuid;
+    std::copy(v.cbegin(), v.cbegin() + 16, uuid.bytes);
+    
+    SLPTR_STORE_CONTENTS_AS(BSQUUID, value, uuid);
+    return true;
+}
 
+bool ICPPParseJSON::parseSHAContentHashImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, StorageLocationPtr value, Evaluator& ctx)
+{
+    BSQSHAContentHash* hash = (BSQSHAContentHash*)Allocator::GlobalAllocator.allocateDynamic(BSQWellKnownType::g_typeSHAContentHash);
     std::copy(v.cbegin(), v.cbegin() + 64, hash->bytes);
     
     SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(value, hash);
     return true;
 }
-    
+
+bool ICPPParseJSON::parseLatLongCoordinateImpl(const APIModule* apimodule, const IType* itype, float latitude, float longitude, StorageLocationPtr value, Evaluator& ctx)
+{
+    BSQLatLongCoordinate llc = {0};
+    llc.latitude = latitude;
+    llc.longitude = longitude;
+
+    SLPTR_STORE_CONTENTS_AS(BSQLatLongCoordinate, value, llc);
+    return true;
+}
+
 void ICPPParseJSON::prepareParseTuple(const APIModule* apimodule, const IType* itype, Evaluator& ctx)
 {
     BSQTypeID tupid = MarshalEnvironment::g_typenameToIdMap.find(itype->name)->second;
     const BSQType* tuptype = BSQType::g_typetable[tupid];
 
     void* tupmem = nullptr;
-    RefMask tupmask = nullptr;
     if(tuptype->tkind == BSQTypeLayoutKind::Struct)
     {
-        tupmem = zxalloc(tuptype->allocinfo.heapsize);
-        tupmask = tuptype->allocinfo.heapmask;
+        tupmem = GCStack::allocFrame(tuptype->allocinfo.inlinedatasize);
     }
     else
     {
-        tupmem = zxalloc(tuptype->allocinfo.inlinedatasize);
-        tupmask = tuptype->allocinfo.inlinedmask;
+        tupmem = GCStack::allocFrame(tuptype->allocinfo.heapsize);
     }
     
-    GCStack::pushFrame((void**)tupmem, tupmask);
+    
     this->tuplestack.push_back(std::make_pair(tupmem, tuptype));
 }
 
@@ -2901,9 +3118,8 @@ void ICPPParseJSON::completeParseTuple(const APIModule* apimodule, const IType* 
     }
 
     GC_MEM_COPY(trgt, tupmem, bytes);
-    xfree(tupmem);
 
-    GCStack::popFrame();
+    GCStack::popFrame(bytes);
     this->tuplestack.pop_back();
 }
 
@@ -2913,19 +3129,15 @@ void ICPPParseJSON::prepareParseRecord(const APIModule* apimodule, const IType* 
     const BSQType* rectype = BSQType::g_typetable[recid];
 
     void* recmem = nullptr;
-    RefMask recmask = nullptr;
     if(rectype->tkind == BSQTypeLayoutKind::Struct)
     {
-        recmem = zxalloc(rectype->allocinfo.heapsize);
-        recmask = rectype->allocinfo.heapmask;
+        recmem = GCStack::allocFrame(rectype->allocinfo.inlinedatasize);
     }
     else
     {
-        recmem = zxalloc(rectype->allocinfo.inlinedatasize);
-        recmask = rectype->allocinfo.inlinedmask;
+        recmem = GCStack::allocFrame(rectype->allocinfo.heapsize);
     }
     
-    GCStack::pushFrame((void**)recmem, recmask);
     this->recordstack.push_back(std::make_pair(recmem, rectype));
 }
 
@@ -2959,33 +3171,62 @@ void ICPPParseJSON::completeParseRecord(const APIModule* apimodule, const IType*
     }
 
     GC_MEM_COPY(trgt, recmem, bytes);
-    xfree(recmem);
 
-    GCStack::popFrame();
+    GCStack::popFrame(bytes);
     this->tuplestack.pop_back();
 }
 
 void ICPPParseJSON::prepareParseContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t count, Evaluator& ctx)
 {
-    auto ctype = dynamic_cast<const ContainerType*>(itype);
-    BSQTypeID containertypeid = MarshalEnvironment::g_typenameToIdMap.find(ctype->name)->second;
+    BSQTypeID containertypeid = MarshalEnvironment::g_typenameToIdMap.find(itype->name)->second;
     const BSQType* collectiontype = BSQType::g_typetable[containertypeid];
 
-    this->containerstack.push_back(std::make_pair(collectiontype, (uint64_t)count));
-    Allocator::GlobalAllocator.pushTempRootScope();
+    //TODO: right now we just assume we can stack alloc this space -- later we want to add special heap allocated frame support (like for global the object)
+    uint8_t* recmem = nullptr;
+
+    if(itype->tag == TypeTag::ContainerTTag)
+    {
+        auto ctype = dynamic_cast<const ContainerTType*>(itype);
+
+        if(ctype->category == ContainerCategory::List)
+        {
+            auto ttype = BSQType::g_typetable[dynamic_cast<const BSQListType*>(collectiontype)->etype];
+            recmem = GCStack::allocFrame(count * ttype->allocinfo.inlinedatasize);
+        }
+        else if(ctype->category == ContainerCategory::Stack)
+        {
+            BSQ_INTERNAL_ASSERT(false);
+        }
+        else if(ctype->category == ContainerCategory::Queue)
+        {
+            BSQ_INTERNAL_ASSERT(false);
+        }
+        else
+        {
+            BSQ_INTERNAL_ASSERT(false);
+        }
+    }
+    else
+    {
+        auto ktype = BSQType::g_typetable[dynamic_cast<const BSQMapType*>(collectiontype)->ktype];
+        auto vtype = BSQType::g_typetable[dynamic_cast<const BSQMapType*>(collectiontype)->vtype];
+
+        recmem = GCStack::allocFrame(count * (ktype->allocinfo.inlinedatasize + vtype->allocinfo.inlinedatasize));
+    }
+
+    this->containerstack.push_back(std::make_pair(collectiontype, std::make_pair(recmem, (uint64_t)count)));
 }
 
-StorageLocationPtr ICPPParseJSON::getValueForContainerElementParse(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t i, Evaluator& ctx)
+StorageLocationPtr ICPPParseJSON::getValueForContainerElementParse_T(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t i, Evaluator& ctx)
 {
-    const ContainerType* ctype = dynamic_cast<const ContainerType*>(itype);
+    const ContainerTType* ctype = dynamic_cast<const ContainerTType*>(itype);
     
     if(ctype->category == ContainerCategory::List)
     {
         const BSQListType* listtype = dynamic_cast<const BSQListType*>(this->containerstack.back().first);
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(listtype->etype)->second;
 
-        auto rr = Allocator::GlobalAllocator.registerTempRoot(lflavor.entrytype);
-        return rr->root;
+        return (StorageLocationPtr)(this->containerstack.back().second.first + (i * lflavor.entrytype->allocinfo.inlinedatasize));
     }
     else if(ctype->category == ContainerCategory::Stack)
     {
@@ -2997,91 +3238,102 @@ StorageLocationPtr ICPPParseJSON::getValueForContainerElementParse(const APIModu
         BSQ_INTERNAL_ASSERT(false);
         return nullptr;
     }
-    else if(ctype->category == ContainerCategory::Set)
+    else
     {
         BSQ_INTERNAL_ASSERT(false);
         return nullptr;
     }
-    else
-    {
-        const BSQMapType* maptype = dynamic_cast<const BSQMapType*>(this->containerstack.back().first);
-        const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.find(std::make_pair(maptype->ktype, maptype->vtype))->second;
+}
 
-        //We are very creative here and use the fact that the kv layout in the tree is identical to the kv layout in the tuple!
-        auto rr = Allocator::GlobalAllocator.registerTempRoot(mflavor.treetype);
-        return (void*)((uint8_t*)rr->root + mflavor.treetype->keyoffset);
-    }
+std::pair<StorageLocationPtr, StorageLocationPtr> ICPPParseJSON::getValueForContainerElementParse_KV(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t i, Evaluator& ctx)
+{
+    const BSQMapType* maptype = dynamic_cast<const BSQMapType*>(this->containerstack.back().first);
+    const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.find(std::make_pair(maptype->ktype, maptype->vtype))->second;
+
+    size_t ecount = (i * (mflavor.keytype->allocinfo.inlinedatasize + mflavor.valuetype->allocinfo.inlinedatasize));
+    auto kloc = (StorageLocationPtr)(this->containerstack.back().second.first + ecount);
+    auto vloc = (StorageLocationPtr)(this->containerstack.back().second.first + ecount + mflavor.keytype->allocinfo.inlinedatasize);
+    
+    return std::make_pair(kloc, vloc);
 }
 
 void ICPPParseJSON::completeParseContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
 {
-    const ContainerType* ctype = dynamic_cast<const ContainerType*>(itype);
-
-    if(ctype->category == ContainerCategory::List)
+    if(itype->tag == TypeTag::ContainerTTag)
     {
-        const BSQListType* listtype = dynamic_cast<const BSQListType*>(this->containerstack.back().first);
-        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(listtype->etype)->second;
+        const ContainerTType* ctype = dynamic_cast<const ContainerTType*>(itype);
 
-        if(this->containerstack.back().second == 0)
+        if(ctype->category == ContainerCategory::List)
         {
-            LIST_STORE_RESULT_EMPTY(value);
-        }
-        else
-        {
-            auto lstart = Allocator::GlobalAllocator.getTempRootCurrScope().begin();
-            void* rres = BSQListOps::s_temp_root_to_list_rec(lflavor, lstart, this->containerstack.back().second);
+            const BSQListType* listtype = dynamic_cast<const BSQListType*>(this->containerstack.back().first);
+            const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(listtype->etype)->second;
 
-            LIST_STORE_RESULT_REPR(rres, value);
+            if(this->containerstack.back().second.second == 0)
+            {
+                LIST_STORE_RESULT_EMPTY(value);
+            }
+            else
+            {
+                std::vector<StorageLocationPtr> params;
+                for(size_t i = 0; i < this->containerstack.back().second.second; ++i)
+                {
+                    params.push_back(this->containerstack.back().second.first + (i * lflavor.entrytype->allocinfo.inlinedatasize));
+                }
+
+                void* rres = nullptr;
+                if(params.size() <= 8)
+                {
+                    rres = BSQListOps::list_consk(lflavor, params);
+                }
+                else
+                {
+                    assert(false);
+                    rres = nullptr;
+                }
+
+                LIST_STORE_RESULT_REPR(&rres, value);
+            }
+
+            GCStack::allocFrame(this->containerstack.back().second.second * lflavor.entrytype->allocinfo.inlinedatasize);
         }
-    }
-    else if(ctype->category == ContainerCategory::Stack)
-    {
-        BSQ_INTERNAL_ASSERT(false);
-    }
-    else if(ctype->category == ContainerCategory::Queue)
-    {
-        BSQ_INTERNAL_ASSERT(false);
-    }
-    else if(ctype->category == ContainerCategory::Set)
-    {
-        BSQ_INTERNAL_ASSERT(false);
+        else if(ctype->category == ContainerCategory::Stack)
+        {
+            BSQ_INTERNAL_ASSERT(false);
+        }
+        else if(ctype->category == ContainerCategory::Queue)
+        {
+            BSQ_INTERNAL_ASSERT(false);
+        }
+        else if(ctype->category == ContainerCategory::Set)
+        {
+            BSQ_INTERNAL_ASSERT(false);
+        }
     }
     else
     {
         const BSQMapType* maptype = dynamic_cast<const BSQMapType*>(this->containerstack.back().first);
         const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.find(std::make_pair(maptype->ktype, maptype->vtype))->second;
 
-        if(this->containerstack.back().second == 0)
+        if(this->containerstack.back().second.second == 0)
         {
             MAP_STORE_RESULT_EMPTY(value);
         }
+        else if(this->containerstack.back().second.second == 1)
+        {
+            BSQMapTreeRepr* mtr = (BSQMapTreeRepr*)Allocator::GlobalAllocator.allocateDynamic(mflavor.treetype);
+            mflavor.treetype->initializeLeaf(mtr, mflavor.treetype->getKeyLocation(mtr), mflavor.keytype, mflavor.treetype->getValueLocation(mtr), mflavor.valuetype);
+
+            MAP_STORE_RESULT_REPR(mtr, value);
+        }
         else
         {
-            std::list<BSQTempRootNode>& roots = Allocator::GlobalAllocator.getTempRootCurrScope();
-            std::vector<BSQTempRootNode> opv(roots.cbegin(), roots.cend());
-
-            std::stable_sort(opv.begin(), opv.end(), [&](const BSQTempRootNode& ln, const BSQTempRootNode& rn) {
-                return mflavor.keytype->fpkeycmp(mflavor.keytype, mflavor.treetype->getKeyLocation(ln.root), mflavor.treetype->getKeyLocation(rn.root)) < 0;
-            });
-
-            //check for dups in the input
-            auto fl = std::adjacent_find(opv.begin(), opv.end(), [&](const BSQTempRootNode& ln, const BSQTempRootNode& rn) {
-                return mflavor.keytype->fpkeycmp(mflavor.keytype, mflavor.treetype->getKeyLocation(ln.root), mflavor.treetype->getKeyLocation(rn.root)) == 0;
-            });
-
-            std::string fname("[JSON_PARSE]");
-            BSQ_LANGUAGE_ASSERT(fl != opv.end(), (&fname), -1, "Duplicate keys in map");
-
-            std::list<BSQTempRootNode> ltomap(opv.begin(), opv.end());
-            auto lstart = ltomap.begin();
-            void* rres = BSQMapOps::s_temp_root_to_map_rec(mflavor, lstart, this->containerstack.back().second);
-
-            MAP_STORE_RESULT_REPR(rres, this->containerstack.back().second, value);
+            assert(false);
         }
+
+        GCStack::allocFrame(this->containerstack.back().second.second * (mflavor.keytype->allocinfo.inlinedatasize + mflavor.keytype->allocinfo.inlinedatasize));
     }
     
     this->containerstack.pop_back();
-    Allocator::GlobalAllocator.popTempRootScope();
 }
 
 void ICPPParseJSON::prepareParseEntity(const APIModule* apimodule, const IType* itype, Evaluator& ctx)
@@ -3090,19 +3342,15 @@ void ICPPParseJSON::prepareParseEntity(const APIModule* apimodule, const IType* 
     const BSQType* ootype = BSQType::g_typetable[ooid];
 
     void* oomem = nullptr;
-    RefMask oomask = nullptr;
     if(ootype->tkind == BSQTypeLayoutKind::Struct)
     {
-        oomem = zxalloc(ootype->allocinfo.heapsize);
-        oomask = ootype->allocinfo.heapmask;
+        oomem = GCStack::allocFrame(ootype->allocinfo.inlinedatasize);
     }
     else
     {
-        oomem = zxalloc(ootype->allocinfo.inlinedatasize);
-        oomask = ootype->allocinfo.inlinedmask;
+        oomem = GCStack::allocFrame(ootype->allocinfo.heapsize);
     }
     
-    GCStack::pushFrame((void**)oomem, oomask);
     this->entitystack.push_back(std::make_pair(oomem, ootype));
 }
 
@@ -3154,6 +3402,16 @@ void ICPPParseJSON::completeParseEntity(const APIModule* apimodule, const IType*
         BSQ_LANGUAGE_ASSERT(checkok, (&pfile), -1, "Input Data Validation Failed");
     }
 
+    uint64_t bytes = 0;
+    if(ootype->tkind == BSQTypeLayoutKind::Struct)
+    {
+        bytes = ootype->allocinfo.inlinedatasize;
+    }
+    else
+    {
+        bytes = ootype->allocinfo.heapsize;
+    }
+
     if(etype->consfunc.has_value())
     {
         auto consid = MarshalEnvironment::g_invokeToIdMap.find(etype->consfunc.value())->second;
@@ -3182,10 +3440,8 @@ void ICPPParseJSON::completeParseEntity(const APIModule* apimodule, const IType*
         GC_MEM_COPY(trgt, oomem, bytes);
     }
 
-    xfree(oomem);
     xfree(mask);
-
-    GCStack::popFrame();
+    GCStack::popFrame(bytes);
     this->tuplestack.pop_back();
 }
 
@@ -3298,20 +3554,58 @@ std::optional<std::pair<std::vector<uint8_t>, std::pair<uint8_t, uint8_t>>> ICPP
     return std::make_optional(std::make_pair(bytes, pprops));
 }
 
-std::optional<DateTime> ICPPParseJSON::extractDateTimeImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
+std::optional<APIDateTime> ICPPParseJSON::extractDateTimeImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
 {
-    BSQDateTime* t = (BSQDateTime*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(value);
+    BSQDateTime t = SLPTR_LOAD_CONTENTS_AS(BSQDateTime, value);
 
-    DateTime dt;
-    dt.year = t->year;
-    dt.month = t->month;
-    dt.day = t->day;
-    dt.hour = t->hour;
-    dt.min = t->min;
-    dt.tzdata = t->tzdata;
+    APIDateTime dt;
+    dt.year = t.year;
+    dt.month = t.month;
+    dt.day = t.day;
+    dt.hour = t.hour;
+    dt.min = t.min;
+    dt.tzdata = t.tzdata;
 
     return std::make_optional(dt);
 }
+
+std::optional<APIUTCDateTime> ICPPParseJSON::extractUTCDateTimeImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
+{
+    BSQUTCDateTime t = SLPTR_LOAD_CONTENTS_AS(BSQUTCDateTime, value);
+
+    APIUTCDateTime dt;
+    dt.year = t.year;
+    dt.month = t.month;
+    dt.day = t.day;
+    dt.hour = t.hour;
+    dt.min = t.min;
+
+    return std::make_optional(dt);
+}
+
+std::optional<APICalendarDate> ICPPParseJSON::extractCalendarDateImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
+{
+    BSQCalendarDate t = SLPTR_LOAD_CONTENTS_AS(BSQCalendarDate, value);
+
+    APICalendarDate dt;
+    dt.year = t.year;
+    dt.month = t.month;
+    dt.day = t.day;
+
+    return std::make_optional(dt);
+}
+
+std::optional<APIRelativeTime> ICPPParseJSON::extractRelativeTimeImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
+{
+    BSQRelativeTime t = SLPTR_LOAD_CONTENTS_AS(BSQRelativeTime, value);
+
+    APIRelativeTime dt;
+    dt.hour = t.hour;
+    dt.min = t.min;
+
+    return std::make_optional(dt);
+}
+    
 
 std::optional<uint64_t> ICPPParseJSON::extractTickTimeImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
 {
@@ -3323,7 +3617,23 @@ std::optional<uint64_t> ICPPParseJSON::extractLogicalTimeImpl(const APIModule* a
     return std::make_optional((uint64_t)SLPTR_LOAD_CONTENTS_AS(BSQLogicalTime, value));
 }
 
-std::optional<std::vector<uint8_t>> ICPPParseJSON::extractUUIDImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
+std::optional<APIISOTimeStamp> ICPPParseJSON::extractISOTimeStampImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
+{
+    BSQISOTimeStamp t = SLPTR_LOAD_CONTENTS_AS(BSQISOTimeStamp, value);
+
+    APIISOTimeStamp dt;
+    dt.year = t.year;
+    dt.month = t.month;
+    dt.day = t.day;
+    dt.hour = t.hour;
+    dt.min = t.min;
+    dt.sec = t.seconds;
+    dt.millis = t.millis;
+
+    return std::make_optional(dt);
+}
+
+std::optional<std::vector<uint8_t>> ICPPParseJSON::extractUUID4Impl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
 {
     auto uuid = SLPTR_LOAD_CONTENTS_AS(BSQUUID, value);
 
@@ -3333,14 +3643,31 @@ std::optional<std::vector<uint8_t>> ICPPParseJSON::extractUUIDImpl(const APIModu
     return std::make_optional(vv);
 }
 
-std::optional<std::vector<uint8_t>> ICPPParseJSON::extractContentHashImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
+std::optional<std::vector<uint8_t>> ICPPParseJSON::extractUUID7Impl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
 {
-    auto hash = (BSQContentHash*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(value);
+    auto uuid = SLPTR_LOAD_CONTENTS_AS(BSQUUID, value);
+
+    std::vector<uint8_t> vv;
+    std::copy(uuid.bytes, uuid.bytes + 16, std::back_inserter(vv));
+
+    return std::make_optional(vv);
+}
+
+std::optional<std::vector<uint8_t>> ICPPParseJSON::extractSHAContentHashImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
+{
+    auto hash = (BSQSHAContentHash*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(value);
 
     std::vector<uint8_t> vv;
     std::copy(hash->bytes, hash->bytes + 64, std::back_inserter(vv));
 
     return std::make_optional(vv);
+}
+
+std::optional<std::pair<float, float>> ICPPParseJSON::extractLatLongCoordinateImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
+{
+    auto llcoord = SLPTR_LOAD_CONTENTS_AS(BSQLatLongCoordinate, value);
+
+    return std::make_optional(std::make_pair(llcoord.latitude, llcoord.longitude));
 }
 
 StorageLocationPtr ICPPParseJSON::extractValueForTupleIndex(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t i, Evaluator& ctx)
@@ -3379,42 +3706,45 @@ StorageLocationPtr ICPPParseJSON::extractValueForEntityField(const APIModule* ap
 
 void ICPPParseJSON::prepareExtractContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
 {
-    auto ctype = dynamic_cast<const ContainerType*>(itype);
-    BSQTypeID containertypeid = MarshalEnvironment::g_typenameToIdMap.find(ctype->name)->second;
+    BSQTypeID containertypeid = MarshalEnvironment::g_typenameToIdMap.find(itype->name)->second;
     const BSQType* collectiontype = BSQType::g_typetable[containertypeid];
 
     this->parsecontainerstack.push_back({});
 
-    if(ctype->category == ContainerCategory::List)
+    if(itype->tag == TypeTag::ContainerTTag)
     {
-        if(LIST_LOAD_TYPE_INFO(value)->tid != BSQ_TYPE_ID_NONE)
+        auto ctype = dynamic_cast<const ContainerTType*>(itype);
+        if(ctype->category == ContainerCategory::List)
         {
-            const BSQListType* listtype = dynamic_cast<const BSQListType*>(collectiontype);
-            const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(listtype->etype)->second;
+            if(LIST_LOAD_DATA(value) != nullptr)
+            {
+                const BSQListType* listtype = dynamic_cast<const BSQListType*>(collectiontype);
+                const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(listtype->etype)->second;
 
-            BSQListOps::s_enumerate_for_extract(lflavor, LIST_LOAD_DATA(value), this->parsecontainerstack.back());
+                BSQListOps::s_enumerate_for_extract(lflavor, LIST_LOAD_DATA(value), this->parsecontainerstack.back());
+            }
         }
-    }
-    else if(ctype->category == ContainerCategory::Stack)
-    {
-        BSQ_INTERNAL_ASSERT(false);
-    }
-    else if(ctype->category == ContainerCategory::Queue)
-    {
-        BSQ_INTERNAL_ASSERT(false);
-    }
-    else if(ctype->category == ContainerCategory::Set)
-    {
-        BSQ_INTERNAL_ASSERT(false);
+        else if(ctype->category == ContainerCategory::Stack)
+        {
+            BSQ_INTERNAL_ASSERT(false);
+        }
+        else if(ctype->category == ContainerCategory::Queue)
+        {
+            BSQ_INTERNAL_ASSERT(false);
+        }
+        else
+        {
+            BSQ_INTERNAL_ASSERT(false);
+        }
     }
     else
     {
-        if(MAP_LOAD_TYPE_INFO(value)->tid != BSQ_TYPE_ID_NONE)
+        if(MAP_LOAD_DATA(value) != nullptr)
         {
             const BSQMapType* maptype = dynamic_cast<const BSQMapType*>(this->containerstack.back().first);
             const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.find(std::make_pair(maptype->ktype, maptype->vtype))->second;
 
-            BSQMapOps::s_enumerate_for_extract(mflavor, MAP_LOAD_REPR(value), this->parsecontainerstack.back());
+            BSQMapOps::s_enumerate_for_extract(mflavor, MAP_LOAD_DATA(value), this->parsecontainerstack.back());
         }
     }
 
@@ -3423,47 +3753,69 @@ void ICPPParseJSON::prepareExtractContainer(const APIModule* apimodule, const IT
 
 std::optional<size_t> ICPPParseJSON::extractLengthForContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
 {
-    const ContainerType* ctype = dynamic_cast<const ContainerType*>(itype);
-
-    if(ctype->category == ContainerCategory::List)
+    if(itype->tag == TypeTag::ContainerTTag)
     {
-        auto ttype = LIST_LOAD_TYPE_INFO(value);
-        if(ttype->tid == BSQ_TYPE_ID_NONE)
+        const ContainerTType* ctype = dynamic_cast<const ContainerTType*>(itype);
+
+        if(ctype->category == ContainerCategory::List)
         {
-            return 0;
+            if(LIST_LOAD_DATA(value) == nullptr)
+            {
+                return std::make_optional(0);
+            }
+            else
+            {
+                auto ttype = LIST_LOAD_REPR_TYPE(value);
+                return std::make_optional((size_t) ttype->getCount(LIST_LOAD_DATA(value)));
+            }
+        }
+        else if(ctype->category == ContainerCategory::Stack)
+        {
+            BSQ_INTERNAL_ASSERT(false);
+            return std::nullopt;
+        }
+        else if(ctype->category == ContainerCategory::Queue)
+        {
+            BSQ_INTERNAL_ASSERT(false);
+            return std::nullopt;
         }
         else
         {
-            return std::make_optional((size_t) dynamic_cast<const BSQListReprType*>(ttype)->getCount(LIST_LOAD_DATA(value)));
+            BSQ_INTERNAL_ASSERT(false);
+            return std::nullopt;
         }
-    }
-    else if(ctype->category == ContainerCategory::Stack)
-    {
-        BSQ_INTERNAL_ASSERT(false);
-        return std::nullopt;
-    }
-    else if(ctype->category == ContainerCategory::Queue)
-    {
-        BSQ_INTERNAL_ASSERT(false);
-        return std::nullopt;
-    }
-    else if(ctype->category == ContainerCategory::Set)
-    {
-        BSQ_INTERNAL_ASSERT(false);
-        return std::nullopt;
     }
     else
     {
-        return std::make_optional((size_t) MAP_LOAD_COUNT(value));
+        if(MAP_LOAD_DATA(value) == nullptr)
+        {
+            return std::make_optional(0);
+        }
+        else
+        {
+            auto ttype = MAP_LOAD_REPR_TYPE(value);
+            return std::make_optional((size_t) ((BSQMapTreeRepr*)(MAP_LOAD_DATA(value)))->tcount);
+        }
     }
 }
 
-StorageLocationPtr ICPPParseJSON::extractValueForContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t i, Evaluator& ctx)
+StorageLocationPtr ICPPParseJSON::extractValueForContainer_T(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t i, Evaluator& ctx)
 {
     auto loc = *(this->parsecontainerstackiter.back());
     this->parsecontainerstackiter.back()++;
 
     return loc;
+}
+
+std::pair<StorageLocationPtr, StorageLocationPtr> ICPPParseJSON::extractValueForContainer_KV(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t i, Evaluator& ctx)
+{
+    auto kloc = *(this->parsecontainerstackiter.back());
+    this->parsecontainerstackiter.back()++;
+
+    auto vloc = *(this->parsecontainerstackiter.back());
+    this->parsecontainerstackiter.back()++;
+    
+    return std::make_pair(kloc, vloc);
 }
 
 void ICPPParseJSON::completeExtractContainer(const APIModule* apimodule, const IType* itype, Evaluator& ctx)

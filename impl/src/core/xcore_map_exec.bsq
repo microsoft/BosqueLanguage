@@ -8,113 +8,26 @@ namespace Core;
 
 #if EXEC_LIBS
 internal entity MapOps provides Some {
-    function s_size_ne<K grounded KeyType, V>(m: MapRepr<K, V>): Nat = s_map_size_ne;
+    internal function s_map_empty<K grounded KeyType, V>(m: Map<K, V>): Nat = s_map_empty;
+    internal function s_map_count<K grounded KeyType, V>(m: Map<K, V>): Nat = s_map_count;
 
-    function s_has_ne<K grounded KeyType, V>(m: MapRepr<K, V>, k: K): Bool = s_map_has_ne;
-    function s_find_ne<K grounded KeyType, V>(m: MapRepr<K, V>, k: K): V = s_map_find_ne;
+    internal function s_map_entries<K grounded KeyType, V>(m: Map<K, V>): List<[K, V]> = s_map_entries;
 
-    function s_union_ne<K grounded KeyType, V>(m1: MapRepr<K, V>, m2: MapRepr<K, V>): MapRepr<K, V> = s_map_union_ne;
+    internal function s_map_min_key<K grounded KeyType, V>(m: Map<K, V>): K = s_map_min_key;
+    internal function s_map_max_key<K grounded KeyType, V>(m: Map<K, V>): K = s_map_max_key;
 
-    recursive? function s_submap_ne<K grounded KeyType, V>(m: MapRepr<K, V>, p: recursive? pred(k: K, v: V) -> Bool): MapRepr<K, V> = s_map_submap_ne;
-    recursive? function s_remap_ne<K grounded KeyType, V, U>(m: MapRepr<K, V>, f: recursive? fn(k: K, v: V) -> U): MapRepr<K, U> = s_map_remap_ne;
+    internal function s_map_has<K grounded KeyType, V>(m: Map<K, V>, k: K): Bool = s_map_has;
+    internal function s_map_get<K grounded KeyType, V>(m: Map<K, V>, k: K): V = s_map_get; 
+    internal function s_map_find<K grounded KeyType, V>(m: Map<K, V>, k: K): (|V, Bool|) = s_map_find; 
 
-    function s_add_ne<K grounded KeyType, V>(m: MapRepr<K, V>, k: K, v: V): MapRepr<K, V> = s_map_add_ne;
-    function s_set_ne<K grounded KeyType, V>(m: MapRepr<K, V>, k: K, v: V): MapRepr<K, V> = s_map_set_ne;
-    function s_remove_ne<K grounded KeyType, V>(m: MapRepr<K, V>, k: K): MapRepr<K, V> = s_map_remove_ne;
+    internal function s_map_union<K grounded KeyType, V>(m1: Map<K, V>, m2: Map<K, V>): Map<K, V> = s_map_union;
 
-    function s_empty<K grounded KeyType, V>(m: MapRepr<T>): Bool {
-        return m === none;
-    }
+    internal recursive? function s_map_submap<K grounded KeyType, V>(m: Map<K, V>, p: recursive? pred(k: K, v: V) -> Bool): Map<K, V> = s_map_submap;
+    internal recursive? function s_map_remap<K grounded KeyType, V, U>(m: Map<K, V>, f: recursive? fn(k: K, v: V) -> U): Map<K, U> = s_map_remap;
 
-    function s_size<K grounded KeyType, V>(m: MapRepr<T>): Nat {
-        if(m === none) {
-            return 0n;
-        }
-        else {
-            return MapOps::s_size_ne<K, V>(m);
-        }
-    }
-
-    function s_has<K grounded KeyType, V>(m: MapRepr<K, V>, k: K): Bool {
-        if(m === none) {
-            return false;
-        }
-        else {
-            return MapOps::s_has_ne<K, V>(m, k);
-        }
-    }
-
-    function s_find<K grounded KeyType, V>(m: MapRepr<K, V>, k: K): [K, V]? {
-        if(m === none) {
-            return none;
-        }
-        else {
-            if(!MapOps::s_has_ne<K, V>(m, k))
-            {
-                return none;
-            }
-            else
-            {
-                return [k, MapOps::s_find_ne<K, V>(m, k)];
-            }
-        }
-    }
-
-    function s_union<K grounded KeyType, V>(m1: MapRepr<K, V>, m2: MapRepr<K, V>): MapRepr<K, V> {
-        if(/\(m1 === none, m2 === none)) {
-            return none;
-        }
-        elif(m1 === none) {
-            return m2;
-        }
-        elif(m2 === none) {
-            return m1;
-        }
-        else {
-            return MapOps::s_union_ne<K, V>(m1, m2);
-        }
-    }
-
-    recursive? function s_submap<K grounded KeyType, V>(m: MapRepr<K, V>, p: recursive? pred(k: K, v: V) -> Bool): MapRepr<K, V> {
-        if(m === none) {
-            return none;
-        }
-        else {
-            return MapOps::s_submap_ne<K, V>[recursive?](m, p);
-        }
-    }
-
-    recursive? function s_remap<K grounded KeyType, V, U>(m: MapRepr<K, V>, f: recursive? fn(k: K, v: V) -> U): MapRepr<K, U> {
-        if(m === none) {
-            return none;
-        }
-        else {
-            return MapOps::s_remap_ne<K, V, U>(m, f);
-        }
-    }
-
-    function s_add<K grounded KeyType, V>(m: MapRepr<K, V>, k: K, v: V): MapRepr<K, V> {
-        if(m === none) {
-            return BTree<K, V>{1n, BTreeNode<K, V>{k, v, none, none}};
-        }
-        else {
-            return MapOps::s_add_ne<K, V>(m, k, v);
-        }
-    }
-
-    function s_set<K grounded KeyType, V>(m: MapRepr<K, V>, k: K, v: V): MapRepr<K, V> {
-        return MapOps::s_set_ne<K, V>(m, k, v);
-    }
-
-    function s_remove<K grounded KeyType, V>(m: MapRepr<K, V>, k: K): MapRepr<K, V> {
-        return MapOps::s_remove_ne<K, V>(m, k);
-    }
+    internal function s_map_add<K grounded KeyType, V>(m: Map<K, V>, k: K, v: V): Map<K, V> = s_map_add;
+    internal function s_map_set<K grounded KeyType, V>(m: Map<K, V>, k: K, v: V): Map<K, V> = s_map_set;
+    internal function s_map_remove<K grounded KeyType, V>(m: Map<K, V>, k: K): Map<K, V> = s_map_remove;
 }
-
-__internal entity MapTree<K grounded KeyType, V> provides Some {
-    internal field dummy_tuple: [K, V]; //ensure the compiler always has the appropriate tuple type for manipulating the internal representation
-}
-
-internal typedef MapRepr<K grounded KeyType, V> = None | MapTree<K, V>;
 
 #endif
