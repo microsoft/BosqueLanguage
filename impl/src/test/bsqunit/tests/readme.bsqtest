@@ -48,7 +48,7 @@ chktest function allpositive_2(): Bool {
 __chktest function allpositive_x_fail(x: Int): Bool {
     return allPositive(1, x, 4);
 }
-/*
+
 ////////
 //
 function structural_types(tup: [Int, Bool], rec: {f: String, g: Int}): Int {
@@ -143,7 +143,7 @@ chktest function genericGreeting_3(): Bool {
 __chktest function genericGreeting_fail_bob(n: String): Bool {
     return NamedGreeting{n}.sayHello() !== "hello bob";
 }
-
+/*
 ////////
 //
 datatype BoolOp provides APIType using {
