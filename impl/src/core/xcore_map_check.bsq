@@ -23,7 +23,7 @@ internal entity MapOps provides Some {
     __safe internal function s_map_union_fast<K grounded KeyType, V>(m1: Map<K, V>, m2: Map<K, V>): Map<K, V> = s_map_union_fast; 
 
     __conditional_safe internal recursive? function s_map_map_pred<K grounded KeyType, V>(m: Map<K, V>, p: recursive? pred(_: K, _: V) -> Bool): List<Bool> = s_map_map_pred;
-    __safe internal function s_map_mask_select<K grounded KeyType, V>(m: Map<K, V>, mask: List<Bool>): m: Map<K, V> = s_map_mask_select;
+    __safe internal function s_map_mask_select<K grounded KeyType, V>(m: Map<K, V>, mask: List<Bool>): Map<K, V> = s_map_mask_select;
 
     __conditional_safe internal recursive? function s_map_remap<K grounded KeyType, V, U>(m: Map<K, V>, f: recursive? fn(k: K, v: V) -> U): Map<K, U> = s_map_remap;
 

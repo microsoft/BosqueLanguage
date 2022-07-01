@@ -26,7 +26,7 @@ __internal entity Map<K grounded KeyType, V> provides Some, Expandoable<[K, V]>,
     }
 
     method getOrNone(key: K): V? {
-        let ev = MapOps.s_map_find<K, V>(this, key);
+        let ev = MapOps::s_map_find<K, V>(this, key);
         if(!ev.1) {
             return none;
         }
@@ -36,7 +36,7 @@ __internal entity Map<K grounded KeyType, V> provides Some, Expandoable<[K, V]>,
     }
 
     method getOption(key: K): Option<V> {
-        let ev = MapOps.s_map_find<K, V>(this, key);
+        let ev = MapOps::s_map_find<K, V>(this, key);
         if(!ev.1) {
             return nothing;
         }
@@ -46,7 +46,7 @@ __internal entity Map<K grounded KeyType, V> provides Some, Expandoable<[K, V]>,
     }
 
     method getTry(key: K, out? v: V): Bool {
-        let ev = MapOps.s_map_find<K, V>(this, key);
+        let ev = MapOps::s_map_find<K, V>(this, key);
         if(!ev.1) {
             return false;
         }

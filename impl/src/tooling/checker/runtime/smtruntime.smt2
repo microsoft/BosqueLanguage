@@ -235,14 +235,14 @@
 
 (define-fun BUTCDateTime@less ((k1 BUTCDateTime) (k2 BUTCDateTime)) Bool
   (ite (not (= (BUTCDateTime@year k1) (BUTCDateTime@year k2)))
-    (< (BUTCDateTime@year k1) (BUTCDateTime@year k2)
+    (< (BUTCDateTime@year k1) (BUTCDateTime@year k2))
     (ite (not (= (BUTCDateTime@month k1) (BUTCDateTime@month k2)))
-      (< (BUTCDateTime@month k1) (BUTCDateTime@month k2)
+      (< (BUTCDateTime@month k1) (BUTCDateTime@month k2))
       (ite (not (= (BUTCDateTime@day k1) (BUTCDateTime@day k2)))
-        (< (BUTCDateTime@day k1) (BUTCDateTime@day k2)
+        (< (BUTCDateTime@day k1) (BUTCDateTime@day k2))
         (ite (not (= (BUTCDateTime@hour k1) (BUTCDateTime@hour k2)))
-          (< (BUTCDateTime@hour k1) (BUTCDateTime@hour k2)
-          (< (BUTCDateTime@min k1) (BUTCDateTime@min k2)
+          (< (BUTCDateTime@hour k1) (BUTCDateTime@hour k2))
+          (< (BUTCDateTime@min k1) (BUTCDateTime@min k2))
         )
       )
     )
@@ -251,18 +251,18 @@
 
 (define-fun BCalendarDate@less ((k1 BCalendarDate) (k2 BCalendarDate)) Bool
   (ite (not (= (BCalendarDate@year k1) (BCalendarDate@year k2)))
-    (< (BCalendarDate@year k1) (BCalendarDate@year k2)
+    (< (BCalendarDate@year k1) (BCalendarDate@year k2))
     (ite (not (= (BCalendarDate@month k1) (BCalendarDate@month k2)))
-      (< (BCalendarDate@month k1) (BCalendarDate@month k2)
-      (< (BCalendarDate@day k1) (BCalendarDate@day k2)
+      (< (BCalendarDate@month k1) (BCalendarDate@month k2))
+      (< (BCalendarDate@day k1) (BCalendarDate@day k2))
     )
   )
 )
 
 (define-fun BRelativeTime@less ((k1 BRelativeTime) (k2 BRelativeTime)) Bool
   (ite (not (= (BRelativeTime@hour k1) (BRelativeTime@hour k2)))
-    (< (BRelativeTime@hour k1) (BRelativeTime@hour k2)
-    (< (BRelativeTime@min k1) (BRelativeTime@min k2)
+    (< (BRelativeTime@hour k1) (BRelativeTime@hour k2))
+    (< (BRelativeTime@min k1) (BRelativeTime@min k2))
   )
 )
 
@@ -276,18 +276,18 @@
 
 (define-fun BISOTimeStamp@less ((k1 BISOTimeStamp) (k2 BISOTimeStamp)) Bool
   (ite (not (= (BISOTimeStamp@year k1) (BISOTimeStamp@year k2)))
-    (< (BISOTimeStamp@year k1) (BISOTimeStamp@year k2)
+    (< (BISOTimeStamp@year k1) (BISOTimeStamp@year k2))
     (ite (not (= (BISOTimeStamp@month k1) (BISOTimeStamp@month k2)))
-      (< (BISOTimeStamp@month k1) (BISOTimeStamp@month k2)
+      (< (BISOTimeStamp@month k1) (BISOTimeStamp@month k2))
       (ite (not (= (BISOTimeStamp@day k1) (BISOTimeStamp@day k2)))
-        (< (BISOTimeStamp@day k1) (BISOTimeStamp@day k2)
+        (< (BISOTimeStamp@day k1) (BISOTimeStamp@day k2))
         (ite (not (= (BISOTimeStamp@hour k1) (BISOTimeStamp@hour k2)))
-          (< (BISOTimeStamp@hour k1) (BISOTimeStamp@hour k2)
+          (< (BISOTimeStamp@hour k1) (BISOTimeStamp@hour k2))
           (ite (not (= (BISOTimeStamp@min k1) (BISOTimeStamp@min k2)))
-            (< (BISOTimeStamp@min k1) (BISOTimeStamp@min k2)
+            (< (BISOTimeStamp@min k1) (BISOTimeStamp@min k2))
             (ite (not (= (BISOTimeStamp@sec k1) (BISOTimeStamp@sec k2)))
-              (< (BISOTimeStamp@sec k1) (BISOTimeStamp@sec k2)
-              (< (BISOTimeStamp@millis k1) (BISOTimeStamp@millis k2)
+              (< (BISOTimeStamp@sec k1) (BISOTimeStamp@sec k2))
+              (< (BISOTimeStamp@millis k1) (BISOTimeStamp@millis k2))
             )
           )
         )
@@ -296,11 +296,11 @@
   )
 )
 
-(define-fun BUUID4@less ((k1 BUUID) (k2 BUUID)) Bool
+(define-fun BUUID4@less ((k1 BUUID4) (k2 BUUID4)) Bool
   (str.< k1 k2)
 )
 
-(define-fun BUUID7@less ((k1 BUUID) (k2 BUUID)) Bool
+(define-fun BUUID7@less ((k1 BUUID7) (k2 BUUID7)) Bool
   (str.< k1 k2)
 )
 

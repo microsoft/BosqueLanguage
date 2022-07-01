@@ -2196,7 +2196,6 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                 return ListOps::s_list_slice_start<T>(this, NumericOps::s_intToNat(idx));
             }
         }
-        }
     }
 
     recursive? method takeUntil(p: recursive? pred(_: T) -> Bool): List<T> {
@@ -2421,7 +2420,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                     return nothing;
                 }
                 else {
-                    something(return mv.0);
+                    return something(mv.0);
                 }
             });
         }
@@ -2572,8 +2571,8 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                 return Map<K, List<T>>{k => this};
             }
             else {
-                return ListOps::s_list_reduce<T, Map<K, List<T>>>[recursive?](this, Map<K, List<T>>{}, recursive? fn(acc: Map<K, List<T>>, v: T): Map<K, List<T>> {
-                    let k = let k = pf[recursive?](v);
+                return ListOps::s_list_reduce<T, Map<K, List<T>>>[recursive?](this, Map<K, List<T>>{}, recursive? fn(acc: Map<K, List<T>>, v: T): Map<K, List<T>> => {
+                    let k = pf[recursive?](v);
                     if(acc.has(k)) {
                         return acc.add(k, List<T>{v});
                     }
@@ -2584,8 +2583,8 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                 });
             }
 #else
-            return ListOps::s_list_reduce<T, Map<K, List<T>>>[recursive?](this, Map<K, List<T>>{}, recursive? fn(acc: Map<K, List<T>>, v: T): Map<K, List<T>> {
-                let k = let k = pf[recursive?](v);
+            return ListOps::s_list_reduce<T, Map<K, List<T>>>[recursive?](this, Map<K, List<T>>{}, recursive? fn(acc: Map<K, List<T>>, v: T): Map<K, List<T>> => {
+                let k = pf[recursive?](v);
                 if(acc.has(k)) {
                     return acc.add(k, List<T>{v});
                 }
@@ -2613,7 +2612,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                 }
                 else {
                     //TODO: this is rough, maybe a special \forall UF type thing would be better
-                    return ListOps::s_list_reduce<T, List<T>>[recursive?](this, List<T>{}, recursive? fn(acc: List<T>, v: T) => List<T> {
+                    return ListOps::s_list_reduce<T, List<T>>[recursive?](this, List<T>{}, recursive? fn(acc: List<T>, v: T): List<T> => {
                         if(ListOps::s_empty<T>(acc)) {
                             return List<T>{v};
                         }
@@ -2655,7 +2654,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                 }
                 else {
                     //TODO: this is rough, maybe a special \forall UF type thing would be better
-                    return ListOps::s_list_reduce<T, List<T>>[recursive?](this, List<T>{}, recursive? fn(acc: List<T>, v: T) => List<T> {
+                    return ListOps::s_list_reduce<T, List<T>>[recursive?](this, List<T>{}, recursive? fn(acc: List<T>, v: T): List<T> => {
                         if(ListOps::s_empty<T>(acc)) {
                             return List<T>{v};
                         }
@@ -2688,7 +2687,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             else {
 #if CHECK_LIBS
                 //TODO: this is a bit rough, maybe special case with quantifier and assert later
-                return ListOps::s_list_reduce<T, List<T>>(this, List<T>{}, fn(acc: List<T>, v: T) => List<T> {
+                return ListOps::s_list_reduce<T, List<T>>(this, List<T>{}, fn(acc: List<T>, v: T): List<T> => {
                     if(ListOps::s_empty<T>(acc)) {
                         return List<T>{v};
                     }

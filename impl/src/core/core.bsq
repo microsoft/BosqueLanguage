@@ -464,7 +464,7 @@ __internal __constructable entity DataBuffer<T unique BufferParsable> provides S
 }
 
 //<summary>Validator for TimeZone</summary>
-typedecl ValidTimeZoneName = /[A-Z]{2, 5}/;
+typedecl ValidTimeZoneName = /[A-Z]{2,5}/;
 typedecl TimeZoneCode = StringOf<ValidTimeZoneName>;
 
 //<summary>Primitive DateTime value.</summary>

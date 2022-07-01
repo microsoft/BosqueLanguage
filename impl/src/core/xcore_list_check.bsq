@@ -61,7 +61,7 @@ internal entity ListOps provides Some {
     __safe internal function s_list_cast<T, U>(l: List<T>): List<U> = s_list_cast;
     __safe internal function s_list_mask_select_cast<T, U>(l: List<T>, mask: List<Bool>): List<U> = s_list_mask_select_cast;
 
-    __conditional_safe internal recursive? s_list_is_sorted<T>(l: List<T>, cmp: recursive? pred(_: T, _: T) -> Bool): Bool = s_list_is_sorted;
+    __conditional_safe internal recursive? function s_list_is_sorted<T>(l: List<T>, cmp: recursive? pred(_: T, _: T) -> Bool): Bool = s_list_is_sorted;
     __conditional_safe internal recursive? function s_list_is_unique<T>(l: List<T>, eq: recursive? pred(_: T, _: T) -> Bool): List<T> = s_list_is_unique;
 
     __conditional_safe internal recursive? function s_list_reduce<T, U>(l: List<T>, init: U, f: recursive? fn(_: U, _: T) -> U): U = s_list_reduce;
