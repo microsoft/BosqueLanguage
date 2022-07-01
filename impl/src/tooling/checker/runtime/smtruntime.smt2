@@ -499,7 +499,7 @@
 
 (define-fun _@@cons_Nat_entrypoint ((ctx HavocSequence)) $Result_BNat
   (let ((iv (BNat@UFCons_API ctx)))
-    (ite (and (<= 0 iv) (<= iv (+ @BNATMAX))
+    (ite (and (<= 0 iv) (<= iv @BNATMAX))
       ($Result_BNat@success iv)
       ($Result_BNat@error ErrorID_AssumeCheck) 
     )
@@ -571,6 +571,7 @@
       (<= d 30)
       (<= d 31)
     )
+  )
 )
 
 (define-fun _@@cons_DateTime_entrypoint ((ctx HavocSequence)) $Result_BDateTime
@@ -594,7 +595,7 @@
 (define-fun _@@cons_CalendarDate_entrypoint ((ctx HavocSequence)) $Result_BCalendarDate
   (let ((y (BDateYear@UFCons_API ctx)) (m (BDateMonth@UFCons_API ctx)) (d (BDateDay@UFCons_API ctx)))
     (ite (and (<= 1900 y) (<= y 2200) (<= 0 m) (<= m 11) (<= 1 d) (@@check_DayInMonth d m y))
-      ($Result_BCalendarDate@success (CalendarDate@cons y m d))
+      ($Result_BCalendarDate@success (BCalendarDate@cons y m d))
       ($Result_BCalendarDate@error ErrorID_AssumeCheck) 
     )
   )
@@ -661,7 +662,7 @@
 (define-fun _@@cons_LatLongCoordinate_entrypoint ((ctx HavocSequence)) $Result_BLatLongCoordinate
   (let ((lat (BFloat@UFCons_API (seq.++ ctx (seq.unit 0)))) (long (BFloat@UFCons_API (seq.++ ctx (seq.unit 1)))))
     (ite (and (<= -90.0 lat) (<= lat 90.0) (< -180.0 long) (<= long 180.0))
-      ($Result_BLatLongCoordinate@success (Result_BLatLongCoordinate@cons lat long))
+      ($Result_BLatLongCoordinate@success (BLatLongCoordinate@cons lat long))
       ($Result_BLatLongCoordinate@error ErrorID_AssumeCheck) 
     )
   )

@@ -111,7 +111,6 @@ __internal entity Map<K grounded KeyType, V> provides Some, Expandoable<[K, V]>,
                 return MapOps::s_map_add<K, V>(this, minkey2);
             }
             else {
-#if CHECK_LIBS
                 if(KeyType::less<K>(maxkey1, minkey2)) {
                     return MapOps::s_map_union_fast<K, V>(this, m);
                 }
@@ -119,6 +118,7 @@ __internal entity Map<K grounded KeyType, V> provides Some, Expandoable<[K, V]>,
                     return MapOps::s_map_union_fast<K, V>(m, this);
                 }
                 else {
+#if CHECK_LIBS
                     let m2l = MapOps::s_map_entries<K, V>(m2);
                     return ListOps::s_list_reduce<[K, V], Map<K, V>>(m2l, m1, fn(acc: Map<K, V>, v: [K, V]): Map<K, V> => {
                         assert(!MapOps::s_map_has<K, V>(acc, v));

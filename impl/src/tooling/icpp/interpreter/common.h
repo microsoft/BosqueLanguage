@@ -229,6 +229,8 @@ typedef void* StorageLocationPtr;
 #define BSQ_MEM_ZERO(TRGTL, SIZE) GC_MEM_ZERO(TRGTL, SIZE)
 #define BSQ_MEM_COPY(TRGTL, SRCL, SIZE) GC_MEM_COPY(TRGTL, SRCL, SIZE)
 
+#define BSQ_SIZE_ENSURE_ALIGN_MIN(V) ((V) < (uint64_t)sizeof(void*) ? (uint64_t)sizeof(void*) : (V)) 
+
 ////////////////////////////////
 //Type and GC interaction decls
 

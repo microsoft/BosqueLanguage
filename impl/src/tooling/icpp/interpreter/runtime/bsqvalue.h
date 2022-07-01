@@ -99,7 +99,7 @@ class BSQRegisterType : public BSQType
 {
 public:
     BSQRegisterType(BSQTypeID tid, uint64_t datasize, const RefMask imask, KeyCmpFP fpkeycmp, DisplayFP fpDisplay, std::string name): 
-        BSQType(tid, BSQTypeLayoutKind::Register, { max((uint64_t)sizeof(void*), datasize), max((uint64_t)sizeof(void*), datasize), datasize, nullptr, imask }, REGISTER_GC_FUNCTOR_SET, {}, fpkeycmp, fpDisplay, name)
+        BSQType(tid, BSQTypeLayoutKind::Register, { BSQ_SIZE_ENSURE_ALIGN_MIN(datasize), BSQ_SIZE_ENSURE_ALIGN_MIN(datasize), datasize, nullptr, imask }, REGISTER_GC_FUNCTOR_SET, {}, fpkeycmp, fpDisplay, name)
     {;}
 
     virtual ~BSQRegisterType() {;}

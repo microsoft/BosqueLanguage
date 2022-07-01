@@ -2633,7 +2633,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                     });
                 }
 #else
-                return ListOps::s_list_sort<T>[recursive?](this, pred);
+                return ListOps::s_list_sort<T>[recursive?](this, cmp);
 #endif
             }
         }
@@ -2670,7 +2670,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                     });
                 }
 #else
-                return ListOps::s_list_uniqueify<T>[recursive?](this, pred);
+                return ListOps::s_list_uniqueify<T>[recursive?](this, cmp);
 #endif
             }
         }
