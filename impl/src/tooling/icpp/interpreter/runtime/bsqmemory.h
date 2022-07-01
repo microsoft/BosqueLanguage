@@ -152,10 +152,9 @@ public:
 
     //TODO: eventually want a list of these as they must broken up into page size
 
-    static void reset()
+    static void reset(uint8_t* argsend)
     {
-        stackp = GCStack::sdata;
-        GC_MEM_ZERO(GCStack::sdata, BSQ_MAX_STACK);
+        stackp = argsend;
     }
 
     inline static uint8_t* allocFrame(size_t bytes)
@@ -392,13 +391,11 @@ public:
             *((void**)datacurr) = *curr;
             *((void**)datacurr + 1) = metacurr;
 
-            *curr = *((void**)datacurr);
+            *curr = (void*)datacurr;
 
             metacurr++;
             datacurr += p->entry_size;
         }
-
-        *curr = nullptr;
 #else
         void** curr = &p->freelist;
         GC_META_DATA_WORD* metacurr = p->slots;
@@ -408,12 +405,10 @@ public:
             **((void***)p->data + i) = *curr;
             *(*((void***)p->data + i) + 1) = metacurr;
 
-            *curr = *((void**)p->data + i);
+            *curr = (void*)p->data + i;
 
             metacurr++;
         }
-
-        *curr = nullptr;
 #endif
     }
 

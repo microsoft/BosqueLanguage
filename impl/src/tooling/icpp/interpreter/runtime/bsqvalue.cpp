@@ -718,7 +718,7 @@ BSQString BSQStringImplType::concat2(StorageLocationPtr s1, StorageLocationPtr s
         auto len1 = BSQStringImplType::utf8ByteCount(stck[0]);
         auto len2 = BSQStringImplType::utf8ByteCount(stck[1]);
 
-        BSQString res = g_emptyString;
+        res = g_emptyString;
         if(IS_INLINE_STRING(&stck[0]) & IS_INLINE_STRING(&stck[1]))
         {
             if(len1 + len2 < 16)
@@ -803,7 +803,7 @@ BSQString BSQStringImplType::slice(StorageLocationPtr str, int64_t startpos, int
     {
         int64_t dist = endpos - startpos;
 
-        BSQString res = {0};
+        res = g_emptyString;
         if(IS_INLINE_STRING(&stck[0]))
         {
             res.u_inlineString = BSQInlineString::create(BSQInlineString::utf8Bytes(stck[0].u_inlineString) + startpos, (uint64_t)dist);
