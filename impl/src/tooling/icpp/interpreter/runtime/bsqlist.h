@@ -211,7 +211,7 @@ public:
         auto fromloc = ((uint8_t*)pvfrom) + sizeof(uint64_t);
         
         uint64_t jj = 0;
-        for(size_t i = 0; i < 8; ++i)
+        for(size_t i = 0; i < 8 && i < end; ++i)
         {
             if(i != idx)
             {

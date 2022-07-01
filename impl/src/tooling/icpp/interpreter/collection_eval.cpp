@@ -852,7 +852,6 @@ void BSQListOps::s_reduce_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk e
             return params[pos];
         }); 
 
-        iter.advance(); //first element is always setup in the reduce value before calling this
         while(iter.valid())
         {
             icall->resultType->storeValue(resl, res);

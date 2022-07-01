@@ -143,7 +143,7 @@ chktest function genericGreeting_3(): Bool {
 __chktest function genericGreeting_fail_bob(n: String): Bool {
     return NamedGreeting{n}.sayHello() !== "hello bob";
 }
-/*
+
 ////////
 //
 datatype BoolOp provides APIType using {
@@ -320,4 +320,3 @@ __chktest function isfreezing_fail_1(t: Celsius): Bool {
 __chktest function is50pct_fail_1(p: Percentage): Bool {
     return p == 50_Percentage;
 }
-*/
