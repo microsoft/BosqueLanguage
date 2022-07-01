@@ -19,8 +19,8 @@ internal entity ListOps provides Some {
     __safe internal function s_list_append<T>(l: List<T>, r: List<T>): List<T> = s_list_append;
 
     __safe internal function s_list_get<T>(l: List<T>, idx: Nat): T = s_list_get; 
-    __safe internal function s_list_get_back<T>(l: List<T>): T = s_list_get_back; 
-    __safe internal function s_list_get_front<T>(l: List<T>): T = s_list_get_front; 
+    __safe internal function s_list_back<T>(l: List<T>): T = s_list_get_back; 
+    __safe internal function s_list_front<T>(l: List<T>): T = s_list_get_front; 
 
     __safe internal function s_list_slice_front<T>(l: List<T>, idx: Nat): List<T> = s_list_slice_front; 
     __safe internal function s_list_slice_end<T>(l: List<T>, idx: Nat): List<T> = s_list_slice_end;

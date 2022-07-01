@@ -13,7 +13,7 @@ internal entity StringOps provides Some {
             return "";
         }
         else {
-            let istr = ListOps::s_list_get_front<String>(l);
+            let istr = ListOps::s_list_front<String>(l);
             let tl = ListOps::s_list_pop_front<String>(l);
             if(ListOps::s_list_empty<String>(tl)) {
                 return istr;
@@ -29,7 +29,7 @@ internal entity StringOps provides Some {
             return "";
         }
         else {
-            let istr = ListOps::s_list_get_front<String>(l);
+            let istr = ListOps::s_list_front<String>(l);
             let tl = ListOps::s_list_pop_front<String>(l);
             if(ListOps::s_list_empty<String>(tl)) {
                 return istr;
