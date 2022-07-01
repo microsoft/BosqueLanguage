@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { MIRAssembly, MIRConceptTypeDecl, MIRConstructableEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIRDataBufferInternalEntityTypeDecl, MIRDataStringInternalEntityTypeDecl, MIREnumEntityTypeDecl, MIREphemeralListType, MIRFieldDecl, MIRObjectEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRRecordType, MIRStringOfInternalEntityTypeDecl, MIRTupleType, MIRType } from "../../../compiler/mir_assembly";
+import { MIRAssembly, MIRConceptTypeDecl, MIRConstructableEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIRDataBufferInternalEntityTypeDecl, MIRDataStringInternalEntityTypeDecl, MIREnumEntityTypeDecl, MIREphemeralListType, MIRFieldDecl, MIRObjectEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRRecordType, MIRStringOfInternalEntityTypeDecl, MIRTupleType, MIRType } from "../../../compiler/mir_assembly";
 import { MIRFieldKey, MIRGlobalKey, MIRInvokeKey, MIRResolvedTypeKey, MIRVirtualMethodKey } from "../../../compiler/mir_ops";
 import { ICPPParseTag } from "./icppdecls_emitter";
 import { Argument, ICPPOp, ParameterInfo } from "./icpp_exp";
@@ -19,8 +19,8 @@ type SourceInfo = {
 };
 
 const ICPP_WORD_SIZE = 8;
-const UNIVERSAL_CONTENT_SIZE = 32;
-const UNIVERSAL_TOTAL_SIZE = 40;
+const UNIVERSAL_CONTENT_SIZE = ICPP_WORD_SIZE * 4;
+const UNIVERSAL_TOTAL_SIZE = ICPP_WORD_SIZE + UNIVERSAL_CONTENT_SIZE;
 const UNIVERSAL_MASK = "51111";
 
 type RefMask = string;
@@ -105,18 +105,6 @@ abstract class ICPPLayoutInfo {
     }
 
     abstract createFromLayoutInfo(tkey: MIRResolvedTypeKey): ICPPLayoutInfo;
-
-    canScalarStackAllocate(): boolean {
-        if(this.layout === ICPPLayoutCategory.Inline) {
-            return /^1+$/.test(this.allocinfo.inlinedmask);
-        }
-        else if(this.layout === ICPPLayoutCategory.UnionInline) {
-            return /^51+$/.test(this.allocinfo.inlinedmask);
-        }
-        else {
-            return false;
-        }
-    }
 
     needsBoxableType(): boolean {
         return this.layout === ICPPLayoutCategory.Inline && this.allocinfo.inlinedatasize > UNIVERSAL_CONTENT_SIZE;
@@ -223,20 +211,6 @@ class ICPPEntityLayoutInfo extends ICPPLayoutInfo {
     }
 }
 
-class ICPPCollectionInternalsLayoutInfo extends ICPPLayoutInfo {
-    readonly xinfo: {name: string, type: MIRResolvedTypeKey, size: number, offset: number}[];
-
-    constructor(tkey: MIRResolvedTypeKey, allocinfo: ICPPTypeSizeInfo, xinfo: {name: string, type: MIRResolvedTypeKey, size: number, offset: number}[]) {
-        super(tkey, allocinfo, ICPPLayoutCategory.Ref);
-
-        this.xinfo = xinfo;
-    }
-
-    createFromLayoutInfo(tkey: MIRResolvedTypeKey): ICPPLayoutInfo {
-        return new ICPPLayoutInfoFixed(tkey, this.allocinfo.createFromSizeInfo(tkey), this.layout);
-    }
-}
-
 class ICPPEphemeralListLayoutInfo extends ICPPLayoutInfo {
     readonly etypes: MIRResolvedTypeKey[];
     readonly eoffsets: number[];
@@ -310,15 +284,10 @@ class ICPPInvokeDecl {
     readonly params: ICPPFunctionParameter[];
     readonly resultType: MIRResolvedTypeKey;
 
-    readonly scalarStackBytes: number;
-    readonly mixedStackBytes: number;
-    readonly mixedStackMask: RefMask;
-
+    readonly stackBytes: number;
     readonly maskSlots: number;
 
-    readonly isUserCode: boolean;
-
-    constructor(name: string, ikey: MIRInvokeKey, srcFile: string, sinfoStart: SourceInfo, sinfoEnd: SourceInfo, recursive: boolean, params: ICPPFunctionParameter[], resultType: MIRResolvedTypeKey, scalarStackBytes: number, mixedStackBytes: number, mixedStackMask: RefMask, maskSlots: number, isUserCode: boolean) {
+    constructor(name: string, ikey: MIRInvokeKey, srcFile: string, sinfoStart: SourceInfo, sinfoEnd: SourceInfo, recursive: boolean, params: ICPPFunctionParameter[], resultType: MIRResolvedTypeKey, stackBytes: number, maskSlots: number) {
         this.name = name;
         this.ikey = ikey;
         this.srcFile = srcFile;
@@ -328,17 +297,13 @@ class ICPPInvokeDecl {
         this.params = params;
         this.resultType = resultType;
 
-        this.scalarStackBytes = scalarStackBytes;
-        this.mixedStackBytes = mixedStackBytes;
-        this.mixedStackMask = mixedStackMask;
+        this.stackBytes = stackBytes;
 
         this.maskSlots = maskSlots;
-
-        this.isUserCode = isUserCode;
     }
 
     jsonEmit(): object {
-        return {name: this.name, ikey: this.ikey, srcFile: this.srcFile, sinfoStart: this.sinfoStart, sinfoEnd: this.sinfoEnd, recursive: this.recursive, params: this.params.map((param) => param.jsonEmit()), resultType: this.resultType, scalarStackBytes: this.scalarStackBytes, mixedStackBytes: this.mixedStackBytes, mixedStackMask: this.mixedStackMask, maskSlots: this.maskSlots, isUserCode: this.isUserCode};
+        return {name: this.name, ikey: this.ikey, srcFile: this.srcFile, sinfoStart: this.sinfoStart, sinfoEnd: this.sinfoEnd, recursive: this.recursive, params: this.params.map((param) => param.jsonEmit()), resultType: this.resultType, stackBytes: this.stackBytes, maskSlots: this.maskSlots};
     }
 }
 
@@ -348,8 +313,8 @@ class ICPPInvokeBodyDecl extends ICPPInvokeDecl {
     readonly resultArg: Argument;
     readonly argmaskSize: number;
 
-    constructor(name: string, ikey: MIRInvokeKey, srcFile: string, sinfoStart: SourceInfo, sinfoEnd: SourceInfo, recursive: boolean, params: ICPPFunctionParameter[], paraminfo: ParameterInfo[], resultType: MIRResolvedTypeKey, resultArg: Argument, scalarStackBytes: number, mixedStackBytes: number, mixedStackMask: RefMask, maskSlots: number, body: ICPPOp[], argmaskSize: number, isUserCode: boolean) {
-        super(name, ikey, srcFile, sinfoStart, sinfoEnd, recursive, params, resultType, scalarStackBytes, mixedStackBytes, mixedStackMask, maskSlots, isUserCode);
+    constructor(name: string, ikey: MIRInvokeKey, srcFile: string, sinfoStart: SourceInfo, sinfoEnd: SourceInfo, recursive: boolean, params: ICPPFunctionParameter[], paraminfo: ParameterInfo[], resultType: MIRResolvedTypeKey, resultArg: Argument, stackBytes: number, maskSlots: number, body: ICPPOp[], argmaskSize: number) {
+        super(name, ikey, srcFile, sinfoStart, sinfoEnd, recursive, params, resultType, stackBytes, maskSlots);
         this.body = body;
         this.paraminfo = paraminfo;
         this.resultArg = resultArg;
@@ -385,7 +350,7 @@ class ICPPInvokePrimitiveDecl extends ICPPInvokeDecl {
     readonly pcodes: Map<string, ICPPPCode>;
 
     constructor(name: string, ikey: MIRInvokeKey, srcFile: string, sinfoStart: SourceInfo, sinfoEnd: SourceInfo, recursive: boolean, params: ICPPFunctionParameter[], resultType: MIRResolvedTypeKey, enclosingtype: string | undefined, implkeyname: string, binds: Map<string, MIRResolvedTypeKey>, pcodes: Map<string, ICPPPCode>) {
-        super(name, ikey, srcFile, sinfoStart, sinfoEnd, recursive, params, resultType, 0, 0, "", 0, false);
+        super(name, ikey, srcFile, sinfoStart, sinfoEnd, recursive, params, resultType, 0, 0);
         this.enclosingtype = enclosingtype;
         this.implkeyname = implkeyname;
         this.binds = binds;
@@ -493,7 +458,8 @@ class ICPPAssembly
             ptag: ICPPParseTag.EntityDeclOfTag,
             tkey: icpptype.tkey,
             name: edecl.tkey,
-            oftype: edecl.fromtype
+            valuetype: edecl.valuetype,
+            basetype: edecl.basetype
         };
     }
     
@@ -525,7 +491,7 @@ class ICPPAssembly
                 name: edecl.tkey,
                 allocinfo: icpptype.allocinfo.jemit(),
                 oftype: edecl.fromtype,
-                norefs: icpptype.canScalarStackAllocate(),
+                norefs: ICPPTypeSizeInfo.isScalarOnlyMask(icpptype.allocinfo.inlinedmask),
                 boxedtype: icpptype.needsBoxableType() ? this.generateBoxedTypeName(icpptype.tkey) : null
             };
         }
@@ -561,57 +527,7 @@ class ICPPAssembly
             tkey: icpptype.tkey,
             name: edecl.tkey,
             ktype: edecl.getTypeK(),
-            vtype: edecl.getTypeV(),
-            etype: edecl.tupentrytype
-        };
-    }
-
-    private processPartialVector4EntityDecl(edecl: MIRPrimitiveInternalEntityTypeDecl, icpptype: ICPPCollectionInternalsLayoutInfo): object {
-        const etype = edecl.terms.get("T") as MIRType;
-
-        return {
-            ptag: ICPPParseTag.PartialVector4Tag,
-            tkey: edecl.tkey,
-            name: edecl.tkey,
-            heapsize: icpptype.allocinfo.heapsize,
-            heapmask: icpptype.allocinfo.heapmask,
-            etype: etype.typeID,
-            esize: icpptype.xinfo[0].size
-        };
-    }
-
-    private processPartialVector8EntityDecl(edecl: MIRPrimitiveInternalEntityTypeDecl, icpptype: ICPPCollectionInternalsLayoutInfo): object {
-        return {
-            ptag: ICPPParseTag.PartialVector4Tag,
-            tkey: edecl.tkey,
-            name: edecl.tkey,
-            heapsize: icpptype.allocinfo.heapsize,
-            heapmask: icpptype.allocinfo.heapmask,
-            etype: icpptype.xinfo[0].type,
-            esize: icpptype.xinfo[0].size
-        };
-    }
-
-    private processListTreeEntityDecl(edecl: MIRPrimitiveInternalEntityTypeDecl, icpptype: ICPPCollectionInternalsLayoutInfo): object {
-        return {
-            ptag: ICPPParseTag.ListTreeTag,
-            tkey: edecl.tkey,
-            name: edecl.tkey,
-            etype: icpptype.xinfo[0].type,
-        };
-    }
-
-    private processMapTreeEntityDecl(edecl: MIRPrimitiveInternalEntityTypeDecl, icpptype: ICPPCollectionInternalsLayoutInfo): object {
-        return {
-            ptag: ICPPParseTag.MapTreeTag,
-            tkey: edecl.tkey,
-            name: edecl.tkey,
-            heapsize: icpptype.allocinfo.heapsize,
-            heapmask: icpptype.allocinfo.heapmask,
-            ktype: icpptype.xinfo[0].type,
-            vtype: icpptype.xinfo[1].type,
-            koffset: icpptype.xinfo[0].offset,
-            voffset: icpptype.xinfo[1].offset
+            vtype: edecl.getTypeV()
         };
     }
 
@@ -637,7 +553,7 @@ class ICPPAssembly
                 allocinfo: icpplayout.allocinfo.jemit(),
                 name: edcl.tkey,
                 vtable: vtbl || null,
-                norefs: icpplayout.canScalarStackAllocate(),
+                norefs: ICPPTypeSizeInfo.isScalarOnlyMask(icpplayout.allocinfo.inlinedmask),
                 boxedtype: icpplayout.needsBoxableType() ? this.generateBoxedTypeName(edcl.tkey) : null,
                 fieldnames: icpplayout.fieldnames,
                 fieldtypes: icpplayout.fieldtypes,
@@ -697,7 +613,7 @@ class ICPPAssembly
                 allocinfo: icpplayout.allocinfo.jemit(),
                 name: cdcl.typeID,
                 vtable: vtbl || null,
-                norefs: icpplayout.canScalarStackAllocate(),
+                norefs: ICPPTypeSizeInfo.isScalarOnlyMask(icpplayout.allocinfo.inlinedmask),
                 boxedtype: icpplayout.needsBoxableType() ? this.generateBoxedTypeName(cdcl.typeID) : null,
                 maxIndex: icpplayout.maxIndex,
                 ttypes: icpplayout.ttypes,
@@ -728,7 +644,7 @@ class ICPPAssembly
                 allocinfo: icpplayout.allocinfo.jemit(),
                 name: cdcl.typeID,
                 vtable: vtbl || null,
-                norefs: icpplayout.canScalarStackAllocate(),
+                norefs: ICPPTypeSizeInfo.isScalarOnlyMask(icpplayout.allocinfo.inlinedmask),
                 boxedtype: icpplayout.needsBoxableType() ? this.generateBoxedTypeName(cdcl.typeID) : null,
                 propertynames: icpplayout.propertynames,
                 propertytypes: icpplayout.propertytypes,
@@ -743,7 +659,7 @@ class ICPPAssembly
             tkey: cdcl.typeID,
             allocinfo: icpplayout.allocinfo.jemit(),
             name: cdcl.typeID,
-            norefs: icpplayout.canScalarStackAllocate(),
+            norefs: ICPPTypeSizeInfo.isScalarOnlyMask(icpplayout.allocinfo.inlinedmask),
             etypes: icpplayout.etypes,
             idxoffsets: icpplayout.eoffsets
         };
@@ -821,18 +737,6 @@ class ICPPAssembly
             else if (edcl.attributes.includes("__map_type")) {
                 return this.processPrimitiveMapEntityDecl(edcl as MIRPrimitiveMapEntityTypeDecl, icpplayout);
             }
-            else if (edcl.attributes.includes("__partial_vector4_type")) {
-                return this.processPartialVector4EntityDecl(edcl as MIRPrimitiveInternalEntityTypeDecl, icpplayout as ICPPCollectionInternalsLayoutInfo);
-            }
-            else if (edcl.attributes.includes("__partial_vector8_type")) {
-                return this.processPartialVector8EntityDecl(edcl as MIRPrimitiveInternalEntityTypeDecl, icpplayout as ICPPCollectionInternalsLayoutInfo);
-            }
-            else if (edcl.attributes.includes("__list_tree_type")) {
-                return this.processListTreeEntityDecl(edcl as MIRPrimitiveInternalEntityTypeDecl, icpplayout as ICPPCollectionInternalsLayoutInfo);
-            }
-            else if (edcl.attributes.includes("__map_tree_type")) {
-                return this.processMapTreeEntityDecl(edcl as MIRPrimitiveInternalEntityTypeDecl, icpplayout as ICPPCollectionInternalsLayoutInfo);
-            }
             else if (edcl instanceof MIRObjectEntityTypeDecl) {
                 return this.processEntityDecl(edcl, icpplayout as ICPPEntityLayoutInfo);
             }
@@ -894,10 +798,7 @@ class ICPPAssembly
                 const ldcl = edcl as MIRPrimitiveListEntityTypeDecl;
                 return {
                     ltype: ldcl.tkey,
-                    entrytype: ldcl.getTypeT().typeID,
-                    pv4type: `PartialVector4<${ldcl.getTypeT().typeID}>`,
-                    pv8type: `PartialVector8<${ldcl.getTypeT().typeID}>`,
-                    treetype: `ListTree<${ldcl.getTypeT().typeID}>`
+                    entrytype: ldcl.getTypeT().typeID
                 };
             }
             else {
@@ -911,9 +812,7 @@ class ICPPAssembly
                 return {
                     ltype: mdcl.tkey,
                     keytype: mdcl.getTypeK().typeID,
-                    valuetype: mdcl.getTypeV().typeID,
-                    tupletype: mdcl.tupentrytype,
-                    treetype: `MapTree<${mdcl.getTypeK().typeID}, ${mdcl.getTypeV().typeID}>`
+                    valuetype: mdcl.getTypeV().typeID
                 };
             }
             else {
@@ -982,7 +881,7 @@ class ICPPAssembly
 export {
     TranspilerOptions, SourceInfo, ICPP_WORD_SIZE, UNIVERSAL_CONTENT_SIZE, UNIVERSAL_TOTAL_SIZE, UNIVERSAL_MASK,
     ICPPTypeSizeInfo, RefMask,
-    ICPPLayoutCategory, ICPPLayoutInfo, ICPPLayoutInfoFixed, ICPPTupleLayoutInfo, ICPPRecordLayoutInfo, ICPPEntityLayoutInfo, ICPPCollectionInternalsLayoutInfo, ICPPEphemeralListLayoutInfo, 
+    ICPPLayoutCategory, ICPPLayoutInfo, ICPPLayoutInfoFixed, ICPPTupleLayoutInfo, ICPPRecordLayoutInfo, ICPPEntityLayoutInfo, ICPPEphemeralListLayoutInfo, 
     ICPPLayoutInlineUnion, ICPPLayoutRefUnion, ICPPLayoutUniversalUnion,
     ICPPInvokeDecl, ICPPFunctionParameter, ICPPPCode, ICPPInvokeBodyDecl, ICPPInvokePrimitiveDecl,
     ICPPConstDecl,

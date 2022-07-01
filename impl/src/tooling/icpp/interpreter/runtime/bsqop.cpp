@@ -54,59 +54,78 @@ std::map<std::string, BSQPrimitiveImplTag> MarshalEnvironment::g_primitiveinvoke
     {"float_power", BSQPrimitiveImplTag::float_power},
     {"decimal_power", BSQPrimitiveImplTag::decimal_power},
 
+    {"nat_mod", BSQPrimitiveImplTag::nat_mod},
+
     {"string_empty", BSQPrimitiveImplTag::string_empty},
     {"string_append", BSQPrimitiveImplTag::string_append},
-    {"s_strconcat_ne", BSQPrimitiveImplTag::s_strconcat_ne},
-    {"s_strjoin_ne", BSQPrimitiveImplTag::s_strjoin_ne},
 
     {"bytebuffer_getformat", BSQPrimitiveImplTag::bytebuffer_getformat},
     {"bytebuffer_getcompression", BSQPrimitiveImplTag::bytebuffer_getcompression},
 
     {"datetime_create", BSQPrimitiveImplTag::datetime_create},
+    {"utcdatetime_create", BSQPrimitiveImplTag::utcdatetime_create},
+    {"calendartime_create", BSQPrimitiveImplTag::calendardate_create},
+    {"relativetime_create", BSQPrimitiveImplTag::relativetime_create},
+    {"isotimestamp_create", BSQPrimitiveImplTag::isotimestamp_create},
+    {"latlongcoordinate_create", BSQPrimitiveImplTag::latlongcoordinate_create},
 
     {"s_list_build_k", BSQPrimitiveImplTag::s_list_build_k},
-    {"s_list_size_ne", BSQPrimitiveImplTag::s_list_size_ne},
-    {"s_list_set_ne", BSQPrimitiveImplTag::s_list_set_ne},
-    {"s_list_push_back_ne", BSQPrimitiveImplTag::s_list_push_back_ne},
-    {"s_list_push_front_ne", BSQPrimitiveImplTag::s_list_push_front_ne},
-    {"s_list_remove_ne", BSQPrimitiveImplTag::s_list_remove_ne},
-    {"s_list_pop_back_ne", BSQPrimitiveImplTag::s_list_pop_back_ne},
-    {"s_list_pop_front_ne", BSQPrimitiveImplTag::s_list_pop_front_ne},
-    {"s_list_reduce_ne", BSQPrimitiveImplTag::s_list_reduce_ne},
-    {"s_list_reduce_idx_ne", BSQPrimitiveImplTag::s_list_reduce_idx_ne},
-    {"s_list_transduce_ne", BSQPrimitiveImplTag::s_list_transduce_ne},
-    {"s_list_transduce_idx_ne", BSQPrimitiveImplTag::s_list_transduce_idx_ne},
-    {"s_list_range_ne", BSQPrimitiveImplTag::s_list_range_ne},
-    {"s_list_fill_ne", BSQPrimitiveImplTag::s_list_fill_ne},
-    {"s_list_reverse_ne", BSQPrimitiveImplTag::s_list_reverse_ne},
-    {"s_list_append_ne", BSQPrimitiveImplTag::s_list_append_ne},
+    {"s_list_empty", BSQPrimitiveImplTag::s_list_empty},
+    {"s_list_size", BSQPrimitiveImplTag::s_list_size},
+    {"s_list_set", BSQPrimitiveImplTag::s_list_set},
+    {"s_list_push_back", BSQPrimitiveImplTag::s_list_push_back},
+    {"s_list_push_front", BSQPrimitiveImplTag::s_list_push_front},
+    {"s_list_insert", BSQPrimitiveImplTag::s_list_insert},
+    {"s_list_remove", BSQPrimitiveImplTag::s_list_remove},
+    {"s_list_pop_back", BSQPrimitiveImplTag::s_list_pop_back},
+    {"s_list_pop_front", BSQPrimitiveImplTag::s_list_pop_front},
+    {"s_list_reduce", BSQPrimitiveImplTag::s_list_reduce},
+    {"s_list_reduce_idx", BSQPrimitiveImplTag::s_list_reduce_idx},
+    {"s_list_transduce", BSQPrimitiveImplTag::s_list_transduce},
+    {"s_list_transduce_idx", BSQPrimitiveImplTag::s_list_transduce_idx},
+    {"s_list_range", BSQPrimitiveImplTag::s_list_range},
+    {"s_list_fill", BSQPrimitiveImplTag::s_list_fill},
+    {"s_list_reverse", BSQPrimitiveImplTag::s_list_reverse},
+    {"s_list_append", BSQPrimitiveImplTag::s_list_append},
     {"s_list_slice_start", BSQPrimitiveImplTag::s_list_slice_start},
     {"s_list_slice_end", BSQPrimitiveImplTag::s_list_slice_end},
-    {"s_list_safe_get", BSQPrimitiveImplTag::s_list_safe_get},
-    {"s_list_safe_back", BSQPrimitiveImplTag::s_list_safe_back},
-    {"s_list_safe_front", BSQPrimitiveImplTag::s_list_safe_front},
-    {"s_list_find_pred_ne", BSQPrimitiveImplTag::s_list_find_pred_ne},
-    {"s_list_find_pred_idx_ne", BSQPrimitiveImplTag::s_list_find_pred_idx_ne},
-    {"s_list_find_pred_last_ne", BSQPrimitiveImplTag::s_list_find_pred_last_ne},
-    {"s_list_find_pred_last_idx_ne", BSQPrimitiveImplTag::s_list_find_pred_last_idx_ne},
-    {"s_list_filter_pred_ne", BSQPrimitiveImplTag::s_list_filter_pred_ne},
-    {"s_list_filter_pred_idx_ne", BSQPrimitiveImplTag::s_list_filter_pred_idx_ne},
-    {"s_list_map_ne", BSQPrimitiveImplTag::s_list_map_ne},
-    {"s_list_map_idx_ne", BSQPrimitiveImplTag::s_list_map_idx_ne},
-    {"s_list_map_sync_ne", BSQPrimitiveImplTag::s_list_map_sync_ne},
-    {"s_list_sort_ne", BSQPrimitiveImplTag::s_list_sort_ne},
-    {"s_list_unique_from_sorted_ne", BSQPrimitiveImplTag::s_list_unique_from_sorted_ne},
+    {"s_list_slice", BSQPrimitiveImplTag::s_list_slice},
+    {"s_list_get", BSQPrimitiveImplTag::s_list_get},
+    {"s_list_back", BSQPrimitiveImplTag::s_list_back},
+    {"s_list_front", BSQPrimitiveImplTag::s_list_front},
+    {"s_list_has_pred", BSQPrimitiveImplTag::s_list_has_pred},
+    {"s_list_has_pred_idx", BSQPrimitiveImplTag::s_list_has_pred_idx},
+    {"s_list_find_pred", BSQPrimitiveImplTag::s_list_find_pred},
+    {"s_list_find_pred_idx", BSQPrimitiveImplTag::s_list_find_pred_idx},
+    {"s_list_find_pred_last", BSQPrimitiveImplTag::s_list_find_pred_last},
+    {"s_list_find_pred_last_idx", BSQPrimitiveImplTag::s_list_find_pred_last_idx},
+    {"s_list_single_index_of", BSQPrimitiveImplTag::s_list_single_index_of},
+    {"s_list_has", BSQPrimitiveImplTag::s_list_has},
+    {"s_list_indexof", BSQPrimitiveImplTag::s_list_indexof},
+    {"s_list_last_indexof", BSQPrimitiveImplTag::s_list_last_indexof},
+    {"s_list_filter_pred", BSQPrimitiveImplTag::s_list_filter_pred},
+    {"s_list_filter_pred_idx", BSQPrimitiveImplTag::s_list_filter_pred_idx},
+    {"s_list_map", BSQPrimitiveImplTag::s_list_map},
+    {"s_list_map_idx", BSQPrimitiveImplTag::s_list_map_idx},
+    {"s_list_map_sync", BSQPrimitiveImplTag::s_list_map_sync},
+    {"s_list_sort", BSQPrimitiveImplTag::s_list_sort},
+    {"s_list_uniqueify", BSQPrimitiveImplTag::s_list_uniqueify},
 
     {"s_map_build_k", BSQPrimitiveImplTag::s_map_build_k},
-    {"s_map_size_ne", BSQPrimitiveImplTag::s_map_size_ne},
-    {"s_map_has_ne", BSQPrimitiveImplTag::s_map_has_ne},
-    {"s_map_find_ne", BSQPrimitiveImplTag::s_map_find_ne},
-    {"s_map_union_ne", BSQPrimitiveImplTag::s_map_union_ne},
-    {"s_map_submap_ne", BSQPrimitiveImplTag::s_map_submap_ne},
-    {"s_map_remap_ne", BSQPrimitiveImplTag::s_map_remap_ne},
-    {"s_map_add_ne", BSQPrimitiveImplTag::s_map_add_ne},
-    {"s_map_set_ne", BSQPrimitiveImplTag::s_map_set_ne},
-    {"s_map_remove_ne", BSQPrimitiveImplTag::s_map_remove_ne}
+    {"s_map_empty", BSQPrimitiveImplTag::s_map_empty},
+    {"s_map_count", BSQPrimitiveImplTag::s_map_count},
+    {"s_map_entries", BSQPrimitiveImplTag::s_map_entries},
+    {"s_map_min_key", BSQPrimitiveImplTag::s_map_min_key},
+    {"s_map_max_key", BSQPrimitiveImplTag::s_map_max_key},
+    {"s_map_has", BSQPrimitiveImplTag::s_map_has},
+    {"s_map_get", BSQPrimitiveImplTag::s_map_get},
+    {"s_map_find", BSQPrimitiveImplTag::s_map_find},
+    {"s_map_union", BSQPrimitiveImplTag::s_map_union},
+    {"s_map_submap", BSQPrimitiveImplTag::s_map_submap},
+    {"s_map_remap", BSQPrimitiveImplTag::s_map_remap},
+    {"s_map_add", BSQPrimitiveImplTag::s_map_add},
+    {"s_map_set", BSQPrimitiveImplTag::s_map_set},
+    {"s_map_remove", BSQPrimitiveImplTag::s_map_remove}
 };
 
 Argument jsonParse_Argument(json j)
@@ -116,12 +135,12 @@ Argument jsonParse_Argument(json j)
 
 TargetVar jsonParse_TargetVar(json j)
 {
-    return TargetVar{ j["kind"].get<ArgumentTag>(), j["offset"].get<uint32_t>() };
+    return TargetVar{ j["offset"].get<uint32_t>() };
 }
 
 ParameterInfo jsonParse_ParameterInfo(json j)
 {
-    return ParameterInfo{ j["kind"].get<ArgumentTag>(), j["poffset"].get<uint32_t>() };
+    return ParameterInfo{ j["poffset"].get<uint32_t>() };
 }
 
 SourceInfo jsonParse_SourceInfo(json j)
@@ -137,6 +156,20 @@ BSQGuard jsonParse_BSQGuard(json j)
 BSQStatementGuard jsonParse_BSQStatementGuard(json j)
 {
     return BSQStatementGuard{ jsonParse_BSQGuard(j["guard"]), jsonParse_Argument(j["defaultvar"]), j["usedefaulton"].get<bool>(), j["enabled"].get<bool>() };
+}
+
+RefMask internRefMask(std::string mstr)
+{
+    if (MarshalEnvironment::g_stringmaskToDeclMap.find(mstr) == MarshalEnvironment::g_stringmaskToDeclMap.cend())
+    {
+        auto rstr = (char*)malloc(mstr.size() + 1);
+        GC_MEM_COPY(rstr, mstr.c_str(), mstr.size());
+        rstr[mstr.size()] = '\0';
+
+        MarshalEnvironment::g_stringmaskToDeclMap[mstr] = rstr;
+    }
+
+    return MarshalEnvironment::g_stringmaskToDeclMap.find(mstr)->second;
 }
 
 const BSQType* jsonParse_BSQType(json j)
@@ -662,7 +695,7 @@ ReturnAssignOfConsOp* ReturnAssignOfConsOp::jparse(json v)
 
 VarLifetimeStartOp* VarLifetimeStartOp::jparse(json v)
 {
-    return new VarLifetimeStartOp(j_sinfo(v), jsonParse_Argument(v["homelocation"]), j_oftype(v), v["name"].get<std::string>());
+    return new VarLifetimeStartOp(j_sinfo(v), jsonParse_TargetVar(v["homelocation"]), j_oftype(v), v["name"].get<std::string>());
 }
 
 VarLifetimeEndOp* VarLifetimeEndOp::jparse(json v)

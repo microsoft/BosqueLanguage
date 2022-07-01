@@ -14,24 +14,24 @@ const SMT_TIMEOUT = 10000;
 
 //TODO: should compute max consts in program and then set these limits (numerics) to make sure we can cover them 
 const SMT_VOPTS_CHK = {
-    INT_MIN: -255,
-    INT_MAX: 256,
+    INT_MIN: -32768,
+    INT_MAX: 32767,
+    NAT_MAX: 65535,
     SLEN_MAX: 48,
     BLEN_MAX: 32,
 
-    ARRAY_MODE: "Seq",
     CONTAINER_MAX: 3,
         
     ActionMode: SymbolicActionMode.ChkTestSymbolic
 } as VerifierOptions;
 
 const SMT_VOPTS_ERR = {
-    INT_MIN: -255,
-    INT_MAX: 256,
+    INT_MIN: -32768,
+    INT_MAX: 32767,
+    NAT_MAX: 65535,
     SLEN_MAX: 48,
     BLEN_MAX: 32,
 
-    ARRAY_MODE: "Seq",
     CONTAINER_MAX: 3,
         
     ActionMode: SymbolicActionMode.ErrTestSymbolic

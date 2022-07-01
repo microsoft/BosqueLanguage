@@ -779,28 +779,28 @@ class MIREmitter {
         this.m_currentBlock.push(new MIRConstructorPrimaryCollectionEmpty(sinfo, tkey, trgt));
     }
 
-    emitConstructorPrimaryCollectionSingletons(sinfo: SourceInfo, tkey: MIRResolvedTypeKey, args: [MIRType, MIRArgument][], trgt: MIRRegisterArgument) {
+    emitConstructorPrimaryCollectionSingletons(sinfo: SourceInfo, tkey: MIRResolvedTypeKey, args: [MIRType, MIRArgument][], trgt: MIRRegisterArgument, isassociative: boolean) {
         if(!this.emitEnabled) {
             return;
         }
 
-        this.m_currentBlock.push(new MIRConstructorPrimaryCollectionSingletons(sinfo, tkey, args.map((arg) => [arg[0].typeID, arg[1]]), trgt));
+        this.m_currentBlock.push(new MIRConstructorPrimaryCollectionSingletons(sinfo, tkey, args.map((arg) => [arg[0].typeID, arg[1]]), trgt, isassociative));
     }
 
-    emitConstructorPrimaryCollectionCopies(sinfo: SourceInfo, tkey: MIRResolvedTypeKey, args: [MIRType, MIRArgument][], trgt: MIRRegisterArgument) {
+    emitConstructorPrimaryCollectionCopies(sinfo: SourceInfo, tkey: MIRResolvedTypeKey, args: [MIRType, MIRArgument][], trgt: MIRRegisterArgument, isassociative: boolean) {
         if(!this.emitEnabled) {
             return;
         }
 
-        this.m_currentBlock.push(new MIRConstructorPrimaryCollectionCopies(sinfo, tkey, args.map((arg) => [arg[0].typeID, arg[1]]), trgt));
+        this.m_currentBlock.push(new MIRConstructorPrimaryCollectionCopies(sinfo, tkey, args.map((arg) => [arg[0].typeID, arg[1]]), trgt, isassociative));
     }
 
-    emitConstructorPrimaryCollectionMixed(sinfo: SourceInfo, tkey: MIRResolvedTypeKey, args: [boolean, MIRType, MIRArgument][], trgt: MIRRegisterArgument) {
+    emitConstructorPrimaryCollectionMixed(sinfo: SourceInfo, tkey: MIRResolvedTypeKey, args: [boolean, MIRType, MIRArgument][], trgt: MIRRegisterArgument, isassociative: boolean) {
         if(!this.emitEnabled) {
             return;
         }
         
-        this.m_currentBlock.push(new MIRConstructorPrimaryCollectionMixed(sinfo, tkey, args.map((arg) => [arg[0], arg[1].typeID, arg[2]]), trgt));
+        this.m_currentBlock.push(new MIRConstructorPrimaryCollectionMixed(sinfo, tkey, args.map((arg) => [arg[0], arg[1].typeID, arg[2]]), trgt, isassociative));
     }
 
     emitBinKeyEq(sinfo: SourceInfo, lhslayouttype: MIRType, lhs: MIRArgument, rhslayouttype: MIRType, rhs: MIRArgument, cmptype: MIRType, trgt: MIRRegisterArgument, guard: MIRStatmentGuard | undefined, lhsflowtype: MIRType, rhsflowtype: MIRType) {
@@ -1402,10 +1402,16 @@ class MIREmitter {
         emitter.registerResolvedTypeReference(assembly.getSpecialBufferCompressionType());
         emitter.registerResolvedTypeReference(assembly.getSpecialByteBufferType());
         emitter.registerResolvedTypeReference(assembly.getSpecialDateTimeType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialUTCDateTimeType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialCalendarDateType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialRelativeTimeType());
         emitter.registerResolvedTypeReference(assembly.getSpecialTickTimeType());
         emitter.registerResolvedTypeReference(assembly.getSpecialLogicalTimeType());
-        emitter.registerResolvedTypeReference(assembly.getSpecialUUIDType());
-        emitter.registerResolvedTypeReference(assembly.getSpecialContentHashType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialISOTimeStampType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialUUID4Type());
+        emitter.registerResolvedTypeReference(assembly.getSpecialUUID7Type());
+        emitter.registerResolvedTypeReference(assembly.getSpecialSHAContentHashType());
+        emitter.registerResolvedTypeReference(assembly.getSpecialLatLongCoordinateType());
         emitter.registerResolvedTypeReference(assembly.getSpecialRegexType());
         emitter.registerResolvedTypeReference(assembly.getSpecialNothingType());
 

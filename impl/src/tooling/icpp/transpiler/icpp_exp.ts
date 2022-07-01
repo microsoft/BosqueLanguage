@@ -10,8 +10,7 @@ enum ArgumentTag
 {
     InvalidOp = 0x0,
     Const,
-    ScalarVal,
-    MixedVal
+    StackVal
 }
 
 const EMPTY_CONST_POSITION = 0;
@@ -170,12 +169,10 @@ type Argument = {
 };
 
 type TargetVar = {
-    kind: ArgumentTag;
     offset: number;
 };
 
 type ParameterInfo = {
-    kind: ArgumentTag;
     poffset: number;
 };
 
@@ -201,12 +198,8 @@ class ICPPOpEmitter
         return { kind: ArgumentTag.Const, location: offset };
     }
 
-    static genScalarArgument(offset: number): Argument {
-        return { kind: ArgumentTag.ScalarVal, location: offset };
-    }
-
-    static genMixedArgument(offset: number): Argument {
-        return { kind: ArgumentTag.MixedVal, location: offset };
+    static genStackArgument(offset: number): Argument {
+        return { kind: ArgumentTag.StackVal, location: offset };
     }
 
     static genMaskGuard(gindex: number, goffset: number): ICPPGuard {
@@ -473,7 +466,7 @@ class ICPPOpEmitter
         return { tag: OpCodeTag.ReturnAssignOfConsOp, sinfo: sinfo, trgt: trgt, args: args, oftype: oftype };
     }
     
-    static genVarLifetimeStartOp(sinfo: SourceInfo, homelocation: Argument, oftype: MIRResolvedTypeKey, name: string): ICPPOp {
+    static genVarLifetimeStartOp(sinfo: SourceInfo, homelocation: TargetVar, oftype: MIRResolvedTypeKey, name: string): ICPPOp {
         return { tag: OpCodeTag.VarLifetimeStartOp, sinfo: sinfo, homelocation: homelocation, oftype: oftype, name: name };
     }
     

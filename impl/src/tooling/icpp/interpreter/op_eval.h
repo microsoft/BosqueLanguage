@@ -47,9 +47,13 @@ enum class DebuggerCmd
 class BreakPoint
 {
 public:
-    const BSQInvokeDecl* invk;
-    int64_t line;
+    int64_t bpid;
     int64_t callCount;
+
+    const BSQInvokeDecl* invk;
+    const InterpOp* op;
+
+    int64_t line;
 
     bool isValid() const
     {
@@ -86,15 +90,17 @@ class VariableHomeLocationInfo
 public:
     std::string vname;
     const BSQType* vtype;
-    Argument location;
+    TargetVar location;
 };
 
 class EvaluatorFrame
 {
 public:
 #ifdef BSQ_DEBUG_BUILD
-    std::pair<int64_t, BreakPoint> dbg_prevreturnbp;
+    BreakPoint dbg_prevreturnbp;
     BreakPoint dbg_prevbp;
+    BreakPoint dbg_currentbp;
+
     int64_t dbg_currentline;
     StepMode dbg_step_mode;
     std::map<std::string, VariableHomeLocationInfo> dbg_locals;
@@ -102,8 +108,7 @@ public:
 
     const BSQInvokeDecl* invoke;
 
-    uint8_t* scalarbase;
-    uint8_t* mixedbase;
+    uint8_t* frameptr;
     BSQBool* argmask;
     BSQBool* masksbase;
 
@@ -134,13 +139,9 @@ public:
 
     inline StorageLocationPtr evalArgument(Argument arg)
     {
-        if(arg.kind == ArgumentTag::ScalarVal)
+        if(arg.kind == ArgumentTag::StackVal)
         {
-            return this->cframe->scalarbase + arg.location;
-        }
-        else if(arg.kind == ArgumentTag::MixedVal)
-        {
-            return this->cframe->mixedbase + arg.location;
+            return this->cframe->frameptr + arg.location;
         }
         else 
         {
@@ -150,26 +151,12 @@ public:
 
     inline StorageLocationPtr evalTargetVar(TargetVar trgt)
     {
-        if(trgt.kind == ArgumentTag::ScalarVal)
-        {
-            return this->cframe->scalarbase + trgt.offset;
-        }
-        else
-        {
-            return this->cframe->mixedbase + trgt.offset;
-        }
+        return this->cframe->frameptr + trgt.offset;
     }
 
-    static inline StorageLocationPtr evalParameterInfo(ParameterInfo pinfo, uint8_t* scalarbase, uint8_t* mixedbase)
+    static inline StorageLocationPtr evalParameterInfo(ParameterInfo pinfo, uint8_t* frameptr)
     {
-        if(pinfo.kind == ArgumentTag::ScalarVal)
-        {
-            return scalarbase + pinfo.poffset;
-        }
-        else 
-        {
-            return mixedbase + pinfo.poffset;
-        }
+        return frameptr + pinfo.poffset;
     }
 
 #ifdef BSQ_DEBUG_BUILD
@@ -188,8 +175,8 @@ public:
 
     int64_t call_count = 0;
     bool debuggerattached = false;
-    BreakPoint ttdBreakpoint = {nullptr, 0, -1};
-    BreakPoint ttdBreakpoint_LastHit = {nullptr, 0, -1};
+    BreakPoint ttdBreakpoint = {-1, -1, nullptr, nullptr, 0};
+    BreakPoint ttdBreakpoint_LastHit = {-1, -1, nullptr, nullptr, 0};
     std::vector<BreakPoint> breakpoints;
 
     std::vector<std::pair<DebuggerCmd, std::string>> dbg_history;
@@ -201,105 +188,64 @@ public:
         this->cpos = -1;
 
         this->call_count = 0;
-        this->ttdBreakpoint_LastHit = {nullptr, 0, -1};          
+        this->ttdBreakpoint_LastHit = {-1, -1, nullptr, nullptr, 0};
     }
 
 private:
-    bool advanceLineAndProcsssBP(InterpOp* op)
+    bool advanceOpAndProcsssBP(InterpOp* op)
     {
-        if(!this->cframe->invoke->isUserCode)
+        if(op == nullptr)
         {
             return false;
         }
 
-        if(op == nullptr || op->sinfo.line == -1)
+        if(this->cframe->dbg_currentbp.isValid())
         {
-            return false;
+            this->cframe->dbg_prevbp = this->cframe->dbg_currentbp;
+        }
+        this->cframe->dbg_currentline = (*this->cframe->cpos)->sinfo.line;
+        this->cframe->dbg_currentbp = {-1, this->call_count, this->cframe->invoke, op, this->cframe->dbg_currentline};
+
+        if(this->cframe->dbg_step_mode == StepMode::Step || this->cframe->dbg_step_mode == StepMode::StepInto)
+        {
+            return true;
         }
 
-        if(op->sinfo.line == this->cframe->dbg_currentline)
+        if(this->ttdBreakpoint.op == op && this->call_count == ttdBreakpoint.callCount)
         {
-            if(op->tag == OpCodeTag::InvokeFixedFunctionOp || op->tag == OpCodeTag::InvokeVirtualFunctionOp || op->tag == OpCodeTag::InvokeVirtualOperatorOp)
+            this->cframe->dbg_step_mode = StepMode::Step;
+            this->ttdBreakpoint = {-1, -1, nullptr, nullptr, 0};
+
+            for(int32_t i = 0; i <= this->cpos; ++i)
             {
-                if(this->cframe->dbg_step_mode == StepMode::StepInto)
-                {
-                    return true;
-                }
-
-                if(this->ttdBreakpoint.line == this->cframe->dbg_currentline && this->call_count == ttdBreakpoint.callCount)
-                {
-                    this->cframe->dbg_step_mode = StepMode::Step;
-                    this->ttdBreakpoint = {nullptr, 0, -1};
-
-                    for(int32_t i = 0; i <= this->cpos; ++i)
-                    {
-                        if(Evaluator::g_callstack[i].invoke->isUserCode)
-                        {
-                            Evaluator::g_callstack[i].dbg_step_mode = StepMode::Step;
-                        }
-                    }
-
-                    return true;
-                }
+                Evaluator::g_callstack[i].dbg_step_mode = StepMode::Step;
             }
 
-            return false;
+            return true;
         }
-        else
+
+        auto fbp = std::find_if(breakpoints.cbegin(), breakpoints.cend(), [this, op](const BreakPoint& bp) {
+            return bp.op == op && bp.invk->srcFile == this->cframe->invoke->srcFile;
+        });
+
+        if(fbp != breakpoints.cend())
         {
-            if(this->cframe->dbg_currentline != -1)
-            {
-                this->cframe->dbg_prevbp = {this->cframe->invoke, this->cframe->dbg_currentline, this->call_count};
-            }
-            this->cframe->dbg_currentline = (*this->cframe->cpos)->sinfo.line;
+            this->ttdBreakpoint_LastHit = {-1, this->call_count, this->cframe->invoke, op, this->cframe->dbg_currentline};
 
-            if(this->cframe->dbg_step_mode == StepMode::Step || this->cframe->dbg_step_mode == StepMode::StepInto)
-            {
-                return true;
-            }
-
-            if(this->ttdBreakpoint.line == this->cframe->dbg_currentline && this->call_count == ttdBreakpoint.callCount)
+            if(!this->ttdBreakpoint.isValid())
             {
                 this->cframe->dbg_step_mode = StepMode::Step;
-                this->ttdBreakpoint = {nullptr, 0, -1};
 
-                for(int32_t i = 0; i <= this->cpos; ++i)
+                for(int32_t i = 0; i < this->cpos; ++i)
                 {
-                    if(Evaluator::g_callstack[i].invoke->isUserCode)
-                    {
-                        Evaluator::g_callstack[i].dbg_step_mode = StepMode::Step;
-                    }
+                    Evaluator::g_callstack[i].dbg_step_mode = StepMode::Step;
                 }
 
                 return true;
             }
-
-            auto fbp = std::find_if(breakpoints.cbegin(), breakpoints.cend(), [this](const BreakPoint& bp) {
-                return bp.line == this->cframe->dbg_currentline && bp.invk->srcFile == this->cframe->invoke->srcFile;
-            });
-
-            if(fbp != breakpoints.cend())
-            {
-                this->ttdBreakpoint_LastHit = {this->cframe->invoke, this->cframe->dbg_currentline, this->call_count};
-
-                if(!this->ttdBreakpoint.isValid())
-                {
-                    this->cframe->dbg_step_mode = StepMode::Step;
-
-                    for(int32_t i = 0; i < this->cpos; ++i)
-                    {
-                        if(Evaluator::g_callstack[i].invoke->isUserCode)
-                        {
-                            Evaluator::g_callstack[i].dbg_step_mode = StepMode::Step;
-                        }
-                    }
-
-                    return true;
-                }
-            }
-
-            return false;
         }
+
+        return false;
     }
 
     StepMode computeCallIntoStepMode()
@@ -337,11 +283,11 @@ private:
     {
         if(this->cframe == nullptr)
         {
-            return {nullptr, -1, 0};
+            return {-1, -1, nullptr, nullptr, 0};
         }
         else
         {
-            return {this->cframe->invoke, this->cframe->dbg_currentline, this->call_count};
+            return {-1, this->call_count, this->cframe->invoke, *this->cframe->cpos, this->cframe->dbg_currentline};
         }
     }
 
@@ -352,10 +298,10 @@ private:
             return;
         }
 
-        Evaluator::g_callstack[this->cpos - 1].dbg_prevreturnbp = std::make_pair(Evaluator::g_callstack[this->cpos - 1].dbg_currentline, BreakPoint{this->cframe->invoke, this->cframe->dbg_currentline, this->call_count});
+        Evaluator::g_callstack[this->cpos - 1].dbg_prevreturnbp = BreakPoint{-1, this->call_count, this->cframe->invoke, *this->cframe->cpos, this->cframe->dbg_currentline};
     }
 
-    inline void pushFrame(StepMode smode, const BreakPoint& callerpos, const BSQInvokeDecl* invk, uint8_t* scalarbase, uint8_t* mixedbase, BSQBool* argmask, BSQBool* masksbase, const std::vector<InterpOp*>* ops)
+    inline void pushFrame(StepMode smode, const BreakPoint& callerpos, const BSQInvokeDecl* invk, uint8_t* frameptr, BSQBool* argmask, BSQBool* masksbase, const std::vector<InterpOp*>* ops)
     {
         this->call_count++;
 
@@ -364,13 +310,13 @@ private:
 
         cf->dbg_currentline = -1;
         cf->dbg_prevbp = callerpos;
-        cf->dbg_prevreturnbp = std::make_pair(-1, callerpos);
+        cf->dbg_prevreturnbp = callerpos;
+        cf->dbg_currentbp = {-1, -1, nullptr, nullptr, 0};
 
         cf->dbg_step_mode = smode;
         
         cf->invoke = invk;
-        cf->scalarbase = scalarbase;
-        cf->mixedbase = mixedbase;
+        cf->frameptr = frameptr;
         cf->argmask = argmask;
         cf->masksbase = masksbase;
         cf->ops = ops;
@@ -381,14 +327,13 @@ private:
         this->cframe = Evaluator::g_callstack + this->cpos;
     }
 #else
-    inline void pushFrame(const BSQInvokeDecl* invk, uint8_t* scalarbase, uint8_t* mixedbase, BSQBool* argmask, BSQBool* masksbase, const std::vector<InterpOp*>* ops) 
+    inline void pushFrame(const BSQInvokeDecl* invk, uint8_t* frameptr, BSQBool* argmask, BSQBool* masksbase, const std::vector<InterpOp*>* ops) 
     {
         this->cpos++;
 
         auto cf = Evaluator::g_callstack + cpos;
         cf->invoke = invk;
-        cf->scalarbase = scalarbase;
-        cf->mixedbase = mixedbase;
+        cf->frameptr = frameptr;
         cf->argmask = argmask;
         cf->masksbase = masksbase;
         cf->ops = ops;
@@ -462,7 +407,7 @@ private:
     {
         assert(gvaroffset >= 0);
 
-        return this->cframe->scalarbase + gvaroffset;
+        return this->cframe->frameptr + gvaroffset;
     }
 
     inline BSQBool evalGuardStmt(const BSQGuard& guard)
@@ -644,7 +589,7 @@ private:
     std::vector<std::pair<void*, const BSQType*>> entitystack;
     std::vector<BSQBool*> entitymaskstack;
 
-    std::vector<std::pair<const BSQType*, uint64_t>> containerstack;
+    std::vector<std::pair<const BSQType*, std::pair<uint8_t*, uint64_t>>> containerstack;
 
     std::vector<std::list<StorageLocationPtr>> parsecontainerstack;
     std::vector<std::list<StorageLocationPtr>::iterator> parsecontainerstackiter;
@@ -670,12 +615,18 @@ public:
     virtual bool parseRationalImpl(const APIModule* apimodule, const IType* itype, std::string n, uint64_t d, StorageLocationPtr value, Evaluator& ctx) override final;
     virtual bool parseStringImpl(const APIModule* apimodule, const IType* itype, std::string s, StorageLocationPtr value, Evaluator& ctx) override final;
     virtual bool parseByteBufferImpl(const APIModule* apimodule, const IType* itype, uint8_t compress, uint8_t format, std::vector<uint8_t>& data, StorageLocationPtr value, Evaluator& ctx) override final;
-    virtual bool parseDateTimeImpl(const APIModule* apimodule, const IType* itype, DateTime t, StorageLocationPtr value, Evaluator& ctx) override final;
+    virtual bool parseDateTimeImpl(const APIModule* apimodule, const IType* itype, APIDateTime t, StorageLocationPtr value, Evaluator& ctx) override final;
+    virtual bool parseUTCDateTimeImpl(const APIModule* apimodule, const IType* itype, APIUTCDateTime t, StorageLocationPtr value, Evaluator& ctx) override final;
+    virtual bool parseCalendarDateImpl(const APIModule* apimodule, const IType* itype, APICalendarDate t, StorageLocationPtr value, Evaluator& ctx) override final;
+    virtual bool parseRelativeTimeImpl(const APIModule* apimodule, const IType* itype, APIRelativeTime t, StorageLocationPtr value, Evaluator& ctx) override final;
     virtual bool parseTickTimeImpl(const APIModule* apimodule, const IType* itype, uint64_t t, StorageLocationPtr value, Evaluator& ctx) override final;
     virtual bool parseLogicalTimeImpl(const APIModule* apimodule, const IType* itype, uint64_t j, StorageLocationPtr value, Evaluator& ctx) override final;
-    virtual bool parseUUIDImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, StorageLocationPtr value, Evaluator& ctx) override final;
-    virtual bool parseContentHashImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, StorageLocationPtr value, Evaluator& ctx) override final;
-    
+    virtual bool parseISOTimeStampImpl(const APIModule* apimodule, const IType* itype, APIISOTimeStamp t, StorageLocationPtr value, Evaluator& ctx) override final;
+    virtual bool parseUUID4Impl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, StorageLocationPtr value, Evaluator& ctx) override final;
+    virtual bool parseUUID7Impl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, StorageLocationPtr value, Evaluator& ctx) override final;
+    virtual bool parseSHAContentHashImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, StorageLocationPtr value, Evaluator& ctx) override final;
+    virtual bool parseLatLongCoordinateImpl(const APIModule* apimodule, const IType* itype, float latitude, float longitude, StorageLocationPtr value, Evaluator& ctx) override final;
+
     virtual void prepareParseTuple(const APIModule* apimodule, const IType* itype, Evaluator& ctx) override final;
     virtual StorageLocationPtr getValueForTupleIndex(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t i, Evaluator& ctx) override final;
     virtual void completeParseTuple(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
@@ -685,7 +636,8 @@ public:
     virtual void completeParseRecord(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
 
     virtual void prepareParseContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t count, Evaluator& ctx) override final;
-    virtual StorageLocationPtr getValueForContainerElementParse(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t i, Evaluator& ctx) override final;
+    virtual StorageLocationPtr getValueForContainerElementParse_T(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t i, Evaluator& ctx) override final;
+    virtual std::pair<StorageLocationPtr, StorageLocationPtr> getValueForContainerElementParse_KV(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t i, Evaluator& ctx) override final;
     virtual void completeParseContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
 
     virtual void prepareParseEntity(const APIModule* apimodule, const IType* itype, Evaluator& ctx) override final;
@@ -707,19 +659,26 @@ public:
     virtual std::optional<std::pair<std::string, uint64_t>> extractRationalImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
     virtual std::optional<std::string> extractStringImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
     virtual std::optional<std::pair<std::vector<uint8_t>, std::pair<uint8_t, uint8_t>>> extractByteBufferImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
-    virtual std::optional<DateTime> extractDateTimeImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
+    virtual std::optional<APIDateTime> extractDateTimeImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
+    virtual std::optional<APIUTCDateTime> extractUTCDateTimeImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
+    virtual std::optional<APICalendarDate> extractCalendarDateImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
+    virtual std::optional<APIRelativeTime> extractRelativeTimeImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
     virtual std::optional<uint64_t> extractTickTimeImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
     virtual std::optional<uint64_t> extractLogicalTimeImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
-    virtual std::optional<std::vector<uint8_t>> extractUUIDImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
-    virtual std::optional<std::vector<uint8_t>> extractContentHashImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
-    
+    virtual std::optional<APIISOTimeStamp> extractISOTimeStampImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
+    virtual std::optional<std::vector<uint8_t>> extractUUID4Impl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
+    virtual std::optional<std::vector<uint8_t>> extractUUID7Impl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
+    virtual std::optional<std::vector<uint8_t>> extractSHAContentHashImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
+    virtual std::optional<std::pair<float, float>> extractLatLongCoordinateImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
+
     virtual StorageLocationPtr extractValueForTupleIndex(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t i, Evaluator& ctx) override final;
     virtual StorageLocationPtr extractValueForRecordProperty(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, std::string pname, Evaluator& ctx) override final;
     virtual StorageLocationPtr extractValueForEntityField(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, std::pair<std::string, std::string> fnamefkey, Evaluator& ctx) override final;
 
     virtual void prepareExtractContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
     virtual std::optional<size_t> extractLengthForContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx) override final;
-    virtual StorageLocationPtr extractValueForContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t i, Evaluator& ctx) override final;
+    virtual StorageLocationPtr extractValueForContainer_T(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t i, Evaluator& ctx) override final;
+    virtual std::pair<StorageLocationPtr, StorageLocationPtr> extractValueForContainer_KV(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t i, Evaluator& ctx) override final;
     virtual void completeExtractContainer(const APIModule* apimodule, const IType* itype, Evaluator& ctx) override final;
 
     virtual std::optional<size_t> extractUnionChoice(const APIModule* apimodule, const IType* itype, const std::vector<const IType*>& opttypes, StorageLocationPtr intoloc, Evaluator& ctx) override final;

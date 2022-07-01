@@ -146,7 +146,7 @@ __chktest function genericGreeting_fail_bob(n: String): Bool {
 
 ////////
 //
-typedecl BoolOp provides APIType using {
+datatype BoolOp provides APIType using {
     line: Nat
 } of
 LConst { val: Bool }

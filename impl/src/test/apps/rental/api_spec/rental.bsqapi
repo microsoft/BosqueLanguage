@@ -1,0 +1,18 @@
+namespace Rental;
+
+enum Reason {
+    insufficientAvailability,
+    closedDueToConditions,
+    internalError
+}
+
+enum ExpertiseLevel {
+    novice,
+    intermediate,
+    expert
+}
+
+function processRentalRequest(expertise: ExpertiseLevel, requestedQuantity: Nat, allowPartials: Bool): Result<Nat, Reason>
+    ensures allowPartials && $return.isOk() ==> $return.result() <= requestedQuantity;
+    ensures !allowPartials && $return.isOk() ==> $return.result() == requestedQuantity;
+;

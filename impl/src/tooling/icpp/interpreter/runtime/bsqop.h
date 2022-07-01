@@ -30,8 +30,7 @@ enum class ArgumentTag
 {
     InvalidOp = 0x0,
     Const,
-    ScalarVal,
-    MixedVal
+    StackVal
 };
 
 enum class OpCodeTag
@@ -186,14 +185,12 @@ Argument jsonParse_Argument(json j);
 
 struct TargetVar
 {
-    ArgumentTag kind;
     uint32_t offset;
 };
 TargetVar jsonParse_TargetVar(json j);
 
 struct ParameterInfo
 {
-    ArgumentTag kind;
     uint32_t poffset;
 };
 ParameterInfo jsonParse_ParameterInfo(json j);
@@ -222,6 +219,8 @@ struct BSQStatementGuard
     bool enabled; //true if this statment guard is active and should be used
 };
 BSQStatementGuard jsonParse_BSQStatementGuard(json j);
+
+RefMask internRefMask(std::string mstr);
 
 const BSQType* jsonParse_BSQType(json j);
 BSQRecordPropertyID jsonParse_BSQRecordPropertyID(json j);
@@ -1148,11 +1147,11 @@ public:
 class VarLifetimeStartOp : public InterpOp
 {
 public:
-    const Argument homelocation;
+    const TargetVar homelocation;
     const BSQType* oftype;
     const std::string name;
     
-    VarLifetimeStartOp(SourceInfo sinfo, Argument homelocation, const BSQType* oftype, const std::string name) : InterpOp(sinfo, OpCodeTag::VarLifetimeStartOp), homelocation(homelocation), oftype(oftype), name(name) {;}
+    VarLifetimeStartOp(SourceInfo sinfo, TargetVar homelocation, const BSQType* oftype, const std::string name) : InterpOp(sinfo, OpCodeTag::VarLifetimeStartOp), homelocation(homelocation), oftype(oftype), name(name) {;}
     virtual ~VarLifetimeStartOp() {;}
 
     static VarLifetimeStartOp* jparse(json v);

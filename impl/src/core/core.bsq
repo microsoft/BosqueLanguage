@@ -48,7 +48,7 @@ __universal concept KeyType provides Any {
 }
 
 //<summary>Type for indicating that a datatype is a Validator.</summary>
-__universal private concept Validator provides Any {
+__universal concept Validator provides Any {
 }
 
 //<summary>Type for indicating that a datatype is parsable.</summary>
@@ -58,7 +58,6 @@ __universal concept Parsable provides Any {
 //<summary>Type for indicating that a datatype is parsable out of a buffer.</summary>
 __universal concept BufferParsable provides Any {
 }
-
 
 //<summary>Type for indicating that a datatype can be use as an input on a test method.</summary>
 __universal concept TestableType provides Any {
@@ -70,13 +69,6 @@ __universal concept APIType provides TestableType {
 
 //<summary>Type for indicating that a datatype overrides the algebraic operators +, -, *, / along with the needed consts.</summary>
 __universal concept Algebraic provides Any {
-}
-
-enum AlgebraicOpStability {
-    unstable,
-    bounded,
-    stable,
-    complete
 }
 
 //<summary>Type for indicating that a datatype overrides the algebraic operators ==, !=, <, >, <=, >=.</summary>
@@ -105,8 +97,7 @@ abstract infix operator <=(a: Some, b: Some): Bool;
 abstract infix operator >=(a: Some, b: Some): Bool;
 
 //<summary>Primitive integer value.</summary>
-__internal __typedeclable entity Int provides Some, Algebraic, Orderable, KeyType, APIType {
-    const stability: AlgebraicOpStability = AlgebraicOpStability::bounded;
+__internal __typedeclable __typebase entity Int provides Some, Algebraic, Orderable, KeyType, APIType {
     const zero: Int = 0i;
     const one: Int = 1i;
 
@@ -134,8 +125,7 @@ __safe __primitive inline infix operator <=(a: Int, b: Int): Bool = default;
 __safe __primitive inline infix operator >=(a: Int, b: Int): Bool = default;
 
 //<summary>Primitive natural number value.</summary>
-__internal __typedeclable entity Nat provides Some, Algebraic, Orderable, KeyType, APIType {
-    const stability: AlgebraicOpStability = AlgebraicOpStability::stable;
+__internal __typedeclable __typebase entity Nat provides Some, Algebraic, Orderable, KeyType, APIType {
     const zero: Nat = 0n;
     const one: Nat = 1n;
 
@@ -162,8 +152,7 @@ __safe __primitive inline infix operator <=(a: Nat, b: Nat): Bool = default;
 __safe __primitive inline infix operator >=(a: Nat, b: Nat): Bool = default;
 
 //<summary>Primitive big-integer value.</summary>
-__internal __typedeclable entity BigInt provides Some, Algebraic, Orderable, KeyType, APIType {
-    const stability: AlgebraicOpStability = AlgebraicOpStability::complete;
+__internal __typedeclable __typebase entity BigInt provides Some, Algebraic, Orderable, KeyType, APIType {
     const zero: BigInt = 0I;
     const one: BigInt = 1I;
 
@@ -191,8 +180,7 @@ __safe __primitive inline infix operator <=(a: BigInt, b: BigInt): Bool = defaul
 __safe __primitive inline infix operator >=(a: BigInt, b: BigInt): Bool = default;
 
 //<summary>Primitive big-integer value.</summary>
-__internal __typedeclable entity BigNat provides Some, Algebraic, Orderable, KeyType, APIType {
-    const stability: AlgebraicOpStability = AlgebraicOpStability::complete;
+__internal __typedeclable __typebase entity BigNat provides Some, Algebraic, Orderable, KeyType, APIType {
     const zero: BigNat = 0N;
     const one: BigNat = 1N;
 
@@ -219,8 +207,7 @@ __safe __primitive inline infix operator <=(a: BigNat, b: BigNat): Bool = defaul
 __safe __primitive inline infix operator >=(a: BigNat, b: BigNat): Bool = default;
 
 //<summary>Primitive rational value.</summary>
-__internal __typedeclable entity Rational provides Some, Algebraic, Orderable, APIType {
-    const stability: AlgebraicOpStability = AlgebraicOpStability::unstable;
+__internal __typedeclable __typebase entity Rational provides Some, Algebraic, Orderable, APIType {
     const zero: Rational = 0/1R;
     const one: Rational = 1/1R;
 
@@ -248,8 +235,7 @@ __safe __primitive inline infix operator <=(a: Rational, b: Rational): Bool = de
 __safe __primitive inline infix operator >=(a: Rational, b: Rational): Bool = default;
 
 //<summary>Primitive float value defaults to 64bit.</summary>
-__internal __typedeclable entity Float provides Some, Algebraic, Orderable, APIType {
-    const stability: AlgebraicOpStability = AlgebraicOpStability::unstable;
+__internal __typedeclable __typebase entity Float provides Some, Algebraic, Orderable, APIType {
     const zero: Float = 0.0f;
     const one: Float = 1.0f;
 
@@ -296,8 +282,7 @@ __safe __primitive inline infix operator <=(a: Float, b: Float): Bool = default;
 __safe __primitive inline infix operator >=(a: Float, b: Float): Bool = default;
 
 //<summary>Primitive float decimal value.</summary>
-__internal __typedeclable entity Decimal provides Some, Algebraic, Orderable, APIType {
-    const stability: AlgebraicOpStability = AlgebraicOpStability::unstable;
+__internal __typedeclable __typebase entity Decimal provides Some, Algebraic, Orderable, APIType {
     const zero: Decimal = 0.0d;
     const one: Decimal = 1.0d;
 
@@ -344,7 +329,7 @@ __safe __primitive inline infix operator <=(a: Decimal, b: Decimal): Bool = defa
 __safe __primitive inline infix operator >=(a: Decimal, b: Decimal): Bool = default;
 
 //<summary>Primitive string value.</summary>
-__internal entity String provides Some, KeyType, APIType {
+__internal __typedeclable __typebase entity String provides Some, KeyType, APIType {
     __safe private function s_empty(s: String): Bool = string_empty;
     __assume_safe private function s_concat2(s1: String, s2: String): String = string_append;
 
@@ -382,15 +367,23 @@ __internal entity String provides Some, KeyType, APIType {
     }
 
     method extractFront(v: String | Regex): String, String {
-        use bin search on RE(.*) and RE -- take maximal slice
+        use search on RE(.*) -- take maximal slice
     }
 
     method extractEnd(v: String | Regex): String, String {
-        use bin search on (.*)RE and RE -- take maximal slice
+        use search on (.*)RE -- take maximal slice
     }
 
-    method splitAt(v: String | Regex): String, String, String {
-        use bin search on min start position of RE(.*)
+    method removeFront(v: String | Regex): String, String {
+        use search on RE(.*) -- take maximal slice
+    }
+
+    method removeEnd(v: String | Regex): String, String {
+        use search on (.*)RE -- take maximal slice
+    }
+
+    method splitAtFirst(v: String | Regex): String, String, String {
+        use search on min position of RE(.*)
     }
 
     method splitAll(...seps: List<String>): List<String> {
@@ -400,7 +393,7 @@ __internal entity String provides Some, KeyType, APIType {
 }
 
 //<summary>Primitive safe string value.</summary>
-__internal __constructable entity StringOf<T unique Validator> provides Some, KeyType, APIType {
+__internal __constructable __typedeclable entity StringOf<T unique Validator> provides Some, KeyType, APIType {
     private function s_into(s: String): StringOf<T> = special_inject;
     method value(): String = special_extract;
 
@@ -420,7 +413,7 @@ __internal __constructable entity StringOf<T unique Validator> provides Some, Ke
 }
 
 //<summary>Primitive DataString value.</summary>
-__internal __constructable entity DataString<T unique Parsable> provides Some, KeyType, APIType when T grounded APIType, TestableType when T grounded TestableType {
+__internal __constructable __typedeclable entity DataString<T unique Parsable> provides Some, KeyType, APIType when T grounded APIType, TestableType when T grounded TestableType {
     private function s_into(s: String): DataString<T> = special_inject;
     method value(): String = special_extract;
 
@@ -470,38 +463,109 @@ __internal __constructable entity DataBuffer<T unique BufferParsable> provides S
     method value(): ByteBuffer = special_extract;
 }
 
-//<summary>Primitive DateTime value.</summary>
-__internal __typedeclable entity DateTime provides Some, APIType {
-    __assume_safe internal function s_create(year: Nat, month: Nat, day: Nat, hour: Nat, min: Nat, tzdata: String): DateTime = datetime_create;
+//<summary>Validator for TimeZone</summary>
+typedecl ValidTimeZoneName = /[A-Z]{2,5}/;
+typedecl TimeZoneCode = StringOf<ValidTimeZoneName>;
 
-    function create(year: Nat, month?: Nat=0n, day?: Nat=1n, hour?: Nat=0n, min?: Nat=0n, tzdata?: String="UTC"): DateTime
-        requires year >= 1900n;
+//<summary>Primitive DateTime value.</summary>
+__internal __typedeclable __typebase entity DateTime provides Some, APIType {
+    __assume_safe internal function s_create(year: Nat, month: Nat, day: Nat, hour: Nat, min: Nat, tzdata: TimeZoneCode): DateTime = datetime_create;
+
+    function create(year: Nat, month?: Nat=0n, day?: Nat=1n, hour?: Nat=0n, min?: Nat=0n, tzdata?: TimeZoneCode='UTC'_TimeZoneCode): DateTime
+        requires 1900n <= year && year <= 2200n;
         requires month < 12n;
-        requires day != 0n && day <= 31n;
+        requires DateOps::s_check_DayInMonth(day, month, year);
         requires hour < 24n;
         requires min < 60n;
     {
         return DateTime::s_create(year, month, day, hour, min, tzdata);
     }
 }
-//TODO: operators for orderable -- maybe Year, Month, Day, TZ, Hour, Min order ??
 
-//<summary>Primitive DateTime value.</summary>
-__internal __typedeclable entity TickTime provides Some, Orderable, APIType {
+__internal __typedeclable __typebase entity UTCDateTime provides Some, APIType, KeyType {
+    __assume_safe internal function s_create(year: Nat, month: Nat, day: Nat, hour: Nat, min: Nat): UTCDateTime = utcdatetime_create;
+
+    function create(year: Nat, month?: Nat=0n, day?: Nat=1n, hour?: Nat=0n, min?: Nat=0n): UTCDateTime
+        requires 1900n <= year && year <= 2200n;
+        requires month < 12n;
+        requires DateOps::s_check_DayInMonth(day, month, year);
+        requires hour < 24n;
+        requires min < 60n;
+    {
+        return UTCDateTime::s_create(year, month, day, hour, min);
+    }
 }
-//TODO: operators for orderable
+
+__internal __typedeclable __typebase entity CalendarDate provides Some, APIType, KeyType {
+    __assume_safe internal function s_create(year: Nat, month: Nat, day: Nat, hour: Nat, min: Nat): CalendarDate = calendardate_create;
+
+    function create(year: Nat, month?: Nat=0n, day?: Nat=1n): CalendarDate
+        requires 1900n <= year && year <= 2200n;
+        requires month < 12n;
+        requires DateOps::s_check_DayInMonth(day, month, year);
+    {
+        return CalendarDate::s_create(year, month, day);
+    }
+}
+
+__internal __typedeclable __typebase entity RelativeTime provides Some, APIType, KeyType {
+    __assume_safe internal function s_create(hour: Nat, min: Nat): RelativeTime = relativetime_create;
+
+    function create(year: Nat, month?: Nat=0n, day?: Nat=1n): RelativeTime
+        requires hour < 24n;
+        requires min < 60n;
+    {
+        return RelativeTime::s_create(hour, min);
+    }
+}
+
+//<summary>Primitive TickTime value.</summary>
+__internal __typedeclable __typebase entity TickTime provides Some, Orderable, KeyType APIType {
+}
 
 //<summary>Primitive LogicalTime value.</summary>
-__internal __typedeclable entity LogicalTime provides Some, Orderable, KeyType, APIType {
+__internal __typedeclable __typebase entity LogicalTime provides Some, Orderable, KeyType, APIType {
+    //TODO: logical time zero and one
 }
-//TODO: operators for orderable and make key type compliant
 
-//<summary>Primitive UUID value.</summary>
-__internal __typedeclable entity UUID provides Some, KeyType, APIType {
+__internal __typedeclable __typebase entity ISOTimeStamp provides Some, KeyType, APIType {
+    __assume_safe internal function s_create(year: Nat, month: Nat, day: Nat, hour: Nat, min: Nat, sec: Nat, millis: Nat): ISOTimeStamp = isotimestamp_create;
+
+    function create(year: Nat, month?: Nat=0n, day?: Nat=1n, hour?: Nat=0n, min?: Nat=0n, sec?: Nat=0n, millis?: Nat=0n): ISOTimeStamp
+        requires 1900n <= year && year <= 2200n;
+        requires month < 12n;
+        requires DateOps::s_check_DayInMonth(day, month, year);
+        requires hour < 24n;
+        requires min < 60n;
+        requires sec < 61n;
+        requires millis < 1000n;
+    {
+        return ISOTimeStamp::s_create(year, month, day, hour, min, sec, millis);
+    }
+}
+
+//<summary>Primitive UUID4 value.</summary>
+__internal __typedeclable __typebase entity UUID4 provides Some, KeyType, APIType {
+}
+
+//<summary>Primitive UUID7 value.</summary>
+__internal __typedeclable __typebase entity UUID7 provides Some, KeyType, APIType {
 }
 
 //<summary>Primitive hash value suitable for content addressable operations or crypto secure digests.</summary>
-__internal __typedeclable entity ContentHash provides Some, KeyType, APIType {
+__internal __typedeclable __typebase entity SHAContentHash provides Some, KeyType, APIType {
+}
+
+//<summary>Primitive Lat/Long</summary>
+__internal __typedeclable __typebase entity LatLongCoordinate provides Some, APIType {
+    __assume_safe internal function s_create(lat: Float, long: Float): LatLongCoordinate = latlongcoordinate_create;
+
+    function create(lat: Float, long: Float): LatLongCoordinate
+        requires -90.0f <= lat && lat <= 90.0f;
+        requires -180.0f < long && long <= 180.0f;
+    {
+        return LatLongCoordinate::s_create(lat, long);
+    }
 }
 
 //<summary>Primitive regex value.</summary>

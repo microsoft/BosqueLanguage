@@ -7,73 +7,49 @@
 
 const BSQType** BSQType::g_typetable = nullptr;
 
-GCStackEntry GCStack::frames[BSQ_MAX_STACK];
-uint32_t GCStack::stackp = 0;
+uint8_t GCStack::sdata[BSQ_MAX_STACK];
+uint8_t* GCStack::stackp = GCStack::stackp;
 
-void BumpSpaceAllocator::ensureSpace_slow()
-{
-    Allocator::GlobalAllocator.collect();
-}
+bool GCStack::global_init_complete = false;
+PageInfo* GCStack::global_memory = nullptr;
+BSQType* GCStack::global_type = nullptr;
+
+PageInfo AllocPages::g_sential_page = {0};
 
 Allocator Allocator::GlobalAllocator;
-
-BSQCollectionGCReprNode* Allocator::collectionnodesend = Allocator::collectionnodes;
-BSQCollectionGCReprNode Allocator::collectionnodes[BSQ_MAX_STACK];
-std::list<BSQCollectionIterator*> Allocator::collectioniters;
-std::vector<std::list<BSQTempRootNode>> Allocator::alloctemps;
 
 #ifdef BSQ_DEBUG_BUILD
     std::map<size_t, std::pair<const BSQType*, void*>> Allocator::dbg_idToObjMap;
 #endif
 
-void gcProcessRootOperator_nopImpl(const BSQType* btype, void** data)
+void gcProcessHeapOperator_nopImpl(const BSQType* btype, void** data, void* fromObj)
 {
     return;
 }
 
-void gcProcessRootOperator_inlineImpl(const BSQType* btype, void** data)
+void gcProcessHeapOperator_inlineImpl(const BSQType* btype, void** data, void* fromObj)
 {
-    Allocator::gcProcessSlotsWithMask<true>(data, btype->allocinfo.inlinedmask);
+    Allocator::gcProcessSlotsWithMask(data, fromObj, btype->allocinfo.inlinedmask);
 }
 
-void gcProcessRootOperator_refImpl(const BSQType* btype, void** data)
+void gcProcessHeapOperator_refImpl(const BSQType* btype, void** data, void* fromObj)
 {
-    Allocator::gcProcessSlot<true>(data);
+    Allocator::gcProcessSlotHeap(data, fromObj);
 }
 
-void gcProcessRootOperator_stringImpl(const BSQType* btype, void** data)
+void gcProcessHeapOperator_stringImpl(const BSQType* btype, void** data, void* fromObj)
 {
-    Allocator::gcProcessSlotWithString<true>(data);
+    Allocator::gcProcessSlotWithString(data, fromObj);
 }
 
-void gcProcessRootOperator_bignumImpl(const BSQType* btype, void** data)
+void gcProcessHeapOperator_bignumImpl(const BSQType* btype, void** data, void* fromObj)
 {
-    Allocator::gcProcessSlotWithBigNum<true>(data);
+    Allocator::gcProcessSlotWithBigNum(data, fromObj);
 }
 
-void gcProcessHeapOperator_nopImpl(const BSQType* btype, void** data)
+void gcProcessHeapOperator_collectionImpl(const BSQType* btype, void** data, void* fromObj)
 {
-    return;
-}
-
-void gcProcessHeapOperator_inlineImpl(const BSQType* btype, void** data)
-{
-    Allocator::gcProcessSlotsWithMask<true>(data, btype->allocinfo.inlinedmask);
-}
-
-void gcProcessHeapOperator_refImpl(const BSQType* btype, void** data)
-{
-    Allocator::gcProcessSlot<true>(data);
-}
-
-void gcProcessHeapOperator_stringImpl(const BSQType* btype, void** data)
-{
-    Allocator::gcProcessSlotWithString<true>(data);
-}
-
-void gcProcessHeapOperator_bignumImpl(const BSQType* btype, void** data)
-{
-    Allocator::gcProcessSlotWithBigNum<true>(data);
+    Allocator::gcProcessSlotWithCollection(data, fromObj);
 }
 
 void gcDecOperator_nopImpl(const BSQType* btype, void** data)
@@ -88,65 +64,50 @@ void gcDecOperator_inlineImpl(const BSQType* btype, void** data)
 
 void gcDecOperator_refImpl(const BSQType* btype, void** data)
 {
-    Allocator::gcDecrement(*data);
+    Allocator::GlobalAllocator.processDecHeapRC(*data);
 }
 
 void gcDecOperator_stringImpl(const BSQType* btype, void** data)
 {
-    Allocator::gcDecrementString(*data);
+    Allocator::gcDecrementString(data);
 }
 
 void gcDecOperator_bignumImpl(const BSQType* btype, void** data)
 {
-    Allocator::gcDecrementBigNum(*data);
+    Allocator::gcDecrementBigNum(data);
 }
 
-void gcClearOperator_nopImpl(const BSQType* btype, void** data)
+void gcDecOperator_collectionImpl(const BSQType* btype, void** data)
+{
+    Allocator::gcDecrementCollection(data);
+}
+
+void gcEvacuateOperator_nopImpl(const BSQType* btype, void** data, void* obj)
 {
     return;
 }
 
-void gcClearOperator_inlineImpl(const BSQType* btype, void** data)
+void gcEvacuateOperator_inlineImpl(const BSQType* btype, void** data, void* obj)
 {
-    Allocator::gcClearMarkSlotsWithMask(data, btype->allocinfo.inlinedmask);
+    Allocator::gcEvacuateWithMask(data, obj, btype->allocinfo.inlinedmask);
 }
 
-void gcClearOperator_refImpl(const BSQType* btype, void** data)
+void gcEvacuateOperator_refImpl(const BSQType* btype, void** data, void* obj)
 {
-    Allocator::gcClearMark(*data);
+    Allocator::GlobalAllocator.processDecHeapEvacuate(obj, data);
 }
 
-void gcClearOperator_stringImpl(const BSQType* btype, void** data)
+void gcEvacuateOperator_stringImpl(const BSQType* btype, void** data, void* obj)
 {
-    Allocator::gcClearMarkString(*data);
+    Allocator::gcEvacuateString(data, obj);
 }
 
-void gcClearOperator_bignumImpl(const BSQType* btype, void** data)
+void gcEvacuateOperator_bignumImpl(const BSQType* btype, void** data, void* obj)
 {
-    Allocator::gcClearMarkBigNum(*data);
+    Allocator::gcEvacuateBigNum(data, obj);
 }
 
-void gcMakeImmortalOperator_nopImpl(const BSQType* btype, void** data)
+void gcEvacuateOperator_collectionImpl(const BSQType* btype, void** data, void* obj)
 {
-    return;
-}
-
-void gcMakeImmortalOperator_inlineImpl(const BSQType* btype, void** data)
-{
-    Allocator::gcMakeImmortalSlotsWithMask(data, btype->allocinfo.inlinedmask);
-}
-
-void gcMakeImmortalOperator_refImpl(const BSQType* btype, void** data)
-{
-    Allocator::gcMakeImmortal(*data);
-}
-
-void gcMakeImmortalOperator_stringImpl(const BSQType* btype, void** data)
-{
-    Allocator::gcMakeImmortalString(*data);
-}
-
-void gcMakeImmortalOperator_bignumImpl(const BSQType* btype, void** data)
-{
-    Allocator::gcMakeImmortalBigNum(*data);
+    Allocator::gcEvacuateCollection(data, obj);
 }

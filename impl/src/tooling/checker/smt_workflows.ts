@@ -26,12 +26,12 @@ const smtruntime = FS.readFileSync(smtruntime_path).toString();
 
 function generateStandardVOpts(mode: SymbolicActionMode): VerifierOptions {
     return {
-        INT_MIN: -255,
-        INT_MAX: 256,
+        INT_MIN: -32768,
+        INT_MAX: 32767,
+        NAT_MAX: 65535,
         SLEN_MAX: 48,
         BLEN_MAX: 32,
 
-        ARRAY_MODE: "Seq",
         CONTAINER_MAX: 3,
 
         ActionMode: mode

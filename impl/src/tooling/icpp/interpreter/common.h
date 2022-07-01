@@ -16,14 +16,22 @@
 #include <string>
 
 #include <vector>
+#include <queue>
 #include <list>
 #include <map>
+
+#include <chrono>
 
 #include "../../api_parse/decls.h"
 
 ////////////////////////////////
+//Forward decls for bosque types
+typedef uint32_t BSQTypeID;
+class BSQType;
+
+////////////////////////////////
 //Various sizes
-#define BSQ_MAX_STACK 2048
+#define BSQ_MAX_STACK 65536
 
 ////////////////////////////////
 //Asserts
@@ -60,79 +68,132 @@
 #define MEM_STATS_ARG(X)
 #endif
 
-//Program should not contain any allocations larger than this in a single block 
-#define BSQ_ALLOC_MAX_BLOCK_SIZE 65536
-
-//Min and max bump allocator size
-#define BSQ_MIN_NURSERY_SIZE 1048576
-#define BSQ_MAX_NURSERY_SIZE 16777216
-
-//Allocation routines
 #ifdef _WIN32
-#define BSQ_STACK_SPACE_ALLOC(SIZE) ((SIZE) == 0 ? nullptr : _alloca(SIZE))
+#define BSQ_STACK_ALLOC(SIZE) ((SIZE) == 0 ? nullptr : _alloca(SIZE))
 #else
-#define BSQ_STACK_SPACE_ALLOC(SIZE) ((SIZE) == 0 ? nullptr : alloca(SIZE))
+#define BSQ_STACK_ALLOC(SIZE) ((SIZE) == 0 ? nullptr : alloca(SIZE))
 #endif
 
-#define BSQ_BUMP_SPACE_ALLOC(SIZE) zxalloc(SIZE)
-#define BSQ_BUMP_SPACE_RELEASE(M) xfree(M)
+//All struct/tuple/record objects must be smaller than this -- larger seems like a performance anti-pattern
+//If really needed we could try to always grab/release pages in chunks of 4. Large objects allocate into these and for small objs we just throw 3 pages in the spare list. Holes are a bit of a problem though.
+#define BSQ_ALLOC_MAX_OBJ_SIZE 496ul
 
-#define BSQ_FREE_LIST_ALLOC_SMALL(SIZE) xalloc(SIZE)
-#define BSQ_FREE_LIST_RELEASE(SIZE, M) xfree(M)
+//List/Map nodes can contain multiple objects so largest allocation is a multiple (4, 8, 16)  of this + a count
+#define BSQ_ALLOC_MAX_BLOCK_SIZE ((BSQ_ALLOC_MAX_OBJ_SIZE * 16ul) + 16ul)
 
-#define GC_REF_LIST_BLOCK_SIZE_DEFAULT 256
+//Block allocation size
+#define BSQ_BLOCK_ALLOCATION_SIZE 8192ul
 
-//Header word layout
-//high [RC - 40 bits] [MARK - 1 bit] [YOUNG - 1 bit] [UNUSED - 2 bits] [TYPEID - 20 bits]
+//Collection threshold
+//TODO: we probably want allow this to adjust dynamically on demand, say from 2MB to 16MB or something
+#define BSQ_COLLECT_THRESHOLD 8388608ul
 
-#define GC_MARK_BIT 0x800000
-#define GC_YOUNG_BIT 0x400000
-#define GC_BUMP_SPACE_BIT 0x200000
-#define GC_EAGER_RC_BIT 0x100000
-#define GC_RC_MASK 0xFFFFFFFFFF000000
-#define GC_TYPE_ID_MASK 0x1FFFFF
-#define GC_REACHABLE_MASK (GC_RC_MASK | GC_MARK_BIT)
+//Make sure any allocated page is addressable by us -- larger than 2^31 and less than 2^42
+#define MIN_ALLOCATED_ADDRESS 2147483648ul
+#define MAX_ALLOCATED_ADDRESS 281474976710656ul
+
+#define GC_REF_LIST_BLOCK_SIZE_DEFAULT 512
+
+//Header layout and with immix style blocks
+//high [ALLOCATED - 1 bit] [DEC_PENDING - 1 bit] [FWDPTR - 1 bit] [RC - 59 bits] [MARK 1 - bit] [YOUNG - 1 bit]
+//high [1] [RC value - 58 bits] | [0] [PTR - 58 bits]
+
+#define GC_ALLOCATED_BIT 0x8000000000000000ul
+#define GC_DEC_PENDING_BIT 0x4000000000000000ul
+#define GC_IS_FWD_PTR_BIT 0x2000000000000000ul
+
+#define GC_RC_KIND_MASK 0x1000000000000000ul
+#define GC_RC_DATA_MASK 0xFFFFFFFFFFFFFFCul
+#define GC_RC_PTR_SHIFT 0x2
+
+#define GC_MARK_BIT 0x2ul
+#define GC_YOUNG_BIT 0x1ul
+
+#define PAGE_ADDR_MASK 0xFFFFFFFFFFFFE000ul
+#define PAGE_INDEX_ADDR_MASK 0x1FFFul
+#define PAGE_MASK_EXTRACT_ID(M) (((uintptr_t)M) & PAGE_ADDR_MASK)
+#define PAGE_MASK_EXTRACT_ADDR(M) ((PageInfo*)PAGE_MASK_EXTRACT_ID(M))
+#define PAGE_INDEX_EXTRACT(M, PI) ((((uintptr_t)M) - ((uintptr_t)(PI)->data)) / (PI)->entry_size)
 
 typedef uint64_t GC_META_DATA_WORD;
-#define GC_GET_META_DATA_ADDR(M) ((GC_META_DATA_WORD*)((uint8_t*)M - sizeof(GC_META_DATA_WORD)))
-#define GC_LOAD_META_DATA_WORD(ADDR) (*((GC_META_DATA_WORD*)ADDR))
-#define GC_SET_META_DATA_WORD(ADDR, W) (*((GC_META_DATA_WORD*)ADDR) = W)
 
-#define GC_EXTRACT_RC(W) (W & GC_RC_MASK)
-#define GC_EXTRACT_TYPEID(W) (W & GC_TYPE_ID_MASK)
+typedef uint16_t AllocPageInfo;
+#define AllocPageInfo_Alloc 0x1
+#define AllocPageInfo_Ev 0x2
 
-#define GC_RC_ZERO ((GC_META_DATA_WORD)0x0)
-#define GC_RC_ONE ((GC_META_DATA_WORD)0x1000000)
+#define AllocPageInfo_Pending 0x4
+#define AllocPageInfo_EvCandidate 0x8
 
-#define GC_TEST_IS_UNREACHABLE(W) ((W & GC_REACHABLE_MASK) == 0x0)
-#define GC_TEST_IS_ZERO_RC(W) ((W & GC_RC_MASK) == GC_RC_ZERO)
-#define GC_TEST_IS_YOUNG(W) (W & GC_YOUNG_BIT)
+struct PageInfo
+{
+    void* freelist; //allocate from here until nullptr
 
-#define GC_CLEAR_MARK_BIT(W) (W & (GC_RC_MASK | GC_YOUNG_BIT | GC_TYPE_ID_MASK))
+    GC_META_DATA_WORD* slots; //ptr to the metadata slots -- null if this is a sentinal PageInfo
+    void* data; //pointer to the data segment in this page
+    BSQType* btype;
+
+    uint16_t entry_size; //size of the entries in this page
+    uint16_t entry_count; //max number of objects that can be allocated from this Page
+
+    uint16_t freelist_count;
+
+    AllocPageInfo allocinfo;
+};
+#ifndef DEBUG_ALLOC_BLOCKS
+#define GC_PAGE_INDEX_FOR_ADDR(M, PAGE) PAGE_INDEX_EXTRACT(M, PAGE)
+#define GC_GET_OBJ_AT_INDEX(PAGE, IDX) ((void*)((uint8_t*)(PAGE)->data + (IDX * (PAGE)->entry_size)))
+#else
+#define GC_PAGE_INDEX_FOR_ADDR(M, PAGE) (std::distance((PAGE)->data, std::find((PAGE)->data, (PAGE)->data + (PAGE)->entry_count, M)))
+#define GC_GET_OBJ_AT_INDEX(PAGE, IDX) (((void**)(PAGE)->data)[IDX])
+#endif
+
+#define GC_GET_META_DATA_ADDR(M) (PAGE_MASK_EXTRACT_ADDR(M)->slots + GC_PAGE_INDEX_FOR_ADDR(M, PAGE_MASK_EXTRACT_ADDR(M)))
+#define GC_GET_META_DATA_ADDR_AND_PAGE(M, PAGE) ((PAGE)->slots + GC_PAGE_INDEX_FOR_ADDR(M, PAGE))
+
+#define GC_LOAD_META_DATA_WORD(ADDR) (*ADDR)
+#define GC_STORE_META_DATA_WORD(ADDR, W) (*ADDR = W)
+
+#define GC_IS_DEC_PENDING(W) ((W & GC_DEC_PENDING_BIT) != 0x0ul)
+#define GC_IS_FWD_PTR(W) ((W & GC_IS_FWD_PTR_BIT) != 0x0ul)
+#define GC_IS_MARKED(W) ((W & GC_MARK_BIT) != 0x0ul)
+#define GC_IS_YOUNG(W) ((W & GC_YOUNG_BIT) != 0x0ul)
+
+#define GC_IS_ALLOCATED(W) ((W & GC_ALLOCATED_BIT) != 0x0ul)
+
+#define GC_EXTRACT_RC(W) (W & GC_RC_COUNT_MASK)
+#define GC_RC_ZERO 0x0ul
+#define GC_RC_ONE 0x4ul
+#define GC_RC_TWO 0x8ul
+
+#define GC_IS_LIVE(W) ((W & (GC_RC_DATA_MASK | GC_MARK_BIT)) != 0x0ul)
+#define GC_IS_UNREACHABLE(W) ((W & (GC_RC_DATA_MASK | GC_MARK_BIT)) == 0x0ul)
+#define GC_IS_ZERO_RC(W) ((W & GC_RC_DATA_MASK) == GC_RC_ZERO)
+
 #define GC_SET_MARK_BIT(W) (W | GC_MARK_BIT)
 
-#define GC_INC_RC(W) (W + GC_RC_ONE)
-#define GC_DEC_RC(W) (W - GC_RC_ONE)
+#define GC_INC_RC_COUNT(W) (W + GC_RC_ONE)
+#define GC_DEC_RC_COUNT(W) (W - GC_RC_ONE)
 
-#define GC_INIT_BUMP_SPACE_ALLOC(ADDR, TID) GC_SET_META_DATA_WORD(ADDR, GC_YOUNG_BIT | TID)
+#define GC_HAS_RC_DATA(W) ((W & GC_RC_DATA_MASK) != 0x0)
 
-#define GC_INIT_OLD_RC_ROOT_REF(ADDR, W) GC_SET_META_DATA_WORD(ADDR, GC_RC_ZERO | GC_MARK_BIT | GC_EXTRACT_TYPEID(W))
-#define GC_INIT_OLD_RC_HEAP_REF(ADDR, W) GC_SET_META_DATA_WORD(ADDR, GC_RC_ONE | GC_EXTRACT_TYPEID(W))
+#define GC_RC_IS_COUNT(W) ((W & GC_RC_KIND_MASK) != 0x0)
+#define GC_RC_IS_PARENT(W) ((W & GC_RC_KIND_MASK) == 0x0)
+#define GC_RC_GET_PARENT(W) ((void*)((W & GC_RC_DATA_MASK) >> GC_RC_PTR_SHIFT))
+#define GC_RC_SET_PARENT(W, P) (GC_ALLOCATED_BIT | (((uintptr_t)P) << GC_RC_PTR_SHIFT) | (W & GC_MARK_BIT))
 
-//Access type info + special forwarding pointer mark
-#define GET_TYPE_META_DATA_FROM_WORD(W) (*(BSQType::g_typetable + GC_EXTRACT_TYPEID(W)))
-#define GET_TYPE_META_DATA_FROM_ADDR(ADDR) GET_TYPE_META_DATA_FROM_WORD(GC_LOAD_META_DATA_WORD(ADDR))
-#define GET_TYPE_META_DATA(M) GET_TYPE_META_DATA_FROM_ADDR(GC_GET_META_DATA_ADDR(M))
+#define GC_GET_DEC_LIST(W) ((void*)((W & GC_RC_DATA_MASK) >> GC_RC_PTR_SHIFT))
+#define GC_SET_DEC_LIST(DL) (GC_DEC_PENDING_BIT | (((uintptr_t)DL) << GC_RC_PTR_SHIFT))
+
+#define GC_GET_FWD_PTR(W) ((void*)((W & GC_RC_DATA_MASK) >> GC_RC_PTR_SHIFT))
+#define GC_SET_FWD_PTR(FP) (GC_IS_FWD_PTR_BIT | (((uintptr_t)FP) << GC_RC_PTR_SHIFT))
+
+#define GC_INIT_YOUNG_ALLOC(ADDR) GC_STORE_META_DATA_WORD(ADDR, GC_YOUNG_BIT | GC_ALLOCATED_BIT)
+
+//Access type info
+#define GET_TYPE_META_DATA(M) (PAGE_MASK_EXTRACT_ADDR(M)->btype)
 #define GET_TYPE_META_DATA_AS(T, M) (dynamic_cast<const T*>(GET_TYPE_META_DATA(M)))
 
-#define GC_SET_TYPE_META_DATA_FORWARD_SENTINAL(ADDR) *(ADDR) = 0
-#define GC_IS_TYPE_META_DATA_FORWARD_SENTINAL(W) ((W) == 0)
-#define GC_GET_FORWARD_PTR(M) *((void**)M)
-#define GC_SET_FORWARD_PTR(M, P) *((void**)M) = (void*)P
-
 //Misc operations
-#define COMPUTE_REAL_BYTES(M) (GET_TYPE_META_DATA(M)->allocinfo.heapsize + sizeof(GC_META_DATA_WORD))
-
 #define GC_MEM_COPY(DST, SRC, BYTES) std::copy((uint8_t*)SRC, ((uint8_t*)SRC) + (BYTES), (uint8_t*)DST)
 #define GC_MEM_ZERO(DST, BYTES) std::fill((uint8_t*)DST, ((uint8_t*)DST) + (BYTES), (uint8_t)0)
 
@@ -144,6 +205,7 @@ typedef void* StorageLocationPtr;
 
 #define IS_INLINE_STRING(S) (*(((uint8_t*)(S)) + 15) != 0)
 #define IS_INLINE_BIGNUM(N) false
+#define IS_EMPTY_COLLECTION(C) (C == nullptr)
 
 #define SLPTR_LOAD_CONTENTS_AS(T, L) (*((T*)L))
 #define SLPTR_STORE_CONTENTS_AS(T, L, V) *((T*)L) = V
@@ -167,10 +229,10 @@ typedef void* StorageLocationPtr;
 #define BSQ_MEM_ZERO(TRGTL, SIZE) GC_MEM_ZERO(TRGTL, SIZE)
 #define BSQ_MEM_COPY(TRGTL, SRCL, SIZE) GC_MEM_COPY(TRGTL, SRCL, SIZE)
 
+#define BSQ_SIZE_ENSURE_ALIGN_MIN(V) ((V) < (uint64_t)sizeof(void*) ? (uint64_t)sizeof(void*) : (V)) 
+
 ////////////////////////////////
 //Type and GC interaction decls
-
-class BSQType;
 
 enum class BSQTypeLayoutKind : uint32_t
 {
@@ -181,6 +243,7 @@ enum class BSQTypeLayoutKind : uint32_t
     BoxedStruct,
     String,
     BigNum,
+    Collection,
     Ref,
     UnionRef,
     UnionInline,
@@ -191,12 +254,15 @@ enum class BSQTypeLayoutKind : uint32_t
 #define PTR_FIELD_MASK_PTR '2'
 #define PTR_FIELD_MASK_STRING '3'
 #define PTR_FIELD_MASK_BIGNUM '4'
-#define PTR_FIELD_MASK_UNION '5'
+#define PTR_FIELD_MASK_COLLECTION '5'
+#define PTR_FIELD_MASK_UNION '6'
 #define PTR_FIELD_MASK_END (char)0
 
 typedef const char* RefMask;
 
-typedef void (*GCProcessOperatorFP)(const BSQType*, void**);
+typedef void (*GCProcessOperatorVisitFP)(const BSQType*, void**, void*);
+typedef void (*GCProcessOperatorDecFP)(const BSQType*, void**);
+typedef void (*GCProcessOperatorUpdateEvacuateMoveFP)(const BSQType*, void**, void*);
 
 enum DisplayMode
 {
@@ -233,23 +299,21 @@ struct BSQTypeSizeInfo
     const RefMask inlinedmask; //The mask used to traverse this object as part of inline storage (on stack or inline in an object) -- must cover full size of data
 };
 
-#define UNION_UNIVERSAL_CONTENT_SIZE 32
-#define UNION_UNIVERSAL_SIZE 40
+#define ICPP_WORD_SIZE 8
+#define UNION_UNIVERSAL_CONTENT_SIZE (ICPP_WORD_SIZE * 4)
+#define UNION_UNIVERSAL_SIZE (ICPP_WORD_SIZE + UNION_UNIVERSAL_CONTENT_SIZE)
 #define UNION_UNIVERSAL_MASK "51111"
 
 struct GCFunctorSet
 {
-    GCProcessOperatorFP fpProcessObjRoot;
-    GCProcessOperatorFP fpProcessObjHeap;
-    GCProcessOperatorFP fpDecObj;
-    GCProcessOperatorFP fpClearObj;
-    GCProcessOperatorFP fpMakeImmortal;
+    GCProcessOperatorVisitFP fpProcessObjVisit;
+    GCProcessOperatorDecFP fpDecObj;
+    GCProcessOperatorUpdateEvacuateMoveFP fpProcessMoveObj;
 };
 
 typedef int (*KeyCmpFP)(const BSQType* btype, StorageLocationPtr, StorageLocationPtr);
 constexpr KeyCmpFP EMPTY_KEY_CMP = nullptr;
 
-typedef uint32_t BSQTypeID;
 typedef uint32_t BSQTupleIndex;
 typedef uint32_t BSQRecordPropertyID;
 typedef uint32_t BSQFieldID;
@@ -268,23 +332,21 @@ typedef uint32_t BSQConstantID;
 #define BSQ_TYPE_ID_DECIMAL 8
 #define BSQ_TYPE_ID_RATIONAL 9
 #define BSQ_TYPE_ID_STRING 10
-#define BSQ_TYPE_ID_BYTEBUFFER_LEAF 11
-#define BSQ_TYPE_ID_BYTEBUFFER_NODE 12
-#define BSQ_TYPE_ID_BYTEBUFFER 13
-#define BSQ_TYPE_ID_DATETIME 14
-#define BSQ_TYPE_ID_TICKTIME 15
-#define BSQ_TYPE_ID_LOGICALTIME 16
-#define BSQ_TYPE_ID_UUID 17
-#define BSQ_TYPE_ID_CONTENTHASH 18
-#define BSQ_TYPE_ID_REGEX 19
+#define BSQ_TYPE_ID_BYTEBUFFER 11
+#define BSQ_TYPE_ID_DATETIME 12
+#define BSQ_TYPE_ID_UTC_DATETIME 13
+#define BSQ_TYPE_ID_CALENDAR_DATE 14
+#define BSQ_TYPE_ID_RELATIVE_TIME 15
+#define BSQ_TYPE_ID_TICKTIME 16
+#define BSQ_TYPE_ID_LOGICALTIME 17
+#define BSQ_TYPE_ID_ISO_TIMESTAMP 18
+#define BSQ_TYPE_ID_UUID4 19
+#define BSQ_TYPE_ID_UUID7 20
+#define BSQ_TYPE_ID_SHA_CONTENT_HASH 21
+#define BSQ_TYPE_ID_LAT_LONG_COORDINATE 22
+#define BSQ_TYPE_ID_REGEX 23
 
-#define BSQ_TYPE_ID_STRINGREPR_K16 20
-#define BSQ_TYPE_ID_STRINGREPR_K32 21
-#define BSQ_TYPE_ID_STRINGREPR_K64 22
-#define BSQ_TYPE_ID_STRINGREPR_K96 23
-#define BSQ_TYPE_ID_STRINGREPR_K128 24
-
-#define BSQ_TYPE_ID_STRINGREPR_TREE 25
+#define BSQ_TYPE_ID_INTERNAL 4294967296
 
 enum class BSQPrimitiveImplTag
 {
@@ -324,58 +386,76 @@ enum class BSQPrimitiveImplTag
 
     float_power,
     decimal_power,
+    nat_mod,
 
     string_empty,
     string_append,
-    s_strconcat_ne,
-    s_strjoin_ne,
 
     bytebuffer_getformat,
     bytebuffer_getcompression,
 
     datetime_create,
+    utcdatetime_create,
+    calendardate_create,
+    relativetime_create,
+    isotimestamp_create,
+    latlongcoordinate_create,
 
     s_list_build_k,
-    s_list_size_ne,
-    s_list_set_ne,
-    s_list_push_back_ne,
-    s_list_push_front_ne,
-    s_list_remove_ne,
-    s_list_pop_back_ne,
-    s_list_pop_front_ne,
-    s_list_reduce_ne,
-    s_list_reduce_idx_ne,
-    s_list_transduce_ne,
-    s_list_transduce_idx_ne,
-    s_list_range_ne,
-    s_list_fill_ne,
-    s_list_reverse_ne,
-    s_list_append_ne,
+    s_list_empty,
+    s_list_size,
+    s_list_set,
+    s_list_push_back,
+    s_list_push_front,
+    s_list_insert,
+    s_list_remove,
+    s_list_pop_back,
+    s_list_pop_front,
+    s_list_reduce,
+    s_list_reduce_idx,
+    s_list_transduce,
+    s_list_transduce_idx,
+    s_list_range,
+    s_list_fill,
+    s_list_reverse,
+    s_list_append,
     s_list_slice_start,
     s_list_slice_end,
-    s_list_safe_get,
-    s_list_safe_back,
-    s_list_safe_front,
-    s_list_find_pred_ne,
-    s_list_find_pred_idx_ne,
-    s_list_find_pred_last_ne,
-    s_list_find_pred_last_idx_ne,
-    s_list_filter_pred_ne,
-    s_list_filter_pred_idx_ne,
-    s_list_map_ne,
-    s_list_map_idx_ne,
-    s_list_map_sync_ne,
-    s_list_sort_ne,
-    s_list_unique_from_sorted_ne,
+    s_list_slice,
+    s_list_get,
+    s_list_back,
+    s_list_front,
+    s_list_has_pred,
+    s_list_has_pred_idx,
+    s_list_find_pred,
+    s_list_find_pred_idx,
+    s_list_find_pred_last,
+    s_list_find_pred_last_idx,
+    s_list_single_index_of,
+    s_list_has,
+    s_list_indexof,
+    s_list_last_indexof,
+    s_list_filter_pred,
+    s_list_filter_pred_idx,
+    s_list_map,
+    s_list_map_idx,
+    s_list_map_sync,
+    s_list_sort,
+    s_list_uniqueify,
 
     s_map_build_k,
-    s_map_size_ne,
-    s_map_has_ne,
-    s_map_find_ne,
-    s_map_union_ne,
-    s_map_submap_ne,
-    s_map_remap_ne,
-    s_map_add_ne,
-    s_map_set_ne,
-    s_map_remove_ne
+    s_map_empty,
+    s_map_count,
+    s_map_entries,
+    s_map_min_key,
+    s_map_max_key,
+    s_map_has,
+    s_map_get,
+    s_map_find,
+    s_map_union,
+    s_map_submap,
+    s_map_remap,
+    s_map_add,
+    s_map_set,
+    s_map_remove
 };

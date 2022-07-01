@@ -38,10 +38,6 @@ enum ICPPParseTag {
     QueueTag,
     SetTag,
     MapTag,
-    PartialVector4Tag,
-    PartialVector8Tag,
-    ListTreeTag,
-    MapTreeTag,
     RefUnionTag,
     InlineUnionTag,
     UniversalUnionTag

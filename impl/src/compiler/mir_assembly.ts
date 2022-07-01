@@ -27,14 +27,21 @@ enum APIEmitTypeTag
     ByteBufferTag,
     DataBufferTag,
     DateTimeTag,
+    UTCDateTimeTag,
+    CalendarDateTag,
+    RelativeTimeTag,
     TickTimeTag,
     LogicalTimeTag,
-    UUIDTag,
-    ContentHashTag,
+    ISOTimeStampTag,
+    UUID4Tag,
+    UUID7Tag,
+    SHAContentHashTag,
+    LatLongCoordinateTag,
     ConstructableOfType,
     TupleTag,
     RecordTag,
-    ContainerTag,
+    ContainerTTag,
+    ContainerKVTag,
     EnumTag,
     EntityTag,
     UnionTag
@@ -45,8 +52,7 @@ enum ContainerCategory
     List = 0x0,
     Stack,
     Queue,
-    Set,
-    Map
+    Set
 }
 
 function jemitsinfo(sinfo: SourceInfo): object {
@@ -374,24 +380,26 @@ class MIRObjectEntityTypeDecl extends MIREntityTypeDecl {
 } 
 
 class MIRConstructableEntityTypeDecl extends MIREntityTypeDecl {
-    readonly fromtype: MIRResolvedTypeKey;
+    readonly valuetype: MIRResolvedTypeKey;
     readonly validatefunc: MIRInvokeKey | undefined; 
     readonly usingcons: MIRInvokeKey | undefined;
+    readonly basetype: MIRResolvedTypeKey;
 
-    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], fromtype: MIRResolvedTypeKey, validatefunc: MIRInvokeKey | undefined, usingcons: MIRInvokeKey | undefined) {
+    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], fromtype: MIRResolvedTypeKey, validatefunc: MIRInvokeKey | undefined, usingcons: MIRInvokeKey | undefined, basetype: MIRResolvedTypeKey) {
         super(srcInfo, srcFile, tkey, attributes, ns, name, terms, provides);
 
-        this.fromtype = fromtype;
+        this.valuetype = fromtype;
         this.validatefunc = validatefunc;
         this.usingcons = usingcons;
+        this.basetype = basetype;
     }
 
     jemit(): object {
-        return { tag: "constructable", ...this.jemitbase(), fromtype: this.fromtype, validatefunc: this.validatefunc, usingcons: this.usingcons };
+        return { tag: "constructable", ...this.jemitbase(), valuetype: this.valuetype, validatefunc: this.validatefunc, usingcons: this.usingcons, basetype: this.basetype };
     }
 
     static jparse(jobj: any): MIRConstructableEntityTypeDecl {
-        return new MIRConstructableEntityTypeDecl(...MIROOTypeDecl.jparsebase(jobj), jobj.fromtype, jobj.validatefunc, jobj.usingcons);
+        return new MIRConstructableEntityTypeDecl(...MIROOTypeDecl.jparsebase(jobj), jobj.valuetype, jobj.validatefunc, jobj.usingcons, jobj.basetype);
     }
 }
 
@@ -622,12 +630,8 @@ class MIRPrimitiveSetEntityTypeDecl extends MIRPrimitiveCollectionEntityTypeDecl
 }
 
 class MIRPrimitiveMapEntityTypeDecl extends MIRPrimitiveCollectionEntityTypeDecl {
-    readonly tupentrytype: MIRResolvedTypeKey;
-
-    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], binds: Map<string, MIRType>, tupentrytype: MIRResolvedTypeKey) {
+    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], binds: Map<string, MIRType>) {
         super(srcInfo, srcFile, tkey, attributes, ns, name, terms, provides, binds);
-
-        this.tupentrytype = tupentrytype;
     }
 
     getTypeK(): MIRType {
@@ -639,11 +643,11 @@ class MIRPrimitiveMapEntityTypeDecl extends MIRPrimitiveCollectionEntityTypeDecl
     }
 
     jemit(): object {
-        return { tag: "set", ...this.jemitcollection(), tupentrytype: this.tupentrytype };
+        return { tag: "set", ...this.jemitcollection() };
     }
 
     static jparse(jobj: any): MIRPrimitiveMapEntityTypeDecl {
-        return new MIRPrimitiveMapEntityTypeDecl(...MIRPrimitiveCollectionEntityTypeDecl.jparsecollection(jobj), jobj.tupentrytype);
+        return new MIRPrimitiveMapEntityTypeDecl(...MIRPrimitiveCollectionEntityTypeDecl.jparsecollection(jobj));
     }
 }
 
@@ -1124,17 +1128,35 @@ class MIRAssembly {
                 else if(tt.typeID === "DateTime") {
                     return {tag: APIEmitTypeTag.DateTimeTag};
                 }
+                else if(tt.typeID === "UTCDateTime") {
+                    return {tag: APIEmitTypeTag.UTCDateTimeTag};
+                }
+                else if(tt.typeID === "CalendarDate") {
+                    return {tag: APIEmitTypeTag.CalendarDateTag};
+                }
+                else if(tt.typeID === "RelativeTime") {
+                    return {tag: APIEmitTypeTag.RelativeTimeTag};
+                }
                 else if(tt.typeID === "TickTime") {
                     return {tag: APIEmitTypeTag.TickTimeTag};
                 }
                 else if(tt.typeID === "LogicalTime") {
                     return {tag: APIEmitTypeTag.LogicalTimeTag};
                 }
-                else if(tt.typeID === "UUID") {
-                    return {tag: APIEmitTypeTag.UUIDTag};
+                else if(tt.typeID === "ISOTimeStamp") {
+                    return {tag: APIEmitTypeTag.ISOTimeStampTag};
                 }
-                else if(tt.typeID === "ContentHash") {
-                    return {tag: APIEmitTypeTag.ContentHashTag};
+                else if(tt.typeID === "UUID4") {
+                    return {tag: APIEmitTypeTag.UUID4Tag};
+                }
+                else if(tt.typeID === "UUID7") {
+                    return {tag: APIEmitTypeTag.UUID7Tag};
+                }
+                else if(tt.typeID === "SHAContentHash") {
+                    return {tag: APIEmitTypeTag.SHAContentHashTag};
+                }
+                else if(tt.typeID === "LatLongCoordinate") {
+                    return {tag: APIEmitTypeTag.LatLongCoordinateTag};
                 }
                 else {
                     assert(false);
@@ -1142,16 +1164,7 @@ class MIRAssembly {
                 }
             }
             else if (entity instanceof MIRConstructableInternalEntityTypeDecl) {
-                if (tt.typeID.startsWith("StringOf")) {
-                    return {tag: APIEmitTypeTag.StringOfTag, name: tt.typeID, validator: (entity.fromtype as MIRResolvedTypeKey)};
-                }
-                else if (tt.typeID.startsWith("DataString")) {
-                    return {tag: APIEmitTypeTag.DataStringTag, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey), chkinv: (entity as MIRDataStringInternalEntityTypeDecl).accepts};
-                }
-                else if (tt.typeID.startsWith("DataBuffer")) {
-                    return {tag: APIEmitTypeTag.DataBufferTag, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey), chkinv: (entity as MIRDataBufferInternalEntityTypeDecl).accepts};
-                }
-                else if (tt.typeID.startsWith("Something")) {
+                if (tt.typeID.startsWith("Something")) {
                     return {tag: APIEmitTypeTag.ConstructableOfType, name: tt.typeID, oftype: (entity.fromtype as MIRResolvedTypeKey), validatefunc: null};
                 }
                 else if (tt.typeID.startsWith("Result::Ok")) {
@@ -1176,25 +1189,25 @@ class MIRAssembly {
                 assert(entity instanceof MIRPrimitiveCollectionEntityTypeDecl);
 
                 if(entity instanceof MIRPrimitiveListEntityTypeDecl) {
-                    return {tag: APIEmitTypeTag.ContainerTag, name: tt.typeID, category: ContainerCategory.List, elemtype: entity.getTypeT().typeID};
+                    return {tag: APIEmitTypeTag.ContainerTTag, name: tt.typeID, category: ContainerCategory.List, elemtype: entity.getTypeT().typeID};
                 }
                 else if(entity instanceof MIRPrimitiveStackEntityTypeDecl) {
-                    return {tag: APIEmitTypeTag.ContainerTag, name: tt.typeID, category: ContainerCategory.Stack, elemtype: entity.getTypeT().typeID};
+                    return {tag: APIEmitTypeTag.ContainerTTag, name: tt.typeID, category: ContainerCategory.Stack, elemtype: entity.getTypeT().typeID};
                 }
                 else if(entity instanceof MIRPrimitiveQueueEntityTypeDecl) {
-                    return {tag: APIEmitTypeTag.ContainerTag, name: tt.typeID, category: ContainerCategory.Queue, elemtype: entity.getTypeT().typeID};
+                    return {tag: APIEmitTypeTag.ContainerTTag, name: tt.typeID, category: ContainerCategory.Queue, elemtype: entity.getTypeT().typeID};
                 }
                 else if(entity instanceof MIRPrimitiveSetEntityTypeDecl) {
-                    return {tag: APIEmitTypeTag.ContainerTag, name: tt.typeID, category: ContainerCategory.Set, elemtype: entity.getTypeT().typeID};
+                    return {tag: APIEmitTypeTag.ContainerTTag, name: tt.typeID, category: ContainerCategory.Set, elemtype: entity.getTypeT().typeID};
                 }
                 else {
                     const mentity = entity as MIRPrimitiveMapEntityTypeDecl;
-                    return {tag: APIEmitTypeTag.ContainerTag, name: tt.typeID, category: ContainerCategory.Map, elemtype: mentity.tupentrytype};
+                    return {tag: APIEmitTypeTag.ContainerKVTag, name: tt.typeID, ktype: mentity.getTypeK(), vtype: mentity.getTypeV()};
                 }
             }
         }
         else if(entity instanceof MIRConstructableEntityTypeDecl) {
-            return {tag: APIEmitTypeTag.ConstructableOfType, name: tt.typeID, oftype: entity.fromtype, validatefunc: entity.validatefunc || null};
+            return {tag: APIEmitTypeTag.ConstructableOfType, name: tt.typeID, oftype: entity.valuetype, validatefunc: entity.validatefunc || null};
         }
         else if(entity instanceof MIREnumEntityTypeDecl) {
             return {tag: APIEmitTypeTag.EnumTag, name: tt.typeID, enums: entity.enums};

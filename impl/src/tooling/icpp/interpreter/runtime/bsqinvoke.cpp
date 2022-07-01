@@ -18,16 +18,7 @@ RefMask jsonLoadRefMask(json val)
     else
     {
         auto mstr = val.get<std::string>();
-        if (MarshalEnvironment::g_stringmaskToDeclMap.find(mstr) == MarshalEnvironment::g_stringmaskToDeclMap.cend())
-        {
-            auto rstr = (char*)malloc(mstr.size() + 1);
-            GC_MEM_COPY(rstr, mstr.c_str(), mstr.size());
-            rstr[mstr.size()] = '\0';
-
-            MarshalEnvironment::g_stringmaskToDeclMap[mstr] = rstr;
-        }
-
-        return MarshalEnvironment::g_stringmaskToDeclMap.find(mstr)->second;
+        return internRefMask(mstr);
     }
 }
 
@@ -282,7 +273,7 @@ const BSQType* jsonLoadDeclOfType(json v)
 {
     auto ttype = j_tkey(v);
     auto tname = j_name(v);
-    auto oftypeid = MarshalEnvironment::g_typenameToIdMap.find(v["oftype"].get<std::string>())->second;
+    auto oftypeid = MarshalEnvironment::g_typenameToIdMap.find(v["basetype"].get<std::string>())->second;
 
     switch(oftypeid)
     {
@@ -302,14 +293,26 @@ const BSQType* jsonLoadDeclOfType(json v)
         return CONS_BSQ_RATIONAL_TYPE(ttype, tname);
     case BSQ_TYPE_ID_DATETIME:
         return CONS_BSQ_DATE_TIME_TYPE(ttype, tname);
+    case BSQ_TYPE_ID_UTC_DATETIME:
+        return CONS_BSQ_UTC_DATE_TIME_TYPE(ttype, tname);
+    case BSQ_TYPE_ID_CALENDAR_DATE:
+        return CONS_BSQ_CALENDAR_DATE_TYPE(ttype, tname);
+    case BSQ_TYPE_ID_RELATIVE_TIME:
+        return CONS_BSQ_RELATIVE_TIME_TYPE(ttype, tname);
     case BSQ_TYPE_ID_TICKTIME:
         return CONS_BSQ_TICK_TIME_TYPE(ttype, tname);
     case BSQ_TYPE_ID_LOGICALTIME:
         return CONS_BSQ_LOGICAL_TIME_TYPE(ttype, tname);
-    case BSQ_TYPE_ID_UUID:
-        return CONS_BSQ_UUID_TYPE(ttype, tname);
-    case BSQ_TYPE_ID_CONTENTHASH:
-        return CONS_BSQ_CONTENT_HASH_TYPE(ttype, tname); 
+    case BSQ_TYPE_ID_ISO_TIMESTAMP:
+        return CONS_BSQ_ISO_TIME_STAMP_TYPE(ttype, tname);
+    case BSQ_TYPE_ID_UUID4:
+        return CONS_BSQ_UUID4_TYPE(ttype, tname);
+    case BSQ_TYPE_ID_UUID7:
+        return CONS_BSQ_UUID7_TYPE(ttype, tname);
+    case BSQ_TYPE_ID_SHA_CONTENT_HASH:
+        return CONS_BSQ_SHA_CONTENT_HASH_TYPE(ttype, tname); 
+    case BSQ_TYPE_ID_LAT_LONG_COORDINATE:
+        return CONS_BSQ_LAT_LONG_COORDINATE_TYPE(ttype, tname);
     default: {
         assert(false);
         return nullptr;
@@ -324,45 +327,12 @@ const BSQType* jsonLoadListType(json v)
     return CONS_BSQ_LIST_TYPE(j_tkey(v), j_name(v), etype);
 }
 
-const BSQType* jsonLoadPartialVectorType(json v, ListReprKind pvtag)
-{
-    uint64_t heapsize = v["heapsize"].get<uint64_t>();
-    RefMask hmask = jsonLoadRefMask(v["heapmask"]);
-
-    BSQTypeID etype = MarshalEnvironment::g_typenameToIdMap.find(v["etype"].get<std::string>())->second;
-    uint64_t esize = v["esize"].get<uint64_t>();
-
-    return CONS_BSQ_PARTIAL_VECTOR_TYPE(j_tkey(v), heapsize, hmask, j_name(v), etype, esize, pvtag);
-}
-
-const BSQType* jsonLoadListTreeType(json v)
-{
-    BSQTypeID etype = MarshalEnvironment::g_typenameToIdMap.find(v["etype"].get<std::string>())->second;
-    
-    return CONS_BSQ_TREE_LIST_TYPE(j_tkey(v), j_name(v), etype);
-}
-
 const BSQType* jsonLoadMapType(json v)
 {
     BSQTypeID ktype = MarshalEnvironment::g_typenameToIdMap.find(v["ktype"].get<std::string>())->second;
     BSQTypeID vtype = MarshalEnvironment::g_typenameToIdMap.find(v["vtype"].get<std::string>())->second;
-    BSQTypeID etype = MarshalEnvironment::g_typenameToIdMap.find(v["etype"].get<std::string>())->second;
 
-    return CONS_BSQ_MAP_TYPE(j_tkey(v), j_name(v), ktype, vtype, etype);
-}
-
-const BSQType* jsonLoadMapTreeType(json v)
-{
-    uint64_t heapsize = v["heapsize"].get<uint64_t>();
-    RefMask hmask = jsonLoadRefMask(v["heapmask"]);
-
-    BSQTypeID ktype = MarshalEnvironment::g_typenameToIdMap.find(v["ktype"].get<std::string>())->second;
-    BSQTypeID vtype = MarshalEnvironment::g_typenameToIdMap.find(v["vtype"].get<std::string>())->second;
-    
-    uint32_t koffset = v["koffset"].get<uint32_t>();
-    uint32_t voffset = v["voffset"].get<uint32_t>();
-
-    return CONS_BSQ_MAP_TREE_TYPE(j_tkey(v), heapsize, hmask, j_name(v), ktype, koffset, vtype, voffset);
+    return CONS_BSQ_MAP_TYPE(j_tkey(v), j_name(v), ktype, vtype);
 }
 
 const BSQType* jsonLoadRefUnionType(json v)
@@ -424,10 +394,6 @@ enum class ICPPParseTag
     QueueTag,
     SetTag,
     MapTag,
-    PartialVector4Tag,
-    PartialVector8Tag,
-    ListTreeTag,
-    MapTreeTag,
     RefUnionTag,
     InlineUnionTag,
     UniversalUnionTag
@@ -500,18 +466,6 @@ void jsonLoadBSQTypeDecl(json v)
     case ICPPParseTag::MapTag:
         ttype = jsonLoadMapType(v);
         break;
-    case ICPPParseTag::PartialVector4Tag:
-        ttype = jsonLoadPartialVectorType(v, ListReprKind::PV4);
-        break;
-    case ICPPParseTag::PartialVector8Tag:
-        ttype = jsonLoadPartialVectorType(v, ListReprKind::PV8);
-        break;
-    case ICPPParseTag::ListTreeTag:
-        ttype = jsonLoadListTreeType(v);
-        break;
-    case ICPPParseTag::MapTreeTag:
-        ttype = jsonLoadMapTreeType(v);
-        break;
     case ICPPParseTag::RefUnionTag:
         ttype = jsonLoadRefUnionType(v);
         break;
@@ -575,13 +529,11 @@ BSQInvokeBodyDecl* BSQInvokeBodyDecl::jsonLoad(json v)
     std::vector<ParameterInfo> paraminfo;
     auto jparaminfo = v["paraminfo"];
     std::transform(jparaminfo.cbegin(), jparaminfo.cend(), std::back_inserter(paraminfo), [](json param) {
-        auto atag = param["kind"].get<ArgumentTag>();
         auto offset = param["poffset"].get<uint32_t>();
-        return ParameterInfo{atag, offset};
+        return ParameterInfo{offset};
     });
 
-    Argument resultArg = { v["resultArg"]["kind"].get<ArgumentTag>(), v["resultArg"]["location"].get<uint32_t>() }; 
-    const RefMask mask = jsonLoadRefMask(v["mixedStackMask"]);
+    Argument resultArg = { v["resultArg"]["kind"].get<ArgumentTag>(), v["resultArg"]["location"].get<uint32_t>() };
 
     std::vector<InterpOp*> body;
     auto jbody = v["body"];
@@ -589,7 +541,7 @@ BSQInvokeBodyDecl* BSQInvokeBodyDecl::jsonLoad(json v)
         return InterpOp::jparse(jop);
     });
 
-    return new BSQInvokeBodyDecl(j_name(v), ikey, srcfile, j_sinfoStart(v), j_sinfoEnd(v), recursive, params, rtype, paraminfo, resultArg, v["scalarStackBytes"].get<size_t>(), v["mixedStackBytes"].get<size_t>(), mask, v["maskSlots"].get<uint32_t>(), body, v["argmaskSize"].get<uint32_t>(), v["isUserCode"].get<bool>());
+    return new BSQInvokeBodyDecl(j_name(v), ikey, srcfile, j_sinfoStart(v), j_sinfoEnd(v), recursive, params, rtype, paraminfo, resultArg, v["stackBytes"].get<size_t>(), v["maskSlots"].get<uint32_t>(), body, v["argmaskSize"].get<uint32_t>());
 }
 
 BSQInvokePrimitiveDecl* BSQInvokePrimitiveDecl::jsonLoad(json v)
@@ -605,8 +557,6 @@ BSQInvokePrimitiveDecl* BSQInvokePrimitiveDecl::jsonLoad(json v)
         return BSQFunctionParameter{j_name(param), ptype};
     });
     auto rtype = BSQType::g_typetable[MarshalEnvironment::g_typenameToIdMap.find(v["resultType"].get<std::string>())->second];
-
-    const RefMask mask = jsonLoadRefMask(v["mixedStackMask"]);
 
     const BSQType* enclosingtype = nullptr;
     if(v.contains("enclosingtype") && v["enclosingtype"].is_string())
@@ -643,5 +593,5 @@ BSQInvokePrimitiveDecl* BSQInvokePrimitiveDecl::jsonLoad(json v)
         pcodes[name] = new BSQPCode(code, cargpos);
     });
 
-    return new BSQInvokePrimitiveDecl(j_name(v), ikey, srcfile, j_sinfoStart(v), j_sinfoEnd(v), recursive, params, rtype, v["scalarStackBytes"].get<size_t>(), v["mixedStackBytes"].get<size_t>(), mask, v["maskSlots"].get<uint32_t>(), enclosingtype, implkey, implkeyname, binds, pcodes);
+    return new BSQInvokePrimitiveDecl(j_name(v), ikey, srcfile, j_sinfoStart(v), j_sinfoEnd(v), recursive, params, rtype, v["stackBytes"].get<size_t>(), v["maskSlots"].get<uint32_t>(), enclosingtype, implkey, implkeyname, binds, pcodes);
 }

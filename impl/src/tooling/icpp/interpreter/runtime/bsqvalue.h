@@ -55,10 +55,16 @@ public:
     static const BSQType* g_typeByteBufferNode;
     static const BSQType* g_typeByteBuffer;
     static const BSQType* g_typeDateTime;
+    static const BSQType* g_typeUTCDateTime;
+    static const BSQType* g_typeCalendarDate;
+    static const BSQType* g_typeRelativeTime;
     static const BSQType* g_typeTickTime;
     static const BSQType* g_typeLogicalTime;
-    static const BSQType* g_typeUUID;
-    static const BSQType* g_typeContentHash;
+    static const BSQType* g_typeISOTimeStamp;
+    static const BSQType* g_typeUUID4;
+    static const BSQType* g_typeUUID7;
+    static const BSQType* g_typeSHAContentHash;
+    static const BSQType* g_typeLatLongCoordinate;
     static const BSQType* g_typeRegex;
 };
 
@@ -93,7 +99,7 @@ class BSQRegisterType : public BSQType
 {
 public:
     BSQRegisterType(BSQTypeID tid, uint64_t datasize, const RefMask imask, KeyCmpFP fpkeycmp, DisplayFP fpDisplay, std::string name): 
-        BSQType(tid, BSQTypeLayoutKind::Register, { std::max((uint64_t)sizeof(void*), datasize), std::max((uint64_t)sizeof(void*), datasize), datasize, nullptr, imask }, REGISTER_GC_FUNCTOR_SET, {}, fpkeycmp, fpDisplay, name)
+        BSQType(tid, BSQTypeLayoutKind::Register, { BSQ_SIZE_ENSURE_ALIGN_MIN(datasize), BSQ_SIZE_ENSURE_ALIGN_MIN(datasize), datasize, nullptr, imask }, REGISTER_GC_FUNCTOR_SET, {}, fpkeycmp, fpDisplay, name)
     {;}
 
     virtual ~BSQRegisterType() {;}
@@ -432,6 +438,18 @@ public:
     {;}
 
     virtual ~BSQEphemeralListType() {;}
+};
+
+std::string globalObjectDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode);
+
+class BSQGlobalObjectType : public BSQRefType
+{
+public:
+    BSQGlobalObjectType(uint64_t heapsize, const RefMask heapmask, std::string name):
+        BSQRefType(BSQ_TYPE_ID_INTERNAL, heapsize, heapmask, {}, EMPTY_KEY_CMP, globalObjectDisplay_impl, name)
+    {;}
+
+    virtual ~BSQGlobalObjectType() {;}
 };
 
 std::string unionDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode);
@@ -914,6 +932,8 @@ public:
 
     virtual ~BSQStringReprType() {;}
 
+    virtual bool isKReprNode() const = 0;
+
     virtual uint64_t utf8ByteCount(void* repr) const = 0;
     virtual void* slice(void* data, uint64_t nstart, uint64_t nend) const = 0;
 };
@@ -926,6 +946,8 @@ public:
     {;}
 
     virtual ~BSQStringKReprTypeAbstract() {;}
+
+    virtual bool isKReprNode() const override final { return true; }
 
     static uint64_t getUTF8ByteCount(void* repr)
     {
@@ -959,7 +981,7 @@ template <uint64_t k>
 class BSQStringKReprType : public BSQStringKReprTypeAbstract
 {
 public:
-    BSQStringKReprType(BSQTypeID tid): BSQStringKReprTypeAbstract(tid, k, "[Internal::StringKRepr]") 
+    BSQStringKReprType(): BSQStringKReprTypeAbstract(BSQ_TYPE_ID_INTERNAL, k, "[Internal::StringKRepr]") 
     {;}
 
     virtual ~BSQStringKReprType() {;}
@@ -970,15 +992,19 @@ struct BSQStringTreeRepr
     void* srepr1;
     void* srepr2;
     uint64_t size;
+    //TODO: stash perfect hashing bit if in tree to allow for fast order compare on strings! Maybe de-dup on GC in this tree too and use as Key value.
+    //Then we need to sweep this tree periodically for release OR do some special case for count 1 and a string check
 };
 
 class BSQStringTreeReprType : public BSQStringReprType
 {
 public:
-    BSQStringTreeReprType(): BSQStringReprType(BSQ_TYPE_ID_STRINGREPR_TREE, sizeof(BSQStringTreeRepr), "22", "[Internal::StringConcatRepr]") 
+    BSQStringTreeReprType(): BSQStringReprType(BSQ_TYPE_ID_INTERNAL, sizeof(BSQStringTreeRepr), "22", "[Internal::StringConcatRepr]") 
     {;}
 
     virtual ~BSQStringTreeReprType() {;}
+
+    virtual bool isKReprNode() const override final { return false; }
 
     uint64_t utf8ByteCount(void* repr) const override final
     {
@@ -990,6 +1016,8 @@ public:
 
 struct BSQString
 {
+    //TODO: should we make the reprs use this instead of void* -- makes a tree node can store much more 
+    //      also we can then use this as a place to stash a pointer for the perfect tree hash for less compare and GC de-dupe
     union { void* u_data; BSQInlineString u_inlineString; };
 };
 constexpr BSQString g_emptyString = {0};
@@ -1194,7 +1222,7 @@ private:
 
 public:
     BSQStringImplType(BSQTypeID tid, std::string name) 
-    : BSQType(tid, BSQTypeLayoutKind::String, {sizeof(BSQString), sizeof(BSQString), sizeof(BSQString), "31", "31"}, { gcDecOperator_stringImpl, gcClearOperator_stringImpl, gcProcessRootOperator_stringImpl, gcProcessHeapOperator_stringImpl }, {}, entityStringKeyCmp_impl, entityStringDisplay_impl, name)
+    : BSQType(tid, BSQTypeLayoutKind::String, {sizeof(BSQString), sizeof(BSQString), sizeof(BSQString), "31", "31"}, { gcProcessHeapOperator_stringImpl, gcDecOperator_stringImpl, gcEvacuateOperator_stringImpl  }, {}, entityStringKeyCmp_impl, entityStringDisplay_impl, name)
     {
         static_assert(sizeof(BSQString) == 16);
     }
@@ -1285,8 +1313,8 @@ std::string entityByteBufferLeafDisplay_impl(const BSQType* btype, StorageLocati
 std::string entityByteBufferNodeDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode);
 std::string entityByteBufferDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode);
 
-#define CONS_BSQ_BYTE_BUFFER_LEAF_TYPE() (new BSQRefType(BSQ_TYPE_ID_BYTEBUFFER_LEAF, sizeof(BSQByteBufferLeaf), nullptr, {}, EMPTY_KEY_CMP, entityByteBufferLeafDisplay_impl, "ByteBufferLeaf"))
-#define CONS_BSQ_BYTE_BUFFER_NODE_TYPE() (new BSQRefType(BSQ_TYPE_ID_BYTEBUFFER_NODE, sizeof(BSQByteBufferNode), "22", {}, EMPTY_KEY_CMP, entityByteBufferNodeDisplay_impl, "ByteBufferNode"))
+#define CONS_BSQ_BYTE_BUFFER_LEAF_TYPE() (new BSQRefType(BSQ_TYPE_ID_INTERNAL, sizeof(BSQByteBufferLeaf), nullptr, {}, EMPTY_KEY_CMP, entityByteBufferLeafDisplay_impl, "ByteBufferLeaf"))
+#define CONS_BSQ_BYTE_BUFFER_NODE_TYPE() (new BSQRefType(BSQ_TYPE_ID_INTERNAL, sizeof(BSQByteBufferNode), "22", {}, EMPTY_KEY_CMP, entityByteBufferNodeDisplay_impl, "ByteBufferNode"))
 #define CONS_BSQ_BYTE_BUFFER_TYPE(TID, NAME) (new BSQRefType(TID, sizeof(BSQByteBuffer), "2", {}, EMPTY_KEY_CMP, entityByteBufferDisplay_impl, NAME))
 
 ////
@@ -1300,20 +1328,76 @@ struct BSQDateTime
     uint8_t hour;    // 0-23
     uint8_t min;     // 0-59
 
+    uint16_t padding;
+
     const char* tzdata; //timezone name in tzdata database
 };
 
 std::string entityDateTimeDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode);
 
-#define CONS_BSQ_DATE_TIME_TYPE(TID, NAME) (new BSQRefType(TID, sizeof(BSQDateTime), nullptr, {}, EMPTY_KEY_CMP, entityDateTimeDisplay_impl, NAME))
+#define CONS_BSQ_DATE_TIME_TYPE(TID, NAME) (new BSQRegisterType<BSQDateTime>(TID, sizeof(BSQDateTime), "11", EMPTY_KEY_CMP, entityDateTimeDisplay_impl, NAME))
+
+////
+//UTCDateTime
+
+struct BSQUTCDateTime
+{
+    uint16_t year;   // Year since 1900
+    uint8_t month;   // 0-11
+    uint8_t day;     // 1-31
+    uint8_t hour;    // 0-23
+    uint8_t min;     // 0-59
+
+    uint16_t padding;
+};
+
+std::string entityUTCDateTimeDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode);
+int entityUTCDateTimeKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
+
+#define CONS_BSQ_UTC_DATE_TIME_TYPE(TID, NAME) (new BSQRegisterType<BSQUTCDateTime>(TID, sizeof(BSQUTCDateTime), "1", entityUTCDateTimeKeyCmp_impl, entityUTCDateTimeDisplay_impl, NAME))
+
+////
+//CalendarDate
+
+struct BSQCalendarDate
+{
+    uint16_t year;   // Year since 1900
+    uint8_t month;   // 0-11
+    uint8_t day;     // 1-31
+
+    uint32_t padding;
+};
+
+std::string entityCalendarDateDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode);
+int entityCalendarDateKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
+
+#define CONS_BSQ_CALENDAR_DATE_TYPE(TID, NAME) (new BSQRegisterType<BSQCalendarDate>(TID, sizeof(BSQCalendarDate), "1", entityCalendarDateKeyCmp_impl, entityCalendarDateDisplay_impl, NAME))
+
+////
+//UTCDateTime
+
+struct BSQRelativeTime
+{
+    uint8_t hour;    // 0-23
+    uint8_t min;     // 0-59
+
+    uint16_t padding;
+    uint32_t padding2;
+};
+
+std::string entityRelativeTimeDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode);
+int entityRelativeTimeKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
+
+#define CONS_BSQ_RELATIVE_TIME_TYPE(TID, NAME) (new BSQRegisterType<BSQRelativeTime>(TID, sizeof(BSQRelativeTime), "1", entityRelativeTimeKeyCmp_impl, entityRelativeTimeDisplay_impl, NAME))
 
 ////
 //TickTime
 typedef uint64_t BSQTickTime;
 
 std::string entityTickTimeDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode);
+int entityTickTimeKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
 
-#define CONS_BSQ_TICK_TIME_TYPE(TID, NAME) (new BSQRegisterType<BSQTickTime>(TID, sizeof(BSQTickTime), "1", EMPTY_KEY_CMP, entityTickTimeDisplay_impl, NAME))
+#define CONS_BSQ_TICK_TIME_TYPE(TID, NAME) (new BSQRegisterType<BSQTickTime>(TID, sizeof(BSQTickTime), "1", entityTickTimeKeyCmp_impl, entityTickTimeDisplay_impl, NAME))
 
 ////
 //LogicalTime
@@ -1325,22 +1409,59 @@ int entityLogicalTimeKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1,
 #define CONS_BSQ_LOGICAL_TIME_TYPE(TID, NAME) (new BSQRegisterType<BSQTickTime>(TID, sizeof(BSQLogicalTime), "1", entityLogicalTimeKeyCmp_impl, entityLogicalTimeDisplay_impl, NAME))
 
 ////
+//ISOTimeStamp
+
+struct BSQISOTimeStamp
+{
+    uint16_t year;   // Year since 1900
+    uint8_t month;   // 0-11
+    uint8_t day;     // 1-31
+    uint8_t hour;    // 0-23
+    uint8_t min;     // 0-59
+
+    uint16_t seconds; //0-61
+    uint16_t millis; //0-999
+
+    int16_t padding1;
+    uint32_t padding2;
+};
+
+std::string entityISOTimeStampDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode);
+int entityISOTimeStampKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
+
+#define CONS_BSQ_ISO_TIME_STAMP_TYPE(TID, NAME) (new BSQRegisterType<BSQISOTimeStamp>(TID, sizeof(BSQISOTimeStamp), "11", entityISOTimeStampKeyCmp_impl, entityISOTimeStampDisplay_impl, NAME))
+
+////
 //UUID
 typedef struct { uint8_t bytes[16]; } BSQUUID;
 
 std::string entityUUIDDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode);
 int entityUUIDKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
 
-#define CONS_BSQ_UUID_TYPE(TID, NAME) (new BSQRegisterType<BSQUUID>(TID, sizeof(BSQUUID), "11", entityUUIDKeyCmp_impl, entityUUIDDisplay_impl, NAME))
+#define CONS_BSQ_UUID4_TYPE(TID, NAME) (new BSQRegisterType<BSQUUID>(TID, sizeof(BSQUUID), "11", entityUUIDKeyCmp_impl, entityUUIDDisplay_impl, NAME))
+#define CONS_BSQ_UUID7_TYPE(TID, NAME) (new BSQRegisterType<BSQUUID>(TID, sizeof(BSQUUID), "11", entityUUIDKeyCmp_impl, entityUUIDDisplay_impl, NAME))
 
 ////
 //ContentHash
-typedef struct { uint8_t bytes[64]; } BSQContentHash;
+typedef struct { uint8_t bytes[64]; } BSQSHAContentHash;
 
-std::string entityContentHashDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode);
-int entityContentHashKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
+std::string entitySHAContentHashDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode);
+int entitySHAContentHashKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2);
 
-#define CONS_BSQ_CONTENT_HASH_TYPE(TID, NAME) (new BSQRefType(TID, sizeof(BSQContentHash), nullptr, {}, entityContentHashKeyCmp_impl, entityContentHashDisplay_impl, NAME))
+#define CONS_BSQ_SHA_CONTENT_HASH_TYPE(TID, NAME) (new BSQRefType(TID, sizeof(BSQSHAContentHash), nullptr, {}, entitySHAContentHashKeyCmp_impl, entitySHAContentHashDisplay_impl, NAME))
+
+////
+//GeoCoordinate
+
+struct BSQLatLongCoordinate
+{
+    float latitude;
+    float longitude;
+};
+
+std::string entityLatLongCoordinateDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode);
+
+#define CONS_BSQ_LAT_LONG_COORDINATE_TYPE(TID, NAME) (new BSQRegisterType<BSQLatLongCoordinate>(TID, sizeof(BSQLatLongCoordinate), "1", EMPTY_KEY_CMP, entityLatLongCoordinateDisplay_impl, NAME))
 
 ////
 //Regex
@@ -1371,5 +1492,5 @@ std::string entityListDisplay_impl(const BSQType* btype, StorageLocationPtr data
 
 std::string entityMapDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode);
 
-#define CONS_BSQ_MAP_TYPE(TID, NAME, KTYPE, VTYPE, CTYPE) (new BSQMapType(TID, entityMapDisplay_impl, NAME, KTYPE, VTYPE, CTYPE))
+#define CONS_BSQ_MAP_TYPE(TID, NAME, KTYPE, VTYPE) (new BSQMapType(TID, entityMapDisplay_impl, NAME, KTYPE, VTYPE))
 #define CONS_BSQ_MAP_TREE_TYPE(TID, HEAP_SIZE, HEAP_MASK, NAME, KTYPE, KOFFSET, VTYPE, VOFFSET) (new BSQMapTreeType(TID, HEAP_SIZE, HEAP_MASK, NAME, KTYPE, KOFFSET, VTYPE, VOFFSET))

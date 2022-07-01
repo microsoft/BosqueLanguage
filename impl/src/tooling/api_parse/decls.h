@@ -101,20 +101,27 @@ enum class TypeTag
     ByteBufferTag,
     DataBufferTag,
     DateTimeTag,
+    UTCDateTimeTag,
+    CalendarDateTag,
+    RelativeTimeTag,
     TickTimeTag,
     LogicalTimeTag,
-    UUIDTag,
-    ContentHashTag,
+    ISOTimeStampTag,
+    UUID4Tag,
+    UUID7Tag,
+    SHAContentHashTag,
+    LatLongCoordinateTag,
     ConstructableOfType,
     TupleTag,
     RecordTag,
-    ContainerTag,
+    ContainerTTag,
+    ContainerKVTag,
     EnumTag,
     EntityTag,
     UnionTag
 };
 
-struct DateTime
+struct APIDateTime
 {
     uint16_t year;   // Year since 1900
     uint8_t month;   // 0-11
@@ -123,6 +130,39 @@ struct DateTime
     uint8_t min;     // 0-59
 
     const char* tzdata; //timezone name as spec in tzdata database
+};
+
+struct APIUTCDateTime
+{
+    uint16_t year;   // Year since 1900
+    uint8_t month;   // 0-11
+    uint8_t day;     // 1-31
+    uint8_t hour;    // 0-23
+    uint8_t min;     // 0-59
+};
+
+struct APICalendarDate
+{
+    uint16_t year;   // Year since 1900
+    uint8_t month;   // 0-11
+    uint8_t day;     // 1-31
+};
+
+struct APIRelativeTime
+{
+    uint8_t hour;    // 0-23
+    uint8_t min;     // 0-59
+};
+
+struct APIISOTimeStamp
+{
+    uint16_t year;   // Year since 1900
+    uint8_t month;   // 0-11
+    uint8_t day;     // 1-31
+    uint8_t hour;    // 0-23
+    uint8_t min;     // 0-59
+    uint8_t sec;     // 0-60
+    uint16_t millis; // 0-999
 };
 
 template <typename ValueRepr, typename State>
@@ -146,12 +186,18 @@ public:
     virtual bool parseRationalImpl(const APIModule* apimodule, const IType* itype, std::string n, uint64_t d, ValueRepr value, State& ctx) = 0;
     virtual bool parseStringImpl(const APIModule* apimodule, const IType* itype, std::string s, ValueRepr value, State& ctx) = 0;
     virtual bool parseByteBufferImpl(const APIModule* apimodule, const IType* itype, uint8_t compress, uint8_t format, std::vector<uint8_t>& data, ValueRepr value, State& ctx) = 0;
-    virtual bool parseDateTimeImpl(const APIModule* apimodule, const IType* itype, DateTime t, ValueRepr value, State& ctx) = 0;
+    virtual bool parseDateTimeImpl(const APIModule* apimodule, const IType* itype, APIDateTime t, ValueRepr value, State& ctx) = 0;
+    virtual bool parseUTCDateTimeImpl(const APIModule* apimodule, const IType* itype, APIUTCDateTime t, ValueRepr value, State& ctx) = 0;
+    virtual bool parseCalendarDateImpl(const APIModule* apimodule, const IType* itype, APICalendarDate t, ValueRepr value, State& ctx) = 0;
+    virtual bool parseRelativeTimeImpl(const APIModule* apimodule, const IType* itype, APIRelativeTime t, ValueRepr value, State& ctx) = 0;
     virtual bool parseTickTimeImpl(const APIModule* apimodule, const IType* itype, uint64_t t, ValueRepr value, State& ctx) = 0;
     virtual bool parseLogicalTimeImpl(const APIModule* apimodule, const IType* itype, uint64_t j, ValueRepr value, State& ctx) = 0;
-    virtual bool parseUUIDImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, ValueRepr value, State& ctx) = 0;
-    virtual bool parseContentHashImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, ValueRepr value, State& ctx) = 0;
-    
+    virtual bool parseISOTimeStampImpl(const APIModule* apimodule, const IType* itype, APIISOTimeStamp t, ValueRepr value, State& ctx) = 0;
+    virtual bool parseUUID4Impl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, ValueRepr value, State& ctx) = 0;
+    virtual bool parseUUID7Impl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, ValueRepr value, State& ctx) = 0;
+    virtual bool parseSHAContentHashImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, ValueRepr value, State& ctx) = 0;
+    virtual bool parseLatLongCoordinateImpl(const APIModule* apimodule, const IType* itype, float latitude, float longitude, ValueRepr value, State& ctx) = 0;
+
     virtual void prepareParseTuple(const APIModule* apimodule, const IType* itype, State& ctx) = 0;
     virtual ValueRepr getValueForTupleIndex(const APIModule* apimodule, const IType* itype, ValueRepr value, size_t i, State& ctx) = 0;
     virtual void completeParseTuple(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
@@ -161,7 +207,8 @@ public:
     virtual void completeParseRecord(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
 
     virtual void prepareParseContainer(const APIModule* apimodule, const IType* itype, ValueRepr value, size_t count, State& ctx) = 0;
-    virtual ValueRepr getValueForContainerElementParse(const APIModule* apimodule, const IType* itype, ValueRepr value, size_t i, State& ctx) = 0;
+    virtual ValueRepr getValueForContainerElementParse_T(const APIModule* apimodule, const IType* itype, ValueRepr value, size_t i, State& ctx) = 0;
+    virtual std::pair<ValueRepr, ValueRepr> getValueForContainerElementParse_KV(const APIModule* apimodule, const IType* itype, ValueRepr value, size_t i, State& ctx) = 0;
     virtual void completeParseContainer(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
 
     virtual void prepareParseEntity(const APIModule* apimodule, const IType* itype, State& ctx) = 0;
@@ -183,11 +230,17 @@ public:
     virtual std::optional<std::pair<std::string, uint64_t>> extractRationalImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
     virtual std::optional<std::string> extractStringImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
     virtual std::optional<std::pair<std::vector<uint8_t>, std::pair<uint8_t, uint8_t>>> extractByteBufferImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
-    virtual std::optional<DateTime> extractDateTimeImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
+    virtual std::optional<APIDateTime> extractDateTimeImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
+    virtual std::optional<APIUTCDateTime> extractUTCDateTimeImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
+    virtual std::optional<APICalendarDate> extractCalendarDateImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
+    virtual std::optional<APIRelativeTime> extractRelativeTimeImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
     virtual std::optional<uint64_t> extractTickTimeImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
     virtual std::optional<uint64_t> extractLogicalTimeImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
-    virtual std::optional<std::vector<uint8_t>> extractUUIDImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
-    virtual std::optional<std::vector<uint8_t>> extractContentHashImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
+    virtual std::optional<APIISOTimeStamp> extractISOTimeStampImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
+    virtual std::optional<std::vector<uint8_t>> extractUUID4Impl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
+    virtual std::optional<std::vector<uint8_t>> extractUUID7Impl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
+    virtual std::optional<std::vector<uint8_t>> extractSHAContentHashImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
+    virtual std::optional<std::pair<float, float>> extractLatLongCoordinateImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
     
     virtual ValueRepr extractValueForTupleIndex(const APIModule* apimodule, const IType* itype, ValueRepr value, size_t i, State& ctx) = 0;
     virtual ValueRepr extractValueForRecordProperty(const APIModule* apimodule, const IType* itype, ValueRepr value, std::string pname, State& ctx) = 0;
@@ -195,7 +248,8 @@ public:
 
     virtual void prepareExtractContainer(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
     virtual std::optional<size_t> extractLengthForContainer(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
-    virtual ValueRepr extractValueForContainer(const APIModule* apimodule, const IType* itype, ValueRepr value, size_t i, State& ctx) = 0;
+    virtual ValueRepr extractValueForContainer_T(const APIModule* apimodule, const IType* itype, ValueRepr value, size_t i, State& ctx) = 0;
+    virtual std::pair<ValueRepr, ValueRepr> extractValueForContainer_KV(const APIModule* apimodule, const IType* itype, ValueRepr value, size_t i, State& ctx) = 0;
     virtual void completeExtractContainer(const APIModule* apimodule, const IType* itype, State& ctx) = 0;
 
     virtual std::optional<size_t> extractUnionChoice(const APIModule* apimodule, const IType* itype, const std::vector<const IType*>& opttypes, ValueRepr intoloc, State& ctx) = 0;
@@ -212,11 +266,17 @@ public:
     static std::optional<std::string> parseToRealNumber(json j);
     static std::optional<std::string> parseToDecimalNumber(json j);
     static std::optional<std::pair<std::string, uint64_t>> parseToRationalNumber(json j);
-    static std::optional<DateTime> parseToDateTime(json j);
+    static std::optional<APIDateTime> parseToDateTime(json j);
+    static std::optional<APIUTCDateTime> parseToUTCDateTime(json j);
+    static std::optional<APICalendarDate> parseToCalendarDate(json j);
+    static std::optional<APIRelativeTime> parseToRelativeTime(json j);
     static std::optional<uint64_t> parseToTickTime(json j);
     static std::optional<uint64_t> parseToLogicalTime(json j);
-    static std::optional<std::vector<uint8_t>> parseUUID(json j);
-    static std::optional<std::vector<uint8_t>> parseContentHash(json j);
+    static std::optional<APIISOTimeStamp> parseToISOTimeStamp(json j);
+    static std::optional<std::vector<uint8_t>> parseUUID4(json j);
+    static std::optional<std::vector<uint8_t>> parseUUID7(json j);
+    static std::optional<std::vector<uint8_t>> parseSHAContentHash(json j);
+    static std::optional<std::pair<float, float>> parseLatLongCoordinate(json j);
 
     static std::optional<json> emitUnsignedNumber(uint64_t n);
     static std::optional<json> emitSignedNumber(int64_t i);
@@ -225,11 +285,17 @@ public:
     static std::optional<json> emitRealNumber(std::string s);
     static std::optional<json> emitDecimalNumber(std::string s);
     static std::optional<json> emitRationalNumber(std::pair<std::string, uint64_t> rv);
-    static std::optional<json> emitDateTime(DateTime t);
+    static std::optional<json> emitDateTime(APIDateTime t);
+    static std::optional<json> emitUTCDateTime(APIUTCDateTime t);
+    static std::optional<json> emitCalendarDate(APICalendarDate t);
+    static std::optional<json> emitRelativeTime(APIRelativeTime t);
     static std::optional<json> emitTickTime(uint64_t t);
     static std::optional<json> emitLogicalTime(uint64_t t);
-    static std::optional<json> emitUUID(std::vector<uint8_t> uuid);
-    static std::optional<json> emitHash(std::vector<uint8_t> hash);
+    static std::optional<json> emitISOTimeStamp(APIISOTimeStamp t);
+    static std::optional<json> emitUUID4(std::vector<uint8_t> uuid);
+    static std::optional<json> emitUUID7(std::vector<uint8_t> uuid);
+    static std::optional<json> emitSHAHash(std::vector<uint8_t> hash);
+    static std::optional<json> emitLatLongCoordinate(std::pair<float, float> llcoord);
 
     static std::optional<std::pair<std::string, std::string>> checkEnumName(json j);
 };
@@ -976,6 +1042,150 @@ public:
     }
 };
 
+class UTCDateTimeType : public IGroundedType
+{
+public:
+    UTCDateTimeType() : IGroundedType(TypeTag::UTCDateTimeTag, "UTCDateTime") {;}
+    virtual ~UTCDateTimeType() {;}
+
+    static UTCDateTimeType* jparse(json j)
+    {
+        return new UTCDateTimeType();
+    }
+
+    virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
+    {
+        std::time_t tval = std::time(nullptr);
+
+        auto utctime = std::gmtime(&tval);
+        char utcstr[20] = {0};
+        size_t utcsize = strftime(utcstr, 20, "%Y-%m-%dT%H:%Mz", utctime);
+        std::string utcres(utcstr, utcstr + utcsize);
+        
+        return utcres;
+    }
+
+    template <typename ValueRepr, typename State>
+    bool parse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
+    {
+        auto t = JSONParseHelper::parseToUTCDateTime(j);
+        if(!t.has_value())
+        {
+            return false;
+        }
+
+        return apimgr.parseUTCDateTimeImpl(apimodule, this, t.value(), value, ctx);
+    }
+
+    template <typename ValueRepr, typename State>
+    std::optional<json> extract(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
+    {
+        auto tval = apimgr.extractUTCDateTimeImpl(apimodule, this, value, ctx);
+        if(!tval.has_value())
+        {
+            return std::nullopt;
+        }
+
+        return JSONParseHelper::emitUTCDateTime(tval.value());
+    }
+};
+
+class CalendarDateType : public IGroundedType
+{
+public:
+    CalendarDateType() : IGroundedType(TypeTag::CalendarDateTag, "CalendarDate") {;}
+    virtual ~CalendarDateType() {;}
+
+    static CalendarDateType* jparse(json j)
+    {
+        return new CalendarDateType();
+    }
+
+    virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
+    {
+        std::time_t tval = std::time(nullptr);
+
+        auto utctime = std::gmtime(&tval);
+        char utcstr[20] = {0};
+        size_t utcsize = strftime(utcstr, 20, "%Y-%m-%d", utctime);
+        std::string utcres(utcstr, utcstr + utcsize);
+        
+        return utcres;
+    }
+
+    template <typename ValueRepr, typename State>
+    bool parse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
+    {
+        auto t = JSONParseHelper::parseToCalendarDate(j);
+        if(!t.has_value())
+        {
+            return false;
+        }
+
+        return apimgr.parseCalendarDateImpl(apimodule, this, t.value(), value, ctx);
+    }
+
+    template <typename ValueRepr, typename State>
+    std::optional<json> extract(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
+    {
+        auto tval = apimgr.extractCalendarDateImpl(apimodule, this, value, ctx);
+        if(!tval.has_value())
+        {
+            return std::nullopt;
+        }
+
+        return JSONParseHelper::emitCalendarDate(tval.value());
+    }
+};
+
+class RelativeTimeType : public IGroundedType
+{
+public:
+    RelativeTimeType() : IGroundedType(TypeTag::RelativeTimeTag, "RelativeTime") {;}
+    virtual ~RelativeTimeType() {;}
+
+    static RelativeTimeType* jparse(json j)
+    {
+        return new RelativeTimeType();
+    }
+
+    virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
+    {
+        std::time_t tval = std::time(nullptr);
+
+        auto utctime = std::gmtime(&tval);
+        char utcstr[20] = {0};
+        size_t utcsize = strftime(utcstr, 20, "%H:%MZ", utctime);
+        std::string utcres(utcstr, utcstr + utcsize);
+        
+        return utcres;
+    }
+
+    template <typename ValueRepr, typename State>
+    bool parse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
+    {
+        auto t = JSONParseHelper::parseToRelativeTime(j);
+        if(!t.has_value())
+        {
+            return false;
+        }
+
+        return apimgr.parseRelativeTimeImpl(apimodule, this, t.value(), value, ctx);
+    }
+
+    template <typename ValueRepr, typename State>
+    std::optional<json> extract(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
+    {
+        auto tval = apimgr.extractRelativeTimeImpl(apimodule, this, value, ctx);
+        if(!tval.has_value())
+        {
+            return std::nullopt;
+        }
+
+        return JSONParseHelper::emitRelativeTime(tval.value());
+    }
+};
+
 class TickTimeType : public IGroundedType
 {
 public:
@@ -1060,15 +1270,63 @@ public:
     }
 };
 
-class UUIDType : public IGroundedType
+class ISOTimeStampType : public IGroundedType
 {
 public:
-    UUIDType() : IGroundedType(TypeTag::UUIDTag, "UUID") {;}
-    virtual ~UUIDType() {;}
+    ISOTimeStampType() : IGroundedType(TypeTag::ISOTimeStampTag, "ISOTimeStamp") {;}
+    virtual ~ISOTimeStampType() {;}
 
-    static UUIDType* jparse(json j)
+    static ISOTimeStampType* jparse(json j)
     {
-        return new UUIDType();
+        return new ISOTimeStampType();
+    }
+
+    virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
+    {
+        std::time_t tval = std::time(nullptr);
+
+        auto utctime = std::gmtime(&tval);
+        char utcstr[30] = {0};
+        size_t utcsize = strftime(utcstr, 30, "%Y-%m-%dT%H:%M:%S.000Z", utctime);
+        std::string utcres(utcstr, utcstr + utcsize);
+        
+        return utcres;
+    }
+
+    template <typename ValueRepr, typename State>
+    bool parse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
+    {
+        auto t = JSONParseHelper::parseToISOTimeStamp(j);
+        if(!t.has_value())
+        {
+            return false;
+        }
+
+        return apimgr.parseISOTimeStampImpl(apimodule, this, t.value(), value, ctx);
+    }
+
+    template <typename ValueRepr, typename State>
+    std::optional<json> extract(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
+    {
+        auto tval = apimgr.extractISOTimeStampImpl(apimodule, this, value, ctx);
+        if(!tval.has_value())
+        {
+            return std::nullopt;
+        }
+
+        return JSONParseHelper::emitISOTimeStamp(tval.value());
+    }
+};
+
+class UUID4Type : public IGroundedType
+{
+public:
+    UUID4Type() : IGroundedType(TypeTag::UUID4Tag, "UUID4") {;}
+    virtual ~UUID4Type() {;}
+
+    static UUID4Type* jparse(json j)
+    {
+        return new UUID4Type();
     }
 
     virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
@@ -1093,37 +1351,92 @@ public:
     template <typename ValueRepr, typename State>
     bool parse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
     {
-        auto uuid = JSONParseHelper::parseUUID(j);
+        auto uuid = JSONParseHelper::parseUUID4(j);
         if(!uuid.has_value())
         {
             return false;
         }
 
-        return apimgr.parseUUIDImpl(apimodule, this, uuid.value(), value, ctx);
+        return apimgr.parseUUID4Impl(apimodule, this, uuid.value(), value, ctx);
     }
 
     template <typename ValueRepr, typename State>
     std::optional<json> extract(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
     {
-        auto uval = apimgr.extractUUIDImpl(apimodule, this, value, ctx);
+        auto uval = apimgr.extractUUID4Impl(apimodule, this, value, ctx);
         if(!uval.has_value())
         {
             return std::nullopt;
         }
 
-        return JSONParseHelper::emitUUID(uval.value());
+        return JSONParseHelper::emitUUID4(uval.value());
     }
 };
 
-class ContentHashType : public IGroundedType
+class UUID7Type : public IGroundedType
 {
 public:
-    ContentHashType() : IGroundedType(TypeTag::ContentHashTag, "ContentHash") {;}
-    virtual ~ContentHashType() {;}
+    UUID7Type() : IGroundedType(TypeTag::UUID7Tag, "UUID7") {;}
+    virtual ~UUID7Type() {;}
 
-    static ContentHashType* jparse(json j)
+    static UUID7Type* jparse(json j)
     {
-        return new ContentHashType();
+        return new UUID7Type();
+    }
+
+    virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
+    {
+        std::vector<std::string> uuids = {
+            "45fa4fbe-7c18-400f-99c8-57d824baa1db",
+            "07fdf94f-41a8-4d58-8f1b-7090f02aea3c",
+            "1d999dd0-75da-4d57-b4c7-78afd6d1c7e8",
+            "09f4758f-83bd-4bb4-b39c-b3de9476c79e",
+            "86a7dddf-6302-4feb-b2b7-0c7bb1c9526c",
+            "6e37a758-415f-448f-a7b2-e4ce9309ee94",
+            "12694350-cd2d-4a71-b188-b215ba4db8aa",
+            "5037fa0b-78ec-47f3-926c-ef138a752c09",
+            "03423fa4-8ab2-4f2f-9c73-01c682d261c3",
+            "e6ff1343-47e2-461c-8391-73aae8848bd6"
+        };
+
+        std::uniform_int_distribution<size_t> lgen(0, 9);
+        return uuids[lgen(rnd)];
+    }
+
+    template <typename ValueRepr, typename State>
+    bool parse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
+    {
+        auto uuid = JSONParseHelper::parseUUID7(j);
+        if(!uuid.has_value())
+        {
+            return false;
+        }
+
+        return apimgr.parseUUID7Impl(apimodule, this, uuid.value(), value, ctx);
+    }
+
+    template <typename ValueRepr, typename State>
+    std::optional<json> extract(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
+    {
+        auto uval = apimgr.extractUUID7Impl(apimodule, this, value, ctx);
+        if(!uval.has_value())
+        {
+            return std::nullopt;
+        }
+
+        return JSONParseHelper::emitUUID7(uval.value());
+    }
+};
+
+class SHAContentHashType : public IGroundedType
+{
+public:
+    SHAContentHashType() : IGroundedType(TypeTag::SHAContentHashTag, "SHAContentHash") {;}
+    virtual ~SHAContentHashType() {;}
+
+    static SHAContentHashType* jparse(json j)
+    {
+        return new SHAContentHashType();
     }
 
     virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
@@ -1148,25 +1461,80 @@ public:
     template <typename ValueRepr, typename State>
     bool parse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
     {
-        auto hash = JSONParseHelper::parseContentHash(j);
+        auto hash = JSONParseHelper::parseSHAContentHash(j);
         if(!hash.has_value())
         {
             return false;
         }
 
-        return apimgr.parseContentHashImpl(apimodule, this, hash.value(), value, ctx);
+        return apimgr.parseSHAContentHashImpl(apimodule, this, hash.value(), value, ctx);
     }
 
     template <typename ValueRepr, typename State>
     std::optional<json> extract(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
     {
-        auto hash = apimgr.extractContentHashImpl(apimodule, this, value, ctx);
+        auto hash = apimgr.extractSHAContentHashImpl(apimodule, this, value, ctx);
         if(!hash.has_value())
         {
             return std::nullopt;
         }
 
-        return JSONParseHelper::emitHash(hash.value());
+        return JSONParseHelper::emitSHAHash(hash.value());
+    }
+};
+
+class LatLongCoordinateType : public IGroundedType
+{
+public:
+    LatLongCoordinateType() : IGroundedType(TypeTag::LatLongCoordinateTag, "LatLongCoordinate") {;}
+    virtual ~LatLongCoordinateType() {;}
+
+    static LatLongCoordinateType* jparse(json j)
+    {
+        return new LatLongCoordinateType();
+    }
+
+    virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
+    {
+        std::vector<std::string> uuids = {
+            "45fa4fbe-7c18-400f-99c8-57d824baa1db",
+            "07fdf94f-41a8-4d58-8f1b-7090f02aea3c",
+            "1d999dd0-75da-4d57-b4c7-78afd6d1c7e8",
+            "09f4758f-83bd-4bb4-b39c-b3de9476c79e",
+            "86a7dddf-6302-4feb-b2b7-0c7bb1c9526c",
+            "6e37a758-415f-448f-a7b2-e4ce9309ee94",
+            "12694350-cd2d-4a71-b188-b215ba4db8aa",
+            "5037fa0b-78ec-47f3-926c-ef138a752c09",
+            "03423fa4-8ab2-4f2f-9c73-01c682d261c3",
+            "e6ff1343-47e2-461c-8391-73aae8848bd6"
+        };
+
+        std::uniform_int_distribution<size_t> lgen(0, 9);
+        return uuids[lgen(rnd)];
+    }
+
+    template <typename ValueRepr, typename State>
+    bool parse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
+    {
+        auto llv = JSONParseHelper::parseLatLongCoordinate(j);
+        if(!llv.has_value())
+        {
+            return false;
+        }
+
+        return apimgr.parseLatLongCoordinateImpl(apimodule, this, llv.value().first, llv.value().second, value, ctx);
+    }
+
+    template <typename ValueRepr, typename State>
+    std::optional<json> extract(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
+    {
+        auto uval = apimgr.extractLatLongCoordinateImpl(apimodule, this, value, ctx);
+        if(!uval.has_value())
+        {
+            return std::nullopt;
+        }
+
+        return JSONParseHelper::emitLatLongCoordinate(uval.value());
     }
 };
 
@@ -1396,26 +1764,25 @@ enum class ContainerCategory
     List = 0x0,
     Stack,
     Queue,
-    Set,
-    Map
+    Set
 };
 
-class ContainerType : public IGroundedType
+class ContainerTType : public IGroundedType
 {
 public:
     const ContainerCategory category;
     const std::string elemtype;
 
-    ContainerType(std::string name, ContainerCategory category, std::string elemtype) : IGroundedType(TypeTag::ContainerTag, name), category(category), elemtype(elemtype) {;}
-    virtual ~ContainerType() {;}
+    ContainerTType(std::string name, ContainerCategory category, std::string elemtype) : IGroundedType(TypeTag::ContainerTTag, name), category(category), elemtype(elemtype) {;}
+    virtual ~ContainerTType() {;}
 
-    static ContainerType* jparse(json j)
+    static ContainerTType* jparse(json j)
     {
         auto name = j["name"].get<std::string>();
         auto category = j["category"].get<ContainerCategory>();
         auto elemtype = j["elemtype"].get<std::string>();
 
-        return new ContainerType(name, category, elemtype);
+        return new ContainerTType(name, category, elemtype);
     }
 
     virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
@@ -1445,7 +1812,7 @@ public:
         auto tt = apimodule->typemap.find(this->elemtype)->second;
         for(size_t i = 0; i < j.size(); ++i)
         {
-            ValueRepr vval = apimgr.getValueForContainerElementParse(apimodule, this, value, i, ctx);
+            ValueRepr vval = apimgr.getValueForContainerElementParse_T(apimodule, this, value, i, ctx);
             bool ok = tt->tparse(apimgr, apimodule, j[i], vval, ctx);
             if(!ok)
             {
@@ -1471,7 +1838,7 @@ public:
         auto tt = apimodule->typemap.find(this->elemtype)->second;
         for(size_t i = 0; i < clen.value(); ++i)
         {
-            ValueRepr vval = apimgr.extractValueForContainer(apimodule, this, value, i, ctx);
+            ValueRepr vval = apimgr.extractValueForContainer_T(apimodule, this, value, i, ctx);
             auto rr = tt->textract(apimgr, apimodule, vval, ctx);
             if(!rr.has_value())
             {
@@ -1479,6 +1846,100 @@ public:
             }
 
             jres.push_back(rr.value());
+        }
+        
+        apimgr.completeExtractContainer(apimodule, this, ctx);
+        return std::make_optional(jres);
+    }
+};
+
+class ContainerKVType : public IGroundedType
+{
+public:
+    const std::string ktype;
+    const std::string vtype;
+
+    ContainerKVType(std::string name, std::string ktype, std::string vtype) : IGroundedType(TypeTag::ContainerKVTag, name), ktype(ktype), vtype(vtype) {;}
+    virtual ~ContainerKVType() {;}
+
+    static ContainerKVType* jparse(json j)
+    {
+        auto name = j["name"].get<std::string>();
+        auto ktype = j["ktype"].get<std::string>();
+        auto vtype = j["vtype"].get<std::string>();
+
+        return new ContainerKVType(name, ktype, vtype);
+    }
+
+    virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
+    {
+        std::uniform_int_distribution<size_t> lgen(0, 64);
+
+        auto clen = lgen(rnd);
+        auto tj = json::array();
+        for(size_t i = 0; i < clen; ++i)
+        {
+            auto kval = apimodule->typemap.find(this->ktype)->second->jfuzz(apimodule, rnd);
+            auto vval = apimodule->typemap.find(this->vtype)->second->jfuzz(apimodule, rnd);
+
+            auto kventry = json::array({kval, vval});
+            tj.push_back(kventry);
+        }
+
+        return tj;
+    }
+
+    template <typename ValueRepr, typename State>
+    bool parse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
+    {
+        if(!j.is_array())
+        {
+            return false;
+        }
+
+        apimgr.prepareParseContainer(apimodule, this, value, j.size(), ctx);
+        auto kt = apimodule->typemap.find(this->ktype)->second;
+        auto vt = apimodule->typemap.find(this->vtype)->second;
+        for(size_t i = 0; i < j.size(); ++i)
+        {
+            std::pair<ValueRepr, ValueRepr> vval = apimgr.getValueForContainerElementParse_KV(apimodule, this, value, i, ctx);
+            bool kok = kt->tparse(apimgr, apimodule, j[i], vval.first, ctx);
+            bool vok = vt->tparse(apimgr, apimodule, j[i], vval.second, ctx);
+            if(!kok || !vok)
+            {
+                return false;
+            }
+        }
+        apimgr.completeParseContainer(apimodule, this, value, ctx);
+
+        return true;
+    }
+
+    template <typename ValueRepr, typename State>
+    std::optional<json> extract(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
+    {
+        apimgr.prepareExtractContainer(apimodule, this, value, ctx);
+        auto clen = apimgr.extractLengthForContainer(apimodule, this, value, ctx);
+        if(!clen.has_value())
+        {
+            return std::nullopt;
+        }
+
+        auto jres = json::array();
+        auto kt = apimodule->typemap.find(this->ktype)->second;
+        auto vt = apimodule->typemap.find(this->vtype)->second;
+        for(size_t i = 0; i < clen.value(); ++i)
+        {
+            std::pair<ValueRepr, ValueRepr> vval = apimgr.extractValueForContainer_KV(apimodule, this, value, i, ctx);
+            auto kr = kt->textract(apimgr, apimodule, vval.first, ctx);
+            auto vr = vt->textract(apimgr, apimodule, vval.second, ctx);
+            if(!kr.has_value() || !vr.has_value())
+            {
+                return std::nullopt;
+            }
+
+            auto jentry = json::array({kr.value(), vr.value()});
+            jres.push_back(jentry);
         }
         
         apimgr.completeExtractContainer(apimodule, this, ctx);
@@ -1861,22 +2322,36 @@ bool IType::tparse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* ap
             return dynamic_cast<const DataBufferType*>(this)->parse(apimgr, apimodule, j, value, ctx);
         case TypeTag::DateTimeTag:
             return dynamic_cast<const DateTimeType*>(this)->parse(apimgr, apimodule, j, value, ctx);
+        case TypeTag::UTCDateTimeTag:
+            return dynamic_cast<const UTCDateTimeType*>(this)->parse(apimgr, apimodule, j, value, ctx);
+        case TypeTag::CalendarDateTag:
+            return dynamic_cast<const CalendarDateType*>(this)->parse(apimgr, apimodule, j, value, ctx);
+        case TypeTag::RelativeTimeTag:
+            return dynamic_cast<const RelativeTimeType*>(this)->parse(apimgr, apimodule, j, value, ctx);
         case TypeTag::TickTimeTag:
             return dynamic_cast<const TickTimeType*>(this)->parse(apimgr, apimodule, j, value, ctx);
         case TypeTag::LogicalTimeTag:
             return dynamic_cast<const LogicalTimeType*>(this)->parse(apimgr, apimodule, j, value, ctx);
-        case TypeTag::UUIDTag:
-            return dynamic_cast<const UUIDType*>(this)->parse(apimgr, apimodule, j, value, ctx);
-        case TypeTag::ContentHashTag:
-            return dynamic_cast<const ContentHashType*>(this)->parse(apimgr, apimodule, j, value, ctx);
+        case TypeTag::ISOTimeStampTag:
+            return dynamic_cast<const ISOTimeStampType*>(this)->parse(apimgr, apimodule, j, value, ctx);
+        case TypeTag::UUID4Tag:
+            return dynamic_cast<const UUID4Type*>(this)->parse(apimgr, apimodule, j, value, ctx);
+        case TypeTag::UUID7Tag:
+            return dynamic_cast<const UUID7Type*>(this)->parse(apimgr, apimodule, j, value, ctx);
+        case TypeTag::SHAContentHashTag:
+            return dynamic_cast<const SHAContentHashType*>(this)->parse(apimgr, apimodule, j, value, ctx);
+        case TypeTag::LatLongCoordinateTag:
+            return dynamic_cast<const LatLongCoordinateType*>(this)->parse(apimgr, apimodule, j, value, ctx);
         case TypeTag::ConstructableOfType:
             return dynamic_cast<const ConstructableOfType*>(this)->parse(apimgr, apimodule, j, value, ctx);
         case TypeTag::TupleTag:
             return dynamic_cast<const TupleType*>(this)->parse(apimgr, apimodule, j, value, ctx);
         case TypeTag::RecordTag:
             return dynamic_cast<const RecordType*>(this)->parse(apimgr, apimodule, j, value, ctx);
-        case TypeTag::ContainerTag:
-            return dynamic_cast<const ContainerType*>(this)->parse(apimgr, apimodule, j, value, ctx);
+        case TypeTag::ContainerTTag:
+            return dynamic_cast<const ContainerTType*>(this)->parse(apimgr, apimodule, j, value, ctx);
+        case TypeTag::ContainerKVTag:
+            return dynamic_cast<const ContainerKVType*>(this)->parse(apimgr, apimodule, j, value, ctx);
         case TypeTag::EnumTag:
             return dynamic_cast<const EnumType*>(this)->parse(apimgr, apimodule, j, value, ctx);
         case TypeTag::EntityTag:
@@ -1928,22 +2403,36 @@ std::optional<json> IType::textract(ApiManagerJSON<ValueRepr, State>& apimgr, co
             return dynamic_cast<const DataBufferType*>(this)->extract(apimgr, apimodule, value, ctx);
         case TypeTag::DateTimeTag:
             return dynamic_cast<const DateTimeType*>(this)->extract(apimgr, apimodule, value, ctx);
+        case TypeTag::UTCDateTimeTag:
+            return dynamic_cast<const UTCDateTimeType*>(this)->extract(apimgr, apimodule, value, ctx);
+        case TypeTag::CalendarDateTag:
+            return dynamic_cast<const CalendarDateType*>(this)->extract(apimgr, apimodule, value, ctx);
+        case TypeTag::RelativeTimeTag:
+            return dynamic_cast<const RelativeTimeType*>(this)->extract(apimgr, apimodule, value, ctx);
         case TypeTag::TickTimeTag:
             return dynamic_cast<const TickTimeType*>(this)->extract(apimgr, apimodule, value, ctx);
         case TypeTag::LogicalTimeTag:
             return dynamic_cast<const LogicalTimeType*>(this)->extract(apimgr, apimodule, value, ctx);
-        case TypeTag::UUIDTag:
-            return dynamic_cast<const UUIDType*>(this)->extract(apimgr, apimodule, value, ctx);
-        case TypeTag::ContentHashTag:
-            return dynamic_cast<const ContentHashType*>(this)->extract(apimgr, apimodule, value, ctx);
+        case TypeTag::ISOTimeStampTag:
+            return dynamic_cast<const ISOTimeStampType*>(this)->extract(apimgr, apimodule, value, ctx);
+        case TypeTag::UUID4Tag:
+            return dynamic_cast<const UUID4Type*>(this)->extract(apimgr, apimodule, value, ctx);
+        case TypeTag::UUID7Tag:
+            return dynamic_cast<const UUID7Type*>(this)->extract(apimgr, apimodule, value, ctx);
+        case TypeTag::SHAContentHashTag:
+            return dynamic_cast<const SHAContentHashType*>(this)->extract(apimgr, apimodule, value, ctx);
+        case TypeTag::LatLongCoordinateTag:
+            return dynamic_cast<const LatLongCoordinateType*>(this)->extract(apimgr, apimodule, value, ctx);
         case TypeTag::ConstructableOfType:
             return dynamic_cast<const ConstructableOfType*>(this)->extract(apimgr, apimodule, value, ctx);
         case TypeTag::TupleTag:
             return dynamic_cast<const TupleType*>(this)->extract(apimgr, apimodule, value, ctx);
         case TypeTag::RecordTag:
             return dynamic_cast<const RecordType*>(this)->extract(apimgr, apimodule, value, ctx);
-        case TypeTag::ContainerTag:
-            return dynamic_cast<const ContainerType*>(this)->extract(apimgr, apimodule, value, ctx);
+        case TypeTag::ContainerTTag:
+            return dynamic_cast<const ContainerTType*>(this)->extract(apimgr, apimodule, value, ctx);
+        case TypeTag::ContainerKVTag:
+            return dynamic_cast<const ContainerKVType*>(this)->extract(apimgr, apimodule, value, ctx);
         case TypeTag::EnumTag:
             return dynamic_cast<const EnumType*>(this)->extract(apimgr, apimodule, value, ctx);
         case TypeTag::EntityTag:
