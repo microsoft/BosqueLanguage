@@ -8,7 +8,7 @@
 const BSQType** BSQType::g_typetable = nullptr;
 
 uint8_t GCStack::sdata[BSQ_MAX_STACK];
-uint8_t* GCStack::stackp = GCStack::stackp;
+uint8_t* GCStack::stackp = GCStack::sdata;
 
 bool GCStack::global_init_complete = false;
 PageInfo* GCStack::global_memory = nullptr;

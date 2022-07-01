@@ -211,7 +211,7 @@ public:
         auto fromloc = ((uint8_t*)pvfrom) + sizeof(uint64_t);
         
         uint64_t jj = 0;
-        for(size_t i = 0; i < 8; ++i)
+        for(size_t i = 0; i < 8 && i < end; ++i)
         {
             if(i != idx)
             {
@@ -255,7 +255,6 @@ public:
 struct BSQListTypeFlavor
 {
     const BSQTypeID ltype;
-    const BSQTypeID lreprtype;
 
     const BSQType* entrytype;
 
@@ -505,7 +504,7 @@ public:
 
     void storeValue(StorageLocationPtr trgt, StorageLocationPtr src) const override final
     {
-        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, src);
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(trgt, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(src));
     }
 
     StorageLocationPtr indexStorageLocationOffset(StorageLocationPtr src, size_t offset) const override final

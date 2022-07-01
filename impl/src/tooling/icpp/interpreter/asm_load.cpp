@@ -31,7 +31,6 @@ const BSQField* jsonLoadFieldDecl(json v)
 BSQListTypeFlavor jsonLoadListFlavor(json v)
 {
     auto ltype = MarshalEnvironment::g_typenameToIdMap.find(v["ltype"].get<std::string>())->second;
-    auto lreprtype = MarshalEnvironment::g_typenameToIdMap.find(v["reprtype"].get<std::string>())->second;
 
     const BSQType* entrytype = BSQType::g_typetable[MarshalEnvironment::g_typenameToIdMap.find(v["entrytype"].get<std::string>())->second];
     uint64_t esize = entrytype->allocinfo.inlinedatasize;
@@ -50,7 +49,7 @@ BSQListTypeFlavor jsonLoadListFlavor(json v)
     std::string listtreename = "[BSQListTree]";
     const BSQListTreeType* treetype = new BSQListTreeType(BSQ_TYPE_ID_INTERNAL, listtreename, entrytype->tid);
    
-    return BSQListTypeFlavor{ltype, lreprtype, entrytype, pv4type, pv8type, treetype};
+    return BSQListTypeFlavor{ltype, entrytype, pv4type, pv8type, treetype};
 }
 
 BSQMapTypeFlavor jsonLoadMapFlavor(json v)
@@ -103,6 +102,7 @@ void initialize(size_t cbuffsize, const RefMask cmask)
     const BSQType* globaltype = new BSQGlobalObjectType(cbuffsize, cmask, globalname);
 
     Allocator::GlobalAllocator.setGlobalsMemory(globaltype);
+    Evaluator::g_constantbuffer = (uint8_t*)GCStack::global_memory->data;
 }
 
 void initializeLiteral(size_t storageOffset, const BSQType* gtype, std::string& lval)

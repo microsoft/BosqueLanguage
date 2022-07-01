@@ -85,9 +85,6 @@ std::pair<bool, json> run(Evaluator& runner, const APIModule* api, const std::st
             }
         }
     }
-
-    Allocator::GlobalAllocator.reset();
-    GCStack::reset();
     runner.reset();
 
     if(setjmp(Evaluator::g_entrybuff) > 0)
@@ -129,7 +126,7 @@ std::pair<bool, json> run(Evaluator& runner, const APIModule* api, const std::st
                     }
 
                     Allocator::GlobalAllocator.reset();
-                    GCStack::reset();
+                    GCStack::reset(istack);
                     runner.reset();
                 }
             }

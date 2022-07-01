@@ -183,7 +183,6 @@ public:
 
     void reset()
     {
-
         this->cframe = nullptr;
         this->cpos = -1;
 
