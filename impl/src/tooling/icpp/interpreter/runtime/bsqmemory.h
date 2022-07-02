@@ -460,6 +460,8 @@ public:
 #else
             pp = (PageInfo*)mmap(nullptr, BSQ_BLOCK_ALLOCATION_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
             assert(pp != MAP_FAILED);
+
+            xxxx; //we are messing up the alignment here -- ask for 2x size then release pages before/after desired space
 #endif
             pp->slots = (GC_META_DATA_WORD*)((uint8_t*)pp + sizeof(PageInfo));
             pp->data = (GC_META_DATA_WORD*)((uint8_t*)pp + sizeof(PageInfo) + btype->tableEntryCount * sizeof(GC_META_DATA_WORD));
