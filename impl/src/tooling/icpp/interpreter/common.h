@@ -74,9 +74,15 @@ class BSQType;
 #define BSQ_STACK_ALLOC(SIZE) ((SIZE) == 0 ? nullptr : alloca(SIZE))
 #endif
 
-//All struct/tuple/record objects must be smaller than this -- larger seems like a performance anti-pattern
-//If really needed we could try to always grab/release pages in chunks of 4. Large objects allocate into these and for small objs we just throw 3 pages in the spare list. Holes are a bit of a problem though.
+//All struct/tuple/record objects must be smaller than this -- maybe want to lint for this as well as it seems like an anti-pattern
+//TODO: Make the block allocation size smaller to be more memory efficient (particularly with small singleton objects -- ideally these end up as value types)
+//      Relax this constraint with a "large alloc space" -- however disallow interior pointers to addresses beyond half the size of a page
+//         -- or change alloc check to look at base-bound ranges and we never do vlookups on interior references (so no page info access)
+//      This way we will always be safe with the type (and base page) lookups even for very large (like 65k) values
 #define BSQ_ALLOC_MAX_OBJ_SIZE 496ul
+
+//TODO: Types with a small number of allocated objects (e.g. singleton classes) are going to be a bit expensive
+//      Do we have any clever tricks or maybe someone has published something on this?
 
 //List/Map nodes can contain multiple objects so largest allocation is a multiple (4, 8, 16)  of this + a count
 #define BSQ_ALLOC_MAX_BLOCK_SIZE ((BSQ_ALLOC_MAX_OBJ_SIZE * 16ul) + 16ul)

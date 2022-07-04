@@ -320,3 +320,59 @@ __chktest function isfreezing_fail_1(t: Celsius): Bool {
 __chktest function is50pct_fail_1(p: Percentage): Bool {
     return p == 50_Percentage;
 }
+
+////////
+//
+function abs_impl(arg: BigInt): BigInt {
+    var res = arg;
+
+    if(arg < 0I) {
+        res = -arg;
+    }
+   
+    return res;
+}
+
+function sign_impl(arg: BigInt): BigInt {
+    return arg > 0I ? 1I : -1I;
+}
+
+chktest function abs_neg(): Bool {
+    return abs_impl(-3I) == 3I;
+}
+
+chktest function sign_pos_bsqtest(): Bool {
+    return sign_impl(5I) > 0I;
+}
+
+chktest function sign_neg_bsqtest(): Bool {
+    return sign_impl(-4I) < 0I;
+}
+
+chktest function sign_neg_is_minus1(x: BigInt): Bool 
+    requires x < 0I;
+{
+    return sign_impl(x) == -1I;
+}
+
+__chktest function sign_pos_is_1(x: BigInt): Bool 
+    requires x >= 0I;
+{
+    return sign_impl(x) == 1I;
+}
+
+chktest function abs_apptest(arg: BigInt): Bool {
+    let res = abs_impl(arg);
+    return (res == arg || res == -arg) && (res >= 0I);
+}
+
+chktest function sign_apptest(arg: BigInt): Bool {
+    let res = sign_impl(arg);
+    return res == 1I || res == -1I;
+}
+
+__chktest function abs_ensures_fail(arg: BigInt): Bool {
+    let res = abs_impl(arg);
+    return res == 5I && res != arg;
+}
+
