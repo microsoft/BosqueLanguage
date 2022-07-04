@@ -77,6 +77,7 @@ class BSQType;
 //All struct/tuple/record objects must be smaller than this -- maybe want to lint for this as well as it seems like an anti-pattern
 //TODO: Make the block allocation size smaller to be more memory efficient (particularly with small singleton objects -- ideally these end up as value types)
 //      Relax this constraint with a "large alloc space" -- however disallow interior pointers to addresses beyond half the size of a page
+//         -- or change alloc check to look at base-bound ranges and we never do vlookups on interior references (so no page info access)
 //      This way we will always be safe with the type (and base page) lookups even for very large (like 65k) values
 #define BSQ_ALLOC_MAX_OBJ_SIZE 496ul
 

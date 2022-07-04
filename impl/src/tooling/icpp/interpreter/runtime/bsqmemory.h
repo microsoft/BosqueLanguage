@@ -13,6 +13,7 @@
 //I want thi for valloc but seems like I need to do windows.h (#include "memoryapi.h")
 #else
 #include <sys/mman.h>
+#include <unistd.h>
 #endif
 
 #define DEFAULT_PAGE_COST 2
@@ -458,10 +459,31 @@ public:
             pp = (PageInfo*)VirtualAlloc(nullptr, BSQ_BLOCK_ALLOCATION_SIZE, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
             assert(pp != nullptr);
 #else
-            pp = (PageInfo*)mmap(nullptr, BSQ_BLOCK_ALLOCATION_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-            assert(pp != MAP_FAILED);
+            void* ppstart = (PageInfo*)mmap(nullptr, 2 * BSQ_BLOCK_ALLOCATION_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+            assert(ppstart != MAP_FAILED);
 
-            xxxx; //we are messing up the alignment here -- ask for 2x size then release pages before/after desired space
+            auto pagesize = sysconf(_SC_PAGESIZE);
+            uint8_t* pplcurr = (uint8_t*)ppstart;
+            while((((uintptr_t)pplcurr) & PAGE_ADDR_MASK) != ((uintptr_t)pplcurr))
+            {
+                pplcurr = pplcurr + pagesize;
+            }
+            auto ldist = std::distance((uint8_t*)ppstart, pplcurr);
+            if(ldist != 0)
+            {
+                auto rr = munmap(ppstart, ldist);
+                assert(rr != -1);
+            }
+
+            uint8_t* pplend = pplcurr + BSQ_BLOCK_ALLOCATION_SIZE;
+            auto rdist = std::distance(pplend, (uint8_t*)ppstart + 2 * BSQ_BLOCK_ALLOCATION_SIZE);
+            if(rdist != 0)
+            {
+                auto rr = munmap(pplend, rdist);
+                assert(rr != -1);
+            }
+
+            pp = (PageInfo*)pplcurr;
 #endif
             pp->slots = (GC_META_DATA_WORD*)((uint8_t*)pp + sizeof(PageInfo));
             pp->data = (GC_META_DATA_WORD*)((uint8_t*)pp + sizeof(PageInfo) + btype->tableEntryCount * sizeof(GC_META_DATA_WORD));
