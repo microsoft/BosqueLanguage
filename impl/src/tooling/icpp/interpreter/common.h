@@ -352,7 +352,7 @@ typedef uint32_t BSQConstantID;
 #define BSQ_TYPE_ID_LAT_LONG_COORDINATE 22
 #define BSQ_TYPE_ID_REGEX 23
 
-#define BSQ_TYPE_ID_INTERNAL 4294967296
+#define BSQ_TYPE_ID_INTERNAL ((BSQTypeID)UINT32_MAX)
 
 enum class BSQPrimitiveImplTag
 {

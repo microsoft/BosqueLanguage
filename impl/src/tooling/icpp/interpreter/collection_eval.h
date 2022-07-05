@@ -29,6 +29,32 @@ public:
         return res;
     }
 
+    static void* list_cons_rec(const BSQListTypeFlavor& lflavor, const std::vector<StorageLocationPtr>& params, size_t idx, size_t count)
+    {
+        if(count <= 8)
+        {
+            std::vector<StorageLocationPtr> psub(&params[idx], &params[idx + count]);
+            return list_consk(lflavor, psub);
+        }
+        else
+        {
+            void** stck = (void**)GCStack::allocFrame(sizeof(void*) * 2);
+
+            size_t lhscount = count / 2;
+            size_t rhscount = count - lhscount;
+
+            stck[0] = list_cons_rec(lflavor, params, idx, lhscount);
+            stck[1] = list_cons_rec(lflavor, params, idx + lhscount, rhscount);
+
+            void* res = Allocator::GlobalAllocator.allocateDynamic(lflavor.treetype);
+            ((BSQListTreeRepr*)res)->l = stck[0];
+            ((BSQListTreeRepr*)res)->r = stck[1];
+            ((BSQListTreeRepr*)res)->lcount = count;
+
+            GCStack::popFrame(sizeof(void*) * 2);
+            return res;
+        }
+    }
     static void* list_cons(const BSQListTypeFlavor& lflavor, const std::vector<StorageLocationPtr>& params)
     {
         if(params.size() <= 8)
@@ -37,8 +63,7 @@ public:
         }
         else
         {
-            assert(false);
-            return nullptr;
+            return list_cons_rec(lflavor, params, 0, params.size());
         }
     }
 

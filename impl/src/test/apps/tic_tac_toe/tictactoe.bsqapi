@@ -13,6 +13,7 @@ entrypoint function main(c: BoardPostion): Bool {
 
     return !nb.checkWinner(PlayerMark::x);
 }
+
 ///////////////////////////////////////////////
 
 
