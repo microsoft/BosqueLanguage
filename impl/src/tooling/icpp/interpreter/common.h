@@ -24,6 +24,8 @@
 
 #include "../../api_parse/decls.h"
 
+#define DEBUG_ALLOC_BLOCKS
+
 ////////////////////////////////
 //Forward decls for bosque types
 typedef uint32_t BSQTypeID;
@@ -117,9 +119,6 @@ class BSQType;
 
 #define PAGE_ADDR_MASK 0xFFFFFFFFFFFFE000ul
 #define PAGE_INDEX_ADDR_MASK 0x1FFFul
-#define PAGE_MASK_EXTRACT_ID(M) (((uintptr_t)M) & PAGE_ADDR_MASK)
-#define PAGE_MASK_EXTRACT_ADDR(M) ((PageInfo*)PAGE_MASK_EXTRACT_ID(M))
-#define PAGE_INDEX_EXTRACT(M, PI) ((((uintptr_t)M) - ((uintptr_t)(PI)->data)) / (PI)->entry_size)
 
 typedef uint64_t GC_META_DATA_WORD;
 
@@ -146,11 +145,22 @@ struct PageInfo
     AllocPageInfo allocinfo;
 };
 #ifndef DEBUG_ALLOC_BLOCKS
+#define PAGE_MASK_EXTRACT_ID(M) (((uintptr_t)M) & PAGE_ADDR_MASK)
+#define PAGE_MASK_EXTRACT_ADDR(M) ((PageInfo*)PAGE_MASK_EXTRACT_ID(M))
+#define PAGE_INDEX_EXTRACT(M, PI) ((((uintptr_t)M) - ((uintptr_t)(PI)->data)) / (PI)->entry_size)
+
 #define GC_PAGE_INDEX_FOR_ADDR(M, PAGE) PAGE_INDEX_EXTRACT(M, PAGE)
 #define GC_GET_OBJ_AT_INDEX(PAGE, IDX) ((void*)((uint8_t*)(PAGE)->data + (IDX * (PAGE)->entry_size)))
 #else
-#define GC_PAGE_INDEX_FOR_ADDR(M, PAGE) (std::distance((PAGE)->data, std::find((PAGE)->data, (PAGE)->data + (PAGE)->entry_count, M)))
-#define GC_GET_OBJ_AT_INDEX(PAGE, IDX) (((void**)(PAGE)->data)[IDX])
+#define GC_DBG_PAGE_ALLOC(SIZE) (void*)((void**)zxalloc(SIZE) + 1)
+#define GC_DBG_PAGE_FREE(M) xfree((void*)((void**)M - 1))
+#define PAGE_MASK_SET_ID(M, PAGE) *((void**)(((uint8_t*)M) - sizeof(void*))) = PAGE
+
+#define PAGE_MASK_EXTRACT_ID(M) (((uint8_t*)M) - sizeof(void*))
+#define PAGE_MASK_EXTRACT_ADDR(M) (*((PageInfo**)PAGE_MASK_EXTRACT_ID(M)))
+
+#define GC_PAGE_INDEX_FOR_ADDR(M, PAGE) (std::distance((void**)((PAGE)->data), std::find((void**)((PAGE)->data), ((void**)((PAGE)->data)) + (PAGE)->entry_count, M)))
+#define GC_GET_OBJ_AT_INDEX(PAGE, IDX) (((void**)((PAGE)->data))[IDX])
 #endif
 
 #define GC_GET_META_DATA_ADDR(M) (PAGE_MASK_EXTRACT_ADDR(M)->slots + GC_PAGE_INDEX_FOR_ADDR(M, PAGE_MASK_EXTRACT_ADDR(M)))
