@@ -6,7 +6,7 @@
 import { MIRAssembly, MIRConstantDecl, MIREntityType, MIREphemeralListType, MIRFieldDecl, MIRInvokeBodyDecl, MIRInvokeDecl, MIRInvokePrimitiveDecl, MIRObjectEntityTypeDecl, MIRPrimitiveCollectionEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRRecordType, MIRTupleType, MIRType } from "../../../compiler/mir_assembly";
 import { ICPPTypeEmitter } from "./icpptype_emitter";
 import { MIRAbort, MIRArgGuard, MIRArgument, MIRAssertCheck, MIRBasicBlock, MIRBinKeyEq, MIRBinKeyLess, MIRConstantArgument, MIRConstantBigInt, MIRConstantBigNat, MIRConstantDataString, MIRConstantDecimal, MIRConstantFalse, MIRConstantFloat, MIRConstantInt, MIRConstantNat, MIRConstantNone, MIRConstantNothing, MIRConstantRational, MIRConstantRegex, MIRConstantString, MIRConstantStringOf, MIRConstantTrue, MIRConstantTypedNumber, MIRConstructorEntityDirect, MIRConstructorEphemeralList, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionMixed, MIRConstructorPrimaryCollectionSingletons, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConvertValue, MIRDebug, MIRDeclareGuardFlagLocation, MIREntityProjectToEphemeral, MIREntityUpdate, MIREphemeralListExtend, MIRExtract, MIRFieldKey, MIRGlobalKey, MIRGlobalVariable, MIRGuard, MIRGuardedOptionInject, MIRInject, MIRInvokeFixedFunction, MIRInvokeKey, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRIsTypeOf, MIRJump, MIRJumpCond, MIRJumpNone, MIRLoadConst, MIRLoadField, MIRLoadFromEpehmeralList, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadUnintVariableValue, MIRLogicAction, MIRMaskGuard, MIRMultiLoadFromEpehmeralList, MIROp, MIROpTag, MIRPhi, MIRPrefixNotOp, MIRRecordHasProperty, MIRRecordProjectToEphemeral, MIRRecordUpdate, MIRRegisterArgument, MIRRegisterAssign, MIRResolvedTypeKey, MIRReturnAssign, MIRReturnAssignOfCons, MIRSetConstantGuardFlag, MIRSliceEpehmeralList, MIRStatmentGuard, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRTupleHasIndex, MIRTupleProjectToEphemeral, MIRTupleUpdate, MIRVarLifetimeEnd, MIRVarLifetimeStart } from "../../../compiler/mir_ops";
-import { Argument, ArgumentTag, EMPTY_CONST_POSITION, ICPPGuard, ICPPOp, ICPPOpEmitter, ICPPStatementGuard, OpCodeTag, ParameterInfo, TargetVar } from "./icpp_exp";
+import { Argument, ArgumentTag, EMPTY_CONST_POSITION, FALSE_VALUE_POSITION, ICPPGuard, ICPPOp, ICPPOpEmitter, ICPPStatementGuard, NONE_VALUE_POSITION, NOTHING_VALUE_POSITION, OpCodeTag, ParameterInfo, TargetVar, TRUE_VALUE_POSITION } from "./icpp_exp";
 import { SourceInfo } from "../../../ast/parser";
 import { ICPPEntityLayoutInfo, ICPPEphemeralListLayoutInfo, ICPPFunctionParameter, ICPPInvokeBodyDecl, ICPPInvokeDecl, ICPPInvokePrimitiveDecl, ICPPLayoutInfo, ICPPPCode, ICPPRecordLayoutInfo, ICPPTupleLayoutInfo, TranspilerOptions, UNIVERSAL_TOTAL_SIZE } from "./icpp_assembly";
 
@@ -369,13 +369,10 @@ class ICPPBodyEmitter {
 
         this.currentRType = typegen.getMIRType("None");
 
-        this.constlayout.push({ offset: 0, storage: this.typegen.getICPPLayoutInfo(this.typegen.getMIRType("None")), value: "None", isliteral: true });
-        this.constsize = UNIVERSAL_TOTAL_SIZE;
-
-        this.registerSpecialLiteralValue("none", "None");
-        this.registerSpecialLiteralValue("nothing", "Nothing");
-        this.registerSpecialLiteralValue("true", "Bool");
-        this.registerSpecialLiteralValue("false", "Bool");
+        this.registerSpecialLiteralValue("none", "None", NONE_VALUE_POSITION);
+        this.registerSpecialLiteralValue("nothing", "Nothing", NOTHING_VALUE_POSITION);
+        this.registerSpecialLiteralValue("true", "Bool", TRUE_VALUE_POSITION);
+        this.registerSpecialLiteralValue("false", "Bool", FALSE_VALUE_POSITION);
 
         this.assembly.constantDecls.forEach((cdecl) => {
             const decltype = this.typegen.getICPPLayoutInfo(this.typegen.getMIRType(cdecl.declaredType));
@@ -398,12 +395,18 @@ class ICPPBodyEmitter {
         this.masklayout = [];
     }
 
-    private registerSpecialLiteralValue(vlit: string, vtype: MIRResolvedTypeKey) {
+    private registerSpecialLiteralValue(vlit: string, vtype: MIRResolvedTypeKey, knownoffset?: number) {
         if (!this.literalMap.has(vlit)) {
             const ttype = this.typegen.getICPPLayoutInfo(this.typegen.getMIRType(vtype));
-            this.literalMap.set(vlit, this.constsize);
-            this.constlayout.push({ offset: this.constsize, storage: ttype, value: vlit, isliteral: true });
-            this.constsize += ttype.allocinfo.inlinedatasize;
+            this.literalMap.set(vlit, knownoffset || this.constsize);
+            this.constlayout.push({ offset: knownoffset || this.constsize, storage: ttype, value: vlit, isliteral: true });
+
+            if(knownoffset) {
+                this.constsize = knownoffset + ttype.allocinfo.inlinedatasize;
+            }
+            else {
+                this.constsize += ttype.allocinfo.inlinedatasize;
+            }
         }
     }
 
