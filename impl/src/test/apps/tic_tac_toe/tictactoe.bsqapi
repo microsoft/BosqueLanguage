@@ -7,9 +7,9 @@ namespace Main;
 
 ///////////////////////////////////////////////
 
-entrypoint function main(c: BoardPostion): Bool {
+entrypoint function main(): Bool {
     let bb = Board::create4{};
-    let nb = bb.setCellMark(c, PlayerMark::x);
+    let nb = bb.setCellMark(BoardPostion{1, 0}, PlayerMark::x);
 
     return !nb.checkWinner(PlayerMark::x);
 }
