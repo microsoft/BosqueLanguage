@@ -97,7 +97,7 @@ function emitICPPFile(cfile: string, into: string): boolean {
 
 function runICPPFile(icppjson: {code: object, args: any[], main: string}, debug: boolean, cb: (result: string | undefined) => void) {
     try {
-        const cmd = `${process.platform === "darwin" ? "" : ""}${exepath} ${debug ? "--debug " : ""}--stream`;
+        const cmd = `${exepath} ${debug ? "--debug " : ""}--stream`;
 
         const proc = exec(cmd, (err, stdout) => {
            cb(stdout.toString().trim());

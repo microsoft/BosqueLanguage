@@ -10,7 +10,7 @@ import { ICPPTest, PARALLEL_COUNT_ICPP, TestResultKind } from "./test_decls";
 function runICPPTest(exepath: string, verbose: boolean, test: ICPPTest, icppjson: {code: object, args: any[], main: string}, cbpre: (test: ICPPTest) => void, cb: (result: "pass" | "fail" | "error", test: ICPPTest, start: Date, end: Date, icpptime: number, info?: string) => void) {
     const start = new Date();
     try {
-        const cmd = `${process.platform === "darwin" ? "" : ""}${exepath} --stream`;
+        const cmd = `${exepath} --stream`;
 
         if(verbose) {
             cbpre(test);

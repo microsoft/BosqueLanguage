@@ -102,7 +102,12 @@ void initialize(size_t cbuffsize, const RefMask cmask)
     const BSQType* globaltype = new BSQGlobalObjectType(cbuffsize, cmask, globalname);
 
     Allocator::GlobalAllocator.setGlobalsMemory(globaltype);
+
+#ifndef DEBUG_ALLOC_BLOCKS
     Evaluator::g_constantbuffer = (uint8_t*)GCStack::global_memory->data;
+#else
+    Evaluator::g_constantbuffer = (uint8_t*)*((void**)GCStack::global_memory->data);
+#endif
 }
 
 void initializeLiteral(size_t storageOffset, const BSQType* gtype, std::string& lval)

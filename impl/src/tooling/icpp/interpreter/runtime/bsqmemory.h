@@ -1126,7 +1126,11 @@ private:
             }
         }
 
+#ifndef DEBUG_ALLOC_BLOCKS
         void* groot = GCStack::global_memory->data;
+#else
+        void* groot = *((void**)GCStack::global_memory->data);
+#endif
         if(GCStack::global_init_complete)
         {
             //treat it like a single root to the globals object
