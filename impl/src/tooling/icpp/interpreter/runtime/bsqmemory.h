@@ -351,11 +351,6 @@ public:
 
     std::set<PageInfo*> filled_pages; //pages that have been filled by the allocator and are pending collection
 
-#ifdef DEBUG_ALLOC_BLOCKS
-    //For malloc based debug implementation we keep explicit map from object to page it is in
-    std::map<void*, PageInfo*> page_map;
-#endif
-
     inline bool isAddrAllocated(void* addr, void*& realobj) const
     {
         //TODO: probably want some bitvector and/or semi-hierarchical structure here instead 
@@ -406,7 +401,7 @@ public:
             **((void***)p->data + i) = *curr;
             *(*((void***)p->data + i) + 1) = metacurr;
 
-            *curr = (void*)p->data + i;
+            *curr = *((void**)p->data + i);
 
             metacurr++;
         }
@@ -428,9 +423,8 @@ public:
 #ifdef DEBUG_ALLOC_BLOCKS
         for(size_t i = 0; i < p->btype->tableEntryCount; ++i)
         {
-            xfree(*((void**)(p->data) + i));
+            GC_DBG_PAGE_FREE(*((void**)(p->data) + i));
         }
-        p->objslots.clear();
 #endif
 
         p->entry_count = 0;
@@ -501,9 +495,10 @@ public:
 #ifdef DEBUG_ALLOC_BLOCKS
         for(size_t i = 0; i < btype->tableEntryCount; ++i)
         {
-            void* obj = (void*)zxalloc(btype->allocinfo.heapsize);
+            assert(btype->allocinfo.heapsize >= sizeof(void*) * 2);
+            void* obj = (void*)GC_DBG_PAGE_ALLOC(btype->allocinfo.heapsize);
+            PAGE_MASK_SET_ID(obj, pp);
             *((void**)(pp->data) + i) = obj;
-            pp->objslots[obj] = i;
         }
 #endif
 
@@ -1054,15 +1049,23 @@ public:
                 *((void**)datacurr + 1) = metacurr;
 
                 pp->freelist = (void*)datacurr;
+#else
+                auto sweepobj = GC_GET_OBJ_AT_INDEX(pp, i);
+
+                GC_DBG_PAGE_FREE(sweepobj);
+                sweepobj = (void*)GC_DBG_PAGE_ALLOC(pp->btype->allocinfo.heapsize);
+                PAGE_MASK_SET_ID(sweepobj, pp);
+
+                *((void**)(pp->data) + i) = sweepobj;
+
+                **((void***)pp->data + i) = pp->freelist;
+                *(*((void***)pp->data + i) + 1) = metacurr;
+
+                pp->freelist = *((void**)pp->data + i);
+#endif
 
                 pp->freelist_count++;
                 *metacurr = 0x0;
-#else
-                **((void***)p->data + i) = pp->freelist;
-                *(*((void***)p->data + i) + 1) = metacurr;
-
-                pp->freelist = *((void**)p->data + i);
-#endif
             }
             
             if constexpr (evacrc)
@@ -1071,11 +1074,21 @@ public:
                 {
                     void* parent = GC_RC_GET_PARENT(w);
                     BSQType* ptype = PAGE_MASK_EXTRACT_ADDR(parent)->btype;
+
+#ifndef DEBUG_ALLOC_BLOCKS
                     ptype->gcops.fpProcessMoveObj(ptype, (void**)parent, (void*)datacurr);
+#else
+                    auto evacobj = GC_GET_OBJ_AT_INDEX(pp, i);
+                    ptype->gcops.fpProcessMoveObj(ptype, (void**)parent, evacobj);
+#endif
                 
                     if(!GC_IS_MARKED(w))
                     {
+#ifndef DEBUG_ALLOC_BLOCKS
                         this->evacobjs.enque((void*)datacurr);
+#else
+                        this->evacobjs.enque(evacobj);
+#endif
                     }
                 }
             }
@@ -1085,7 +1098,10 @@ public:
             }
 
             metacurr++;
+
+#ifndef DEBUG_ALLOC_BLOCKS
             datacurr += pp->entry_size;
+#endif
         }
 
         this->postsweep_processing(pp, allrcsimple);
@@ -1111,7 +1127,11 @@ private:
             }
         }
 
+#ifndef DEBUG_ALLOC_BLOCKS
         void* groot = GCStack::global_memory->data;
+#else
+        void* groot = *((void**)GCStack::global_memory->data);
+#endif
         if(GCStack::global_init_complete)
         {
             //treat it like a single root to the globals object
@@ -1283,11 +1303,20 @@ private:
                 pp->btype->gcops.fpDecObj(pp->btype, (void**)decobj);
 
                 GC_STORE_META_DATA_WORD(addr, 0x0);
+
+#ifdef DEBUG_ALLOC_BLOCKS
+                auto idx = GC_PAGE_INDEX_FOR_ADDR(decobj, pp);
+
+                GC_DBG_PAGE_FREE(decobj);
+                decobj = (void*)GC_DBG_PAGE_ALLOC(pp->btype->allocinfo.heapsize);
+                PAGE_MASK_SET_ID(decobj, pp);
+                *((void**)(pp->data) + idx) = decobj;
+#endif
+
                 *((void**)decobj) = pp->freelist;
                 *((void**)decobj + 1) = addr;
                 pp->freelist = decobj;
                 pp->freelist_count++;
-
                 this->postdec_processing(pp);
             }
 

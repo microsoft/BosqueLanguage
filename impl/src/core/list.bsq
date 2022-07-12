@@ -74,8 +74,8 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return List<T>{};
         }
         else {
-            let ilist = ListOps::s_get_front<List<T>>(ll);
-            let tl = ListOps::s_pop_front<List<T>>(ll);
+            let ilist = ListOps::s_list_front<List<T>>(ll);
+            let tl = ListOps::s_list_pop_front<List<T>>(ll);
             if(ListOps::s_list_empty<List<T>>(tl)) {
                 return ilist;
             }
@@ -657,8 +657,8 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     method {when T unique Orderable} min(): T 
         requires !ListOps::s_list_empty<T>(this);
     {
-        let iv = ListOps::s_get_front<T>(this);
-        let tl = ListOps::s_pop_front<T>(this);
+        let iv = ListOps::s_list_front<T>(this);
+        let tl = ListOps::s_list_pop_front<T>(this);
         if(ListOps::s_list_empty<T>(tl)) {
             return iv;
         }
@@ -677,8 +677,8 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     method {when T unique Orderable} max(): T
         requires !ListOps::s_list_empty<T>(this);
     {
-        let iv = ListOps::s_get_front<T>(this);
-        let tl = ListOps::s_pop_front<T>(this);
+        let iv = ListOps::s_list_front<T>(this);
+        let tl = ListOps::s_list_pop_front<T>(this);
         if(ListOps::s_list_empty<T>(tl)) {
             return iv;
         }
@@ -699,8 +699,8 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return none;
         }
         else {
-            let iv = ListOps::s_get_front<T>(this);
-            let tl = ListOps::s_pop_front<T>(this);
+            let iv = ListOps::s_list_front<T>(this);
+            let tl = ListOps::s_list_pop_front<T>(this);
             if(ListOps::s_list_empty<T>(tl)) {
                 return iv;
             }
@@ -722,8 +722,8 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return none;
         }
         else {
-            let iv = ListOps::s_get_front<T>(this);
-            let tl = ListOps::s_pop_front<T>(this);
+            let iv = ListOps::s_list_front<T>(this);
+            let tl = ListOps::s_list_pop_front<T>(this);
             if(ListOps::s_list_empty<T>(tl)) {
                 return iv;
             }
@@ -745,8 +745,8 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return nothing;
         }
         else {
-            let iv = ListOps::s_get_front<T>(this);
-            let tl = ListOps::s_pop_front<T>(this);
+            let iv = ListOps::s_list_front<T>(this);
+            let tl = ListOps::s_list_pop_front<T>(this);
             if(ListOps::s_list_empty<T>(tl)) {
                 return something(iv);
             }
@@ -770,8 +770,8 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return nothing;
         }
         else {
-            let iv = ListOps::s_get_front<T>(this);
-            let tl = ListOps::s_pop_front<T>(this);
+            let iv = ListOps::s_list_front<T>(this);
+            let tl = ListOps::s_list_pop_front<T>(this);
             if(ListOps::s_list_empty<T>(tl)) {
                 return something(iv);
             }
@@ -795,8 +795,8 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return false;
         }
         else {
-            let iv = ListOps::s_get_front<T>(this);
-            let tl = ListOps::s_pop_front<T>(this);
+            let iv = ListOps::s_list_front<T>(this);
+            let tl = ListOps::s_list_pop_front<T>(this);
             if(ListOps::s_list_empty<T>(tl)) {
                 res = iv;
                 return true;
@@ -821,8 +821,8 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return false;
         }
         else {
-            let iv = ListOps::s_get_front<T>(this);
-            let tl = ListOps::s_pop_front<T>(this);
+            let iv = ListOps::s_list_front<T>(this);
+            let tl = ListOps::s_list_pop_front<T>(this);
             if(ListOps::s_list_empty<T>(tl)) {
                 res = iv;
                 return true;
@@ -845,8 +845,8 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     method argMin(cmp: recursive? pred(_: T, _: T) -> Bool): T 
         requires !ListOps::s_list_empty<T>(this);
     {
-        let iv = ListOps::s_get_front<T>(this);
-        let tl = ListOps::s_pop_front<T>(this);
+        let iv = ListOps::s_list_front<T>(this);
+        let tl = ListOps::s_list_pop_front<T>(this);
         if(ListOps::s_list_empty<T>(tl)) {
             return iv;
         }
@@ -865,8 +865,8 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
     method argMax(cmp: recursive? pred(_: T, _: T) -> Bool): T
         requires !ListOps::s_list_empty<T>(this);
     {
-        let iv = ListOps::s_get_front<T>(this);
-        let tl = ListOps::s_pop_front<T>(this);
+        let iv = ListOps::s_list_front<T>(this);
+        let tl = ListOps::s_list_pop_front<T>(this);
         if(ListOps::s_list_empty<T>(tl)) {
             return iv;
         }
@@ -887,8 +887,8 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return none;
         }
         else {
-            let iv = ListOps::s_get_front<T>(this);
-            let tl = ListOps::s_pop_front<T>(this);
+            let iv = ListOps::s_list_front<T>(this);
+            let tl = ListOps::s_list_pop_front<T>(this);
             if(ListOps::s_list_empty<T>(tl)) {
                 return iv;
             }
@@ -910,8 +910,8 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return none;
         }
         else {
-            let iv = ListOps::s_get_front<T>(this);
-            let tl = ListOps::s_pop_front<T>(this);
+            let iv = ListOps::s_list_front<T>(this);
+            let tl = ListOps::s_list_pop_front<T>(this);
             if(ListOps::s_list_empty<T>(tl)) {
                 return iv;
             }
@@ -933,8 +933,8 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return nothing;
         }
         else {
-            let iv = ListOps::s_get_front<T>(this);
-            let tl = ListOps::s_pop_front<T>(this);
+            let iv = ListOps::s_list_front<T>(this);
+            let tl = ListOps::s_list_pop_front<T>(this);
             if(ListOps::s_list_empty<T>(tl)) {
                 return something(iv);
             }
@@ -958,8 +958,8 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return nothing;
         }
         else {
-            let iv = ListOps::s_get_front<T>(this);
-            let tl = ListOps::s_pop_front<T>(this);
+            let iv = ListOps::s_list_front<T>(this);
+            let tl = ListOps::s_list_pop_front<T>(this);
             if(ListOps::s_list_empty<T>(tl)) {
                 return something(iv);
             }
@@ -983,8 +983,8 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return false;
         }
         else {
-            let iv = ListOps::s_get_front<T>(this);
-            let tl = ListOps::s_pop_front<T>(this);
+            let iv = ListOps::s_list_front<T>(this);
+            let tl = ListOps::s_list_pop_front<T>(this);
             if(ListOps::s_list_empty<T>(tl)) {
                 res = iv;
                 return true;
@@ -1009,8 +1009,8 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return false;
         }
         else {
-            let iv = ListOps::s_get_front<T>(this);
-            let tl = ListOps::s_pop_front<T>(this);
+            let iv = ListOps::s_list_front<T>(this);
+            let tl = ListOps::s_list_pop_front<T>(this);
             if(ListOps::s_list_empty<T>(tl)) {
                 res = iv;
                 return true;
@@ -1035,8 +1035,8 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return T::zero;
         }
         else {
-            let iv = ListOps::s_get_front<T>(this);
-            let tl = ListOps::s_pop_front<T>(this);
+            let iv = ListOps::s_list_front<T>(this);
+            let tl = ListOps::s_list_pop_front<T>(this);
             if(ListOps::s_list_empty<T>(tl)) {
                 return iv;
             }
@@ -2567,7 +2567,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
         else {
 #if CHECK_LIBS
             if(ListOps::s_list_size<T>(this) == 1) {
-                let k = pf[recursive?](ListOps::s_get_front<T>(this));
+                let k = pf[recursive?](ListOps::s_list_front<T>(this));
                 return Map<K, List<T>>{k => this};
             }
             else {

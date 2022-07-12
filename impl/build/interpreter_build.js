@@ -22,7 +22,7 @@ let includes = " ";
 let outfile = "";
 if(process.platform === "darwin") {
     compiler = "clang++";
-    ccflags = "-O0 -g -DBSQ_DEBUG_BUILD -Wall -std=c++20";
+    ccflags = "-O0 -g -DBSQ_DEBUG_BUILD -Wall -std=c++20 -fsanitize=address";
     includes = includeheaders.map((ih) => `-I ${ih}`).join(" ");
     outfile = "-o " + outexec+ "/icpp";
 }
