@@ -152,7 +152,7 @@ struct PageInfo
 #define GC_PAGE_INDEX_FOR_ADDR(M, PAGE) PAGE_INDEX_EXTRACT(M, PAGE)
 #define GC_GET_OBJ_AT_INDEX(PAGE, IDX) ((void*)((uint8_t*)(PAGE)->data + (IDX * (PAGE)->entry_size)))
 #else
-#define GC_DBG_PAGE_ALLOC(SIZE) (void*)((void**)zxalloc(SIZE) + 1)
+#define GC_DBG_PAGE_ALLOC(SIZE) (void*)((void**)zxalloc(SIZE + sizeof(void*)) + 1)
 #define GC_DBG_PAGE_FREE(M) xfree((void*)((void**)M - 1))
 #define PAGE_MASK_SET_ID(M, PAGE) *((void**)(((uint8_t*)M) - sizeof(void*))) = PAGE
 

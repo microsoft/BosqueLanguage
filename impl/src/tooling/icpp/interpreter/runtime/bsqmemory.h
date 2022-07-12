@@ -495,6 +495,7 @@ public:
 #ifdef DEBUG_ALLOC_BLOCKS
         for(size_t i = 0; i < btype->tableEntryCount; ++i)
         {
+            assert(btype->allocinfo.heapsize >= sizeof(void*) * 2);
             void* obj = (void*)GC_DBG_PAGE_ALLOC(btype->allocinfo.heapsize);
             PAGE_MASK_SET_ID(obj, pp);
             *((void**)(pp->data) + i) = obj;
