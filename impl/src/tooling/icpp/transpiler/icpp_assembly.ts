@@ -69,6 +69,12 @@ class ICPPTypeSizeInfo {
             heapmask = undefined;
         }
         
+        //Force minimum heap allocation of 2 ICPP words -- really doesn't make sense to have smaller than this as a heap alloc
+        if(heapsize < ICPP_WORD_SIZE * 2)
+        {
+            heapsize = ICPP_WORD_SIZE * 2;
+        }
+
         return new ICPPTypeSizeInfo(tkey, ICPP_WORD_SIZE, heapsize, ICPP_WORD_SIZE, ICPP_WORD_SIZE, heapmask, "2", false);
     }
 
