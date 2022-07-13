@@ -2,14 +2,15 @@
 // Copyright (C) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
-/*
-import { MIRAssembly, MIRConstructableEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIRDataBufferInternalEntityTypeDecl, MIRDataStringInternalEntityTypeDecl, MIREntityType, MIREntityTypeDecl, MIREnumEntityTypeDecl, MIREphemeralListType, MIRFieldDecl, MIRHavocEntityTypeDecl, MIRInternalEntityTypeDecl, MIRPrimitiveCollectionEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRRecordType, MIRStringOfInternalEntityTypeDecl, MIRTupleType, MIRType } from "../../../compiler/mir_assembly";
+
+import { MIRAssembly, MIRConstructableEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIRDataBufferInternalEntityTypeDecl, MIRDataStringInternalEntityTypeDecl, MIREntityType, MIREntityTypeDecl, MIREnumEntityTypeDecl, MIREphemeralListType, MIRInternalEntityTypeDecl, MIRPrimitiveCollectionEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRFieldDecl, MIRRecordType, MIRStringOfInternalEntityTypeDecl, MIRTupleType, MIRType } from "../../../compiler/mir_assembly";
 import { MIRGlobalKey, MIRInvokeKey, MIRResolvedTypeKey } from "../../../compiler/mir_ops";
-import { MorphirCallGeneral, MorphirCallSimple, MorphirConst, MorphirExp, MorphirTypeInfo } from "./morphir_exp";
+import { MorphirCallSimple, MorphirConst, MorphirExp, MorphirTypeInfo } from "./morphir_exp";
+import { SourceInfo } from "../../../ast/parser";
 
 import * as assert from "assert";
 
-class SMTTypeEmitter {
+class MorphirTypeEmitter {
     readonly assembly: MIRAssembly;
 
     private namectr: number = 0;
@@ -295,263 +296,263 @@ class SMTTypeEmitter {
                 objval = new MorphirCallSimple("BSQKey_bool__box", [exp]);
             }
             else if (this.isType(from, "Int")) {
-                oftypetag = smtfrom.smttypetag;
-                objval = new SMTCallSimple("bsqkey_int@box", [exp]);
+                oftypetag = smtfrom.morphirtypetag;
+                objval = new MorphirCallSimple("bsqkey_int__box", [exp]);
             }
             else if (this.isType(from, "Nat")) {
-                oftypetag = smtfrom.smttypetag;
-                objval = new SMTCallSimple("bsqkey_nat@box", [exp]);
+                oftypetag = smtfrom.morphirtypetag;
+                objval = new MorphirCallSimple("bsqkey_nat__box", [exp]);
             }
             else if (this.isType(from, "BigInt")) {
-                oftypetag = smtfrom.smttypetag;
-                objval = new SMTCallSimple("bsqkey_bigint@box", [exp]);
+                oftypetag = smtfrom.morphirtypetag;
+                objval = new MorphirCallSimple("bsqkey_bigint__box", [exp]);
             }
             else if (this.isType(from, "BigNat")) {
-                oftypetag = smtfrom.smttypetag;
-                objval = new SMTCallSimple("bsqkey_bignat@box", [exp]);
+                oftypetag = smtfrom.morphirtypetag;
+                objval = new MorphirCallSimple("bsqkey_bignat__box", [exp]);
             }
             else if (this.isType(from, "String")) {
-                oftypetag = smtfrom.smttypetag;
-                objval = new SMTCallSimple("bsqkey_string@box", [exp]);
+                oftypetag = smtfrom.morphirtypetag;
+                objval = new MorphirCallSimple("bsqkey_string__box", [exp]);
             }
             else if(this.isType(from, "UTCDateTime")) {
-                oftypetag = smtfrom.smttypetag;
-                objval = new SMTCallSimple("bsqkey_utcdatetime@box", [exp]);
+                oftypetag = smtfrom.morphirtypetag;
+                objval = new MorphirCallSimple("bsqkey_utcdatetime__box", [exp]);
             }
             else if(this.isType(from, "CalendarDate")) {
-                oftypetag = smtfrom.smttypetag;
-                objval = new SMTCallSimple("bsqkey_calendardate@box", [exp]);
+                oftypetag = smtfrom.morphirtypetag;
+                objval = new MorphirCallSimple("bsqkey_calendardate__box", [exp]);
             }
             else if(this.isType(from, "RelativeTime")) {
-                oftypetag = smtfrom.smttypetag;
-                objval = new SMTCallSimple("bsqkey_relativetimetime@box", [exp]);
+                oftypetag = smtfrom.morphirtypetag;
+                objval = new MorphirCallSimple("bsqkey_relativetimetime__box", [exp]);
             }
             else if(this.isType(from, "TickTime")) {
-                oftypetag = smtfrom.smttypetag;
-                objval = new SMTCallSimple("bsqkey_ticktime@box", [exp]);
+                oftypetag = smtfrom.morphirtypetag;
+                objval = new MorphirCallSimple("bsqkey_ticktime__box", [exp]);
             }
             else if(this.isType(from, "LogicalTime")) {
-                oftypetag = smtfrom.smttypetag;
-                objval = new SMTCallSimple("bsqkey_logicaltime@box", [exp]);
+                oftypetag = smtfrom.morphirtypetag;
+                objval = new MorphirCallSimple("bsqkey_logicaltime__box", [exp]);
             }
             else if(this.isType(from, "ISOTimeStamp")) {
-                oftypetag = smtfrom.smttypetag;
-                objval = new SMTCallSimple("bsqkey_isotimestamp@box", [exp]);
+                oftypetag = smtfrom.morphirtypetag;
+                objval = new MorphirCallSimple("bsqkey_isotimestamp__box", [exp]);
             }
             else if(this.isType(from, "UUID4")) {
-                oftypetag = smtfrom.smttypetag;
-                objval = new SMTCallSimple("bsqkey_uuid4@box", [exp]);
+                oftypetag = smtfrom.morphirtypetag;
+                objval = new MorphirCallSimple("bsqkey_uuid4__box", [exp]);
             }
             else if(this.isType(from, "UUID7")) {
-                oftypetag = smtfrom.smttypetag;
-                objval = new SMTCallSimple("bsqkey_uuid7@box", [exp]);
+                oftypetag = smtfrom.morphirtypetag;
+                objval = new MorphirCallSimple("bsqkey_uuid7__box", [exp]);
             }
             else if(this.isType(from, "SHAContentHash")) {
-                oftypetag = smtfrom.smttypetag;
-                objval = new SMTCallSimple("bsqkey_shacontenthash@box", [exp]);
+                oftypetag = smtfrom.morphirtypetag;
+                objval = new MorphirCallSimple("bsqkey_shacontenthash__box", [exp]);
             }
             else {
                 const entity = this.assembly.entityDecls.get(from.typeID) as MIREntityTypeDecl;
 
                 if (entity instanceof MIRStringOfInternalEntityTypeDecl) {
-                    oftypetag = this.getSMTTypeFor(this.getMIRType("String")).smttypetag;
-                    objval = new SMTCallSimple("bsqkey_string@box", [exp]);
+                    oftypetag = this.getMorphirTypeFor(this.getMIRType("String")).morphirtypetag;
+                    objval = new MorphirCallSimple("bsqkey_string__box", [exp]);
                 }
                 else if (entity instanceof MIRDataStringInternalEntityTypeDecl) {
-                    oftypetag = this.getSMTTypeFor(this.getMIRType("String")).smttypetag;
-                    objval = new SMTCallSimple("bsqkey_string@box", [exp]);
+                    oftypetag = this.getMorphirTypeFor(this.getMIRType("String")).morphirtypetag;
+                    objval = new MorphirCallSimple("bsqkey_string__box", [exp]);
                 }
                 else if (entity instanceof MIRConstructableInternalEntityTypeDecl) {
-                    oftypetag = this.getSMTTypeFor(this.getMIRType(entity.fromtype)).smttypetag;
-                    objval = new SMTCallSimple(this.getSMTConstructorName(this.getMIRType(entity.fromtype)).box, [exp]);
+                    oftypetag = this.getMorphirTypeFor(this.getMIRType(entity.fromtype)).morphirtypetag;
+                    objval = new MorphirCallSimple(this.getMorphirConstructorName(this.getMIRType(entity.fromtype)).box, [exp]);
                 }
                 else if (entity instanceof MIREnumEntityTypeDecl) {
-                    oftypetag = this.getSMTTypeFor(this.getMIRType("Nat")).smttypetag;
-                    objval = new SMTCallSimple("bsqkey_nat@box", [exp]);
+                    oftypetag = this.getMorphirTypeFor(this.getMIRType("Nat")).morphirtypetag;
+                    objval = new MorphirCallSimple("bsqkey_nat__box", [exp]);
                 }
                 else if (entity instanceof MIRConstructableEntityTypeDecl) {
-                    oftypetag = this.getSMTTypeFor(this.getMIRType(entity.basetype)).smttypetag;
-                    objval = new SMTCallSimple(this.getSMTConstructorName(this.getMIRType(entity.basetype)).box, [exp]);
+                    oftypetag = this.getMorphirTypeFor(this.getMIRType(entity.basetype)).morphirtypetag;
+                    objval = new MorphirCallSimple(this.getMorphirConstructorName(this.getMIRType(entity.basetype)).box, [exp]);
                 }
                 else {
                     assert(this.isUniqueEntityType(from));
-                    oftypetag = smtfrom.smttypetag;
-                    objval = new SMTCallSimple(this.getSMTConstructorName(from).box, [exp]);
+                    oftypetag = smtfrom.morphirtypetag;
+                    objval = new MorphirCallSimple(this.getMorphirConstructorName(from).box, [exp]);
                 }
             }
 
-            return new SMTCallSimple("BKey@box", [new SMTConst(smtfrom.smttypetag), new SMTConst(oftypetag), objval as SMTExp]);
+            return new MorphirCallSimple("BKey__box", [new MorphirConst(smtfrom.morphirtypetag), new MorphirConst(oftypetag), objval as MorphirExp]);
         }
     }
 
-    private coerceFromAtomicToTerm(exp: SMTExp, from: MIRType): SMTExp {
+    private coerceFromAtomicToTerm(exp: MorphirExp, from: MIRType): MorphirExp {
         if (from.typeID === "None") {
-            return new SMTConst(`BTerm@none`);
+            return new MorphirConst(`BTerm__none`);
         }
         else if (from.typeID === "Nothing") {
-            return new SMTConst(`BTerm@nothing`);
+            return new MorphirConst(`BTerm__nothing`);
         }
         else {
             if(this.assembly.subtypeOf(from, this.getMIRType("KeyType"))) {
-                return new SMTCallSimple("BTerm@keybox", [this.coerceFromAtomicToKey(exp, from)]);
+                return new MorphirCallSimple("BTerm__keybox", [this.coerceFromAtomicToKey(exp, from)]);
             }
             else {
-                const smtfrom = this.getSMTTypeFor(from);
-                let objval: SMTExp | undefined = undefined;
+                const smtfrom = this.getMorphirTypeFor(from);
+                let objval: MorphirExp | undefined = undefined;
 
                 if (this.isType(from, "Float")) {
-                    objval = new SMTCallSimple("bsqobject_float@box", [exp]);
+                    objval = new MorphirCallSimple("bsqobject_float__box", [exp]);
                 }
                 else if (this.isType(from, "Decimal")) {
-                    objval = new SMTCallSimple("bsqobject_decimal@box", [exp]);
+                    objval = new MorphirCallSimple("bsqobject_decimal__box", [exp]);
                 }
                 else if (this.isType(from, "Rational")) {
-                    objval = new SMTCallSimple("bsqobject_rational@box", [exp]);
+                    objval = new MorphirCallSimple("bsqobject_rational__box", [exp]);
                 }
                 else if (this.isType(from, "ByteBuffer")) {
-                    objval = new SMTCallSimple("bsqobject_bytebuffer@box", [exp]);
+                    objval = new MorphirCallSimple("bsqobject_bytebuffer__box", [exp]);
                 }
                 else if(this.isType(from, "DateTime")) {
-                    objval = new SMTCallSimple("bsqobject_datetime@box", [exp]);
+                    objval = new MorphirCallSimple("bsqobject_datetime__box", [exp]);
                 }
                 else if(this.isType(from, "LatLongCoordinate")) {
-                    objval = new SMTCallSimple("bsqobject_latlongcoordinate@box", [exp]);
+                    objval = new MorphirCallSimple("bsqobject_latlongcoordinate__box", [exp]);
                 }
                 else if (this.isType(from, "Regex")) {
-                    objval = new SMTCallSimple("bsqobject_regex@box", [exp]);
+                    objval = new MorphirCallSimple("bsqobject_regex__box", [exp]);
                 }
                 else if (this.isUniqueTupleType(from)) {
-                    objval = new SMTCallSimple(this.getSMTConstructorName(from).box, [exp]);
+                    objval = new MorphirCallSimple(this.getMorphirConstructorName(from).box, [exp]);
                 }
                 else if (this.isUniqueRecordType(from)) {
-                    objval = new SMTCallSimple(this.getSMTConstructorName(from).box, [exp]);
+                    objval = new MorphirCallSimple(this.getMorphirConstructorName(from).box, [exp]);
                 }
                 else {
                     assert(this.isUniqueEntityType(from));
     
-                    objval = new SMTCallSimple(this.getSMTConstructorName(from).box, [exp]);
+                    objval = new MorphirCallSimple(this.getMorphirConstructorName(from).box, [exp]);
                 }
 
-                return new SMTCallSimple("BTerm@termbox", [new SMTConst(smtfrom.smttypetag), objval as SMTExp]);
+                return new MorphirCallSimple("BTerm__termbox", [new MorphirConst(smtfrom.morphirtypetag), objval as MorphirExp]);
             }
         }
     }
 
-    private coerceKeyIntoAtomic(exp: SMTExp, into: MIRType): SMTExp {
+    private coerceKeyIntoAtomic(exp: MorphirExp, into: MIRType): MorphirExp {
         if (this.isType(into, "None")) {
-            return new SMTConst("bsq_none@literal");
+            return new MorphirConst("bsq_none__literal");
         }
         else {
-            const oexp = new SMTCallSimple("BKey_value", [exp]);
+            const oexp = new MorphirCallSimple("BKey_value", [exp]);
 
             if (this.isType(into, "Bool")) {
-                return new SMTCallSimple("bsqkey_bool_value", [oexp]);
+                return new MorphirCallSimple("bsqkey_bool_value", [oexp]);
             }
             else if (this.isType(into, "Int")) {
-                return new SMTCallSimple("bsqkey_int_value", [oexp]);
+                return new MorphirCallSimple("bsqkey_int_value", [oexp]);
             }
             else if (this.isType(into, "Nat")) {
-                return new SMTCallSimple("bsqkey_nat_value", [oexp]);
+                return new MorphirCallSimple("bsqkey_nat_value", [oexp]);
             }
             else if (this.isType(into, "BigInt")) {
-                return new SMTCallSimple("bsqkey_bigint_value", [oexp]);
+                return new MorphirCallSimple("bsqkey_bigint_value", [oexp]);
             }
             else if (this.isType(into, "BigNat")) {
-                return new SMTCallSimple("bsqkey_bignat_value", [oexp]);
+                return new MorphirCallSimple("bsqkey_bignat_value", [oexp]);
             }
             else if (this.isType(into, "String")) {
-                return new SMTCallSimple("bsqkey_string_value", [oexp]);
+                return new MorphirCallSimple("bsqkey_string_value", [oexp]);
             }
             else if(this.isType(into, "UTCDateTime")) {
-                return new SMTCallSimple("bsqkey_utcdatetime_value", [oexp]);
+                return new MorphirCallSimple("bsqkey_utcdatetime_value", [oexp]);
             }
             else if(this.isType(into, "CalendarDate")) {
-                return new SMTCallSimple("bsqkey_calendardate_value", [oexp]);
+                return new MorphirCallSimple("bsqkey_calendardate_value", [oexp]);
             }
             else if(this.isType(into, "RelativeTime")) {
-                return new SMTCallSimple("bsqkey_relativetime_value", [oexp]);
+                return new MorphirCallSimple("bsqkey_relativetime_value", [oexp]);
             }
             else if(this.isType(into, "TickTime")) {
-                return new SMTCallSimple("bsqkey_ticktime_value", [oexp]);
+                return new MorphirCallSimple("bsqkey_ticktime_value", [oexp]);
             }
             else if(this.isType(into, "LogicalTime")) {
-                return new SMTCallSimple("bsqkey_logicaltime_value", [oexp]);
+                return new MorphirCallSimple("bsqkey_logicaltime_value", [oexp]);
             }
             else if(this.isType(into, "ISOTimeStamp")) {
-                return new SMTCallSimple("bsqkey_isotimestamp_value", [oexp]);
+                return new MorphirCallSimple("bsqkey_isotimestamp_value", [oexp]);
             }
             else if(this.isType(into, "UUID4")) {
-                return new SMTCallSimple("bsqkey_uuid4_value", [oexp]);
+                return new MorphirCallSimple("bsqkey_uuid4_value", [oexp]);
             }
             else if(this.isType(into, "UUID7")) {
-                return new SMTCallSimple("bsqkey_uuid7_value", [oexp]);
+                return new MorphirCallSimple("bsqkey_uuid7_value", [oexp]);
             }
             else if(this.isType(into, "SHAContentHash")) {
-                return new SMTCallSimple("bsqkey_shacontenthash_value", [oexp]);
+                return new MorphirCallSimple("bsqkey_shacontenthash_value", [oexp]);
             }
             else {
                 assert(this.isUniqueEntityType(into));
 
-                return new SMTCallSimple(this.getSMTConstructorName(into).bfield, [oexp]);
+                return new MorphirCallSimple(this.getMorphirConstructorName(into).bfield, [oexp]);
             }
         }
     }
 
-    private coerceTermIntoAtomic(exp: SMTExp, into: MIRType): SMTExp {
+    private coerceTermIntoAtomic(exp: MorphirExp, into: MIRType): MorphirExp {
         if (this.isType(into, "None")) {
-            return new SMTConst("bsq_none@literal");
+            return new MorphirConst("bsq_none__literal");
         }
         else if (this.isType(into, "Nothing")) {
-            return new SMTConst("bsq_nothing@literal");
+            return new MorphirConst("bsq_nothing__literal");
         }
         else {
             if(this.assembly.subtypeOf(into, this.getMIRType("KeyType"))) {
-                return this.coerceKeyIntoAtomic(new SMTCallSimple("BTerm_keyvalue", [exp]), into)
+                return this.coerceKeyIntoAtomic(new MorphirCallSimple("BTerm_keyvalue", [exp]), into)
             }
             else {
-                const oexp = new SMTCallSimple("BTerm_termvalue", [exp]);
+                const oexp = new MorphirCallSimple("BTerm_termvalue", [exp]);
 
                 if (this.isType(into, "Float")) {
-                    return new SMTCallSimple("bsqobject_float_value", [oexp]);
+                    return new MorphirCallSimple("bsqobject_float_value", [oexp]);
                 }
                 else if (this.isType(into, "Decimal")) {
-                    return new SMTCallSimple("bsqobject_decimal_value", [oexp]);
+                    return new MorphirCallSimple("bsqobject_decimal_value", [oexp]);
                 }
                 else if (this.isType(into, "Rational")) {
-                    return new SMTCallSimple("bsqobject_rational_value", [oexp]);
+                    return new MorphirCallSimple("bsqobject_rational_value", [oexp]);
                 }
                 else if (this.isType(into, "ByteBuffer")) {
-                    return new SMTCallSimple("bsqobject_bytebuffer_value", [oexp]);
+                    return new MorphirCallSimple("bsqobject_bytebuffer_value", [oexp]);
                 }
                 else if(this.isType(into, "DateTime")) {
-                    return new SMTCallSimple("bsqobject_datetime_value", [oexp]);
+                    return new MorphirCallSimple("bsqobject_datetime_value", [oexp]);
                 }
                 else if(this.isType(into, "LatLongCoordinate")) {
-                    return new SMTCallSimple("bsqobject_latlongcoordinate_value", [oexp]);
+                    return new MorphirCallSimple("bsqobject_latlongcoordinate_value", [oexp]);
                 }
                 else if (this.isType(into, "Regex")) {
-                    return new SMTCallSimple("bsqobject_regex_value", [oexp]);
+                    return new MorphirCallSimple("bsqobject_regex_value", [oexp]);
                 }
                 else if (this.isUniqueTupleType(into)) {
-                    return new SMTCallSimple(this.getSMTConstructorName(into).bfield, [oexp]);
+                    return new MorphirCallSimple(this.getMorphirConstructorName(into).bfield, [oexp]);
                 }
                 else if (this.isUniqueRecordType(into)) {
-                    return new SMTCallSimple(this.getSMTConstructorName(into).bfield, [oexp]);
+                    return new MorphirCallSimple(this.getMorphirConstructorName(into).bfield, [oexp]);
                 }
                 else {
                     assert(this.isUniqueEntityType(into));
 
-                    return new SMTCallSimple(this.getSMTConstructorName(into).bfield, [oexp]);
+                    return new MorphirCallSimple(this.getMorphirConstructorName(into).bfield, [oexp]);
                 }
             }
         }
     }
 
-    coerce(exp: SMTExp, from: MIRType, into: MIRType): SMTExp {
-        const smtfrom = this.getSMTTypeFor(from);
-        const smtinto = this.getSMTTypeFor(into);
+    coerce(exp: MorphirExp, from: MIRType, into: MIRType): MorphirExp {
+        const smtfrom = this.getMorphirTypeFor(from);
+        const smtinto = this.getMorphirTypeFor(into);
 
-        if(smtfrom.smttypename === smtinto.smttypename) {
+        if(smtfrom.morphirtypename === smtinto.morphirtypename) {
             return exp;
         }
 
@@ -560,7 +561,7 @@ class SMTTypeEmitter {
                 return exp;
             }
             if(smtfrom.isGeneralTermType()) {
-                return new SMTCallSimple("BTerm_keyvalue", [exp]);
+                return new MorphirCallSimple("BTerm_keyvalue", [exp]);
             }
             else {
                 return this.coerceFromAtomicToKey(exp, from);
@@ -571,7 +572,7 @@ class SMTTypeEmitter {
                 return exp;
             }
             else if(smtfrom.isGeneralKeyType()) {
-                return new SMTCallSimple("BTerm@keybox", [exp]);
+                return new MorphirCallSimple("BTerm__keybox", [exp]);
             }
             else {
                 return this.coerceFromAtomicToTerm(exp, from);
@@ -589,15 +590,15 @@ class SMTTypeEmitter {
         }
     }
 
-    coerceToKey(exp: SMTExp, from: MIRType): SMTExp {
-        const smtfrom = this.getSMTTypeFor(from);
+    coerceToKey(exp: MorphirExp, from: MIRType): MorphirExp {
+        const smtfrom = this.getMorphirTypeFor(from);
 
         if (smtfrom.isGeneralKeyType()) {
             return exp;
         }
         else {
             if(smtfrom.isGeneralTermType()) {
-                return new SMTCallSimple("BTerm_keyvalue", [exp]);
+                return new MorphirCallSimple("BTerm_keyvalue", [exp]);
             }
             else {
                 return this.coerceFromAtomicToKey(exp, from);
@@ -625,134 +626,119 @@ class SMTTypeEmitter {
         return `${this.lookupTypeName(tt.typeID)}@_${idx}`;
     }
 
-    generateResultType(ttype: MIRType): SMTTypeInfo {
-        return new SMTTypeInfo(`$Result_${this.getSMTTypeFor(ttype).smttypename}`, "[INTERNAL RESULT]", "[INTERNAL RESULT]");
+    generateResultType(ttype: MIRType): MorphirTypeInfo {
+        return new MorphirTypeInfo(`Result ${this.getMorphirTypeFor(ttype).morphirtypename} String`, "[INTERNAL RESULT]", "[INTERNAL RESULT]");
     }
 
-    generateResultTypeConstructorSuccess(ttype: MIRType, val: SMTExp): SMTExp {
-        return new SMTCallSimple(`$Result_${this.getSMTTypeFor(ttype).smttypename}@success`, [val]);
+    generateResultTypeConstructorSuccess(ttype: MIRType, val: MorphirExp): MorphirExp {
+        return new MorphirCallSimple("Ok", [val]);
     }
 
-    generateResultTypeConstructorError(ttype: MIRType, err: SMTExp): SMTExp {
-        return new SMTCallSimple(`$Result_${this.getSMTTypeFor(ttype).smttypename}@error`, [err]);
+    generateResultTypeConstructorError(ttype: MIRType, err: MorphirExp): MorphirExp {
+        return new MorphirCallSimple("Err", [err]);
     }
 
-    generateErrorResultAssert(rtype: MIRType): SMTExp {
-        return this.generateResultTypeConstructorError(rtype, new SMTConst("ErrorID_AssumeCheck"));
+    generateErrorResultAssert(rtype: MIRType, file: string, sinfo: SourceInfo): MorphirExp {
+        return this.generateResultTypeConstructorError(rtype, new MorphirConst(`"${file}::${sinfo.line}"`));
     }
 
-    generateResultIsSuccessTest(ttype: MIRType, exp: SMTExp): SMTExp {
-        return new SMTCallSimple(`(_ is $Result_${this.getSMTTypeFor(ttype).smttypename}@success)`, [exp]);
+    generateResultIsSuccessTest(ttype: MIRType, exp: MorphirExp): MorphirExp {
+        return new MorphirCallSimple("Result__is__success", [exp]);
     }
 
-    generateResultIsErrorTest(ttype: MIRType, exp: SMTExp): SMTExp {
-        return new SMTCallSimple(`(_ is $Result_${this.getSMTTypeFor(ttype).smttypename}@error)`, [exp]);
+    generateResultIsErrorTest(ttype: MIRType, exp: MorphirExp): MorphirExp {
+        return new MorphirCallSimple("Result__is__error", [exp]);
     }
 
-    generateResultGetSuccess(ttype: MIRType, exp: SMTExp): SMTExp {
-        return new SMTCallSimple(`$Result_${this.getSMTTypeFor(ttype).smttypename}@success_value`, [exp]);
+    generateResultGetSuccess(ttype: MIRType, exp: MorphirExp): MorphirExp {
+        const ufcname = `${this.getMorphirTypeFor(ttype).morphirtypename}@uicons_UF`;
+        return new MorphirCallSimple("Result__success__get__value", [exp, new MorphirConst(ufcname)]);
     }
 
-    generateResultGetError(ttype: MIRType, exp: SMTExp): SMTExp {
-        return new SMTCallSimple(`$Result_${this.getSMTTypeFor(ttype).smttypename}@error_value`, [exp]);
+    generateResultGetError(ttype: MIRType, exp: MorphirExp): MorphirExp {
+        return new MorphirCallSimple("Result__error__get__value", [exp]);
     }
     
-    generateAccessWithSetGuardResultType(ttype: MIRType): SMTTypeInfo {
-        return new SMTTypeInfo(`$GuardResult_${this.getSMTTypeFor(ttype).smttypename}`, "[INTERNAL GUARD RESULT]", "[INTERNAL GUARD RESULT]");
+    generateAccessWithSetGuardResultType(ttype: MIRType): MorphirTypeInfo {
+        return new MorphirTypeInfo(`GuardResult__${this.getMorphirTypeFor(ttype).morphirtypename}`, "[INTERNAL GUARD RESULT]", "[INTERNAL GUARD RESULT]");
     }
 
-    generateAccessWithSetGuardResultTypeConstructorLoad(ttype: MIRType, value: SMTExp, flag: boolean): SMTExp {
-        return new SMTCallSimple(`$GuardResult_${this.getSMTTypeFor(ttype).smttypename}@cons`, [value, new SMTConst(flag ? "true" : "false")]);
+    generateAccessWithSetGuardResultTypeConstructorLoad(ttype: MIRType, value: MorphirExp, flag: boolean): MorphirExp {
+        return new MorphirCallSimple(`GuardResult__${this.getMorphirTypeFor(ttype).morphirtypename}__cons`, [value, new MorphirConst(flag ? "true" : "false")]);
     }
 
-    generateAccessWithSetGuardResultGetValue(ttype: MIRType, exp: SMTExp): SMTExp {
-        return new SMTCallSimple(`$GuardResult_${this.getSMTTypeFor(ttype).smttypename}@result`, [exp]);
+    generateAccessWithSetGuardResultGetValue(ttype: MIRType, exp: MorphirExp): MorphirExp {
+        const ufcname = `${this.getMorphirTypeFor(ttype).morphirtypename}@uicons_UF`;
+        return new MorphirCallSimple(`GuardResult__${this.getMorphirTypeFor(ttype).morphirtypename}__result`, [exp, new MorphirConst(ufcname)]);
     }
 
-    generateAccessWithSetGuardResultGetFlag(ttype: MIRType, exp: SMTExp): SMTExp {
-        return new SMTCallSimple(`$GuardResult_${this.getSMTTypeFor(ttype).smttypename}@flag`, [exp]);
+    generateAccessWithSetGuardResultGetFlag(ttype: MIRType, exp: MorphirExp): MorphirExp {
+        return new MorphirCallSimple(`GuardResult__${this.getMorphirTypeFor(ttype).morphirtypename}__flag`, [exp]);
     }
 
     generateListTypeConsInfoSeq(ttype: MIRType): {cons: string, seqf: string} {
-        return {cons: `${this.getSMTTypeFor(ttype).smttypename}@cons`, seqf: `${this.getSMTTypeFor(ttype).smttypename}_seq`};
+        return {cons: `${this.getMorphirTypeFor(ttype).morphirtypename}__cons`, seqf: `${this.getMorphirTypeFor(ttype).morphirtypename}_seq`};
     }
 
-    generateListTypeConstructorSeq(ttype: MIRType, seq: SMTExp): SMTExp {
+    generateListTypeConstructorSeq(ttype: MIRType, seq: MorphirExp): MorphirExp {
         const consinfo = this.generateListTypeConsInfoSeq(ttype);
-        return new SMTCallSimple(consinfo.cons, [seq]);
+        return new MorphirCallSimple(consinfo.cons, [seq]);
     }
 
-    generateListTypeGetData(ttype: MIRType, ll: SMTExp): SMTExp {
-        return new SMTCallSimple(this.generateListTypeConsInfoSeq(ttype).seqf, [ll]);
+    generateListTypeGetData(ttype: MIRType, ll: MorphirExp): MorphirExp {
+        return new MorphirCallSimple(this.generateListTypeConsInfoSeq(ttype).seqf, [ll]);
     }
 
-    generateListTypeGetLength(ttype: MIRType, ll: SMTExp): SMTExp {
-        return new SMTCallSimple("seq.len", [this.generateListTypeGetData(ttype, ll)]);
+    generateListTypeGetLength(ttype: MIRType, ll: MorphirExp): MorphirExp {
+        return new MorphirCallSimple("length", [this.generateListTypeGetData(ttype, ll)]);
     }
 
-    generateListTypeGetLengthMinus1(ttype: MIRType, ll: SMTExp): SMTExp {
+    generateListTypeGetLengthMinus1(ttype: MIRType, ll: MorphirExp): MorphirExp {
         const len = this.generateListTypeGetLength(ttype, ll);
-        return new SMTCallSimple("-", [len, new SMTConst("1")]);
+        return new MorphirCallSimple("-", [len, new MorphirConst("1")], true);
     }
 
-    generateMapEntryType(ttype: MIRType): SMTTypeInfo {
-        return new SMTTypeInfo(`$MapEntry_${this.getSMTTypeFor(ttype).smttypename}`, "[INTERNAL RESULT]", "[INTERNAL RESULT]");
+    generateMapEntryType(ttype: MIRType): MorphirTypeInfo {
+        return new MorphirTypeInfo(`MapEntry__${this.getMorphirTypeFor(ttype).morphirtypename}`, "[INTERNAL RESULT]", "[INTERNAL RESULT]");
     }
 
     generateMapEntryTypeConsInfo(ttype: MIRType): {cons: string, keyf: string, valf: string} {
-        return {cons: `$MapEntry_${this.getSMTTypeFor(ttype).smttypename}@cons`, keyf: `$MapEntry_${this.getSMTTypeFor(ttype).smttypename}_key`, valf: `$MapEntry_${this.getSMTTypeFor(ttype).smttypename}_value`};
+        return {cons: `MapEntry__${this.getMorphirTypeFor(ttype).morphirtypename}__cons`, keyf: `MapEntry__${this.getMorphirTypeFor(ttype).morphirtypename}_key`, valf: `MapEntry__${this.getMorphirTypeFor(ttype).morphirtypename}_value`};
     }
 
-    generateMapEntryTypeConstructor(ttype: MIRType, key: SMTExp, val: SMTExp): SMTExp {
+    generateMapEntryTypeConstructor(ttype: MIRType, key: MorphirExp, val: MorphirExp): MorphirExp {
         const consinfo = this.generateMapEntryTypeConsInfo(ttype);
-        return new SMTCallSimple(consinfo.cons, [key, val]);
+        return new MorphirCallSimple(consinfo.cons, [key, val]);
     }
 
-    generateMapEntryTypeGetKey(ttype: MIRType, entry: SMTExp): SMTExp {
+    generateMapEntryTypeGetKey(ttype: MIRType, entry: MorphirExp): MorphirExp {
         const consinfo = this.generateMapEntryTypeConsInfo(ttype);
-        return new SMTCallSimple(consinfo.keyf, [entry]);
+        return new MorphirCallSimple(consinfo.keyf, [entry]);
     }
 
-    generateMapEntryTypeGetValue(ttype: MIRType, entry: SMTExp): SMTExp {
+    generateMapEntryTypeGetValue(ttype: MIRType, entry: MorphirExp): MorphirExp {
         const consinfo = this.generateMapEntryTypeConsInfo(ttype);
-        return new SMTCallSimple(consinfo.valf, [entry]);
+        return new MorphirCallSimple(consinfo.valf, [entry]);
     }
 
     generateMapTypeConsInfo(ttype: MIRType): {cons: string, seqf: string} {
-        return {cons: `${this.getSMTTypeFor(ttype).smttypename}@cons`, seqf: `${this.getSMTTypeFor(ttype).smttypename}_seq`};
+        return {cons: `${this.getMorphirTypeFor(ttype).morphirtypename}__cons`, seqf: `${this.getMorphirTypeFor(ttype).morphirtypename}_seq`};
     }
 
-    generateMapTypeConstructor(ttype: MIRType, seq: SMTExp): SMTExp {
+    generateMapTypeConstructor(ttype: MIRType, seq: MorphirExp): MorphirExp {
         const consinfo = this.generateMapTypeConsInfo(ttype);
-        return new SMTCallSimple(consinfo.cons, [seq]);
+        return new MorphirCallSimple(consinfo.cons, [seq]);
     }
 
-    generateMapTypeGetData(ttype: MIRType, mm: SMTExp): SMTExp {
-        return new SMTCallSimple(this.generateMapTypeConsInfo(ttype).seqf, [mm]);
+    generateMapTypeGetData(ttype: MIRType, mm: MorphirExp): MorphirExp {
+        return new MorphirCallSimple(this.generateMapTypeConsInfo(ttype).seqf, [mm]);
     }
 
-    generateMapTypeGetLength(ttype: MIRType, mm: SMTExp): SMTExp {
-        return new SMTCallSimple("seq.len", [this.generateMapTypeGetData(ttype, mm)]);
-    }
-
-    generateHavocConstructorName(tt: MIRType): string {
-        return `_@@cons_${this.lookupTypeName(tt.typeID)}_entrypoint`;
-    }
-
-    generateHavocConstructorPathExtend(path: SMTExp, step: SMTExp): SMTExp {
-        return new SMTCallSimple("seq.++", [path, new SMTCallSimple("seq.unit", [step])]);
-    }
-
-    generateHavocConstructorCall(tt: MIRType, path: SMTExp, step: SMTExp): SMTExp {
-        return new SMTCallGeneral(this.generateHavocConstructorName(tt), [this.generateHavocConstructorPathExtend(path, step)]);
-    }
-
-    generateHavocConstructorCall_PassThrough(tt: MIRType, path: SMTExp): SMTExp {
-        return new SMTCallGeneral(this.generateHavocConstructorName(tt), [path]);
+    generateMapTypeGetLength(ttype: MIRType, mm: MorphirExp): MorphirExp {
+        return new MorphirCallSimple("length", [this.generateMapTypeGetData(ttype, mm)]);
     }
 }
 
 export {
-    SMTTypeEmitter
+    MorphirTypeEmitter
 };
-*/
