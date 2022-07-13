@@ -7,11 +7,10 @@ namespace Main;
 
 ///////////////////////////////////////////////
 
-entrypoint function main(c: BoardPostion): Bool {
-    let bb = Board::create4{};
-    let nb = bb.setCellMark(c, PlayerMark::x);
+const main_empty_board: Board = Board::createEmpty{};
 
-    return !nb.checkWinner(PlayerMark::x);
+entrypoint function main(): Bool {
+    return !Main::main_empty_board.hasWinner();
 }
 ///////////////////////////////////////////////
 
