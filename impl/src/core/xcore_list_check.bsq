@@ -7,17 +7,145 @@
 namespace Core;
 
 #if CHECK_LIBS
+internal typedef ListVector<T> = Vector1<T> | Vector2<T> | Vector3<T> | Vector4<T>;
+
+internal typedef ListRepr<T> = None | Vector1<T> | Vector2<T> | Vector3<T> | Vector4<T> | SeqList<T>;
+
 internal entity ListOps provides Some {
-    __safe internal function s_list_index_int(start: Int, end: Int, len: Int): List<Int> = s_list_index;
-    __safe internal function s_list_index_nat(start: Nat, end: Nat, len: Nat): List<Nat> = s_list_index;
+    internal function s_into<T>(l: ListRepr<T>): List<T> = special_inject;
+    internal function s_value<T>(l: List<T>): ListRepr<T> = special_extract;
 
-    __safe internal function s_list_empty<T>(l: List<T>): Bool = s_list_empty; 
-    __safe internal function s_list_size<T>(l: List<T>): Nat = s_list_size; 
+    internal function s_vector_to_seqlist<T>(l: ListVector<T>): SeqList<T> {
 
-    __safe internal function s_list_fill<T>(count: Nat, v: T): List<T> = s_list_fill;
+        xxxx; //TODO here!!!!!!!!!!!!
 
-    __safe internal function s_list_append<T>(l: List<T>, r: List<T>): List<T> = s_list_append;
+        if(ll.is<Vector1<T>>()) {
+            return 1n;
+        }
+        elif(ll.is<Vector2<T>>()) {
+            return 2n;
+        }
+        elif(ll.is<Vector3<T>>()) {
+            return 3n;
+        }
+        elif(ll.is<Vector4<T>>()) {
+            return 4n;
+        }
+    }
 
+    internal function s_seqlist_to_vector_or_none<T>(l: SeqList<T>, len: Nat): ListVector<T> | None {
+        if(len == 0n) {
+            return none;
+        }
+        elif(len == 1n) {
+            return Vector1<T>{SeqListOps::s_list_get<T>(l, 0)};
+        }
+        elif(len == 2n) {
+            return Vector2<T>{SeqListOps::s_list_get<T>(l, 0), SeqListOps::s_list_get<T>(l, 1)};
+        }
+        elif(len == 3n) {
+            return Vector3<T>{SeqListOps::s_list_get<T>(l, 0), SeqListOps::s_list_get<T>(l, 1), SeqListOps::s_list_get<T>(l, 2)};
+        }
+        else {
+            return Vector4<T>{SeqListOps::s_list_get<T>(l, 0), SeqListOps::s_list_get<T>(l, 1), SeqListOps::s_list_get<T>(l, 2), SeqListOps::s_list_get<T>(l, 3)};
+        }
+    }
+
+    internal function s_list_index_int(start: Int, end: Int, len: Int): List<Int> {
+        if(len == 0i) {
+            return ListOps::s_into<Int>(none);
+        }
+        elif(len == 1i) {
+            return ListOps::s_into<Int>(Vector1<Int>{start});
+        }
+        elif(len == 2i) {
+            return ListOps::s_into<Int>(Vector2<Int>{start, start + 1i});
+        }
+        elif(len == 3i) {
+            return ListOps::s_into<Int>(Vector3<Int>{start, start + 1i, start + 2i});
+        }
+        elif(len == 4i) {
+            return ListOps::s_into<Int>(Vector4<Int>{start, start + 1i, start + 2i, start + 3i});
+        }
+        else {
+            return ListOps::s_into<Int>(SeqListOps::s_list_index_int(start, end, len));
+        }
+    }
+
+    internal function s_list_index_nat(start: Nat, end: Nat, len: Nat): List<Nat> {
+        if(len == 0n) {
+            return ListOps::s_into<Nat>(none);
+        }
+        elif(len == 1n) {
+            return ListOps::s_into<Nat>(Vector1<Nat>{start});
+        }
+        elif(len == 2n) {
+            return ListOps::s_into<Nat>(Vector2<Nat>{start, start + 1n});
+        }
+        elif(len == 3n) {
+            return ListOps::s_into<Nat>(Vector3<Nat>{start, start + 1n, start + 2n});
+        }
+        elif(len == 4n) {
+            return ListOps::s_into<Nat>(Vector4<Nat>{start, start + 1n, start + 2n, start + 3n});
+        }
+        else {
+            return ListOps::s_into<Nat>(SeqListOps::s_list_index_nat(start, end, len));
+        }
+    }
+
+    internal function s_list_empty<T>(l: List<T>): Bool {
+        return ListOps::s_value<T>(l) === none;
+    }
+
+    internal function s_list_size<T>(l: List<T>): Nat {
+        let ll = ListOps::s_value<T>(l);
+
+        if(ll === none) {
+            return 0n;
+        }
+        elif(ll.is<Vector1<T>>()) {
+            return 1n;
+        }
+        elif(ll.is<Vector2<T>>()) {
+            return 2n;
+        }
+        elif(ll.is<Vector3<T>>()) {
+            return 3n;
+        }
+        elif(ll.is<Vector4<T>>()) {
+            return 4n;
+        }
+        else {
+            return SeqListOps::s_list_size<T>(l);
+        }
+    }
+
+    internal function s_list_fill<T>(count: Nat, v: T): List<T> {
+        if(len == 0n) {
+            return ListOps::s_into<T>(none);
+        }
+        elif(len == 1n) {
+            return ListOps::s_into<T>(Vector1<T>{v});
+        }
+        elif(len == 2n) {
+            return ListOps::s_into<T>(Vector2<T>{v, v});
+        }
+        elif(len == 3n) {
+            return ListOps::s_into<T>(Vector3<T>{v, v, v});
+        }
+        elif(len == 4n) {
+            return ListOps::s_into<T>(Vector4<T>{v, v, v, v});
+        }
+        else {
+            return ListOps::s_into<T>(SeqListOps::s_list_fill<T>(count, v));
+        }
+    }
+
+    internal function s_list_append<T>(ll: List<T>, rr: List<T>): List<T> {
+
+    }
+
+    /*
     __safe internal function s_list_get<T>(l: List<T>, idx: Nat): T = s_list_get; 
     __safe internal function s_list_back<T>(l: List<T>): T = s_list_get_back; 
     __safe internal function s_list_front<T>(l: List<T>): T = s_list_get_front; 
@@ -69,5 +197,6 @@ internal entity ListOps provides Some {
 
     __conditional_safe internal recursive? function s_list_transduce<T, E, U>(l: List<T>, env: E, op: recursive? fn(_: E, _: T) -> (|E, U|)): (|E, List<U>|) = s_list_transduce;
     __conditional_safe internal recursive? function s_list_transduce_idx<T, E, U>(l: List<T>, env: E, op: recursive? fn(_: E, _: T, _: Nat) -> (|E, U|)): (|E, List<U>|) = s_list_transduce_idx;
+*/
 }
 #endif

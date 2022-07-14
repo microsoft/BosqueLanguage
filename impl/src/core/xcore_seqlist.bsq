@@ -1,0 +1,24 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+//The core namespace implements the primitive concepts used in the bosque core language
+namespace Core;
+
+#if CHECK_LIBS
+__internal entity SeqList<T> provides Some {
+}
+
+internal entity SeqListOps provides Some {
+    __safe internal function s_list_index_int(start: Int, end: Int, len: Int): SeqList<Int> = s_list_index;
+    __safe internal function s_list_index_nat(start: Nat, end: Nat, len: Nat): SeqList<Nat> = s_list_index;
+
+    __safe internal function s_list_size<T>(l: SeqList<T>): Nat = s_list_size;
+
+    internal function s_list_fill<T>(count: Nat, v: T): SeqList<T> = s_list_fill;
+
+    internal function s_list_append<T>(ll: SeqList<T>, rr: SeqList<T>): SeqList<T> = s_list_append;
+} 
+#endif
+

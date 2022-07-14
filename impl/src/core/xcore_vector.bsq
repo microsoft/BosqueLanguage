@@ -1,0 +1,78 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+//The core namespace implements the primitive concepts used in the bosque core language
+namespace Core;
+
+#if CHECK_LIBS
+internal entity Vector1<T> provides Some {
+    field v0: T;
+}
+
+internal entity Vector2<T> provides Some {
+    field v0: T;
+    field v1: T;
+}
+
+internal entity Vector3<T> provides Some {
+    field v0: T;
+    field v1: T;
+    field v2: T;
+}
+
+internal entity Vector4<T> provides Some {
+    field v0: T;
+    field v1: T;
+    field v2: T;
+    field v3: T;
+}
+
+internal entity VectorOps provides Some {
+    function s_append_vector_safe_helper<T>(l: ListVector<T> | None, r: ListVector<T> | None): ListVector<T> | None {
+        if(/\(l === none, r === none)) {
+            return none;
+        }
+        elif(l === none) {
+            return r;
+        }
+        elif(r === none) {
+            return l;
+        }
+        else {
+            if(/\(l.is<Vector1<T>>(), r.is<Vector1<T>>())) {
+                let ll = s_safeAs<ListVector<T>, Vector1<T>>(l);
+                let rr = s_safeAs<ListVector<T>, Vector1<T>>(r);
+                return Vector2<T>{ll.v0, rr.v0};
+            }
+            elif(/\(l.is<Vector1<T>>(), r.is<Vector2<T>>())) {
+                let ll = s_safeAs<ListVector<T>, Vector1<T>>(l);
+                let rr = s_safeAs<ListVector<T>, Vector2<T>>(r);
+                return Vector3<T>{ll.v0, rr.v0, rr.v1};
+            }
+            elif(/\(l.is<Vector1<T>>(), r.is<Vector3<T>>())) {
+                let ll = s_safeAs<ListVector<T>, Vector1<T>>(l);
+                let rr = s_safeAs<ListVector<T>, Vector3<T>>(r);
+                return Vector4<T>{ll.v0, rr.v0, rr.v1, rr.v2};
+            }
+            elif(/\(l.is<Vector2<T>>(), r.is<Vector1<T>>())) {
+                let ll = s_safeAs<ListVector<T>, Vector2<T>>(l);
+                let rr = s_safeAs<ListVector<T>, Vector1<T>>(r);
+                return Vector3<T>{ll.v0, ll.v1, rr.v0};
+            }
+            elif(/\(l.is<Vector2<T>>(), r.is<Vector2<T>>())) {
+                let ll = s_safeAs<ListVector<T>, Vector2<T>>(l);
+                let rr = s_safeAs<ListVector<T>, Vector2<T>>(r);
+                return Vector4<T>{ll.v0, ll.v1, rr.v0, rr.v1};
+            }
+            else {
+                let ll = s_safeAs<ListVector<T>, Vector1<T>>(l);
+                let rr = s_safeAs<ListVector<T>, Vector3<T>>(r);
+                return Vector4<T>{ll.v0, rr.v0, rr.v1, rr.v2};
+            }
+        }
+    }
+}
+#endif
+

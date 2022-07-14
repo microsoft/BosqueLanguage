@@ -2607,7 +2607,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             }
             else {
 #if CHECK_LIBS
-                if(ListOps::s_list_is_sorted<T>[recursive?](this. cmp)) {
+                if(ListOps::s_list_is_sorted<T>[recursive?](this, cmp)) {
                     return this;
                 }
                 else {
