@@ -115,10 +115,7 @@ internal entity ListOps provides Some {
     }
 
     internal function s_list_index_int(start: Int, end: Int, len: Int): List<Int> {
-        if(len == 0i) {
-            return ListOps::s_into<Int>(none);
-        }
-        elif(len == 1i) {
+        if(len == 1i) {
             return ListOps::s_into<Int>(Vector1<Int>{start});
         }
         elif(len == 2i) {
@@ -140,10 +137,7 @@ internal entity ListOps provides Some {
     }
 
     internal function s_list_index_nat(start: Nat, end: Nat, len: Nat): List<Nat> {
-        if(len == 0n) {
-            return ListOps::s_into<Nat>(none);
-        }
-        elif(len == 1n) {
+        if(len == 1n) {
             return ListOps::s_into<Nat>(Vector1<Nat>{start});
         }
         elif(len == 2n) {
@@ -196,10 +190,7 @@ internal entity ListOps provides Some {
     }
 
     internal function s_list_fill<T>(count: Nat, v: T): List<T> {
-        if(len == 0n) {
-            return ListOps::s_into<T>(none);
-        }
-        elif(len == 1n) {
+        if(len == 1n) {
             return ListOps::s_into<T>(Vector1<T>{v});
         }
         elif(len == 2n) {
@@ -233,7 +224,7 @@ internal entity ListOps provides Some {
             return s_blockingfailure<T>();
 #else
             return SeqListOps::s_list_get<T>(ll, idx);
-#else
+#endif
         }
         else {
             return VectorOps::s_list_get<T>(s_safeAs<ListRepr<T>, ListVector<T>>(ll), idx);
@@ -247,11 +238,11 @@ internal entity ListOps provides Some {
 #if CHK_SMALL_ONLY
             return s_blockingfailure<T>();
 #else
-            return SeqListOps::s_list_back<T>(ll, idx);
-#else
+            return SeqListOps::s_list_back<T>(ll);
+#endif
         }
         else {
-            return VectorOps::s_list_back<T>(s_safeAs<ListRepr<T>, ListVector<T>>(ll), idx);
+            return VectorOps::s_list_back<T>(s_safeAs<ListRepr<T>, ListVector<T>>(ll));
         }
     }
 
@@ -262,11 +253,146 @@ internal entity ListOps provides Some {
 #if CHK_SMALL_ONLY
             return s_blockingfailure<T>();
 #else
-            return SeqListOps::s_list_front<T>(ll, idx);
-#else
+            return SeqListOps::s_list_front<T>(ll);
+#endif
         }
         else {
-            return VectorOps::s_list_front<T>(s_safeAs<ListRepr<T>, ListVector<T>>(ll), idx);
+            return VectorOps::s_list_front<T>(s_safeAs<ListRepr<T>, ListVector<T>>(ll));
+        }
+    }
+
+    internal function s_list_set<T>(l: List<T>, i: Nat, v: T): List<T> {
+        let ll = ListOps::s_value<T>(l);
+
+        if(ll.is<SeqList<T>>()) {
+#if CHK_SMALL_ONLY
+            return s_blockingfailure<T>();
+#else
+            return ListOps::s_into<T>(SeqListOps::s_list_set<T>(ll, i, v));
+#endif
+        }
+        else {
+            return ListOps::s_into<T>(VectorOps::s_list_set<T>(s_safeAs<ListRepr<T>, ListVector<T>>(ll), i, v));
+        }
+    }
+
+    internal function s_list_remove<T>(l: List<T>, i: Nat): List<T>  {
+        let ll = ListOps::s_value<T>(l);
+
+        if(ll.is<SeqList<T>>()) {
+#if CHK_SMALL_ONLY
+            return s_blockingfailure<T>();
+#else
+            let res = ListOps::s_ensure_std_repr<T>(SeqListOps::s_list_remove<T>(ll, i));
+            return ListOps::s_into<T>(res);
+#endif
+        }
+        else {
+            return ListOps::s_into<T>(VectorOps::s_list_remove<T>(s_safeAs<ListRepr<T>, ListVector<T>>(ll), i));
+        }
+    }
+
+    internal function s_list_insert<T>(l: List<T>, idx: Nat, v: T): List<T> {
+        let ll = ListOps::s_value<T>(l);
+
+        if(ll.is<SeqList<T>>()) {
+#if CHK_SMALL_ONLY
+            return s_blockingfailure<T>();
+#else
+            return ListOps::s_into<T>(SeqListOps::s_list_insert<T>(ll, i, v));
+#endif
+        }
+        else {
+            if(ll.is<Vector4<T>>()) {
+#if CHK_SMALL_ONLY
+                return s_blockingfailure<T>();
+#else
+                return ListOps::s_into<T>(SeqListOps::s_list_insert<T>(ListOps::s_vector_to_seqlist<T>(ll), i, v));
+#endif
+            }
+            else {
+                return ListOps::s_into<T>(VectorOps::s_list_insert<T>(s_safeAs<ListRepr<T>, Vector1<T> | Vector2<T> | Vector3<T>>(ll), i, v));
+            }
+        }
+    }
+
+    internal function s_list_pop_back<T>(l: List<T>): List<T> {
+        let ll = ListOps::s_value<T>(l);
+
+        if(ll.is<SeqList<T>>()) {
+#if CHK_SMALL_ONLY
+            return s_blockingfailure<T>();
+#else
+            let res = ListOps::s_ensure_std_repr<T>(SeqListOps::s_list_pop_back<T>(ll));
+            return ListOps::s_into<T>(res);
+#endif
+        }
+        else {
+            return ListOps::s_into<T>(VectorOps::s_list_pop_back<T>(s_safeAs<ListRepr<T>, ListVector<T>>(ll)));
+        }
+    }
+
+    internal function s_list_pop_front<T>(l: List<T>): List<T> {
+    let ll = ListOps::s_value<T>(l);
+
+        if(ll.is<SeqList<T>>()) {
+#if CHK_SMALL_ONLY
+            return s_blockingfailure<T>();
+#else
+            let res = ListOps::s_ensure_std_repr<T>(SeqListOps::s_list_pop_front<T>(ll));
+            return ListOps::s_into<T>(res);
+#endif
+        }
+        else {
+            return ListOps::s_into<T>(VectorOps::s_list_pop_front<T>(s_safeAs<ListRepr<T>, ListVector<T>>(ll)));
+        }
+    }
+
+    internal function s_list_push_back<T>(l: List<T>, v: T): List<T> {
+        let ll = ListOps::s_value<T>(l);
+
+        if(ll.is<SeqList<T>>()) {
+#if CHK_SMALL_ONLY
+            return s_blockingfailure<T>();
+#else
+            return ListOps::s_into<T>(SeqListOps::s_list_push_back<T>(ll, v));
+#endif
+        }
+        else {
+            if(ll.is<Vector4<T>>()) {
+#if CHK_SMALL_ONLY
+                return s_blockingfailure<T>();
+#else
+                return ListOps::s_into<T>(SeqListOps::s_list_push_back<T>(ListOps::s_vector_to_seqlist<T>(ll), v));
+#endif
+            }
+            else {
+                return ListOps::s_into<T>(VectorOps::s_list_push_back<T>(s_safeAs<ListRepr<T>, Vector1<T> | Vector2<T> | Vector3<T>>(ll), v));
+            }
+        }
+    }
+
+    internal function s_list_push_front<T>(l: List<T>, v: T): List<T> {
+        let ll = ListOps::s_value<T>(l);
+
+        if(ll.is<SeqList<T>>()) {
+#if CHK_SMALL_ONLY
+            return s_blockingfailure<T>();
+#else
+            return ListOps::s_into<T>(SeqListOps::s_list_push_front<T>(ll, v));
+#endif
+        }
+        else {
+            if(ll.is<Vector4<T>>()) {
+#if CHK_SMALL_ONLY
+                return s_blockingfailure<T>();
+#else
+                return ListOps::s_into<T>(SeqListOps::s_list_push_front<T>(ListOps::s_vector_to_seqlist<T>(ll), v));
+#endif
+            }
+            else {
+                return ListOps::s_into<T>(VectorOps::s_list_push_front<T>(s_safeAs<ListRepr<T>, Vector1<T> | Vector2<T> | Vector3<T>>(ll), v));
+            }
         }
     }
 
@@ -279,7 +405,7 @@ internal entity ListOps provides Some {
 #else
             let mask = SeqListOps::s_list_map_pred<T>[recursive?](ll, p);
             return SeqListOps::s_list_has_true(mask);
-#else
+#endif
         }
         else {
             return VectorOps::s_list_has_pred<T>[recursive?](s_safeAs<ListRepr<T>, ListVector<T>>(ll), p);
@@ -295,7 +421,7 @@ internal entity ListOps provides Some {
 #else
             let mask = SeqListOps::s_list_map_pred_idx<T>[recursive?](ll, p);
             return SeqListOps::s_list_has_true(mask);
-#else
+#endif
         }
         else {
             return VectorOps::s_list_has_pred_idx<T>[recursive?](s_safeAs<ListRepr<T>, ListVector<T>>(ll), p);
@@ -311,7 +437,7 @@ internal entity ListOps provides Some {
 #else
             let mask = SeqListOps::s_list_map_pred<T>[recursive?](ll, p);
             return SeqListOps::s_list_indexof_true(mask);
-#else
+#endif
         }
         else {
             return VectorOps::s_list_find_pred<T>[recursive?](s_safeAs<ListRepr<T>, ListVector<T>>(ll), p);
@@ -327,7 +453,7 @@ internal entity ListOps provides Some {
 #else
             let mask = SeqListOps::s_list_map_pred_idx<T>[recursive?](ll, p);
             return SeqListOps::s_list_indexof_true(mask);
-#else
+#endif
         }
         else {
             return VectorOps::s_list_find_pred_idx<T>[recursive?](s_safeAs<ListRepr<T>, ListVector<T>>(ll), p);
@@ -343,7 +469,7 @@ internal entity ListOps provides Some {
 #else
             let mask = SeqListOps::s_list_map_pred<T>[recursive?](ll, p);
             return SeqListOps::s_list_last_indexof_true(mask);
-#else
+#endif
         }
         else {
             return VectorOps::s_list_find_pred_last<T>[recursive?](s_safeAs<ListRepr<T>, ListVector<T>>(ll), p);
@@ -359,7 +485,7 @@ internal entity ListOps provides Some {
 #else
             let mask = SeqListOps::s_list_map_pred_idx<T>[recursive?](ll, p);
             return SeqListOps::s_list_last_indexof_true(mask);
-#else
+#endif
         }
         else {
             return VectorOps::s_list_find_pred_last_idx<T>[recursive?](s_safeAs<ListRepr<T>, ListVector<T>>(ll), p);
@@ -375,14 +501,14 @@ internal entity ListOps provides Some {
 #else
             let mask = SeqListOps::s_list_map_pred_idx<T>[recursive?](ll, p);
             return SeqListOps::s_list_single_indexof_true(mask);
-#else
+#endif
         }
         else {
             return VectorOps::s_list_single_index_of<T>[recursive?](s_safeAs<ListRepr<T>, ListVector<T>>(ll), p);
         }
     }
 
-    internal function s_list_has<T>(l: List<T>, v: T): Bool {
+    internal function s_list_has<T grounded KeyType>(l: List<T>, v: T): Bool {
         let ll = ListOps::s_value<T>(l);
 
         if(ll.is<SeqList<T>>()) {
@@ -390,14 +516,14 @@ internal entity ListOps provides Some {
             return s_blockingfailure<Bool>();
 #else
             return SeqListOps::s_list_has<T>(ll, v);
-#else
+#endif
         }
         else {
             return VectorOps::s_list_has<T>(s_safeAs<ListRepr<T>, ListVector<T>>(ll), v);
         }
     }
 
-    internal function s_list_indexof<T>(l: List<T>, v: T): Int {
+    internal function s_list_indexof<T grounded KeyType>(l: List<T>, v: T): Int {
         let ll = ListOps::s_value<T>(l);
 
         if(ll.is<SeqList<T>>()) {
@@ -405,14 +531,14 @@ internal entity ListOps provides Some {
             return s_blockingfailure<Int>();
 #else
             return SeqListOps::s_list_indexof<T>(ll, v);
-#else
+#endif
         }
         else {
             return VectorOps::s_list_indexof<T>(s_safeAs<ListRepr<T>, ListVector<T>>(ll), v);
         }
     }
 
-    internal function s_list_last_indexof<T>(l: List<T>, v: T): Int {
+    internal function s_list_last_indexof<T grounded KeyType>(l: List<T>, v: T): Int {
         let ll = ListOps::s_value<T>(l);
 
         if(ll.is<SeqList<T>>()) {
@@ -420,7 +546,7 @@ internal entity ListOps provides Some {
             return s_blockingfailure<Bool>();
 #else
             return SeqListOps::s_list_has<T>(ll, v);
-#else
+#endif
         }
         else {
             return VectorOps::s_list_has<T>(s_safeAs<ListRepr<T>, ListVector<T>>(ll), v);
@@ -442,9 +568,10 @@ internal entity ListOps provides Some {
                 return this;
             }
             else {
-                return ListOps::s_into<T>(SeqListOps::s_list_mask_select<T>(ll, mask));
+                let resl = ListOps::s_ensure_std_repr<T>(SeqListOps::s_list_mask_select<T>(ll, mask));
+                return ListOps::s_into<T>(resl);
             }
-#else
+#endif
         }
         else {
             return ListOps::s_into<T>(VectorOps::s_list_filter_pred<T>[recursive?](s_safeAs<ListRepr<T>, ListVector<T>>(ll), p));
@@ -466,9 +593,10 @@ internal entity ListOps provides Some {
                 return this;
             }
             else {
-                return ListOps::s_into<T>(SeqListOps::s_list_mask_select<T>(ll, mask));
+                let resl = ListOps::s_ensure_std_repr<T>(SeqListOps::s_list_mask_select<T>(ll, mask));
+                return ListOps::s_into<T>(resl);
             }
-#else
+#endif
         }
         else {
             return ListOps::s_into<T>(VectorOps::s_list_filter_pred_idx<T>[recursive?](s_safeAs<ListRepr<T>, ListVector<T>>(ll), p));
@@ -483,7 +611,7 @@ internal entity ListOps provides Some {
             return s_blockingfailure<List<U>>();
 #else
             return ListOps::s_into<T>(SeqListOps::s_list_map_fn<T, U>[recursive?](ll, f));
-#else
+#endif
         }
         else {
             return ListOps::s_into<T>(VectorOps::s_list_map_fn<T, U>[recursive?](s_safeAs<ListRepr<T>, ListVector<T>>(ll), f));
@@ -498,7 +626,7 @@ internal entity ListOps provides Some {
             return s_blockingfailure<List<U>>();
 #else
             return ListOps::s_into<T>(SeqListOps::s_list_map_fn_idx<T, U>[recursive?](ll, f));
-#else
+#endif
         }
         else {
             return ListOps::s_into<T>(VectorOps::s_list_map_fn_idx<T, U>[recursive?](s_safeAs<ListRepr<T>, ListVector<T>>(ll), f));
@@ -514,7 +642,7 @@ internal entity ListOps provides Some {
             return s_blockingfailure<List<V>>();
 #else
             return ListOps::s_into<V>(SeqListOps::s_list_map_fn_sync<T, U, V>[recursive?](ll1, s_safeAs<ListRepr<U>, SeqList<U>>(ll2), f));
-#else
+#endif
         }
         else {
             return ListOps::s_into<V>(VectorOps::s_list_map_fn_sync<T, U, V>[recursive?](s_safeAs<ListRepr<T>, ListVector<T>>(ll1), s_safeAs<ListRepr<U>, ListVector<U>>(ll2), f));
@@ -536,16 +664,157 @@ internal entity ListOps provides Some {
                 return ListOps::s_into<U>(SeqListOps::s_list_map_fn<T, U>[recursive?](ll, f));
             }
             else {
-                let sl = SeqListOps::s_list_mask_select<T>(ll, mask);
+                let sl = ListOps::s_ensure_std_repr<T>(SeqListOps::s_list_mask_select<T>(ll, mask));
                 let ml = SeqListOps::s_list_map_fn<T, U>[recursive?](sl, f);
                 return ListOps::s_into<T>(ml);
             }
-#else
+#endif
         }
         else {
             return ListOps::s_into<T>(VectorOps::s_list_filter_map_fn<T, U>[recursive?](s_safeAs<ListRepr<T>, ListVector<T>>(ll), p, f));
         }
     }
 
+    internal function s_list_slice_front<T>(l: List<T>, start: Nat): List<T> {
+        let ll = ListOps::s_value<T>(l);
+
+        if(ll.is<SeqList<T>>()) {
+#if CHK_SMALL_ONLY
+            return s_blockingfailure<List<T>>();
+#else
+            let resl = ListOps::s_into<T>(SeqListOps::s_list_slice_front<T>(ll, start));
+            return ListOps::s_into<T>(ListOps::s_ensure_std_repr<T>(resl));
+#endif
+        }
+        else {
+            return ListOps::s_into<T>(VectorOps::s_list_slice_front<T>(ll, start));
+        }
+    }
+
+    internal function s_list_slice_end<T>(l: List<T>, end: Nat): List<T> {
+        let ll = ListOps::s_value<T>(l);
+
+        if(ll.is<SeqList<T>>()) {
+#if CHK_SMALL_ONLY
+            return s_blockingfailure<List<T>>();
+#else
+            let resl = SeqListOps::s_list_slice_end<T>(ll, end);
+            return ListOps::s_into<T>(ListOps::s_ensure_std_repr<T>(resl));
+#endif
+        }
+        else {
+            return ListOps::s_into<T>(VectorOps::s_list_slice_end<T>(ll, end));
+        }
+    }
+
+    internal function s_list_slice<T>(l: List<T>, start: Nat, length: Nat): List<T>  {
+        let ll = ListOps::s_value<T>(l);
+
+        if(ll.is<SeqList<T>>()) {
+#if CHK_SMALL_ONLY
+            return s_blockingfailure<List<T>>();
+#else
+            let resl = SeqListOps::s_list_slice<T>(ll, start, length);
+            return ListOps::s_into<T>(ListOps::s_ensure_std_repr<T>(resl));
+#endif
+        }
+        else {
+            return ListOps::s_into<T>(VectorOps::s_list_slice<T>(ll, start, length));
+        }
+    }
+
+    internal recursive? function s_list_is_sorted<T>(l: List<T>, cmp: recursive? pred(_: T, _: T) -> Bool): Bool {
+        let ll = ListOps::s_value<T>(l);
+
+        if(ll.is<SeqList<T>>()) {
+#if CHK_SMALL_ONLY
+            return s_blockingfailure<Bool>();
+#else
+            return SeqListOps::s_list_is_sorted<T>[recursive?](ll, cmp);
+#endif
+        }
+        else {
+            return VectorOps::s_list_is_sorted<T>[recursive?](ll, cmp);
+        }
+    }
+
+    internal recursive? function s_list_is_unique<T, K grounded KeyType>(l: List<T>, keyf: recursive? fn(_: T) -> K): Bool {
+        let ll = ListOps::s_value<T>(l);
+
+        if(ll.is<SeqList<T>>()) {
+#if CHK_SMALL_ONLY
+            return s_blockingfailure<Bool>();
+#else
+            return SeqListOps::s_list_is_unique<T, K>[recursive?](ll, keyf);
+#endif
+        }
+        else {
+            return VectorOps::s_list_is_unique<T, K>[recursive?](ll, keyf);
+        }
+    }
+
+    internal recursive? function s_list_reduce<T, U>(l: List<T>, init: U, f: recursive? fn(_: U, _: T) -> U): U {
+        let ll = ListOps::s_value<T>(l);
+
+        if(ll.is<SeqList<T>>()) {
+#if CHK_SMALL_ONLY
+            return s_blockingfailure<U>();
+#else
+            return SeqListOps::s_list_reduce<T, U>[recursive?](ll, init, f);
+#endif
+        }
+        else {
+            return VectorOps::s_list_reduce<T, U>[recursive?](ll, init, f);
+        }
+    }
+
+    internal recursive? function s_list_reduce_idx<T, U>(l: List<T>, init: U, f: recursive? fn(_: U, _: T, _: Nat) -> U): U {
+        let ll = ListOps::s_value<T>(l);
+
+        if(ll.is<SeqList<T>>()) {
+#if CHK_SMALL_ONLY
+            return s_blockingfailure<U>();
+#else
+            return SeqListOps::s_list_reduce_idx<T, U>[recursive?](ll, init, f);
+#endif
+        }
+        else {
+            return VectorOps::s_list_reduce_idx<T, U>[recursive?](ll, init, f);
+        }
+    }
+
+    internal recursive? function s_list_transduce<T, E, U>(l: List<T>, env: E, op: recursive? fn(_: E, _: T) -> (|E, U|)): (|E, List<U>|) {
+        let ll = ListOps::s_value<T>(l);
+
+        if(ll.is<SeqList<T>>()) {
+#if CHK_SMALL_ONLY
+            return s_blockingfailure<U>();
+#else
+            let e, r = SeqListOps::s_list_transduce<T, E, U>[recursive?](ll, env, op);
+            return (|e, ListOps::s_into<U>(r)|);
+#endif
+        }
+        else {
+            let e, r = VectorOps::s_list_transduce<T, E, U>[recursive?](ll, env, op);
+            return (|e, ListOps::s_into<U>(r)|);
+        }
+    }
+
+    internal recursive? function s_list_transduce_idx<T, E, U>(l: List<T>, env: E, op: recursive? fn(_: E, _: T, _: Nat) -> (|E, U|)): (|E, List<U>|) {
+        let ll = ListOps::s_value<T>(l);
+
+        if(ll.is<SeqList<T>>()) {
+#if CHK_SMALL_ONLY
+            return s_blockingfailure<U>();
+#else
+            let e, r = SeqListOps::s_list_transduce<T, E, U>[recursive?](ll, env, op);
+            return (|e, ListOps::s_into<U>(r)|);
+#endif
+        }
+        else {
+            let e, r = VectorOps::s_list_transduce<T, E, U>[recursive?](ll, env, op);
+            return (|e, ListOps::s_into<U>(r)|);
+        }
+    }
 }
 #endif
