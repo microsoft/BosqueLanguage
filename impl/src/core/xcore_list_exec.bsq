@@ -53,6 +53,8 @@ internal entity ListOps provides Some {
     internal recursive? function s_list_map_fn_idx<T, U>(l: List<T>, f: recursive? fn(_: T, _: Nat) -> U): List<U> = s_list_map_idx;
     internal recursive? function s_list_map_fn_sync<T, U, V>(l1: List<T>, l2: List<U>, f: recursive? fn(_: T, _: U) -> V): List<V> = s_list_map_sync;
 
+    internal recursive? s_list_filter_map_fn<T, U>(l: SeqList<T>, p: recursive? pred(_: T) -> Bool, f: recursive? fn(_: T) -> U): SeqList<U> = s_list_filter_map_fn;
+
     internal function s_list_slice_front<T>(l: List<T>, start: Nat): List<T> = s_list_slice_start;
     internal function s_list_slice_end<T>(l: List<T>, end: Nat): List<T> = s_list_slice_end;
     internal function s_list_slice<T>(l: List<T>, start: Nat, length: Nat): List<T> = s_list_slice;

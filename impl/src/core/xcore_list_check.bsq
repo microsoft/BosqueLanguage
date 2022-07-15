@@ -520,5 +520,32 @@ internal entity ListOps provides Some {
             return ListOps::s_into<V>(VectorOps::s_list_map_fn_sync<T, U, V>[recursive?](s_safeAs<ListRepr<T>, ListVector<T>>(ll1), s_safeAs<ListRepr<U>, ListVector<U>>(ll2), f));
         }
     }
+
+    internal recursive? s_list_filter_map_fn<T, U>(l: List<T>, p: recursive? pred(_: T) -> Bool, f: recursive? fn(_: T) -> U): List<U> {
+        let ll = ListOps::s_value<T>(l);
+
+        if(ll.is<SeqList<T>>()) {
+#if CHK_SMALL_ONLY
+            return s_blockingfailure<List<T>>();
+#else
+            let mask = SeqListOps::s_list_map_pred<T>[recursive?](ll, p);
+            if(SeqListOps::s_list_all_false(mask)) {
+                return List<U>{};
+            }
+            elif(SeqListOps::s_list_all_true(mask)) {
+                return ListOps::s_into<U>(SeqListOps::s_list_map_fn<T, U>[recursive?](ll, f));
+            }
+            else {
+                let sl = SeqListOps::s_list_mask_select<T>(ll, mask);
+                let ml = SeqListOps::s_list_map_fn<T, U>[recursive?](sl, f);
+                return ListOps::s_into<T>(ml);
+            }
+#else
+        }
+        else {
+            return ListOps::s_into<T>(VectorOps::s_list_filter_map_fn<T, U>[recursive?](s_safeAs<ListRepr<T>, ListVector<T>>(ll), p, f));
+        }
+    }
+
 }
 #endif

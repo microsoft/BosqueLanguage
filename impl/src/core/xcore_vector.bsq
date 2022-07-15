@@ -147,6 +147,15 @@ internal entity Vector1<T> provides Some {
     internal recursive? function s_list_map_fn_sync<U, V>(l1: Vector1<T>, l2: Vector1<U>, f: recursive? fn(_: T, _: U) -> V): Vector1<V>{
         return Vector1<V>{f[recursive?](l1.v0, l2.v0)};
     }
+
+    internal recursive? function s_list_filter_map_fn<U>(l: Vector1<T>, p: recursive? pred(_: T) -> Bool, f: recursive? fn(_: T) -> U): Vector1<U> | None {
+        if(p[recursive?](l.v0)) {
+            return Vector1<U>(f[recursive?](l.v0));
+        }
+        else {
+            return none;
+        }
+    }
 }
 
 internal entity Vector2<T> provides Some {
@@ -374,6 +383,30 @@ internal entity Vector2<T> provides Some {
     
     internal recursive? function s_list_map_fn_sync<U, V>(l1: Vector2<T>, l2: Vector2<U>, f: recursive? fn(_: T, _: U) -> V): Vector2<V>{
         return Vector2<V>{f[recursive?](l1.v0, l2.v0), f[recursive?](l1.v1, l2.v1)};
+    }
+
+    internal recursive? function s_mask_filter_map_mixed<U>(l: Vector2<T>, p0: Bool, p1: Bool, f: recursive? fn(_: T) -> U): Vector1<U> {
+        if(p0) {
+            return Vector1<U>{f[recursive?](l.v0)};
+        }
+        else {
+            return Vector1<U>{f[recursive?](l.v1)};
+        }
+    }
+
+    internal recursive? function s_list_filter_map_fn<U>(l: Vector2<T>, p: recursive? pred(_: T) -> Bool, f: recursive? fn(_: T) -> U): Vector2<U> | Vector1<U> | None {
+        let p0 = p[recursive?](l.v0);
+        let p1 = p[recursive?](l.v1);
+
+        if(/\(p0, p1)) {
+            return Vector2<U>{f[recursive?](l.v0), f[recursive?](l.v1)};
+        }
+        elif(!\/(p0, p1)) {
+            return none;
+        }
+        else {
+            return Vector2<T>::s_mask_filter_map_mixed<U>[recursive?](l, p0, p1, f);
+        }
     }
 }
 
@@ -657,6 +690,43 @@ internal entity Vector3<T> provides Some {
     internal recursive? function s_list_map_fn_sync<U, V>(l1: Vector3<T>, l2: Vector3<U>, f: recursive? fn(_: T, _: U) -> V): Vector3<V>{
         return Vector3<V>{f[recursive?](l1.v0, l2.v0), f[recursive?](l1.v1, l2.v1), f[recursive?](l1.v2, l2.v2)};
     }
+
+    internal recursive? function s_mask_filter_map_mixed<U>(l: Vector3<T>, p0: Bool, p1: Bool, p2: Bool, f: recursive? fn(_: T) -> U): Vector2<U> | Vector1<U> {
+        if(/\(p0, p1)) {
+            return Vector2<U>{f[recursive?](l.v0), f[recursive?](l.v1)};
+        }
+        elif(/\(p0, p2)) {
+            return Vector2<U>{f[recursive?](l.v0), f[recursive?](l.v2)};
+        }
+        elif(/\(p1, p2)) {
+            return Vector2<U>{f[recursive?](l.v1), f[recursive?](l.v2)};
+        }
+        elif(p0) {
+            return Vector1<U>{f[recursive?](l.v0)};
+        }
+        elif(p1) {
+            return Vector1<U>{f[recursive?](l.v1)};
+        }
+        else {
+            return Vector1<U>{f[recursive?](l.v2)};
+        }
+    }
+
+    internal recursive? function s_list_filter_map_fn<U>(l: Vector3<T>, p: recursive? pred(_: T) -> Bool, f: recursive? fn(_: T) -> U): Vector3<U> | Vector2<U> | Vector1<U> | None {
+        let p0 = p[recursive?](l.v0);
+        let p1 = p[recursive?](l.v1);
+        let p2 = p[recursive?](l.v2);
+
+        if(/\(p0, p1, p2)) {
+            return Vector3<U>{f[recursive?](l.v0), f[recursive?](l.v1), f[recursive?](l.v2)};
+        }
+        elif(!\/(p0, p1, p2)) {
+            return none;
+        }
+        else {
+            return Vector3<T>::s_mask_filter_map_mixed<U>[recursive?](l, p0, p1, p2, f);
+        }
+    }
 }
 
 internal entity Vector4<T> provides Some {
@@ -805,8 +875,6 @@ internal entity Vector4<T> provides Some {
             return -1i;
         }
     }
-
-    xxxxx;
 
     internal recursive? function s_list_single_index_of(l: Vector4<T>, p: recursive? pred(_: T) -> Bool): Int {
         let p0 = p[recursive?](l.v0);
@@ -980,6 +1048,68 @@ internal entity Vector4<T> provides Some {
     
     internal recursive? function s_list_map_fn_sync<U, V>(l1: Vector4<T>, l2: Vector4<U>, f: recursive? fn(_: T, _: U) -> V): Vector4<V>{
         return Vector3<V>{f[recursive?](l1.v0, l2.v0), f[recursive?](l1.v1, l2.v1), f[recursive?](l1.v2, l2.v2), f[recursive?](l1.v3, l2.v3)};
+    }
+
+    internal recursive? function s_mask_filter_map_mixed<U>(l: Vector4<T>, p0: Bool, p1: Bool, p2: Bool, p3: Bool, f: recursive? fn(_: T) -> U): Vector3<U> | Vector2<U> | Vector1<U> {
+        if(/\(p1, p2, p3)) {
+            return Vector3<U>{f[recursive?](l.v1), f[recursive?](l.v2), f[recursive?](l.v3)};
+        }
+        elif(/\(p0, p2, p3)) {
+            return Vector3<U>{f[recursive?](l.v0), f[recursive?](l.v2), f[recursive?](l.v3)};
+        }
+        elif(/\(p0, p1, p3)) {
+            return Vector3<U>{f[recursive?](l.v0), f[recursive?](l.v1), f[recursive?](l.v3)};
+        }
+        elif(/\(p0, p1, p2)) {
+            return Vector3<U>{f[recursive?](l.v0), f[recursive?](l.v1), f[recursive?](l.v2)};
+        }
+        elif(/\(p0, p1)) {
+            return Vector2<U>{f[recursive?](l.v0), f[recursive?](l.v1)};
+        }
+        elif(/\(p0, p2)) {
+            return Vector2<U>{f[recursive?](l.v0), f[recursive?](l.v2)};
+        }
+        elif(/\(p0, p3)) {
+            return Vector2<U>{f[recursive?](l.v0), f[recursive?](l.v3)};
+        }
+        elif(/\(p1, p2)) {
+            return Vector2<U>{f[recursive?](l.v1), f[recursive?](l.v2)};
+        }
+        elif(/\(p1, p3)) {
+            return Vector2<U>{f[recursive?](l.v1), f[recursive?](l.v3)};
+        }
+        elif(/\(p2, p3)) {
+            return Vector2<U>{f[recursive?](l.v2), f[recursive?](l.v3)};
+        }
+        elif(p0) {
+            return Vector1<U>{f[recursive?](l.v0)};
+        }
+        elif(p1) {
+            return Vector1<U>{f[recursive?](l.v1)};
+        }
+        elif(p2) {
+            return Vector1<U>{f[recursive?](l.v2)};
+        }
+        else {
+            return Vector1<U>{f[recursive?](l.v3)};
+        }
+    }
+
+    internal recursive? function s_list_filter_map_fn<U>(l: Vector4<T>, p: recursive? pred(_: T) -> Bool, f: recursive? fn(_: T) -> U): Vector4<U> | Vector3<U> | Vector2<U> | Vector1<U> | None {
+        let p0 = p[recursive?](l.v0);
+        let p1 = p[recursive?](l.v1);
+        let p2 = p[recursive?](l.v2);
+        let p3 = p[recursive?](l.v3);
+
+        if(/\(p0, p1, p2, p3)) {
+            return Vector4<U>{f[recursive?](l.v0), f[recursive?](l.v1), f[recursive?](l.v2), f[recursive?](l.v2)};
+        }
+        elif(!\/(p0, p1, p2, p3)) {
+            return none;
+        }
+        else {
+            return Vector4<T>::s_mask_filter_map_mixed<U>[recursive?][recursive?](l, p0, p1, p2, p3, f);
+        }
     }
 }
 
@@ -1347,6 +1477,21 @@ internal entity VectorOps provides Some {
         }
         else {
             return Vector4<T>::s_list_map_fn_sync<U, V>[recursive?](l, f);
+        }
+    }
+
+    internal recursive? function s_list_filter_map_fn<T, U>(l: Vector4<T>, p: recursive? pred(_: T) -> Bool, f: recursive? fn(_: T) -> U): Vector4<U> | Vector3<U> | Vector2<U> | Vector1<U> | None {
+        if(l.is<Vector1<T>>()) {
+            return Vector1<T>::s_list_filter_map_fn<U>[recursive?](l, p, f);
+        }
+        elif(l.is<Vector2<T>>()) {
+            return Vector2<T>::s_list_filter_map_fn<U>[recursive?](l, p, f);
+        }
+        elif(l.is<Vector3<T>>()) {
+            return Vector3<T>::s_list_filter_map_fn<U>[recursive?](l, p, f);
+        }
+        else {
+            return Vector4<T>::s_list_filter_map_fn<U>[recursive?](l, p, f);
         }
     }
 }
