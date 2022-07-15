@@ -571,7 +571,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                 });
             }
 #else
-            return ListOps::s_list_reduce_idx<T, Nat>(this, 0n, fn(acc: Nat, v: T): Nat => KeyType::equal<T>(v, e) ? acc + 1n : acc);
+            return ListOps::s_list_reduce<T, Nat>(this, 0n, fn(acc: Nat, v: T): Nat => KeyType::equal<T>(v, e) ? acc + 1n : acc);
 #endif
         }
     }
@@ -603,7 +603,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                 });
             }
 #else
-            return ListOps::s_list_reduce_idx<T, Nat>(this, 0n, fn(acc: Nat, v: T): Nat => {
+            return ListOps::s_list_reduce<T, Nat>(this, 0n, fn(acc: Nat, v: T): Nat => {
                 if(v === none) {
                     return acc + 1n;
                 }
@@ -642,7 +642,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                 });
             }
 #else
-            return ListOps::s_list_reduce_idx<T, Nat>(this, 0n, fn(acc: Nat, v: T): Nat => {
+            return ListOps::s_list_reduce<T, Nat>(this, 0n, fn(acc: Nat, v: T): Nat => {
                 if(v === nothing) {
                     return acc + 1n;
                 }
@@ -1838,6 +1838,9 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
         }
         else {
 #if CHECK_LIBS
+
+            xxxx; // lets add a filter_map operation in place of the 
+
             let mask = ListOps::s_list_map_pred<T>[recursive?](this, p);
             if(ListOps::s_list_all_false(mask)) {
                 return List<U>{};
@@ -2523,6 +2526,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                     return acc;
                 }
                 else {
+                    xxx; //acc empty
                     return ListOps::s_list_append<U>(acc, ull);
                 }
 #endif
