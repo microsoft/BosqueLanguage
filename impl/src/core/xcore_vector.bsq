@@ -445,10 +445,6 @@ internal entity Vector2<T> provides Some {
         return !cmp[recursive?](l.v1, l.v0);
     }
 
-    internal recursive? function s_list_is_unique<T, K grounded KeyType>(l: Vector2<T>, keyf: recursive? fn(_: T) -> K): Bool {
-        return !KeyType::equal<K>(keyf[recursive?](l.v0), keyf[recursive?](l.v1));
-    }
-
     internal recursive? function s_list_reduce<U>(l: Vector2<T>, iv: U, f: recursive? fn(_: U, _: T) -> U): U {
         let v1 = f[recursive?](iv, l.v0);
         return f[recursive?](v1, l.v1);
@@ -820,14 +816,6 @@ internal entity Vector3<T> provides Some {
 
     internal recursive? function s_list_is_sorted<T>(l: Vector3<T>, cmp: recursive? pred(_: T, _: T) -> Bool): Bool {
         return /\(!cmp[recursive?](l.v1, l.v0), !cmp[recursive?](l.v2, l.v1));
-    }
-
-    internal recursive? function s_list_is_unique<T, K grounded KeyType>(l: Vector3<T>, keyf: recursive? fn(_: T) -> K): Bool {
-        let k0 = keyf[recursive?](l.v0);
-        let k1 = keyf[recursive?](l.v1);
-        let k2 = keyf[recursive?](l.v2);
-
-        return /\(!KeyType::equal<K>(k0, k1), !KeyType::equal<K>(k0, k2), !KeyType::equal<K>(k1, k2));
     }
 
     internal recursive? function s_list_reduce<U>(l: Vector3<T>, iv: U, f: recursive? fn(_: U, _: T) -> U): U {
@@ -1286,15 +1274,6 @@ internal entity Vector4<T> provides Some {
 
     internal recursive? function s_list_is_sorted<T>(l: Vector4<T>, cmp: recursive? pred(_: T, _: T) -> Bool): Bool {
         return /\(!cmp[recursive?](l.v1, l.v0), !cmp[recursive?](l.v2, l.v1), !cmp[recursive?](l.v3, l.v2));
-    }
-
-    internal recursive? function s_list_is_unique<T, K grounded KeyType>(l: Vector4<T>, keyf: recursive? fn(_: T) -> K): Bool {
-        let k0 = keyf[recursive?](l.v0);
-        let k1 = keyf[recursive?](l.v1);
-        let k2 = keyf[recursive?](l.v2);
-        let k3 = keyf[recursive?](l.v3);
-
-        return /\(!KeyType::equal<K>(k0, k1), !KeyType::equal<K>(k0, k2), !KeyType::equal<K>(k0, k3), !KeyType::equal<K>(k1, k2), !KeyType::equal<K>(k1, k3), !KeyType::equal<K>(k2, k3));
     }
 
     internal recursive? function s_list_reduce<U>(l: Vector4<T>, iv: U, f: recursive? fn(_: U, _: T) -> U): U {
@@ -1766,18 +1745,6 @@ internal entity VectorOps provides Some {
         }
         else {
             return Vector4<T>::::s_list_is_sorted<T>[recursive?](s_safeAs<ListVector<T>, Vector4<T>>(l), cmp);
-        }
-    }
-
-    internal recursive? function s_list_is_unique<T, K grounded KeyType>(l: ListVector<T>, keyf: recursive? fn(_: T) -> K): Bool {
-        if(l.is<Vector2<T>>()) {
-            return Vector2<T>::s_list_is_unique<T>[recursive?](l, keyf);
-        }
-        elif(l.is<Vector3<T>>()) {
-            return Vector3<T>::s_list_is_unique<T>[recursive?](l, keyf);
-        }
-        else {
-            return Vector4<T>::::s_list_is_unique<T>[recursive?](s_safeAs<ListVector<T>, Vector4<T>>(l), keyf);
         }
     }
 

@@ -3275,15 +3275,6 @@ class SMTBodyEmitter {
                 
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTConst(issorted));
             }
-            case "s_list_is_unique": {
-                const lt = this.typegen.getMIRType(idecl.params[0].type);
-                const tsval = this.typegen.generateListTypeGetData(lt, new SMTVar(args[0].vname));
-                const lenm1 = this.typegen.generateListTypeGetLengthMinus1(lt, new SMTVar(args[0].vname));
-
-                const isunique = `(not (exists ((@ii Int)) (and (<= 0 @ii) (< @ii ${lenm1.emitSMT2(undefined)}) (= (seq.nth ${tsval.emitSMT2(undefined)} @ii) (seq.nth ${tsval.emitSMT2(undefined)} (+ @ii 1))))))`;
-                
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTConst(isunique));
-            }
             case "s_list_reduce": {
                 const lt = this.typegen.getMIRType(idecl.params[0].type);
                 const sval = this.typegen.generateListTypeGetData(lt, new SMTVar(args[0].vname));
@@ -3423,30 +3414,6 @@ class SMTBodyEmitter {
                 ]);
 
                 const cbody = this.typegen.generateMapEntryTypeGetValue(mt, new SMTCallSimple("seq.nth", [mval, new SMTCallSimple("seq.indexof", [maparray, new SMTConst("true")])])); 
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
-            }
-            case "s_map_find": {
-                //TODO: this is applying map just to do a find since we ignore the value part -- candidate for special solver support?
-                const mt = this.typegen.getMIRType(idecl.params[0].type);
-                const mval = this.typegen.generateMapTypeGetData(mt, new SMTVar(args[0].vname));
-                
-                const entrytype = this.typegen.generateMapEntryType(mt);
-                const accesskey = this.typegen.generateMapEntryTypeGetKey(mt, new SMTVar("@@x"));
-                const maparray = new SMTCallSimple("seq.map", [
-                    new SMTConst(`(lambda ((@@x ${entrytype.smttypename})) (= ${args[1].vname} ${accesskey.emitSMT2(undefined)})`),
-                    mval
-                ]);
-
-                const rescons = this.typegen.getSMTConstructorName(mirrestype).cons;
-                const ufcons = this.generateUFConstantForType((this.assembly.ephemeralListDecls.get(entrytype.typeID) as MIREphemeralListType).entries[0]);
-
-                const cbody = new SMTLet("@@idx", new SMTCallSimple("seq.indexof", [maparray, new SMTConst("true")]),
-                    new SMTIf(SMTCallSimple.makeEq(new SMTVar("@@idx"), new SMTConst("-1")),
-                        new SMTCallSimple(rescons, [new SMTConst(ufcons), new SMTConst("false")]),
-                        new SMTCallSimple(rescons, [this.typegen.generateMapEntryTypeGetValue(mt, new SMTCallSimple("seq.nth", [mval, new SMTConst("@@idx")])), new SMTConst("true")])
-                    )
-                );
-                
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
             }
             case "s_map_union_fast": {

@@ -2060,27 +2060,22 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             }
             else {
 #if CHECK_LIBS
-                if(ListOps::s_list_is_unique<T>[recursive?](this. cmp)) {
-                    return this;
-                }
-                else {
-                    //TODO: this is rough, maybe a special \forall UF type thing would be better
-                    return ListOps::s_list_reduce<T, List<T>>[recursive?](this, List<T>{}, recursive? fn(acc: List<T>, v: T): List<T> => {
-                        if(ListOps::s_empty<T>(acc)) {
-                            return List<T>{v};
+                //TODO: this is rough, maybe a special \forall UF type thing would be better
+                return ListOps::s_list_reduce<T, List<T>>[recursive?](this, List<T>{}, recursive? fn(acc: List<T>, v: T): List<T> => {
+                    if(ListOps::s_empty<T>(acc)) {
+                        return List<T>{v};
+                    }
+                    else {
+                        let vk = keyf[recursive?](v);
+                        let hasv = ListOps::s_list_has_pred<T>[recursive?](acc, recursive? pred(accv: T): Bool => KeyType<K>::equal(keyf[recursive?](accv), kv));
+                        if(hasv) {
+                            return acc;
                         }
                         else {
-                            let vk = keyf[recursive?](v);
-                            let hasv = ListOps::s_list_has_pred<T>[recursive?](acc, recursive? pred(accv: T): Bool => KeyType<K>::equal(keyf[recursive?](accv), kv));
-                            if(hasv) {
-                                return acc;
-                            }
-                            else {
-                                return ListOps::s_list_push_back<T>(acc, v);
-                            }
+                            return ListOps::s_list_push_back<T>(acc, v);
                         }
-                    });
-                }
+                    }
+                });
 #else
                 return ListOps::s_list_uniqueify<T>[recursive?](this, cmp);
 #endif

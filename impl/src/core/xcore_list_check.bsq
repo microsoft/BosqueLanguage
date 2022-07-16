@@ -738,21 +738,6 @@ internal entity ListOps provides Some {
         }
     }
 
-    internal recursive? function s_list_is_unique<T, K grounded KeyType>(l: List<T>, keyf: recursive? fn(_: T) -> K): Bool {
-        let ll = ListOps::s_value<T>(l);
-
-        if(ll.is<SeqList<T>>()) {
-#if CHK_SMALL_ONLY
-            return s_blockingfailure<Bool>();
-#else
-            return SeqListOps::s_list_is_unique<T, K>[recursive?](ll, keyf);
-#endif
-        }
-        else {
-            return VectorOps::s_list_is_unique<T, K>[recursive?](ll, keyf);
-        }
-    }
-
     internal recursive? function s_list_reduce<T, U>(l: List<T>, init: U, f: recursive? fn(_: U, _: T) -> U): U {
         let ll = ListOps::s_value<T>(l);
 
