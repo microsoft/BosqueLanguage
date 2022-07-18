@@ -17,16 +17,16 @@ internal entity ListOps provides Some {
 
     internal function s_vector_to_seqlist<T>(l: ListVector<T>): SeqList<T> {
         if(l.is<Vector1<T>>()) {
-            return SeqListOps::s_list_cons_1<T>(l);
+            return SeqListOps::s_list_cons_1<T>(l.v0);
         }
         elif(l.is<Vector2<T>>()) {
-            return SeqListOps::s_list_cons_2<T>(l);
+            return SeqListOps::s_list_cons_2<T>(l.v0, l.v1);
         }
         elif(l.is<Vector3<T>>()) {
-            return SeqListOps::s_list_cons_3<T>(l);
+            return SeqListOps::s_list_cons_3<T>(l.v0, l.v1, l.v2);
         }
         else {
-            return SeqListOps::s_list_cons_4<T>(l);
+            return SeqListOps::s_list_cons_4<T>(l.v0, l.v1, l.v2, l.v3);
         }
     }
 
@@ -266,7 +266,7 @@ internal entity ListOps provides Some {
 
         if(ll.is<SeqList<T>>()) {
 #if CHK_SMALL_ONLY
-            return s_blockingfailure<T>();
+            return s_blockingfailure<List<T>>();
 #else
             return ListOps::s_into<T>(SeqListOps::s_list_set<T>(ll, i, v));
 #endif
@@ -281,7 +281,7 @@ internal entity ListOps provides Some {
 
         if(ll.is<SeqList<T>>()) {
 #if CHK_SMALL_ONLY
-            return s_blockingfailure<T>();
+            return s_blockingfailure<List<T>>();
 #else
             let res = ListOps::s_ensure_std_repr<T>(SeqListOps::s_list_remove<T>(ll, i));
             return ListOps::s_into<T>(res);
@@ -297,7 +297,7 @@ internal entity ListOps provides Some {
 
         if(ll.is<SeqList<T>>()) {
 #if CHK_SMALL_ONLY
-            return s_blockingfailure<T>();
+            return s_blockingfailure<List<T>>();
 #else
             return ListOps::s_into<T>(SeqListOps::s_list_insert<T>(ll, i, v));
 #endif
@@ -305,7 +305,7 @@ internal entity ListOps provides Some {
         else {
             if(ll.is<Vector4<T>>()) {
 #if CHK_SMALL_ONLY
-                return s_blockingfailure<T>();
+                return s_blockingfailure<List<T>>();
 #else
                 return ListOps::s_into<T>(SeqListOps::s_list_insert<T>(ListOps::s_vector_to_seqlist<T>(ll), i, v));
 #endif
@@ -321,7 +321,7 @@ internal entity ListOps provides Some {
 
         if(ll.is<SeqList<T>>()) {
 #if CHK_SMALL_ONLY
-            return s_blockingfailure<T>();
+            return s_blockingfailure<List<T>>();
 #else
             let res = ListOps::s_ensure_std_repr<T>(SeqListOps::s_list_pop_back<T>(ll));
             return ListOps::s_into<T>(res);
@@ -337,7 +337,7 @@ internal entity ListOps provides Some {
 
         if(ll.is<SeqList<T>>()) {
 #if CHK_SMALL_ONLY
-            return s_blockingfailure<T>();
+            return s_blockingfailure<List<T>>();
 #else
             let res = ListOps::s_ensure_std_repr<T>(SeqListOps::s_list_pop_front<T>(ll));
             return ListOps::s_into<T>(res);
@@ -353,7 +353,7 @@ internal entity ListOps provides Some {
 
         if(ll.is<SeqList<T>>()) {
 #if CHK_SMALL_ONLY
-            return s_blockingfailure<T>();
+            return s_blockingfailure<List<T>>();
 #else
             return ListOps::s_into<T>(SeqListOps::s_list_push_back<T>(ll, v));
 #endif
@@ -361,7 +361,7 @@ internal entity ListOps provides Some {
         else {
             if(ll.is<Vector4<T>>()) {
 #if CHK_SMALL_ONLY
-                return s_blockingfailure<T>();
+                return s_blockingfailure<List<T>>();
 #else
                 return ListOps::s_into<T>(SeqListOps::s_list_push_back<T>(ListOps::s_vector_to_seqlist<T>(ll), v));
 #endif
@@ -377,7 +377,7 @@ internal entity ListOps provides Some {
 
         if(ll.is<SeqList<T>>()) {
 #if CHK_SMALL_ONLY
-            return s_blockingfailure<T>();
+            return s_blockingfailure<List<T>>();
 #else
             return ListOps::s_into<T>(SeqListOps::s_list_push_front<T>(ll, v));
 #endif
@@ -385,7 +385,7 @@ internal entity ListOps provides Some {
         else {
             if(ll.is<Vector4<T>>()) {
 #if CHK_SMALL_ONLY
-                return s_blockingfailure<T>();
+                return s_blockingfailure<List<T>>();
 #else
                 return ListOps::s_into<T>(SeqListOps::s_list_push_front<T>(ListOps::s_vector_to_seqlist<T>(ll), v));
 #endif

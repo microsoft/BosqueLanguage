@@ -178,6 +178,50 @@ internal entity Vector1<T> provides Some {
     }
 }
 
+internal entity MapOpsVector1 provides Some {
+    internal function s_map_min_elem<K grounded KeyType, V>(m: Vector1<[K, V]>): K {
+        return m.v0.0;
+    }
+
+    internal function s_map_max_elem<K grounded KeyType, V>(m: Vector1<[K, V]>): K {
+        return m.v0.0
+    }
+
+    internal function s_map_has_key<K grounded KeyType, V>(m: Vector1<[K, V]>, k: K): K {
+        return KeyType::equal<K>(k, m.v0.0);
+    }
+
+    internal function s_map_get_key<K grounded KeyType, V>(m: Vector1<[K, V]>, k: K): V {
+        return m.v0.1;
+    }
+
+    internal recursive? function s_map_filter_pred<K grounded KeyType, V>(m: Vector1<[K, V]>, p: recursive? pred(_: K, _: V) -> Bool): Vector1<[K, V]> | None {
+        if(p[recursive?](m.v0.0, m.v0.1)) {
+            return m;
+        }
+        else {
+            return none;
+        }
+    }
+    
+    internal recursive? function s_map_remap<K grounded KeyType, V, U>(m: Vector1<[K, V]>, f: recursive? fn(k: K, v: V) -> U): Vector1<[K, U]> {
+        return Vector1<K, U>{[m.v0.0, f[recursive?](m.v0.0, m.v0.1)]};
+    }
+
+    internal function s_map_add<K grounded KeyType, V>(m: Vector1<[K, V]>, k: K, v: [K, V]): Vector2<[K, V]> {
+        if(KeyType::less<K>(k, m.v0.0)) {
+            return Vector2<[K, V]>{vtup, m.v0};
+        }
+        else {
+            return Vector2<[K, V]>{m.v0, vtup};
+        }
+    } 
+
+    internal function s_map_set<K grounded KeyType, V>(m: Vector1<[K, V]>, k: K, vtup: [K, V]): Vector1<[K, V]> {
+        return Vector1<[K, V]>{vtup};
+    } 
+}
+
 internal entity Vector2<T> provides Some {
     field v0: T;
     field v1: T;
@@ -467,6 +511,78 @@ internal entity Vector2<T> provides Some {
         let e2, v2 = op[recursive?](e1, l.v1, 1n);
 
         return (|e2, Vector2<U>{v1, v2}|);
+    }
+}
+
+internal entity MapOpsVector2 provides Some {
+    internal function s_map_min_elem<K grounded KeyType, V>(m: Vector2<[K, V]>): K {
+        return m.v0.0;
+    }
+
+    internal function s_map_max_elem<K grounded KeyType, V>(m: Vector2<[K, V]>): K {
+        return m.v1.0;
+    }
+
+    internal function s_map_has_key<K grounded KeyType, V>(m: Vector2<[K, V]>, k: K): K {
+        return \/(KeyType::equal<K>(k, m.v0.0), KeyType::equal<K>(k, m.v1.0));
+    }
+
+    internal function s_map_get_key<K grounded KeyType, V>(m: Vector2<[K, V]>, k: K): V {
+        if(KeyType::equal<K>(k, m.v0.0)) {
+            return m.v0.1;
+        }
+        else {
+            return m.v1.1;
+        }
+    }
+
+    internal recursive? function s_map_filter_pred<K grounded KeyType, V>(m: Vector2<[K, V]>, p: recursive? pred(_: K, _: V) -> Bool): Vector2<[K, V]> | Vector1<[K, V]> | None {
+        let p0 = p[recursive?](l.v0.0, l.v0.1);
+        let p1 = p[recursive?](l.v1.0, l.v1.1);
+
+        if(/\(p0, p1)) {
+            return this;
+        }
+        elif(!\/(p0, p1)) {
+            return none;
+        }
+        else {
+            return Vector2<[K, V]>::s_mask_filter_mixed(m, p0, p1);
+        }
+    }
+    
+    internal recursive? function s_map_remap<K grounded KeyType, V, U>(m: Vector2<[K, V]>, f: recursive? fn(k: K, v: V) -> U): Vector2<[K, U]> {
+        return Vector2<[K, V]>{[m.v0.0, f[recursive?](m.v0.0, m.v0.1)], [m.v1.0, f[recursive?](m.v1.0, m.v1.1)]}
+    }
+
+    internal function s_map_add<K grounded KeyType, V>(m: Vector2<[K, V]>, k: K, v: [K, V]): Vector3<[K, V]> {
+        if(KeyType::less<K>(k, m.v0.0)) {
+            return Vector3<[K, V]>{vtup, m.v0, m.v1};
+        }
+        elif(KeyType::less<K>(k, m.v1.0)) {
+            return Vector3<[K, V]>{m.v0, vtup, m.v1};
+        }
+        else {
+            return Vector3<[K, V]>{m.v0, m.v1, vtup};
+        }
+    } 
+
+    internal function s_map_set<K grounded KeyType, V>(m: Vector2<[K, V]>, k: K, vtup: [K, V]): Vector2<[K, V]> {
+        if(KeyType::equal<K>(k, m.v0.0)) {
+            return Vector2<[K, V]>{vtup, m.v1};
+        }
+        else {
+            return Vector2<[K, V]>{m.v0, vtup};
+        }
+    }
+
+    internal function s_map_remove<K grounded KeyType, V>(m: Vector2<K, V>, k: K): Vector1<[K, V]> {
+        if(KeyType::equal<K>(k, m.v0.0)) {
+            return Vector1<[K, V]>{m.v1};
+        }
+        else {
+            return Vector1<[K, V]>{m.v0};
+        }
     }
 }
 
@@ -844,6 +960,91 @@ internal entity Vector3<T> provides Some {
         let e3, v3 = op[recursive?](e2, l.v2, 2n);
 
         return (|e3, Vector3<U>{v1, v2, v3}|);
+    }
+}
+
+internal entity MapOpsVector3 provides Some {
+    internal function s_map_min_elem<K grounded KeyType, V>(m: Vector3<[K, V]>): K {
+        return m.v0.0;
+    }
+
+    internal function s_map_max_elem<K grounded KeyType, V>(m: Vector3<[K, V]>): K {
+        return m.v2.0;
+    }
+
+    internal function s_map_has_key<K grounded KeyType, V>(m: Vector3<[K, V]>, k: K): K {
+        return \/(KeyType::equal<K>(k, m.v0.0), KeyType::equal<K>(k, m.v1.0), KeyType::equal<K>(k, m.v2.0));
+    }
+
+    internal function s_map_get_key<K grounded KeyType, V>(m: Vector3<[K, V]>, k: K): V {
+        if(KeyType::equal<K>(k, m.v0.0)) {
+            return m.v0.1;
+        }
+        elif(KeyType::equal<K>(k, m.v1.0)) {
+            return m.v1.1;
+        }
+        else {
+            return m.v2.1;
+        }
+    }
+
+    internal recursive? function s_map_filter_pred<K grounded KeyType, V>(m: Vector3<[K, V]>, p: recursive? pred(_: K, _: V) -> Bool): Vector3<[K, V]> | Vector2<[K, V]> | Vector1<[K, V]> | None {
+        let p0 = p[recursive?](l.v0.0, l.v0.1);
+        let p1 = p[recursive?](l.v1.0, l.v1.1);
+        let p2 = p[recursive?](l.v2.0, l.v2.1);
+
+        if(/\(p0, p1, p2)) {
+            return this;
+        }
+        elif(!\/(p0, p1, p2)) {
+            return none;
+        }
+        else {
+            return Vector3<[K, V]>::s_mask_filter_mixed(m, p0, p1, p2);
+        }
+    }
+    
+    internal recursive? function s_map_remap<K grounded KeyType, V, U>(m: Vector3<[K, V]>, f: recursive? fn(k: K, v: V) -> U): Vector3<[K, U]> {
+        return Vector3<[K, V]>{[m.v0.0, f[recursive?](m.v0.0, m.v0.1)], [m.v1.0, f[recursive?](m.v1.0, m.v1.1)], [m.v2.0, f[recursive?](m.v2.0, m.v2.1)]}
+    }
+
+    internal function s_map_add<K grounded KeyType, V>(m: Vector3<[K, V]>, k: K, v: [K, V]): Vector4<[K, V]> {
+        if(KeyType::less<K>(k, m.v0.0)) {
+            return Vector4<[K, V]>{vtup, m.v0, m.v1, m.v2};
+        }
+        elif(KeyType::less<K>(k, m.v1.0)) {
+            return Vector4<[K, V]>{m.v0, vtup, m.v1, m.v2};
+        }
+        elif(KeyType::less<K>(k, m.v2.0)) {
+            return Vector4<[K, V]>{m.v0, m.v1, vtup, m.v2};
+        }
+        else {
+            return Vector4<[K, V]>{m.v0, m.v1, m.v2, vtup};
+        }
+    } 
+
+    internal function s_map_set<K grounded KeyType, V>(m: Vector3<[K, V]>, k: K, vtup: [K, V]): Vector3<[K, V]> {
+        if(KeyType::equal<K>(k, m.v0.0)) {
+            return Vector3<[K, V]>{vtup, m.v1, m.v2};
+        }
+        elif(KeyType::equal<K>(k, m.v1.0)) {
+            return Vector3<[K, V]>{m.v0, vtup, m.v2};
+        }
+        else {
+            return Vector3<[K, V]>{m.v0, m.v1, vtup};
+        }
+    }
+
+    internal function s_map_remove<K grounded KeyType, V>(m: Vector3<K, V>, k: K): Vector2<[K, V]> {
+        if(KeyType::equal<K>(k, m.v0.0)) {
+            return Vector2<[K, V]>{m.v1, m.v2};
+        }
+        elif(KeyType::equal<K>(k, m.v1.0)) {
+            return Vector2<[K, V]>{m.v0, m.v2};
+        }
+        else {
+            return Vector2<[K, V]>{m.v0, m.v1};
+        }
     }
 }
 
@@ -1306,6 +1507,86 @@ internal entity Vector4<T> provides Some {
         let e4, v4 = op[recursive?](e3, l.v3, 3n);
 
         return (|e4, Vector4<U>{v1, v2, v3, v4}|);
+    }
+}
+
+internal entity MapOpsVector4 provides Some {
+    internal function s_map_min_elem<K grounded KeyType, V>(m: Vector4<[K, V]>): K {
+        return m.v0.0;
+    }
+
+    internal function s_map_max_elem<K grounded KeyType, V>(m: Vector4<[K, V]>): K {
+        return m.v3.0;
+    }
+
+    internal function s_map_has_key<K grounded KeyType, V>(m: Vector4<[K, V]>, k: K): K {
+        return \/(KeyType::equal<K>(k, m.v0.0), KeyType::equal<K>(k, m.v1.0), KeyType::equal<K>(k, m.v2.0), KeyType::equal<K>(k, m.v3.0));
+    }
+
+    internal function s_map_get_key<K grounded KeyType, V>(m: Vector4<[K, V]>, k: K): V {
+        if(KeyType::equal<K>(k, m.v0.0)) {
+            return m.v0.1;
+        }
+        elif(KeyType::equal<K>(k, m.v1.0)) {
+            return m.v1.1;
+        }
+        elif(KeyType::equal<K>(k, m.v2.0)) {
+            return m.v2.1;
+        }
+        else {
+            return m.v3.1;
+        }
+    }
+
+    internal recursive? function s_map_filter_pred<K grounded KeyType, V>(m: Vector4<[K, V]>, p: recursive? pred(_: K, _: V) -> Bool): Vector4<[K, V]> | Vector3<[K, V]> | Vector2<[K, V]> | Vector1<[K, V]> | None {
+        let p0 = p[recursive?](l.v0.0, l.v0.1);
+        let p1 = p[recursive?](l.v1.0, l.v1.1);
+        let p2 = p[recursive?](l.v2.0, l.v2.1);
+        let p3 = p[recursive?](l.v3.0, l.v3.1);
+
+        if(/\(p0, p1, p2, p3)) {
+            return this;
+        }
+        elif(!\/(p0, p1, p2, p3)) {
+            return none;
+        }
+        else {
+            return Vector4<[K, V]>::s_mask_filter_mixed(m, p0, p1, p2, p3);
+        }
+    }
+    
+    internal recursive? function s_map_remap<K grounded KeyType, V, U>(m: Vector4<[K, V]>, f: recursive? fn(k: K, v: V) -> U): Vector3<[K, U]> {
+        return Vector3<[K, V]>{[m.v0.0, f[recursive?](m.v0.0, m.v0.1)], [m.v1.0, f[recursive?](m.v1.0, m.v1.1)], [m.v2.0, f[recursive?](m.v2.0, m.v2.1)], [m.v3.0, f[recursive?](m.v3.0, m.v3.1)]}
+    }
+
+    internal function s_map_set<K grounded KeyType, V>(m: Vector4<[K, V]>, k: K, vtup: [K, V]): Vector4<[K, V]> {
+        if(KeyType::equal<K>(k, m.v0.0)) {
+            return Vector4<[K, V]>{vtup, m.v1, m.v2, m.v3};
+        }
+        elif(KeyType::equal<K>(k, m.v1.0)) {
+            return Vector4<[K, V]>{m.v0, vtup, m.v2, m.v3};
+        }
+        elif(KeyType::equal<K>(k, m.v2.0)) {
+            return Vector4<[K, V]>{m.v0, m.v1, vtup, m.v3};
+        }
+        else {
+            return Vector4<[K, V]>{m.v0, m.v1, m.v2, vtup};
+        }
+    }
+
+    internal function s_map_remove<K grounded KeyType, V>(m: Vector4<K, V>, k: K): Vector3<[K, V]> {
+        if(KeyType::equal<K>(k, m.v0.0)) {
+            return Vector3<[K, V]>{m.v1, m.v2, m.v3};
+        }
+        elif(KeyType::equal<K>(k, m.v1.0)) {
+            return Vector3<[K, V]>{m.v0, m.v2, m.v3};
+        }
+        elif(KeyType::equal<K>(k, m.v2.0)) {
+            return Vector3<[K, V]>{m.v0, m.v1, m.v3};
+        }
+        else {
+            return Vector3<[K, V]>{m.v0, m.v1, m.v2};
+        }
     }
 }
 
@@ -1815,6 +2096,137 @@ internal entity VectorOps provides Some {
             return (|e, r|);
         }
     }
+
+    internal function s_map_min_elem<K grounded KeyType, V>(m: MapVector<[K, V]>): K {
+        if(l.is<Vector1<[K, V]>>()) {
+            return MapOpsVector1::s_map_min_elem<K, V>(m);
+        }
+        elif(l.is<Vector2<[K, V]>>()) {
+            return MapOpsVector2::s_map_min_elem<K, V>(m);
+        }
+        elif(l.is<Vector3<[K, V]>>()) {
+            return MapOpsVector3::s_map_min_elem<K, V>(m);
+        }
+        else {
+            return MapOpsVector4::s_map_min_elem<K, V>(m);
+        }
+    }
+
+    internal function s_map_max_elem<K grounded KeyType, V>(m: MapVector<K, V>): K {
+        if(l.is<Vector1<[K, V]>>()) {
+            return MapOpsVector1::s_map_max_elem<K, V>(m, k);
+        }
+        elif(l.is<Vector2<[K, V]>>()) {
+            return MapOpsVector2::s_map_max_elem<K, V>(m, k);
+        }
+        elif(l.is<Vector3<[K, V]>>()) {
+            return MapOpsVector3::s_map_max_elem<K, V>(m, k);
+        }
+        else {
+            return MapOpsVector4::s_map_max_elem<K, V>(m, k);
+        }
+    }
+
+    internal function s_map_has_key<K grounded KeyType, V>(m: MapVector<K, V>, k: K): K {
+        if(l.is<Vector1<[K, V]>>()) {
+            return MapOpsVector1::s_map_has_key<K, V>(m, k);
+        }
+        elif(l.is<Vector2<[K, V]>>()) {
+            return MapOpsVector2::s_map_has_key<K, V>(m, k);
+        }
+        elif(l.is<Vector3<[K, V]>>()) {
+            return MapOpsVector3::s_map_has_key<K, V>(m, k);
+        }
+        else {
+            return MapOpsVector4::s_map_has_key<K, V>(m, k);
+        }
+    }
+
+    internal function s_map_get_key<K grounded KeyType, V>(m: MapVector<K, V>, k: K): V {
+        if(l.is<Vector1<[K, V]>>()) {
+            return MapOpsVector1::s_map_get_key<K, V>(m, k);
+        }
+        elif(l.is<Vector2<[K, V]>>()) {
+            return MapOpsVector2::s_map_get_key<K, V>(m, k);
+        }
+        elif(l.is<Vector3<[K, V]>>()) {
+            return MapOpsVector3::s_map_get_key<K, V>(m, k);
+        }
+        else {
+            return MapOpsVector4::s_map_get_key<K, V>(m, k);
+        }
+    }
+
+    internal recursive? function s_map_filter_pred<K grounded KeyType, V>(m: MapVector<K, V>, p: recursive? pred(_: K, _: V) -> Bool): MapVector<K, V> | None {
+        if(l.is<Vector1<[K, V]>>()) {
+            return MapOpsVector1::s_map_filter_pred<K, V>[recursive?](m, p);
+        }
+        elif(l.is<Vector2<[K, V]>>()) {
+            return MapOpsVector2::s_map_filter_pred<K, V>[recursive?](m, p);
+        }
+        elif(l.is<Vector3<[K, V]>>()) {
+            return MapOpsVector3::s_map_filter_pred<K, V>[recursive?](m, p);
+        }
+        else {
+            return MapOpsVector4::s_map_filter_pred<K, V>[recursive?](m, p);
+        }
+    }
+    
+    internal recursive? function s_map_remap<K grounded KeyType, V, U>(m: MapVector<K, V>, f: recursive? fn(k: K, v: V) -> U): MapVector<[K, U]> {
+        if(l.is<Vector1<[K, V]>>()) {
+            return MapOpsVector1::s_map_remap<K, V, U>[recursive?](m, f);
+        }
+        elif(l.is<Vector2<[K, V]>>()) {
+            return MapOpsVector2::s_map_remap<K, V, U>[recursive?](m, p);
+        }
+        elif(l.is<Vector3<[K, V]>>()) {
+            return MapOpsVector3::s_map_remap<K, V, U>[recursive?](m, p);
+        }
+        else {
+            return MapOpsVector4::s_map_remap<K, V, U>[recursive?](m, p);
+        }
+    }
+
+    internal function s_map_add<K grounded KeyType, V>(m: Vector1<[K, V]> | Vector2<[K, V]> | Vector3<[K, V]>, k: K, vtup: [K, V]): MapVector<K, V> {
+        if(l.is<Vector1<[K, V]>>()) {
+            return MapOpsVector1<T>::s_map_add(m, k, vtup);
+        }
+        elif(l.is<Vector2<[K, V]>>()) {
+            return MapOpsVector2<T>::s_map_add(m, k, vtup);
+        }
+        else {
+            return MapOpsVector3<[K, V]>::s_map_add(m, k, vtup);
+        }
+    }
+
+    internal function s_map_set<K grounded KeyType, V>(m: MapVector<K, V>, k: K, vtup: [K, V]): Vector1<K, V> {
+        if(l.is<Vector1<[K, V]>>()) {
+            return MapOpsVector1::s_map_set<K, V>(m, k, vtup);
+        }
+        elif(l.is<Vector2<[K, V]>>()) {
+            return MapOpsVector2::s_map_set<K, V>(m, k, vtup);
+        }
+        elif(l.is<Vector3<[K, V]>>()) {
+            return MapOpsVector3::s_map_set<K, V>(m, k, vtup);
+        }
+        else {
+            return MapOpsVector4::s_map_set<K, V>(m, k, vtup);
+        }
+    }
+
+    internal function s_map_remove<K grounded KeyType, V>(m: MapVector<K, V>, k: K): Vector1<[K, V]> | Vector2<[K, V]> | Vector3<[K, V]> | None {
+        if(l.is<Vector1<[K, V]>>()) {
+            return none;
+        }
+        elif(l.is<Vector2<[K, V]>>()) {
+            return MapOpsVector2::s_map_remove<K, V>(m, k);
+        }
+        elif(l.is<Vector3<[K, V]>>()) {
+            return MapOpsVector3::s_map_remove<K, V>(m, k);
+        }
+        else {
+            return MapOpsVector4::s_map_remove<K, V>(m, k);
+        }
 }
 #endif
 
