@@ -61,9 +61,6 @@ internal entity ListOps provides Some {
 
     internal function s_list_reverse<T>(ll: List<T>): List<T> = s_list_reverse;
 
-    internal recursive? function s_list_sort<T>(l: List<T>, cmp: recursive? pred(_: T, _: T) -> Bool): List<T> = s_list_sort;
-    internal recursive? function s_list_uniqueify<T, K grounded KeyType>(l: List<T>, cmp: recursive? pred(_: T, _: T) -> Bool): List<T> = s_list_uniqueify;
-
     internal recursive? function s_list_reduce<T, U>(l: List<T>, iv: U, f: recursive? fn(_: U, _: T) -> U): U = s_list_reduce;
     internal recursive? function s_list_reduce_idx<T, U>(l: List<T>, iv: U, f: recursive? fn(_: U, _: T, _: Nat) -> U): U = s_list_reduce_idx;
 

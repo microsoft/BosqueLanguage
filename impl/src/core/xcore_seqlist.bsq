@@ -16,8 +16,8 @@ internal entity SeqListOps provides Some {
     __safe internal function s_list_cons_3<T>(Vector3<T>): SeqList<T> = s_list_cons_3;
     __safe internal function s_list_cons_4<T>(Vector4<T>): SeqList<T> = s_list_cons_4;
 
-    __safe internal function s_list_index_int(start: Int, end: Int, len: Int): SeqList<Int> = s_list_index;
-    __safe internal function s_list_index_nat(start: Nat, end: Nat, len: Nat): SeqList<Nat> = s_list_index;
+    /*__safe*/ internal function s_list_index_int(start: Int, end: Int, len: Int): SeqList<Int> = s_list_index;
+    /*__safe*/ internal function s_list_index_nat(start: Nat, end: Nat, len: Nat): SeqList<Nat> = s_list_index;
 
     __safe internal function s_list_size<T>(l: SeqList<T>): Nat = s_list_size;
 
@@ -53,16 +53,20 @@ internal entity SeqListOps provides Some {
     __safe internal function s_list_has_false(l: SeqList<Bool>): Bool = s_list_has_false;
 
     __safe internal function s_list_all_true(l: SeqList<Bool>): Bool = s_list_all_true; 
-    __safe internal function s_list_all_false(l: SeqList<Bool>): Bool = s_list_all_false; 
-
-    __safe internal function s_list_single_indexof_true(l: SeqList<Bool>): Int = s_list_single_indexof_true; 
+    __safe internal function s_list_all_false(l: SeqList<Bool>): Bool = s_list_all_false;
 
     __safe internal function s_list_indexof_true(l: SeqList<T>): Int = s_list_indexof_true; 
     __safe internal function s_list_last_indexof_true(l: SeqList<T>): Int = s_list_last_indexof_true;
 
+    __safe internal function s_list_slice_front<T>(l: SeqList<T>, start: Nat): SeqList<T> = s_list_slice_start;
+    __safe internal function s_list_slice_end<T>(l: SeqList<T>, end: Nat): SeqList<T> = s_list_slice_end;
+    __safe internal function s_list_slice<T>(l: SeqList<T>, start: Nat, length: Nat): SeqList<T> = s_list_slice;
+
     __safe internal function s_list_mask_select<T>(l: SeqList<T>, mask: SeqList<Bool>): SeqList<T> = s_list_mask_select;
 
-    __conditional_safe internal recursive? function s_list_is_sorted<T>(l: SeqList<T>, cmp: recursive? pred(_: T, _: T) -> Bool): Bool = s_list_is_sorted;
+    __safe internal function s_list_reverse<T>(ll: SeqList<T>): SeqList<T> = s_list_reverse;
+
+    /*__conditional_safe*/ internal recursive? function s_list_is_sorted<T>(l: SeqList<T>, cmp: recursive? pred(_: T, _: T) -> Bool): Bool = s_list_is_sorted;
     
     __conditional_safe internal recursive? function s_list_reduce<T, U>(l: SeqList<T>, init: U, f: recursive? fn(_: U, _: T) -> U): U = s_list_reduce;
     __conditional_safe internal recursive? function s_list_reduce_idx<T, U>(l: SeqList<T>, init: U, f: recursive? fn(_: U, _: T, _: Nat) -> U): U = s_list_reduce_idx;

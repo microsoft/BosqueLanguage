@@ -500,7 +500,15 @@ internal entity ListOps provides Some {
             return s_blockingfailure<Int>();
 #else
             let mask = SeqListOps::s_list_map_pred_idx<T>[recursive?](ll, p);
-            return SeqListOps::s_list_single_indexof_true(mask);
+            let lli = SeqListOps::s_list_indexof_true(mask);
+            let rri = SeqListOps::s_list_last_indexof_true(mask);
+
+            if(lli !== rri) {
+                return -1i;
+            }
+            else {
+                return lli;
+            }
 #endif
         }
         else {
@@ -720,6 +728,21 @@ internal entity ListOps provides Some {
         }
         else {
             return ListOps::s_into<T>(VectorOps::s_list_slice<T>(ll, start, length));
+        }
+    }
+
+    internal function s_list_reverse<T>(ll: List<T>): List<T> {
+        let ll = ListOps::s_value<T>(l);
+
+        if(ll.is<SeqList<T>>()) {
+#if CHK_SMALL_ONLY
+            return s_blockingfailure<Bool>();
+#else
+            return SeqListOps::s_list_reverse<T>(ll);
+#endif
+        }
+        else {
+            return VectorOps::s_list_reverse<T>(ll);
         }
     }
 

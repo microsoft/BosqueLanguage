@@ -751,6 +751,10 @@ class SMTTypeEmitter {
         return new SMTCallSimple("seq.len", [this.generateSeqMapTypeGetData(ttype, mm)]);
     }
 
+    generateSeqMapTypeGetLengthMinus1(ttype: MIRType, mm: SMTExp): SMTExp {
+        return new SMTCallSimple("-", [new SMTCallSimple("seq.len", [this.generateSeqMapTypeGetData(ttype, mm)]), new SMTConst("1")]);
+    }
+
     generateHavocConstructorName(tt: MIRType): string {
         return `_@@cons_${this.lookupTypeName(tt.typeID)}_entrypoint`;
     }
