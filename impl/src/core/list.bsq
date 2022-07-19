@@ -2044,7 +2044,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                     });
                 }
 #else
-                return ListOps::s_list_sort<T>[recursive?](this, cmp);
+                xxxx; //TODO: implement in Bosque for runtime -- merge sort?
 #endif
             }
         }
@@ -2077,7 +2077,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                     }
                 });
 #else
-                return ListOps::s_list_uniqueify<T>[recursive?](this, cmp);
+                xxxx; //TODO: implement in Bosque for runtime -- use map and reduce
 #endif
             }
         }

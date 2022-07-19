@@ -573,7 +573,7 @@ internal entity ListOps provides Some {
                 return List<T>{};
             }
             elif(SeqListOps::s_list_all_true(mask)) {
-                return this;
+                return l;
             }
             else {
                 let resl = ListOps::s_ensure_std_repr<T>(SeqListOps::s_list_mask_select<T>(ll, mask));

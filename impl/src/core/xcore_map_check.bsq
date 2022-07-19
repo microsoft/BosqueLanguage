@@ -231,7 +231,17 @@ internal entity MapOps provides Some {
 #if CHK_SMALL_ONLY
             return s_blockingfailure<Map<K, V>>();
 #else
-            return MapOps::s_into<K, V>(SeqMapOps::s_map_filter_pred<K, V>[recursive?](mm, p));
+            let mask = SeqMapOps::s_map_map_pred<T>[recursive?](mm, p);
+            if(SeqListOps::s_list_all_false(mask)) {
+                return Map<K, V>{};
+            }
+            elif(SeqListOps::s_list_all_true(mask)) {
+                return m;
+            }
+            else {
+                let resl = MapOps::s_ensure_std_repr<K, V>(SeqMapOps::s_map_mask_select<K, V>(mm, mask));
+                return MapOps::s_into<K, V>(resl);
+            }
 #endif
         }
         else {
