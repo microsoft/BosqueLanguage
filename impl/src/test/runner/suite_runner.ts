@@ -65,7 +65,8 @@ function generateICPPAssembly(srcCode: { fname: string, contents: string }[], ma
     }
 }
 
-function generateMASMForSMT(usercode: PackageConfig[], corecode: CodeFileInfo[], buildlevel: BuildLevel, entrypoint: {filename: string, names: string[]}): { masm: MIRAssembly | undefined, errors: string[] } {
+function generateMASMForSMT(usercode: PackageConfig[], corecode: CodeFileInfo[], buildlevel: BuildLevel, smallmodelonly: boolean, entrypoint: {filename: string, names: string[]}): { masm: MIRAssembly | undefined, errors: string[] } {
+    xxxx;
     const coreconfig = new PackageConfig(["CHECK_LIBS"], corecode);
 
     return MIREmitter.generateMASM(BuildApplicationMode.ModelChecker, [coreconfig, ...usercode], buildlevel, entrypoint);

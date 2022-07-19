@@ -11,7 +11,7 @@ import { constructCallGraphInfo, markSafeCalls } from "../../compiler/mir_callg"
 import { MIRInvokeKey } from "../../compiler/mir_ops";
 import { SMTBodyEmitter } from "./smtbody_emitter";
 import { SMTTypeEmitter } from "./smttype_emitter";
-import { SMTAssembly, SMTConstantDecl, SMTEntityCollectionEntryTypeDecl, SMTEntityCollectionSeqListTypeDecl, SMTEntityCollectionSeqMapEntryTypeDecl, SMTEntityCollectionSeqMapTypeDecl, SMTEntityCollectionTypeDecl, SMTEntityInternalOfTypeDecl, SMTEntityOfTypeDecl, SMTEntityStdDecl, SMTEphemeralListDecl, SMTFunction, SMTFunctionUninterpreted, SMTModelState, SMTRecordDecl, SMTTupleDecl } from "./smt_assembly";
+import { SMTAssembly, SMTConstantDecl, SMTEntityCollectionSeqListTypeDecl, SMTEntityCollectionSeqMapEntryTypeDecl, SMTEntityCollectionSeqMapTypeDecl, SMTEntityCollectionTypeDecl, SMTEntityInternalOfTypeDecl, SMTEntityOfTypeDecl, SMTEntityStdDecl, SMTEphemeralListDecl, SMTFunction, SMTFunctionUninterpreted, SMTModelState, SMTRecordDecl, SMTTupleDecl } from "./smt_assembly";
 import { SMTCallGeneral, SMTCallGeneralWOptMask, SMTCallSimple, SMTConst, SMTExp, SMTIf, SMTLet, SMTLetMulti, SMTMaskConstruct, SMTTypeInfo, SMTVar, VerifierOptions } from "./smt_exp";
 
 class SMTEmitter {
@@ -358,54 +358,71 @@ class SMTEmitter {
         const tdecl = this.bemitter.assembly.entityDecls.get(tt.typeID) as MIRPrimitiveListEntityTypeDecl;
         const lentrytype = this.temitter.getMIRType(tdecl.getTypeT().typeID);
 
+        xxxx;
         this.walkAndGenerateHavocType(lentrytype, havocfuncs, ufuncs);
 
+        assert(this.vopts.CONTAINER_MAX <= 3, "Only small input containters supported right now");
         const clen = new SMTCallSimple("ContainerSize@UFCons_API", [new SMTVar("path")]);
 
-        xxxx;
+        const vv1 = this.temitter.assembly.typeMap.get(`Vector1<${tdecl.getTypeT().typeID}>`) as MIRType;
+        const ehavoc1 = this.temitter.generateHavocConstructorCall_PassThrough(lentrytype, new SMTVar("path"));
+        const ccvar1 = this.bemitter.generateTempName();
+        const chkfun1 = this.temitter.generateResultIsErrorTest(lentrytype, new SMTVar(ccvar1));
+        const access1 = this.temitter.generateResultGetSuccess(lentrytype, new SMTVar(ccvar1));
 
-        let cargs: SMTExp[] = [];
-        for (let i = 0; i < this.vopts.CONTAINER_MAX; ++i) {
-            cargs.push(new SMTVar(`carg_${i}`));
-        }
+        const vv2 = this.temitter.assembly.typeMap.get(`Vector2<${tdecl.getTypeT().typeID}>`) as MIRType;
+        const ehavoc2 = this.temitter.generateHavocConstructorCall_PassThrough(lentrytype, new SMTVar("path"));
+        const ccvar2 = this.bemitter.generateTempName();
+        const chkfun2 = this.temitter.generateResultIsErrorTest(lentrytype, new SMTVar(ccvar2));
+        const access2 = this.temitter.generateResultGetSuccess(lentrytype, new SMTVar(ccvar2));
 
-        let optblock: SMTExp = new SMTLet(`carg_${this.vopts.CONTAINER_MAX - 1}`, this.temitter.generateHavocConstructorCall(lentrytype, new SMTVar("path"), new SMTConst(`${this.vopts.CONTAINER_MAX - 1}`)),
-            new SMTIf(
-                this.temitter.generateResultIsErrorTest(lentrytype, new SMTVar(`carg_${this.vopts.CONTAINER_MAX - 1}`)),
-                this.temitter.generateErrorResultAssert(tt),
-                this.temitter.generateResultTypeConstructorSuccess(tt, this.temitter.generateListTypeConstructorSeq(tt, new SMTCallSimple("seq.++", cargs.map((cc) => new SMTCallSimple("seq.unit", [this.temitter.generateResultGetSuccess(lentrytype, cc)])))))
-            )
-        );
+        const vv3 = this.temitter.assembly.typeMap.get(`Vector3<${tdecl.getTypeT().typeID}>`) as MIRType;
+        const ehavoc3 = this.temitter.generateHavocConstructorCall_PassThrough(lentrytype, new SMTVar("path"));
+        const ccvar3 = this.bemitter.generateTempName();
+        const chkfun3 = this.temitter.generateResultIsErrorTest(lentrytype, new SMTVar(ccvar3));
+        const access3 = this.temitter.generateResultGetSuccess(lentrytype, new SMTVar(ccvar3));
 
-        for (let i = this.vopts.CONTAINER_MAX - 1; i > 0; --i) {
-            const ehavoc = this.temitter.generateHavocConstructorCall(lentrytype, new SMTVar("path"), new SMTConst(`${i - 1}`));
-            const ccvar = `carg_${i - 1}`;
-            const chkfun = this.temitter.generateResultIsErrorTest(lentrytype, new SMTVar(ccvar));
+        const chk1: SMTExp = chkfun1;
+        const cons1: SMTExp = this.temitter.generateResultTypeConstructorSuccess(tt, this.temitter.coerce(new SMTCallSimple(this.temitter.getSMTConstructorName(vv1).cons, [access1]), vv1, tdecl.getTypeT()));
 
-            optblock = new SMTLet(ccvar, ehavoc,
-                new SMTIf(
-                    chkfun,
-                    this.temitter.generateErrorResultAssert(tt),
-                    new SMTIf(
-                        SMTCallSimple.makeEq(new SMTVar("len"), new SMTConst(`${i}`)),
-                        this.temitter.generateResultTypeConstructorSuccess(tt, this.temitter.generateListTypeConstructorSeq(tt, new SMTCallSimple("seq.++", cargs.slice(0, i).map((cc) => new SMTCallSimple("seq.unit", [this.temitter.generateResultGetSuccess(lentrytype, cc)]))))),
-                        optblock
-                    )
-                )
-            );
-        }
+        const chk2: SMTExp = SMTCallSimple.makeOrOf(chkfun1, chkfun2);
+        const cons2: SMTExp = this.temitter.generateResultTypeConstructorSuccess(tt, this.temitter.coerce(new SMTCallSimple(this.temitter.getSMTConstructorName(vv2).cons, [access1, access2]), vv2, tdecl.getTypeT()));
+
+        const chk3: SMTExp = SMTCallSimple.makeOrOf(chkfun1, chkfun2, chkfun3);
+        const cons3: SMTExp = this.temitter.generateResultTypeConstructorSuccess(tt, this.temitter.coerce(new SMTCallSimple(this.temitter.getSMTConstructorName(vv3).cons, [access1, access2, access3]), vv3, tdecl.getTypeT()));
 
         const hbody = new SMTLet("len", clen,
-            new SMTIf(SMTCallSimple.makeOrOf(new SMTCallSimple("<", [new SMTVar("len"), new SMTConst("0")]), new SMTCallSimple("<", [new SMTConst("@CONTAINERMAX"), new SMTVar("len")])),
-                this.temitter.generateErrorResultAssert(tt),
-                new SMTIf(
-                    SMTCallSimple.makeEq(new SMTVar("len"), new SMTConst("0")),
-                    this.temitter.generateResultTypeConstructorSuccess(tt, new SMTConst(`${this.temitter.getSMTTypeFor(tt).smttypename}@@empty`)),
-                    optblock
-                )
-            )
-        );
+                new SMTIf(SMTCallSimple.makeOrOf(new SMTCallSimple("<", [new SMTVar("len"), new SMTConst("0")]), new SMTCallSimple("<", [new SMTConst("@CONTAINERMAX"), new SMTVar("len")])),
+                    this.temitter.generateErrorResultAssert(tt),
+                    new SMTIf(SMTCallSimple.makeEq(new SMTVar("len"), new SMTConst("0")),
+                        this.temitter.generateResultTypeConstructorSuccess(tt, new SMTConst("BTerm@none")),
+                        new SMTLet(ccvar1, ehavoc1,
+                            new SMTIf(chk1,
+                                this.temitter.generateErrorResultAssert(tt),
+                                new SMTIf(SMTCallSimple.makeEq(new SMTVar("len"), new SMTConst("1")),
+                                    cons1,
+                                    new SMTLet(ccvar2, ehavoc2,
+                                        new SMTIf(chk2,
+                                            this.temitter.generateErrorResultAssert(tt),
+                                            new SMTIf(SMTCallSimple.makeEq(new SMTVar("len"), new SMTConst("2")),
+                                                cons2,
+                                                new SMTLet(ccvar3, ehavoc3,
+                                                    new SMTIf(chk3,
+                                                        this.temitter.generateErrorResultAssert(tt),
+                                                        cons3
+                                                        )
+                                                    )
+                                                )
+                                            )
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    )
+                );
 
+        
         this.assembly.functions.push(SMTFunction.create(this.temitter.generateHavocConstructorName(tt), [{ vname: "path", vtype: this.havocPathType }], this.temitter.generateResultType(tt), hbody));
     }
 
@@ -421,23 +438,60 @@ class SMTEmitter {
         assert(false, "generateAPITypeConstructorFunction_Set");
     }
 
-    private generateMapTypeConstructorElements_EntryPoint(ttype: MIRType, keys: SMTExp[], values: SMTExp[]): SMTExp {
-        const mirktype = (this.temitter.assembly.entityDecls.get(ttype.typeID) as MIRPrimitiveMapEntityTypeDecl).getTypeK();
+    private generateAPITypeConstructorFunction_Map(tt: MIRType, havocfuncs: Set<String>, ufuncs: SMTFunctionUninterpreted[]) {
+        havocfuncs.add(this.temitter.generateHavocConstructorName(tt));
+        const tdecl = this.bemitter.assembly.entityDecls.get(tt.typeID) as MIRPrimitiveMapEntityTypeDecl;
 
-        let consargs: SMTExp[] = [];
-        for(let i = 0; i < keys.length; ++i) {
-            consargs.push(new SMTCallSimple("seq.unit", [this.temitter.generateMapEntryTypeConstructor(ttype, keys[i], values[i])]));
-        }
-        const consexp = this.temitter.generateMapTypeConstructor(ttype, new SMTCallSimple("seq.++", consargs));
+        const lentrytype = this.temitter.getMIRType(`[${tdecl.getTypeK().typeID}, ${tdecl.getTypeV().typeID}]`);
 
-        xxxx;
+        this.walkAndGenerateHavocType(lentrytype, havocfuncs, ufuncs);
 
-        const smtktype = this.temitter.getSMTTypeFor(mirktype);
-        if (consargs.length == 1) {
-            return consexp;
-        }
-        else {
-            const cmpop: string = smtktype.isGeneralKeyType() ? `${smtktype.smttypename}@less` : "BKey@less";
+        assert(this.vopts.CONTAINER_MAX <= 3, "Only small input containters supported right now");
+        const clen = new SMTCallSimple("ContainerSize@UFCons_API", [new SMTVar("path")]);
+
+        const vv1 = this.temitter.assembly.typeMap.get(`Vector1<${lentrytype.typeID}>`) as MIRType;
+        const ehavoc1 = this.temitter.generateHavocConstructorCall_PassThrough(lentrytype, new SMTVar("path"));
+        const ccvar1 = this.bemitter.generateTempName();
+        const chkfun1 = this.temitter.generateResultIsErrorTest(lentrytype, new SMTVar(ccvar1));
+        const access1 = this.temitter.generateResultGetSuccess(lentrytype, new SMTVar(ccvar1));
+
+        const vv2 = this.temitter.assembly.typeMap.get(`Vector2<${lentrytype.typeID}>`) as MIRType;
+        const v2decl = this.temitter.assembly.entityDecls.get(`Vector2<${lentrytype.typeID}>`) as MIRObjectEntityTypeDecl;
+        const ehavoc2 = this.temitter.generateHavocConstructorCall_PassThrough(lentrytype, new SMTVar("path"));
+        const ccvar2 = this.bemitter.generateTempName();
+        const chkfun2 = this.temitter.generateResultIsErrorTest(lentrytype, new SMTVar(ccvar2));
+        const access2 = this.temitter.generateResultGetSuccess(lentrytype, new SMTVar(ccvar2));
+
+        const vv3 = this.temitter.assembly.typeMap.get(`Vector3<${lentrytype.typeID}>`) as MIRType;
+        const v3decl = this.temitter.assembly.entityDecls.get(`Vector3<${lentrytype.typeID}>`) as MIRObjectEntityTypeDecl;
+        const ehavoc3 = this.temitter.generateHavocConstructorCall_PassThrough(lentrytype, new SMTVar("path"));
+        const ccvar3 = this.bemitter.generateTempName();
+        const chkfun3 = this.temitter.generateResultIsErrorTest(lentrytype, new SMTVar(ccvar3));
+        const access3 = this.temitter.generateResultGetSuccess(lentrytype, new SMTVar(ccvar3));
+
+        const chk1: SMTExp = chkfun1;
+        const cons1: SMTExp = this.temitter.generateResultTypeConstructorSuccess(tt, this.temitter.coerce(new SMTCallSimple(this.temitter.getSMTConstructorName(vv1).cons, [access1]), vv1, tdecl.getTypeT()));
+
+        const chk2: SMTExp = SMTCallSimple.makeOrOf(chkfun1, chkfun2);
+        const cons2: SMTExp = this.temitter.generateResultTypeConstructorSuccess(tt, this.temitter.coerce(new SMTCallSimple(this.temitter.getSMTConstructorName(vv2).cons, [access1, access2]), vv2, tdecl.getTypeT()));
+
+        const chk3: SMTExp = SMTCallSimple.makeOrOf(chkfun1, chkfun2, chkfun3);
+        const cons3: SMTExp = this.temitter.generateResultTypeConstructorSuccess(tt, this.temitter.coerce(new SMTCallSimple(this.temitter.getSMTConstructorName(vv3).cons, [access1, access2, access3]), vv3, tdecl.getTypeT()));
+
+        const smtktype = this.temitter.getSMTTypeFor(tdecl.getTypeK());
+        const cmpop: string = smtktype.isGeneralKeyType() ? `${smtktype.smttypename}@less` : "BKey@less";
+
+        const vexpvalue2 = this.temitter.generateResultGetSuccess(vv2, new SMTVar(ccvar2));
+        const vexp20 = new SMTCallSimple(this.temitter.generateTupleIndexGetFunction(vv2.getUniqueTupleTargetType(), 0), [new SMTCallSimple(this.temitter.generateEntityFieldGetFunction(v2decl, v2decl.fields[0]), [vexpvalue2])]);
+        const vexp21 = new SMTCallSimple(this.temitter.generateTupleIndexGetFunction(vv2.getUniqueTupleTargetType(), 0), [new SMTCallSimple(this.temitter.generateEntityFieldGetFunction(v2decl, v2decl.fields[1]), [vexpvalue2])]);
+        const cmptest2 = new SMTCallSimple(cmpop, [vexp20, vexp21]);
+
+        const vexpvalue3 = this.temitter.generateResultGetSuccess(vv3, new SMTVar(ccvar3));
+        const vexp30 = new SMTCallSimple(this.temitter.generateTupleIndexGetFunction(vv3.getUniqueTupleTargetType(), 0), [new SMTCallSimple(this.temitter.generateEntityFieldGetFunction(v3decl, v3decl.fields[0]), [vexpvalue3])]);
+        const vexp31 = new SMTCallSimple(this.temitter.generateTupleIndexGetFunction(vv3.getUniqueTupleTargetType(), 0), [new SMTCallSimple(this.temitter.generateEntityFieldGetFunction(v3decl, v3decl.fields[1]), [vexpvalue3])]);
+        const vexp32 = new SMTCallSimple(this.temitter.generateTupleIndexGetFunction(vv3.getUniqueTupleTargetType(), 0), [new SMTCallSimple(this.temitter.generateEntityFieldGetFunction(v3decl, v3decl.fields[2]), [vexpvalue3])]);
+        const cmptest3 = SMTCallSimple.makeAndOf(new SMTCallSimple(cmpop, [vexp30, vexp31]), new SMTCallSimple(cmpop, [vexp31, vexp32]));
+        
             let cmps: SMTExp[] = [];
             for (let i = 0; i < keys.length - 1; ++i) {
                 cmps.push(new SMTCallSimple(cmpop, [keys[i], keys[i + 1]]));
@@ -448,77 +502,37 @@ class SMTEmitter {
                 this.temitter.generateResultTypeConstructorSuccess(ttype, consexp),
                 this.temitter.generateErrorResultAssert(ttype)
             );
-        }
-    }
 
-    private generateAPITypeConstructorFunction_Map(tt: MIRType, havocfuncs: Set<String>, ufuncs: SMTFunctionUninterpreted[]) {
-        havocfuncs.add(this.temitter.generateHavocConstructorName(tt));
-        const tdecl = this.bemitter.assembly.entityDecls.get(tt.typeID) as MIRPrimitiveMapEntityTypeDecl;
-
-        const clen = new SMTCallSimple("ContainerSize@UFCons_API", [new SMTVar("path")]);
-
-        this.walkAndGenerateHavocType(tdecl.getTypeK(), havocfuncs, ufuncs);
-        this.walkAndGenerateHavocType(tdecl.getTypeV(), havocfuncs, ufuncs);
-
-        let ckeys: SMTExp[] = [];
-        let cvalues: SMTExp[] = [];
-        for(let i = 0; i < this.vopts.CONTAINER_MAX; ++i) {
-            ckeys.push(new SMTVar(`keyarg_${i}`));
-            cvalues.push(new SMTVar(`valarg_${i}`))
-        }
-
-        let optblock: SMTExp = new SMTLetMulti([
-                {
-                    vname: `keyarg_${this.vopts.CONTAINER_MAX - 1}`, 
-                    value: this.temitter.generateHavocConstructorCall(tdecl.getTypeK(), this.temitter.generateHavocConstructorPathExtend(new SMTVar("path"), new SMTConst(`${this.vopts.CONTAINER_MAX - 1}`)), new SMTConst("0"))
-                },
-                {
-                    vname: `valarg_${this.vopts.CONTAINER_MAX - 1}`, 
-                    value: this.temitter.generateHavocConstructorCall(tdecl.getTypeV(), this.temitter.generateHavocConstructorPathExtend(new SMTVar("path"), new SMTConst(`${this.vopts.CONTAINER_MAX - 1}`)), new SMTConst("1"))
-                },
-            ],
-            new SMTIf(
-                SMTCallSimple.makeOrOf(this.temitter.generateResultIsErrorTest(tdecl.getTypeK(), new SMTVar(`keyarg_${this.vopts.CONTAINER_MAX - 1}`)), this.temitter.generateResultIsErrorTest(tdecl.getTypeV(), new SMTVar(`valarg_${this.vopts.CONTAINER_MAX - 1}`))),
-                this.temitter.generateErrorResultAssert(tt),
-                this.temitter.generateResultTypeConstructorSuccess(tt, this.generateMapTypeConstructorElements_EntryPoint(tt, ckeys.map((cc) => this.temitter.generateResultGetSuccess(tdecl.getTypeK(), cc)), cvalues.map((cc) => this.temitter.generateResultGetSuccess(tdecl.getTypeV(), cc))))
-            )
-        );
-            
-        for (let i = this.vopts.CONTAINER_MAX - 1; i > 0; --i) {
-            const keyhavoc = this.temitter.generateHavocConstructorCall(tdecl.getTypeK(), this.temitter.generateHavocConstructorPathExtend(new SMTVar("path"), new SMTConst(`${i-1}`)), new SMTConst("0"));
-            const keyvar = `keyarg_${i-1}`;
-            const keychk = this.temitter.generateResultIsErrorTest(tdecl.getTypeK(), new SMTVar(keyvar));
-
-            const valhavoc = this.temitter.generateHavocConstructorCall(tdecl.getTypeV(), this.temitter.generateHavocConstructorPathExtend(new SMTVar("path"), new SMTConst(`${i-1}`)), new SMTConst("1"));
-            const valvar = `valarg_${i-1}`;
-            const valchk = this.temitter.generateResultIsErrorTest(tdecl.getTypeV(), new SMTVar(valvar));
-
-            optblock = new SMTLetMulti([
-                    { vname: keyvar, value: keyhavoc },
-                    { vname: valvar, value: valhavoc }
-                ], 
-                new SMTIf(
-                    SMTCallSimple.makeOrOf(keychk, valchk),
-                    this.temitter.generateErrorResultAssert(tt),
-                    new SMTIf(
-                        SMTCallSimple.makeEq(new SMTVar("len"), new SMTConst(`${i}`)),
-                        this.temitter.generateResultTypeConstructorSuccess(tt, this.generateMapTypeConstructorElements_EntryPoint(tt, ckeys.slice(0, i).map((cc) => this.temitter.generateResultGetSuccess(tdecl.getTypeK(), cc)), cvalues.slice(0, i).map((cc) => this.temitter.generateResultGetSuccess(tdecl.getTypeV(), cc)))),
-                        optblock
-                    )
-                )
-            );
-        }
-        
         const hbody = new SMTLet("len", clen,
-            new SMTIf(SMTCallSimple.makeOrOf(new SMTCallSimple("<", [new SMTVar("len"), new SMTConst("0")]), new SMTCallSimple("<", [new SMTConst("@CONTAINERMAX"), new SMTVar("len")])),
-                this.temitter.generateErrorResultAssert(tt),
-                new SMTIf(
-                    SMTCallSimple.makeEq(new SMTVar("len"), new SMTConst("0")),
-                    this.temitter.generateResultTypeConstructorSuccess(tt, new SMTConst(`${this.temitter.getSMTTypeFor(tt).smttypename}@@empty`)),
-                    optblock
-                )
-            )
-        );
+                new SMTIf(SMTCallSimple.makeOrOf(new SMTCallSimple("<", [new SMTVar("len"), new SMTConst("0")]), new SMTCallSimple("<", [new SMTConst("@CONTAINERMAX"), new SMTVar("len")])),
+                    this.temitter.generateErrorResultAssert(tt),
+                    new SMTIf(SMTCallSimple.makeEq(new SMTVar("len"), new SMTConst("0")),
+                        this.temitter.generateResultTypeConstructorSuccess(tt, new SMTConst("BTerm@none")),
+                        new SMTLet(ccvar1, ehavoc1,
+                            new SMTIf(chk1,
+                                this.temitter.generateErrorResultAssert(tt),
+                                new SMTIf(SMTCallSimple.makeEq(new SMTVar("len"), new SMTConst("1")),
+                                    cons1,
+                                    new SMTLet(ccvar2, ehavoc2,
+                                        new SMTIf(chk2,
+                                            this.temitter.generateErrorResultAssert(tt),
+                                            new SMTIf(SMTCallSimple.makeEq(new SMTVar("len"), new SMTConst("2")),
+                                                cons2,
+                                                new SMTLet(ccvar3, ehavoc3,
+                                                    new SMTIf(chk3,
+                                                        this.temitter.generateErrorResultAssert(tt),
+                                                        cons3
+                                                        )
+                                                    )
+                                                )
+                                            )
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    )
+                );
 
         this.assembly.functions.push(SMTFunction.create(this.temitter.generateHavocConstructorName(tt), [{ vname: "path", vtype: this.havocPathType }], this.temitter.generateResultType(tt), hbody));
     }
@@ -694,47 +708,12 @@ class SMTEmitter {
         const smttype = this.temitter.getSMTTypeFor(mirtype);
         const esmttype = this.temitter.generateSeqMapEntryType(mirtype);
 
-        const smtk = this.temitter.getSMTTypeFor(edecl.terms.get("K") as MIRType, true);
-        xxxx;
-        const smtvtup = this.temitter.getSMTTypeFor(this.temitter.getMIRType(`[${(edecl.terms.get("K") as MIRType).typeID}, ${(edecl.terms.get("V") as MIRType).typeID}]`), true);
-
-        const mminfo = this.temitter.generateSeqMapTypeConsInfo(mirtype);
-        const consfuncs = this.temitter.getSMTConstructorName(mirtype);
-        const consdecl = {
-            cname: consfuncs.cons, 
-            cargs: [
-                { fname: mminfo.lenf, ftype: "BNat" },
-                { fname: mminfo.arrayf, ftype: `(Array ${smtk.smttypename} ${esmttype.smttypename})` }
-            ]
-        };
-
-        const econsfuncs = this.temitter.generateLargeMapEntryTypeConsInfo(mirtype);
-        const econsdecl = {
-            cname: econsfuncs.cons,
-            cargs: [
-                { fname: econsfuncs.keyf, ftype: smtk.smttypename},
-                { fname: econsfuncs.valf, ftype: smtvtup.smttypename}
-            ]
-        };
-        const esmtdecl = new SMTEntityCollectionSeqMapEntryTypeDecl(esmttype.smttypename, esmttype.smttypetag, econsdecl, econsfuncs.empty);
-
-        const smtdecl = new SMTEntityCollectionSeqMapTypeDecl(smttype.smttypename, smttype.smttypetag, consdecl, consfuncs.box, consfuncs.bfield, esmtdecl);
-        this.assembly.auxCollectionDecls.push(smtdecl);
-
-        /*
-        const mirtype = this.temitter.getMIRType(edecl.tkey);
-        const smttype = this.temitter.getSMTTypeFor(mirtype);
-        const esmttype = this.temitter.generateMapEntryType(mirtype);
-
         const consopfuncs = this.temitter.getSMTConstructorName(mirtype);
-        const consfuncs = this.temitter.generateMapTypeConsInfo(mirtype);
+        const consfuncs = this.temitter.generateSeqMapTypeConsInfo(mirtype);
 
-        const efunc = this.temitter.generateMapTypeConstructor(mirtype, new SMTConst(`(as seq.empty (Seq ${esmttype.smttypename}))`));
-        const emptyconst = {fkind: smttype.smttypename, fname: smttype.smttypename + "@@empty", fexp: efunc.emitSMT2(undefined)};
-
-        const smtk = this.temitter.getSMTTypeFor(edecl.getTypeK());
-        const smtv = this.temitter.getSMTTypeFor(edecl.getTypeV());
-
+        const smtk = this.temitter.getSMTTypeFor(edecl.terms.get("K") as MIRType, true);
+        const smtv = this.temitter.getSMTTypeFor(edecl.terms.get("V") as MIRType, true);
+        
         const consdecl = {
             cname: consfuncs.cons,
             cargs: [
@@ -742,7 +721,7 @@ class SMTEmitter {
             ]
         };
 
-        const econsfuncs = this.temitter.generateMapEntryTypeConsInfo(mirtype);
+        const econsfuncs = this.temitter.generateSeqMapEntryTypeConsInfo(mirtype);
         const econsdecl = {
             cname: econsfuncs.cons,
             cargs: [
@@ -750,12 +729,10 @@ class SMTEmitter {
                 { fname: econsfuncs.valf, ftype: smtv.smttypename}
             ]
         };
+        const esmtdecl = new SMTEntityCollectionSeqMapEntryTypeDecl(esmttype.smttypename, esmttype.smttypetag, econsdecl);
 
-        const esmtdecl = new SMTEntityCollectionEntryTypeDecl(esmttype.smttypename, esmttype.smttypetag, econsdecl);
-
-        const smtdecl = new SMTEntityCollectionTypeDecl(smttype.smttypename, smttype.smttypetag, consdecl, consopfuncs.box, consopfuncs.bfield, emptyconst, esmtdecl);
-        this.assembly.entityDecls.push(smtdecl);
-        */
+        const smtdecl = new SMTEntityCollectionSeqMapTypeDecl(smttype.smttypename, smttype.smttypetag, consdecl, consopfuncs.box, consopfuncs.bfield, esmtdecl);
+        this.assembly.auxCollectionDecls.push(smtdecl);
     }
 
     private processVirtualInvokes() {

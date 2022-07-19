@@ -200,13 +200,11 @@ class SMTEntityCollectionSeqMapTypeDecl extends SMTEntityDecl {
 
 class SMTEntityCollectionSeqMapEntryTypeDecl extends SMTEntityDecl {
     readonly consf: { cname: string, cargs: { fname: string, ftype: string }[] };
-    readonly emptyf: string;
 
-    constructor(smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: string }[] }, emptyf: string) {
+    constructor(smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: string }[] }) {
         super(false, smtname, typetag, "INVALID_SPECIAL", "INVALID_SPECIAL");
 
         this.consf = consf;
-        this.emptyf = emptyf;
     }
 }
 
@@ -593,7 +591,7 @@ class SMTAssembly {
             .map((tt) => {
                 return {
                     decl: `(${(tt as SMTEntityCollectionSeqMapTypeDecl).entryinfo.smtname} 0)`,
-                    consf: `( (${(tt as SMTEntityCollectionSeqMapTypeDecl).entryinfo.consf.cname} ${(tt as SMTEntityCollectionSeqMapTypeDecl).entryinfo.consf.cargs.map((te) => `(${te.fname} ${te.ftype})`).join(" ")}) (${(tt as SMTEntityCollectionSeqMapTypeDecl).entryinfo.emptyf}) )`
+                    consf: `( (${(tt as SMTEntityCollectionSeqMapTypeDecl).entryinfo.consf.cname} ${(tt as SMTEntityCollectionSeqMapTypeDecl).entryinfo.consf.cargs.map((te) => `(${te.fname} ${te.ftype})`).join(" ")}) )`
                 };
             });
 
