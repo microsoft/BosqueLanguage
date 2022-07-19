@@ -4152,6 +4152,12 @@ class Parser {
                 else if(ename === "Map") {
                     attributes.push("__map_type");
                 }
+                else if(ename === "SeqList") {
+                    attributes.push("__seqlist_type");
+                }
+                else if(ename === "SeqMap") {
+                    attributes.push("__seqmap_type");
+                }
                 else {
                     //not special
                 }

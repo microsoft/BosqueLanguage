@@ -6,12 +6,12 @@
 import * as assert  from "assert";
 import { BSQRegex } from "../../ast/bsqregex";
 
-import { MIRAssembly, MIRConceptType, MIRConstructableEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIRDataBufferInternalEntityTypeDecl, MIRDataStringInternalEntityTypeDecl, MIREntityType, MIREntityTypeDecl, MIREnumEntityTypeDecl, MIRFieldDecl, MIRInvokeDecl, MIRObjectEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRRecordType, MIRStringOfInternalEntityTypeDecl, MIRTupleType, MIRType, MIRTypeOption, SymbolicActionMode } from "../../compiler/mir_assembly";
+import { MIRAssembly, MIRConceptType, MIRConstructableEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIRDataBufferInternalEntityTypeDecl, MIRDataStringInternalEntityTypeDecl, MIREntityType, MIREntityTypeDecl, MIREnumEntityTypeDecl, MIRFieldDecl, MIRInvokeDecl, MIRObjectEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRRecordType, MIRStringOfInternalEntityTypeDecl, MIRTupleType, MIRType, MIRTypeOption, SymbolicActionMode } from "../../compiler/mir_assembly";
 import { constructCallGraphInfo, markSafeCalls } from "../../compiler/mir_callg";
 import { MIRInvokeKey } from "../../compiler/mir_ops";
 import { SMTBodyEmitter } from "./smtbody_emitter";
 import { SMTTypeEmitter } from "./smttype_emitter";
-import { SMTAssembly, SMTConstantDecl, SMTEntityCollectionEntryTypeDecl, SMTEntityCollectionTypeDecl, SMTEntityInternalOfTypeDecl, SMTEntityOfTypeDecl, SMTEntityStdDecl, SMTEphemeralListDecl, SMTFunction, SMTFunctionUninterpreted, SMTModelState, SMTRecordDecl, SMTTupleDecl } from "./smt_assembly";
+import { SMTAssembly, SMTConstantDecl, SMTEntityCollectionEntryTypeDecl, SMTEntityCollectionSeqListTypeDecl, SMTEntityCollectionSeqMapEntryTypeDecl, SMTEntityCollectionSeqMapTypeDecl, SMTEntityCollectionTypeDecl, SMTEntityInternalOfTypeDecl, SMTEntityOfTypeDecl, SMTEntityStdDecl, SMTEphemeralListDecl, SMTFunction, SMTFunctionUninterpreted, SMTModelState, SMTRecordDecl, SMTTupleDecl } from "./smt_assembly";
 import { SMTCallGeneral, SMTCallGeneralWOptMask, SMTCallSimple, SMTConst, SMTExp, SMTIf, SMTLet, SMTLetMulti, SMTMaskConstruct, SMTTypeInfo, SMTVar, VerifierOptions } from "./smt_exp";
 
 class SMTEmitter {
@@ -362,6 +362,8 @@ class SMTEmitter {
 
         const clen = new SMTCallSimple("ContainerSize@UFCons_API", [new SMTVar("path")]);
 
+        xxxx;
+
         let cargs: SMTExp[] = [];
         for (let i = 0; i < this.vopts.CONTAINER_MAX; ++i) {
             cargs.push(new SMTVar(`carg_${i}`));
@@ -427,6 +429,8 @@ class SMTEmitter {
             consargs.push(new SMTCallSimple("seq.unit", [this.temitter.generateMapEntryTypeConstructor(ttype, keys[i], values[i])]));
         }
         const consexp = this.temitter.generateMapTypeConstructor(ttype, new SMTCallSimple("seq.++", consargs));
+
+        xxxx;
 
         const smtktype = this.temitter.getSMTTypeFor(mirktype);
         if (consargs.length == 1) {
@@ -565,7 +569,7 @@ class SMTEmitter {
         const consdecl = {
             cname: consfuncs.cons, 
             cargs: edecl.fields.map((fd) => {
-                return { fname: this.temitter.generateEntityFieldGetFunction(edecl, fd), ftype: this.temitter.getSMTTypeFor(this.temitter.getMIRType(fd.declaredType)) };
+                return { fname: this.temitter.generateEntityFieldGetFunction(edecl, fd), ftype: this.temitter.getSMTTypeFor(this.temitter.getMIRType(fd.declaredType), true) };
             })
         };
 
@@ -640,20 +644,27 @@ class SMTEmitter {
         const mirtype = this.temitter.getMIRType(edecl.tkey);
         const smttype = this.temitter.getSMTTypeFor(mirtype);
 
-        const consopfuncs = this.temitter.getSMTConstructorName(mirtype);
+        const consfuncs = this.temitter.getSMTConstructorName(mirtype);
 
-        const consfuncs = this.temitter.generateListTypeConsInfoSeq(mirtype);
+        const smtdecl = new SMTEntityCollectionTypeDecl(smttype.smttypename, smttype.smttypetag, consfuncs.box, consfuncs.bfield);
+        this.assembly.entityDecls.push(smtdecl);
+    }
 
+    private processPrimitiveSeqListEntityDecl(edecl: MIRPrimitiveInternalEntityTypeDecl) {
+        const mirtype = this.temitter.getMIRType(edecl.tkey);
+        const smttype = this.temitter.getSMTTypeFor(mirtype);
+
+        const llinfo = this.temitter.generateSeqListTypeConsInfoSeq(mirtype);
+        const consfuncs = this.temitter.getSMTConstructorName(mirtype);
         const consdecl = {
-            cname: consfuncs.cons,
-            cargs: [{ fname: consfuncs.seqf, ftype: `(Seq ${this.temitter.getSMTTypeFor(edecl.getTypeT()).smttypename})` }]
+            cname: consfuncs.cons, 
+            cargs: [
+                { fname: llinfo.seqf, ftype: `(Seq ${this.temitter.getSMTTypeFor(edecl.terms.get("T") as MIRType, true).smttypename})` },
+            ]
         };
 
-        const efunc = this.temitter.generateListTypeConstructorSeq(mirtype, new SMTConst(`(as seq.empty (Seq ${this.temitter.getSMTTypeFor(edecl.getTypeT()).smttypename}))`));
-        const emptyconst = { fkind: smttype.smttypename, fname: smttype.smttypename + "@@empty", fexp: efunc.emitSMT2(undefined) };
-
-        const smtdecl = new SMTEntityCollectionTypeDecl(smttype.smttypename, smttype.smttypetag, consdecl, consopfuncs.box, consopfuncs.bfield, emptyconst, undefined);
-        this.assembly.entityDecls.push(smtdecl);
+        const smtdecl = new SMTEntityCollectionSeqListTypeDecl(smttype.smttypename, smttype.smttypetag, consdecl, consfuncs.box, consfuncs.bfield);
+        this.assembly.auxCollectionDecls.push(smtdecl);
     }
 
     private processPrimitiveStackEntityDecl(edecl: MIRPrimitiveStackEntityTypeDecl) {
@@ -669,6 +680,48 @@ class SMTEmitter {
     }
 
     private processPrimitiveMapEntityDecl(edecl: MIRPrimitiveMapEntityTypeDecl) {
+        const mirtype = this.temitter.getMIRType(edecl.tkey);
+        const smttype = this.temitter.getSMTTypeFor(mirtype);
+
+        const consfuncs = this.temitter.getSMTConstructorName(mirtype);
+
+        const smtdecl = new SMTEntityCollectionTypeDecl(smttype.smttypename, smttype.smttypetag, consfuncs.box, consfuncs.bfield);
+        this.assembly.entityDecls.push(smtdecl);
+    }
+
+    private processPrimitiveSeqMapEntityDecl(edecl: MIRPrimitiveInternalEntityTypeDecl) {
+        const mirtype = this.temitter.getMIRType(edecl.tkey);
+        const smttype = this.temitter.getSMTTypeFor(mirtype);
+        const esmttype = this.temitter.generateSeqMapEntryType(mirtype);
+
+        const smtk = this.temitter.getSMTTypeFor(edecl.terms.get("K") as MIRType, true);
+        xxxx;
+        const smtvtup = this.temitter.getSMTTypeFor(this.temitter.getMIRType(`[${(edecl.terms.get("K") as MIRType).typeID}, ${(edecl.terms.get("V") as MIRType).typeID}]`), true);
+
+        const mminfo = this.temitter.generateSeqMapTypeConsInfo(mirtype);
+        const consfuncs = this.temitter.getSMTConstructorName(mirtype);
+        const consdecl = {
+            cname: consfuncs.cons, 
+            cargs: [
+                { fname: mminfo.lenf, ftype: "BNat" },
+                { fname: mminfo.arrayf, ftype: `(Array ${smtk.smttypename} ${esmttype.smttypename})` }
+            ]
+        };
+
+        const econsfuncs = this.temitter.generateLargeMapEntryTypeConsInfo(mirtype);
+        const econsdecl = {
+            cname: econsfuncs.cons,
+            cargs: [
+                { fname: econsfuncs.keyf, ftype: smtk.smttypename},
+                { fname: econsfuncs.valf, ftype: smtvtup.smttypename}
+            ]
+        };
+        const esmtdecl = new SMTEntityCollectionSeqMapEntryTypeDecl(esmttype.smttypename, esmttype.smttypetag, econsdecl, econsfuncs.empty);
+
+        const smtdecl = new SMTEntityCollectionSeqMapTypeDecl(smttype.smttypename, smttype.smttypetag, consdecl, consfuncs.box, consfuncs.bfield, esmtdecl);
+        this.assembly.auxCollectionDecls.push(smtdecl);
+
+        /*
         const mirtype = this.temitter.getMIRType(edecl.tkey);
         const smttype = this.temitter.getSMTTypeFor(mirtype);
         const esmttype = this.temitter.generateMapEntryType(mirtype);
@@ -702,6 +755,7 @@ class SMTEmitter {
 
         const smtdecl = new SMTEntityCollectionTypeDecl(smttype.smttypename, smttype.smttypetag, consdecl, consopfuncs.box, consopfuncs.bfield, emptyconst, esmtdecl);
         this.assembly.entityDecls.push(smtdecl);
+        */
     }
 
     private processVirtualInvokes() {
@@ -958,6 +1012,12 @@ class SMTEmitter {
             else if (edcl.attributes.includes("__map_type")) {
                 this.processPrimitiveMapEntityDecl(edcl as MIRPrimitiveMapEntityTypeDecl);
             }
+            else if(edcl.attributes.includes("__seqlist_type")) {
+                this.processPrimitiveSeqListEntityDecl(edcl as MIRPrimitiveInternalEntityTypeDecl);
+            }
+            else if(edcl.attributes.includes("__seqmap_type")) {
+                this.processPrimitiveSeqMapEntityDecl(edcl as MIRPrimitiveInternalEntityTypeDecl);
+            }
             else {
                 //Don't need to do anything
             }
@@ -1037,7 +1097,7 @@ class SMTEmitter {
             const smttype = this.temitter.getSMTTypeFor(mirtype);
             const ops = this.temitter.getSMTConstructorName(mirtype);
             const consargs = ttup.entries.map((entry, i) => {
-                return { fname: this.temitter.generateTupleIndexGetFunction(ttup, i), ftype: this.temitter.getSMTTypeFor(entry) };
+                return { fname: this.temitter.generateTupleIndexGetFunction(ttup, i), ftype: this.temitter.getSMTTypeFor(entry, true) };
             });
 
             this.assembly.tupleDecls.push(new SMTTupleDecl(smttype.smttypename, ttag, { cname: ops.cons, cargs: consargs }, ops.box, ops.bfield));
@@ -1058,7 +1118,7 @@ class SMTEmitter {
             const smttype = this.temitter.getSMTTypeFor(mirtype);
             const ops = this.temitter.getSMTConstructorName(mirtype);
             const consargs = trec.entries.map((entry) => {
-                return { fname: this.temitter.generateRecordPropertyGetFunction(trec, entry.pname), ftype: this.temitter.getSMTTypeFor(entry.ptype) };
+                return { fname: this.temitter.generateRecordPropertyGetFunction(trec, entry.pname), ftype: this.temitter.getSMTTypeFor(entry.ptype, true) };
             });
 
             this.assembly.recordDecls.push(new SMTRecordDecl(smttype.smttypename, ttag, { cname: ops.cons, cargs: consargs }, ops.box, ops.bfield));
@@ -1070,7 +1130,7 @@ class SMTEmitter {
             const smttype = this.temitter.getSMTTypeFor(mirtype);
             const ops = this.temitter.getSMTConstructorName(mirtype);
             const consargs = ephl.entries.map((entry, i) => {
-                return { fname: this.temitter.generateEphemeralListGetFunction(ephl, i), ftype: this.temitter.getSMTTypeFor(entry) };
+                return { fname: this.temitter.generateEphemeralListGetFunction(ephl, i), ftype: this.temitter.getSMTTypeFor(entry, true) };
             });
 
             this.assembly.ephemeralDecls.push(new SMTEphemeralListDecl(smttype.smttypename, { cname: ops.cons, cargs: consargs }));

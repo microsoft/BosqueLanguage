@@ -22,7 +22,8 @@ type SMT2FileInfo = {
     KEY_BOX_OPS: string[],
     TUPLE_INFO: { decls: string[], constructors: string[], boxing: string[] },
     RECORD_INFO: { decls: string[], constructors: string[], boxing: string[] },
-    TYPE_INFO: { decls: string[], constructors: string[], boxing: string[] }
+    TYPE_INFO: { decls: string[], constructors: string[], boxing: string[] },
+    COLLECTION_INFO: string[],
     EPHEMERAL_DECLS: { decls: string[], constructors: string[] },
     RESULT_INFO: { decls: string[], constructors: string[] },
     MASK_INFO: { decls: string[], constructors: string[] },
@@ -171,27 +172,41 @@ class SMTEntityInternalOfTypeDecl extends SMTEntityDecl {
     }
 }
 
-class SMTEntityCollectionEntryTypeDecl extends SMTEntityDecl {
+class SMTEntityCollectionTypeDecl extends SMTEntityDecl {
+    constructor(smtname: string, typetag: string, boxf: string, ubf: string) {
+        super(false, smtname, typetag, boxf, ubf);
+    }
+}
+
+class SMTEntityCollectionSeqListTypeDecl extends SMTEntityDecl {
     readonly consf: { cname: string, cargs: { fname: string, ftype: string }[] };
 
-    constructor(smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: string }[] }) {
-        super(false, smtname, typetag, "INVALID_SPECIAL", "INVALID_SPECIAL");
-
+    constructor(smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: string }[] }, boxf: string, ubf: string) {
+        super(false, smtname, typetag, boxf, ubf);
         this.consf = consf;
     }
 }
 
-class SMTEntityCollectionTypeDecl extends SMTEntityDecl {
+class SMTEntityCollectionSeqMapTypeDecl extends SMTEntityDecl {
     readonly consf: { cname: string, cargs: { fname: string, ftype: string }[] };
-    readonly emptyconst: {fkind: string, fname: string, fexp: string};
-    readonly entrydecl: SMTEntityCollectionEntryTypeDecl | undefined;
+    readonly entryinfo: SMTEntityCollectionSeqMapEntryTypeDecl;
 
-    constructor(smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: string }[] }, boxf: string, ubf: string, emptyconst: {fkind: string, fname: string, fexp: string}, entrydecl: SMTEntityCollectionEntryTypeDecl | undefined) {
+    constructor(smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: string }[] }, boxf: string, ubf: string, entryinfo: SMTEntityCollectionSeqMapEntryTypeDecl) {
         super(false, smtname, typetag, boxf, ubf);
+        this.consf = consf;
+        this.entryinfo = entryinfo;
+    }
+}
+
+class SMTEntityCollectionSeqMapEntryTypeDecl extends SMTEntityDecl {
+    readonly consf: { cname: string, cargs: { fname: string, ftype: string }[] };
+    readonly emptyf: string;
+
+    constructor(smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: string }[] }, emptyf: string) {
+        super(false, smtname, typetag, "INVALID_SPECIAL", "INVALID_SPECIAL");
 
         this.consf = consf;
-        this.emptyconst = emptyconst;
-        this.entrydecl = entrydecl;
+        this.emptyf = emptyf;
     }
 }
 
@@ -387,6 +402,8 @@ class SMTAssembly {
     havocfuncs: Set<string> = new Set<string>();
     model: SMTModelState | undefined = undefined;
 
+    auxCollectionDecls: (SMTEntityCollectionSeqListTypeDecl | SMTEntityCollectionSeqMapTypeDecl)[] = [];
+
     constructor(vopts: VerifierOptions, entrypoint: string) {
         this.vopts = vopts;
         this.entrypoint = entrypoint;
@@ -550,35 +567,47 @@ class SMTAssembly {
             });
 
         const collectiontypeinfo = this.entityDecls
-            .filter((et) => (et instanceof SMTEntityCollectionTypeDecl))
+            .filter((et) => et instanceof SMTEntityCollectionTypeDecl)
             .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
             .map((tt) => {
-                const ctype = tt as SMTEntityCollectionTypeDecl;
+                return {
+                    decl: `(define-sort ${tt.smtname} () BTerm)`,
+                    boxf: `(${tt.boxf} (${tt.ubf} BTerm))`
+                };
+            });
+
+        const collectionseqlisttypeinfo = this.auxCollectionDecls
+            .filter((et) => (et instanceof SMTEntityCollectionSeqListTypeDecl))
+            .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
+            .map((tt) => {
                 return {
                     decl: `(${tt.smtname} 0)`,
-                    consf: `( (${ctype.consf.cname} ${ctype.consf.cargs.map((te) => `(${te.fname} ${te.ftype})`).join(" ")}) )`,
+                    consf: `( (${(tt as SMTEntityCollectionSeqListTypeDecl).consf.cname} ${(tt as SMTEntityCollectionSeqListTypeDecl).consf.cargs.map((te) => `(${te.fname} ${te.ftype})`).join(" ")}) )`,
                     boxf: `(${tt.boxf} (${tt.ubf} ${tt.smtname}))`
                 };
             });
 
-        const collectiontypeinfoconsts = this.entityDecls
-            .filter((et) => (et instanceof SMTEntityCollectionTypeDecl))
+        const collectionseqmapentrytypeinfo = this.auxCollectionDecls
+            .filter((et) => (et instanceof SMTEntityCollectionSeqMapTypeDecl))
             .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
             .map((tt) => {
-                const ctype = tt as SMTEntityCollectionTypeDecl;
-                return `(declare-const ${ctype.emptyconst.fname} ${ctype.emptyconst.fkind}) (assert (= ${ctype.emptyconst.fname} ${ctype.emptyconst.fexp}))`;
-            });
-
-        const collectionentrytypeinfo = this.entityDecls
-            .filter((et) => (et instanceof SMTEntityCollectionTypeDecl) && (et as SMTEntityCollectionTypeDecl).entrydecl !== undefined)
-            .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
-            .map((tt) => {
-                const einfo = (tt as SMTEntityCollectionTypeDecl).entrydecl as SMTEntityCollectionEntryTypeDecl;
                 return {
-                    decl: `(${einfo.smtname} 0)`,
-                    consf: `( (${einfo.consf.cname} ${einfo.consf.cargs.map((te) => `(${te.fname} ${te.ftype})`).join(" ")}) )`
+                    decl: `(${(tt as SMTEntityCollectionSeqMapTypeDecl).entryinfo.smtname} 0)`,
+                    consf: `( (${(tt as SMTEntityCollectionSeqMapTypeDecl).entryinfo.consf.cname} ${(tt as SMTEntityCollectionSeqMapTypeDecl).entryinfo.consf.cargs.map((te) => `(${te.fname} ${te.ftype})`).join(" ")}) (${(tt as SMTEntityCollectionSeqMapTypeDecl).entryinfo.emptyf}) )`
                 };
             });
+
+        const collectionseqmaptypeinfo = this.auxCollectionDecls
+            .filter((et) => (et instanceof SMTEntityCollectionSeqMapTypeDecl))
+            .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
+            .map((tt) => {
+                return {
+                    decl: `(${tt.smtname} 0)`,
+                    consf: `( (${(tt as SMTEntityCollectionSeqMapTypeDecl).consf.cname} ${(tt as SMTEntityCollectionSeqMapTypeDecl).consf.cargs.map((te) => `(${te.fname} ${te.ftype})`).join(" ")}) )`,
+                    boxf: `(${tt.boxf} (${tt.ubf} ${tt.smtname}))`
+                };
+            });
+
 
         const etypeinfo = this.ephemeralDecls
             .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
@@ -756,20 +785,25 @@ class SMTAssembly {
             TYPE_INFO: { 
                 decls: [
                     ...termtypeinfo.filter((tti) => tti.decl !== undefined).map((tti) => tti.decl as string),
-                    ...collectiontypeinfo.map((clti) => clti.decl),
-                    ...collectionentrytypeinfo.map((clti) => clti.decl)
+                    ...collectionseqlisttypeinfo.map((clti) => clti.decl),
+                    ...collectionseqmapentrytypeinfo.map((clti) => clti.decl),
+                    ...collectionseqmaptypeinfo.map((clti) => clti.decl),
                 ], 
                 constructors: [
                     ...termtypeinfo.filter((tti) => tti.consf !== undefined).map((tti) => tti.consf as string),
-                    ...collectiontypeinfo.map((clti) => clti.consf),
-                    ...collectionentrytypeinfo.map((clti) => clti.consf)
+                    ...collectionseqlisttypeinfo.map((clti) => clti.consf),
+                    ...collectionseqmapentrytypeinfo.map((clti) => clti.consf),
+                    ...collectionseqmaptypeinfo.map((clti) => clti.consf),
                 ], 
                 boxing: [
-                    ...termtypeinfo.map((tti) => tti.boxf), 
-                    ...ofinternaltypeinfo.map((ttofi) => ttofi.boxf), 
-                    ...collectiontypeinfo.map((cti) => cti.boxf)
+                    ...termtypeinfo.map((tti) => tti.boxf),
+                    ...ofinternaltypeinfo.map((ttofi) => ttofi.boxf),
+                    ...collectiontypeinfo.map((cti) => cti.boxf),
+                    ...collectionseqlisttypeinfo.map((clti) => clti.boxf),
+                    ...collectionseqmaptypeinfo.map((clti) => clti.boxf),
                 ] 
             },
+            COLLECTION_INFO: collectiontypeinfo.map((cti) => cti.decl),
             EPHEMERAL_DECLS: { 
                 decls: etypeinfo.map((kti) => kti.decl), 
                 constructors: etypeinfo.map((kti) => kti.consf) 
@@ -783,10 +817,7 @@ class SMTAssembly {
                 constructors: maskinfo.map((mi) => mi.consf) 
             },
             V_MIN_MAX: v_min_max,
-            GLOBAL_DECLS: [
-                ...collectiontypeinfoconsts,
-                ...gdecls
-            ],
+            GLOBAL_DECLS: [...gdecls],
             UF_DECLS: [...ufdecls, ...ufopdecls],
             FUNCTION_DECLS: foutput.reverse(),
             GLOBAL_DEFINITIONS: gdefs,
@@ -827,6 +858,7 @@ class SMTAssembly {
             .replace(";;TUPLE_TYPE_BOXING;;", joinWithIndent(sfileinfo.TUPLE_INFO.boxing, "      "))
             .replace(";;RECORD_TYPE_BOXING;;", joinWithIndent(sfileinfo.RECORD_INFO.boxing, "      "))
             .replace(";;TYPE_BOXING;;", joinWithIndent(sfileinfo.TYPE_INFO.boxing, "      "))
+            .replace(";;COLLECTION_DECLS;;", joinWithIndent(sfileinfo.COLLECTION_INFO, ""))
             .replace(";;EPHEMERAL_DECLS;;", joinWithIndent(sfileinfo.EPHEMERAL_DECLS.decls, "      "))
             .replace(";;EPHEMERAL_CONSTRUCTORS;;", joinWithIndent(sfileinfo.EPHEMERAL_DECLS.constructors, "      "))
             .replace(";;RESULT_DECLS;;", joinWithIndent(sfileinfo.RESULT_INFO.decls, "      "))
@@ -845,7 +877,7 @@ class SMTAssembly {
 }
 
 export {
-    SMTEntityDecl, SMTEntityOfTypeDecl, SMTEntityInternalOfTypeDecl, SMTEntityCollectionTypeDecl, SMTEntityCollectionEntryTypeDecl,
+    SMTEntityDecl, SMTEntityOfTypeDecl, SMTEntityInternalOfTypeDecl, SMTEntityCollectionTypeDecl, SMTEntityCollectionSeqListTypeDecl, SMTEntityCollectionSeqMapTypeDecl, SMTEntityCollectionSeqMapEntryTypeDecl,
     SMTEntityStdDecl,
     SMTTupleDecl, SMTRecordDecl, SMTEphemeralListDecl,
     SMTConstantDecl,
