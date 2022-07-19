@@ -20,7 +20,7 @@ const SMT_VOPTS_CHK = {
     SLEN_MAX: 48,
     BLEN_MAX: 32,
 
-    CONTAINER_MAX: 3,
+    CONTAINER_MAX: 4,
         
     ActionMode: SymbolicActionMode.ChkTestSymbolic
 } as VerifierOptions;
@@ -32,7 +32,7 @@ const SMT_VOPTS_ERR = {
     SLEN_MAX: 48,
     BLEN_MAX: 32,
 
-    CONTAINER_MAX: 3,
+    CONTAINER_MAX: 4,
         
     ActionMode: SymbolicActionMode.ErrTestSymbolic
 } as VerifierOptions;

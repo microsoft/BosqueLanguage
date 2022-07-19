@@ -32,7 +32,7 @@ function generateStandardVOpts(mode: SymbolicActionMode): VerifierOptions {
         SLEN_MAX: 48,
         BLEN_MAX: 32,
 
-        CONTAINER_MAX: 3,
+        CONTAINER_MAX: 4,
 
         ActionMode: mode
     };
