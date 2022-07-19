@@ -55,7 +55,6 @@ class SMTBodyEmitter {
     requiredUpdateVirtualEntity: { inv: string, argflowtype: MIRType, allsafe: boolean, updates: [MIRFieldKey, MIRResolvedTypeKey][], resulttype: MIRType }[] = [];
 
     requiredSingletonConstructorsList: { inv: string, argc: number, resulttype: MIRType }[] = [];
-    requiredSingletonConstructorsMap: { srcFile: string, sinfo: SourceInfo, inv: string, argc: number, argtupletype: MIRTupleType, resulttype: MIRType }[] = [];
 
     requiredVirtualFunctionInvokes: { inv: string, allsafe: boolean, argflowtype: MIRType, vfname: MIRVirtualMethodKey, optmask: string | undefined, resulttype: MIRType }[] = [];
     requiredVirtualOperatorInvokes: { inv: string, argflowtype: MIRType, opname: MIRVirtualMethodKey, args: MIRResolvedTypeKey[], resulttype: MIRType }[] = [];
@@ -471,6 +470,8 @@ class SMTBodyEmitter {
         const ldecl = this.assembly.entityDecls.get(geninfo.resulttype.typeID) as MIRPrimitiveListEntityTypeDecl;
         const etype = ldecl.getTypeT();
 
+        xxxx;
+
         let args: { vname: string, vtype: SMTTypeInfo }[] = [];
         for(let j = 0; j < geninfo.argc; ++j) {
             args.push({ vname: `arg${j}`, vtype: this.typegen.getSMTTypeFor(etype) });
@@ -483,60 +484,6 @@ class SMTBodyEmitter {
 
         const bbody = this.typegen.generateListTypeConstructorSeq(geninfo.resulttype, new SMTCallSimple("seq.++", largs));
         return SMTFunction.create(this.typegen.lookupFunctionName(geninfo.inv), args, this.typegen.getSMTTypeFor(geninfo.resulttype), bbody);
-    }
-
-    generateSingletonConstructorMap(geninfo: { srcFile: string, sinfo: SourceInfo, inv: string, argc: number, argtupletype: MIRTupleType, resulttype: MIRType }): SMTFunction {
-        let args: { vname: string, vtype: SMTTypeInfo }[] = [];
-        for(let j = 0; j < geninfo.argc; ++j) {
-            args.push({ vname: `arg${j}`, vtype: this.typegen.getSMTTypeFor(this.typegen.getMIRType(geninfo.argtupletype.typeID)) });
-        }
-        
-        if(geninfo.argc === 1) {
-            const vkey = new SMTCallSimple(this.typegen.generateTupleIndexGetFunction(geninfo.argtupletype, 0), [new SMTVar("arg0")]);
-            const vval = new SMTCallSimple(this.typegen.generateTupleIndexGetFunction(geninfo.argtupletype, 1), [new SMTVar("arg0")]);
-            const consexp = this.typegen.generateMapTypeConstructor(geninfo.resulttype, new SMTCallSimple("seq.unit", [this.typegen.generateMapEntryTypeConstructor(geninfo.resulttype, vkey, vval)]));
-            
-            return SMTFunction.create(this.typegen.lookupFunctionName(geninfo.inv), args, this.typegen.getSMTTypeFor(geninfo.resulttype), consexp);
-        }
-        else {
-            const vtype = this.typegen.getSMTTypeFor(this.typegen.getMIRType(geninfo.argtupletype.typeID));
-            const permfun = `permute@${geninfo.argc}@${vtype.smttypename}`;
-            const newpermuteop = `(declare-fun ${permfun} ((Seq ${vtype.smttypename})) (Seq Int))`;
-
-            if(!this.requiredUFOps.includes(newpermuteop)) {
-                this.requiredUFOps.push(newpermuteop);
-            }
-
-            let keyargs: SMTExp[] = [];
-            let keyseq: SMTExp[] = [];
-            let eseq: SMTExp[] = [];
-            for(let i = 0; i < geninfo.argc; ++i) {
-                const aarg = new SMTVar(`arg${i}`);
-                const kval = new SMTCallSimple(this.typegen.generateTupleIndexGetFunction(geninfo.argtupletype, 0), [aarg]);
-                const vval = new SMTCallSimple(this.typegen.generateTupleIndexGetFunction(geninfo.argtupletype, 1), [aarg]);
-
-                keyargs.push(kval);
-                keyseq.push(new SMTCallSimple("seq.unit", [kval]));
-                eseq.push(new SMTCallSimple("seq.unit", [this.typegen.generateMapEntryTypeConstructor(geninfo.resulttype, kval, vval)]));
-            }
-
-            const distinctchk = new SMTCallSimple("distinct", keyargs);
-            const notsorted = new SMTConst(`(exitsts ((ii Int)) (and (<= 0 ii) (< ii ${geninfo.argc - 1}) (${vtype.smttypename}@less (seq.nth kseq (seq.nth permseq (+ ii 1))) (seq.nth kseq (seq.nth permseq ii)))))`);
-
-            const consexp = new SMTLetMulti([{vname: "keyseq", value: new SMTCallSimple("seq.++", keyseq)}, {vname: "eseq", value: new SMTCallSimple("seq.++", eseq)}],
-                new SMTIf(SMTCallSimple.makeNot(distinctchk), 
-                    this.generateErrorCreate(geninfo.sinfo, geninfo.resulttype, "Duplicate Keys in Map Constructor"),
-                    new SMTLet("permseq", new SMTCallSimple(permfun, [new SMTVar("keyseq")]),
-                        new SMTIf(notsorted,
-                            this.typegen.generateErrorResultAssert(geninfo.resulttype),
-                            this.typegen.generateResultTypeConstructorSuccess(geninfo.resulttype, new SMTConst("(seq.map (lambda ((jj Int)) (seq.nth eseq jj)) permseq)"))
-                        )
-                    )
-                )
-            );
-
-            return SMTFunction.create(this.typegen.lookupFunctionName(geninfo.inv), args, this.typegen.generateResultType(geninfo.resulttype), consexp);
-        }
     }
 
     generateUpdateTupleIndexVirtual(geninfo: { inv: string, argflowtype: MIRType, updates: [number, MIRResolvedTypeKey][], resulttype: MIRType }): SMTFunction {
