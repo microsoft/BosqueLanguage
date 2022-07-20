@@ -1977,7 +1977,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                     return acc;
                 }
                 else {
-                    let accp = ListOps::s_list_map_fn<U, [T, U]>(ull, fn(u: U) => [v, u]);
+                    let accp = ListOps::s_list_map_fn<U, [T, U]>(ull, fn(u: U): [T, U] => [v, u]);
                     return List<[T, U]>::s_append_helper(acc, ull);
                 }
             });

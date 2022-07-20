@@ -543,7 +543,6 @@ BSQInt BSQListOps::s_find_pred_last_ne(LambdaEvalThunk ee, void* t, const BSQLis
 
 BSQInt BSQListOps::s_find_pred_last_idx_ne(LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* pred, const std::vector<StorageLocationPtr>& params)
 {
-    BSQBool found = BSQFALSE;
     int64_t icount = ttype->getCount(t);
     int64_t idx = icount - 1;
 
@@ -1271,7 +1270,7 @@ void* BSQMapOps::s_remove_ne(const BSQMapTypeFlavor& mflavor, void* t, const BSQ
     return res;
 }
 
-void* BSQMapOps::s_fast_union_ne(const BSQMapTypeFlavor& mflavor, void* t1, const BSQMapTreeType* ttype1, void* t2, const BSQMapTreeType* ttype2, const std::vector<StorageLocationPtr>& params)
+void* BSQMapOps::s_fast_union_ne(const BSQMapTypeFlavor& mflavor, void* t1, const BSQMapTreeType* ttype1, void* t2, const BSQMapTreeType* ttype2)
 {
     void** stck = (void**)GCStack::allocFrame(sizeof(void*) * 2);
     void* res = nullptr;

@@ -3788,7 +3788,6 @@ std::optional<size_t> ICPPParseJSON::extractLengthForContainer(const APIModule* 
         }
         else
         {
-            auto ttype = MAP_LOAD_REPR_TYPE(value);
             return std::make_optional((size_t) ((BSQMapTreeRepr*)(MAP_LOAD_DATA(value)))->tcount);
         }
     }
