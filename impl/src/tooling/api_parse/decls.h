@@ -1903,8 +1903,8 @@ public:
         for(size_t i = 0; i < j.size(); ++i)
         {
             std::pair<ValueRepr, ValueRepr> vval = apimgr.getValueForContainerElementParse_KV(apimodule, this, value, i, ctx);
-            bool kok = kt->tparse(apimgr, apimodule, j[i], vval.first, ctx);
-            bool vok = vt->tparse(apimgr, apimodule, j[i], vval.second, ctx);
+            bool kok = kt->tparse(apimgr, apimodule, j[i][0], vval.first, ctx);
+            bool vok = vt->tparse(apimgr, apimodule, j[i][1], vval.second, ctx);
             if(!kok || !vok)
             {
                 return false;

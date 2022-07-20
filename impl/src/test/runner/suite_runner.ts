@@ -65,8 +65,13 @@ function generateICPPAssembly(srcCode: { fname: string, contents: string }[], ma
     }
 }
 
-function generateMASMForSMT(usercode: PackageConfig[], corecode: CodeFileInfo[], buildlevel: BuildLevel, entrypoint: {filename: string, names: string[]}): { masm: MIRAssembly | undefined, errors: string[] } {
-    const coreconfig = new PackageConfig(["CHECK_LIBS"], corecode);
+function generateMASMForSMT(usercode: PackageConfig[], corecode: CodeFileInfo[], buildlevel: BuildLevel, smallmodelonly: boolean, entrypoint: {filename: string, names: string[]}): { masm: MIRAssembly | undefined, errors: string[] } {
+    let smtmacros = ["CHECK_LIBS"];
+    if(smallmodelonly) {
+        smtmacros.push("CHK_SMALL_ONLY");
+    }
+
+    const coreconfig = new PackageConfig(smtmacros, corecode);
 
     return MIREmitter.generateMASM(BuildApplicationMode.ModelChecker, [coreconfig, ...usercode], buildlevel, entrypoint);
 }
@@ -169,7 +174,7 @@ function runtestsICPP(buildlevel: BuildLevel, istestbuild: boolean, topts: Trans
     }
 }
 
-function runtestsSMT(buildlevel: BuildLevel, istestbuild: boolean, usercode: PackageConfig[], entrypoint: {filename: string, namespace: string, names: string[]}[], verbose: Verbosity, category: Category[], dirs: string[], cbpre: (test: SymTest | SymTestInternalChkShouldFail) => void, cb: (result: "pass" | "passlimit" | "fail" | "error", test: SymTest | SymTestInternalChkShouldFail, start: Date, end: Date, smttime: number, info?: string) => void, cbdone: (err: string | null) => void) {
+function runtestsSMT(buildlevel: BuildLevel, smallmodelonly: boolean, istestbuild: boolean, usercode: PackageConfig[], entrypoint: {filename: string, namespace: string, names: string[]}[], verbose: Verbosity, category: Category[], dirs: string[], cbpre: (test: SymTest | SymTestInternalChkShouldFail) => void, cb: (result: "pass" | "passlimit" | "fail" | "error", test: SymTest | SymTestInternalChkShouldFail, start: Date, end: Date, smttime: number, info?: string) => void, cbdone: (err: string | null) => void) {
     if(!category.includes("sym")) {
         cbdone(null);
         return;
@@ -188,7 +193,7 @@ function runtestsSMT(buildlevel: BuildLevel, istestbuild: boolean, usercode: Pac
     });
 
     for(let i = 0; i < filteredentry.length; ++i) {
-        const {masm, errors} = generateMASMForSMT(usercode, corecode as CodeFileInfo[], buildlevel, {filename: filteredentry[i].filename, names: filteredentry[i].names});
+        const {masm, errors} = generateMASMForSMT(usercode, corecode as CodeFileInfo[], buildlevel, smallmodelonly, {filename: filteredentry[i].filename, names: filteredentry[i].names});
         if(masm === undefined) {
             cbdone(errors.join("\n"));
             return;
@@ -418,7 +423,7 @@ function loadEntryPointInfo(files: string[], istestbuild: boolean): {filename: s
     }
 }
 
-function runtests(packageloads: {macros: string[], files: string[]}[], globalmacros: string[], entrypointfiles: string[], buildlevel: BuildLevel, istestbuild: boolean, topts: TranspilerOptions, verbose: Verbosity, category: Category[], dirs: string[]) {
+function runtests(packageloads: {macros: string[], files: string[]}[], globalmacros: string[], entrypointfiles: string[], buildlevel: BuildLevel, smallmodelonly: boolean, istestbuild: boolean, topts: TranspilerOptions, verbose: Verbosity, category: Category[], dirs: string[]) {
     let totalicpp = 0;
     let failedicpp: {test: ICPPTest, info: string}[] = [];
     let erroricpp: {test: ICPPTest, info: string}[] = [];
@@ -544,7 +549,7 @@ function runtests(packageloads: {macros: string[], files: string[]}[], globalmac
             process.exit(1);
         }
         else {
-            runtestsSMT(buildlevel, istestbuild, usersrc as PackageConfig[], entrypoints, verbose, category, dirs, cbpre_smt, cb_smt, cbdone_smt);
+            runtestsSMT(buildlevel, smallmodelonly, istestbuild, usersrc as PackageConfig[], entrypoints, verbose, category, dirs, cbpre_smt, cb_smt, cbdone_smt);
         }
     };
 

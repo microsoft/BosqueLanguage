@@ -26,6 +26,14 @@ __internal entity Map<K grounded KeyType, V> provides Some, Expandoable<[K, V]>,
     }
 
     method getOrNone(key: K): V? {
+#if CHECK_LIBS
+        if(!MapOps::s_map_has<K, V>(this, key)) {
+            return none;
+        }
+        else {
+            return MapOps::s_map_get<K, V>(this, key);
+        }
+#else
         let ev = MapOps::s_map_find<K, V>(this, key);
         if(!ev.1) {
             return none;
@@ -33,9 +41,18 @@ __internal entity Map<K grounded KeyType, V> provides Some, Expandoable<[K, V]>,
         else {
             return ev.0;
         }
+#endif
     }
 
     method getOption(key: K): Option<V> {
+#if CHECK_LIBS
+        if(!MapOps::s_map_has<K, V>(this, key)) {
+            return nothing;
+        }
+        else {
+            return something(MapOps::s_map_get<K, V>(this, key));
+        }
+#else
         let ev = MapOps::s_map_find<K, V>(this, key);
         if(!ev.1) {
             return nothing;
@@ -43,9 +60,19 @@ __internal entity Map<K grounded KeyType, V> provides Some, Expandoable<[K, V]>,
         else {
             return something(ev.0);
         }
+#endif
     }
 
     method getTry(key: K, out? v: V): Bool {
+#if CHECK_LIBS
+        if(!MapOps::s_map_has<K, V>(this, key)) {
+            return false;
+        }
+        else {
+            v = MapOps::s_map_get<K, V>(this, key);
+            return true;
+        }
+#else
         let ev = MapOps::s_map_find<K, V>(this, key);
         if(!ev.1) {
             return false;
@@ -54,6 +81,7 @@ __internal entity Map<K grounded KeyType, V> provides Some, Expandoable<[K, V]>,
             v = ev.0;
             return true;
         }
+#endif
     }
 
     method entries(): List<[K, V]> {
@@ -118,16 +146,11 @@ __internal entity Map<K grounded KeyType, V> provides Some, Expandoable<[K, V]>,
                     return MapOps::s_map_union_fast<K, V>(m, this);
                 }
                 else {
-#if CHECK_LIBS
                     let m2l = MapOps::s_map_entries<K, V>(m2);
                     return ListOps::s_list_reduce<[K, V], Map<K, V>>(m2l, m1, fn(acc: Map<K, V>, v: [K, V]): Map<K, V> => {
                         assert(!MapOps::s_map_has<K, V>(acc, v));
                         MapOps::s_map_add<K, V>(acc, v);
                     });
-#else
-                    //TODO: maybe want union fast for exec as well
-                    return MapOps::s_map_union<K, V>(this, m);
-#endif
                 }
             }
         }
@@ -138,20 +161,7 @@ __internal entity Map<K grounded KeyType, V> provides Some, Expandoable<[K, V]>,
             return Map<K, V>{};
         }
         else {
-#if CHECK_LIBS
-            let mask = MapOps::s_map_map_pred<K, V>[recursive?](this, p);
-            if(ListOps::s_list_all_false(mask)) {
-                return Map<K, V>{};
-            }
-            elif(ListOps::s_list_all_true(mask)) {
-                return this;
-            }
-            else {
-                return ListOps::s_map_mask_select<K, V>(this, mask);
-            }
-#else
-            return MapOps::s_map_submap<K, V>(this, p);
-#endif
+            return MapOps::s_map_submap<K, V>[recursive?](this, p);
         }
     }
 
@@ -190,4 +200,10 @@ __internal entity Map<K grounded KeyType, V> provides Some, Expandoable<[K, V]>,
     //
     //TODO: ref versions of the add/remove/set operators
     //
+
+    internal function s_initializer_add(m: Map<K, V>, vtup: [K, V]): Map<K, V> {
+        assert(!MapOps::s_map_has<K, V>(this, k));
+
+        return MapOps::s_map_add<K, V>(this, vtup.0, vtup.1);
+    }
 }

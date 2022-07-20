@@ -32,7 +32,7 @@ function generateStandardVOpts(mode: SymbolicActionMode): VerifierOptions {
         SLEN_MAX: 48,
         BLEN_MAX: 32,
 
-        CONTAINER_MAX: 3,
+        CONTAINER_MAX: 4,
 
         ActionMode: mode
     };
@@ -72,9 +72,15 @@ function workflowLoadCoreSrc(): CodeFileInfo[] | undefined {
     }
 }
 
-function generateMASM(usercode: PackageConfig, buildlevel: BuildLevel, entrypoint: {filename: string, names: string[]}): { masm: MIRAssembly | undefined, errors: string[] } {
+function generateMASM(usercode: PackageConfig, buildlevel: BuildLevel, smallmodelonly: boolean, entrypoint: {filename: string, names: string[]}): { masm: MIRAssembly | undefined, errors: string[] } {
     const corecode = workflowLoadCoreSrc() as CodeFileInfo[];
-    const coreconfig = new PackageConfig(["CHECK_LIBS"], corecode);
+
+    let smtmacros = ["CHECK_LIBS"];
+    if(smallmodelonly) {
+        smtmacros.push("CHK_SMALL_ONLY");
+    }
+
+    const coreconfig = new PackageConfig(smtmacros, corecode);
 
     return MIREmitter.generateMASM(BuildApplicationMode.ModelChecker, [coreconfig, usercode], buildlevel, entrypoint);
 }
@@ -125,9 +131,9 @@ function runVEvaluatorAsync(cpayload: object, mode: SymbolicActionMode, cb: (res
     }
 }
 
-function workflowGetErrors(usercode: PackageConfig, buildlevel: BuildLevel, istestbuild: boolean, vopts: VerifierOptions, entrypoint: {filename: string, name: string}): { file: string, line: number, pos: number, msg: string }[] | undefined {
+function workflowGetErrors(usercode: PackageConfig, buildlevel: BuildLevel, smallmodelonly: boolean, istestbuild: boolean, vopts: VerifierOptions, entrypoint: {filename: string, name: string}): { file: string, line: number, pos: number, msg: string }[] | undefined {
     try {
-        const { masm, errors } = generateMASM(usercode, buildlevel, {filename: entrypoint.filename, names: [entrypoint.name]});
+        const { masm, errors } = generateMASM(usercode, buildlevel, smallmodelonly, {filename: entrypoint.filename, names: [entrypoint.name]});
         if(masm === undefined) {
             process.stderr.write(chalk.red(`Compiler Errors!\n`));
             process.stderr.write(JSON.stringify(errors, undefined, 2) + "\n");
@@ -142,9 +148,9 @@ function workflowGetErrors(usercode: PackageConfig, buildlevel: BuildLevel, iste
     }
 }
 
-function workflowEmitToFile(into: string, usercode: PackageConfig, buildlevel: BuildLevel, istestbuild: boolean, timeout: number, vopts: VerifierOptions, entrypoint: {filename: string, name: string, fkey: MIRResolvedTypeKey}, errorTrgtPos: { file: string, line: number, pos: number }, smtonly: boolean) {
+function workflowEmitToFile(into: string, usercode: PackageConfig, buildlevel: BuildLevel, smallmodelonly: boolean, istestbuild: boolean, timeout: number, vopts: VerifierOptions, entrypoint: {filename: string, name: string, fkey: MIRResolvedTypeKey}, errorTrgtPos: { file: string, line: number, pos: number }, smtonly: boolean) {
     try {
-        const { masm, errors } = generateMASM(usercode, buildlevel, {filename: entrypoint.filename, names: [entrypoint.name]});
+        const { masm, errors } = generateMASM(usercode, buildlevel, smallmodelonly, {filename: entrypoint.filename, names: [entrypoint.name]});
         if(masm === undefined) {
             process.stderr.write(chalk.red(`Compiler Errors!\n`));
             process.stderr.write(JSON.stringify(errors, undefined, 2) + "\n");
@@ -168,9 +174,9 @@ function workflowEmitToFile(into: string, usercode: PackageConfig, buildlevel: B
     }
 }
 
-function workflowErrorCheckSingle(usercode: PackageConfig, buildlevel: BuildLevel, istestbuild: boolean, timeout: number, vopts: VerifierOptions, entrypoint: {filename: string, name: string, fkey: MIRResolvedTypeKey}, errorTrgtPos: { file: string, line: number, pos: number }, cb: (result: string) => void) {
+function workflowErrorCheckSingle(usercode: PackageConfig, buildlevel: BuildLevel, smallmodelonly: boolean, istestbuild: boolean, timeout: number, vopts: VerifierOptions, entrypoint: {filename: string, name: string, fkey: MIRResolvedTypeKey}, errorTrgtPos: { file: string, line: number, pos: number }, cb: (result: string) => void) {
     try {
-        const { masm } = generateMASM(usercode, buildlevel, {filename: entrypoint.filename, names: [entrypoint.name]});
+        const { masm } = generateMASM(usercode, buildlevel, smallmodelonly, {filename: entrypoint.filename, names: [entrypoint.name]});
         if(masm === undefined) {
             cb(JSON.stringify({result: "error", info: "compile errors"}));
         }
@@ -189,9 +195,9 @@ function workflowErrorCheckSingle(usercode: PackageConfig, buildlevel: BuildLeve
     }
 }
 
-function workflowPassCheck(usercode: PackageConfig, buildlevel: BuildLevel, istestbuild: boolean, timeout: number, vopts: VerifierOptions, entrypoint: {filename: string, name: string, fkey: MIRResolvedTypeKey}, cb: (result: string) => void) {
+function workflowPassCheck(usercode: PackageConfig, buildlevel: BuildLevel, smallmodelonly: boolean, istestbuild: boolean, timeout: number, vopts: VerifierOptions, entrypoint: {filename: string, name: string, fkey: MIRResolvedTypeKey}, cb: (result: string) => void) {
     try {
-        const { masm } = generateMASM(usercode, buildlevel, {filename: entrypoint.filename, names: [entrypoint.name]});
+        const { masm } = generateMASM(usercode, buildlevel, smallmodelonly, {filename: entrypoint.filename, names: [entrypoint.name]});
         if(masm === undefined) {
             cb(JSON.stringify({result: "error", info: "compile errors"}));
         }
@@ -212,7 +218,7 @@ function workflowPassCheck(usercode: PackageConfig, buildlevel: BuildLevel, iste
 
 function workflowEvaluate(usercode: PackageConfig, buildlevel: BuildLevel, istestbuild: boolean, timeout: number, vopts: VerifierOptions, entrypoint: {filename: string, name: string, fkey: MIRResolvedTypeKey}, jin: any[], cb: (result: string) => void) {
     try {
-        const { masm } = generateMASM(usercode, buildlevel, {filename: entrypoint.filename, names: [entrypoint.name]});
+        const { masm } = generateMASM(usercode, buildlevel, false, {filename: entrypoint.filename, names: [entrypoint.name]});
         if(masm === undefined) {
             cb(JSON.stringify({result: "error", info: "compile errors"}));
         }

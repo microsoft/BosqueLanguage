@@ -1,0 +1,42 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+//The core namespace implements the primitive concepts used in the bosque core language
+namespace Core;
+
+#if CHECK_LIBS
+__internal entity SeqMap<T> provides Some {
+}
+
+internal entity SeqMapOps provides Some {
+    __safe internal function s_map_cons_1<K grounded KeyType, V>(v: Vector1<[K, V]>): SeqMap<K, V> = s_map_cons_1;
+    __safe internal function s_map_cons_2<K grounded KeyType, V>(v: Vector2<[K, V]>): SeqMap<K, V> = s_map_cons_2;
+    __safe internal function s_map_cons_3<K grounded KeyType, V>(v: Vector3<[K, V]>): SeqMap<K, V> = s_map_cons_3;
+    __safe internal function s_map_cons_4<K grounded KeyType, V>(v: Vector4<[K, V]>): SeqMap<K, V> = s_map_cons_4;
+
+    __assume_safe internal function s_map_get_elem_order<K grounded KeyType, V>(m: SeqMap<K, V>, idx: Int): [K, V]
+
+    __safe internal function s_map_count<K grounded KeyType, V>(m: SeqMap<K, V>): Nat = s_map_count; 
+
+    __safe internal function s_map_entries<K grounded KeyType, V>(m: SeqMap<K, V>): SeqList<[K, V]> = s_map_entries;
+
+    __safe internal function s_map_min_key<K grounded KeyType, V>(m: SeqMap<K, V>): K = s_map_min_key;
+    __safe internal function s_map_max_key<K grounded KeyType, V>(m: SeqMap<K, V>): K = s_map_max_key; 
+
+    __safe internal function s_map_has<K grounded KeyType, V>(m: SeqMap<K, V>, k: K): Bool = s_map_has; 
+    __safe internal function s_map_get<K grounded KeyType, V>(m: SeqMap<K, V>, k: K): V = s_map_get;
+    
+    __safe internal function s_map_union_fast<K grounded KeyType, V>(m1: SeqMap<K, V>, m2: SeqMap<K, V>): SeqMap<K, V> = s_map_union_fast;  
+
+    __conditional_safe internal recursive? function s_map_map_pred<K grounded KeyType, V>(m: SeqMap<K, V>, p: recursive? pred(_: K, _: V) -> Bool): SeqList<Bool> = s_map_map_pred;
+    __safe internal function s_map_mask_select<K grounded KeyType, V>(m: MapList<T>, mask: SeqList<Bool>): MapList<K, V> = s_map_mask_select;
+    
+    __conditional_safe internal recursive? function s_map_remap<K grounded KeyType, V, U>(m: SeqMap<K, V>, f: recursive? fn(k: K, v: V) -> U): SeqMap<K, U> = s_map_remap;
+
+    __safe internal function s_map_add<K grounded KeyType, V>(m: SeqMap<K, V>, k: K, v: V): SeqMap<K, V> = s_map_add; 
+    __safe internal function s_map_set<K grounded KeyType, V>(m: SeqMap<K, V>, k: K, v: V): SeqMap<K, V> = s_map_set;
+    __safe internal function s_map_remove<K grounded KeyType, V>(m: SeqMap<K, V>, k: K): SeqMap<K, V> = s_map_remove;  
+}
+#endif

@@ -3,28 +3,22 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { BSQRegex } from "../../ast/bsqregex";
-import { SymbolicActionMode } from "../../compiler/mir_assembly";
-import { MIRResolvedTypeKey } from "../../compiler/mir_ops";
-import { SMTExp, SMTTypeInfo, VerifierOptions } from "./smt_exp";
+import { BSQRegex } from "../../../ast/bsqregex";
+import { MIRResolvedTypeKey } from "../../../compiler/mir_ops";
+import { MorphirExp, MorphirTypeInfo } from "./morphir_exp";
 
-type SMT2FileInfo = {
+type Morphir2FileInfo = {
     TYPE_TAG_DECLS: string[],
     ORDINAL_TYPE_TAG_DECLS: string[],
     ABSTRACT_TYPE_TAG_DECLS: string[],
-    INDEX_TAG_DECLS: string[],
-    PROPERTY_TAG_DECLS: string[],
     SUBTYPE_DECLS: string[],
-    TUPLE_HAS_INDEX_DECLS: string[],
-    RECORD_HAS_PROPERTY_DECLS: string[],
     STRING_TYPE_ALIAS: string,
     OF_TYPE_DECLS: string[],
     KEY_BOX_OPS: string[],
-    TUPLE_INFO: { decls: string[], constructors: string[], boxing: string[] },
-    RECORD_INFO: { decls: string[], constructors: string[], boxing: string[] },
-    TYPE_INFO: { decls: string[], constructors: string[], boxing: string[] },
-    COLLECTION_INFO: string[],
-    EPHEMERAL_DECLS: { decls: string[], constructors: string[] },
+    TUPLE_INFO: { decls: string[], boxing: string[] },
+    RECORD_INFO: { decls: string[], boxing: string[] },
+    TYPE_INFO: { decls: string[], constructors: string[], boxing: string[] }
+    EPHEMERAL_DECLS: { decls: string[] },
     RESULT_INFO: { decls: string[], constructors: string[] },
     MASK_INFO: { decls: string[], constructors: string[] },
     V_MIN_MAX: string[],
@@ -35,17 +29,17 @@ type SMT2FileInfo = {
     ACTION: string[]
 };
 
-class SMTFunction {
+class MorphirFunction {
     readonly fname: string;
-    readonly args: { vname: string, vtype: SMTTypeInfo }[];
+    readonly args: { vname: string, vtype: MorphirTypeInfo }[];
     readonly maskname: string | undefined;
     readonly masksize: number;
-    readonly result: SMTTypeInfo;
+    readonly result: MorphirTypeInfo;
 
-    readonly body: SMTExp;
+    readonly body: MorphirExp;
     readonly implicitlambdas: string[] | undefined;
 
-    constructor(fname: string, args: { vname: string, vtype: SMTTypeInfo }[], maskname: string | undefined, masksize: number, result: SMTTypeInfo, body: SMTExp, implicitlambdas: string[] | undefined) {
+    constructor(fname: string, args: { vname: string, vtype: MorphirTypeInfo }[], maskname: string | undefined, masksize: number, result: MorphirTypeInfo, body: MorphirExp, implicitlambdas: string[] | undefined) {
         this.fname = fname;
         this.args = args;
         this.maskname = maskname;
@@ -56,19 +50,19 @@ class SMTFunction {
         this.implicitlambdas = implicitlambdas;
     }
 
-    static create(fname: string, args: { vname: string, vtype: SMTTypeInfo }[], result: SMTTypeInfo, body: SMTExp): SMTFunction {
-        return new SMTFunction(fname, args, undefined, 0, result, body, undefined);
+    static create(fname: string, args: { vname: string, vtype: MorphirTypeInfo }[], result: MorphirTypeInfo, body: MorphirExp): MorphirFunction {
+        return new MorphirFunction(fname, args, undefined, 0, result, body, undefined);
     }
 
-    static createWithImplicitLambdas(fname: string, args: { vname: string, vtype: SMTTypeInfo }[], result: SMTTypeInfo, body: SMTExp, implicitlambdas: string[]): SMTFunction {
-        return new SMTFunction(fname, args, undefined, 0, result, body, implicitlambdas);
+    static createWithImplicitLambdas(fname: string, args: { vname: string, vtype: MorphirTypeInfo }[], result: MorphirTypeInfo, body: MorphirExp, implicitlambdas: string[]): MorphirFunction {
+        return new MorphirFunction(fname, args, undefined, 0, result, body, implicitlambdas);
     }
 
-    static createWithMask(fname: string, args: { vname: string, vtype: SMTTypeInfo }[], maskname: string, masksize: number, result: SMTTypeInfo, body: SMTExp): SMTFunction {
-        return new SMTFunction(fname, args, maskname, masksize, result, body, undefined);
+    static createWithMask(fname: string, args: { vname: string, vtype: MorphirTypeInfo }[], maskname: string, masksize: number, result: MorphirTypeInfo, body: MorphirExp): MorphirFunction {
+        return new MorphirFunction(fname, args, maskname, masksize, result, body, undefined);
     }
 
-    emitSMT2(): string {
+    emitMorphir(): string {
         const args = this.args.map((arg) => `(${arg.vname} ${arg.vtype.smttypename})`);
         const body = this.body.emitSMT2("  ");
 
@@ -80,7 +74,7 @@ class SMTFunction {
         }
     }
 
-    emitSMT2_DeclOnly(): string {
+    emitMorphir_DeclOnly(): string {
         const args = this.args.map((arg) => `(${arg.vname} ${arg.vtype.smttypename})`);
 
         if(this.maskname === undefined) {
@@ -91,7 +85,7 @@ class SMTFunction {
         }
     }
 
-    emitSMT2_SingleDeclOnly(): string {
+    emitMorphir_SingleDeclOnly(): string {
         const args = this.args.map((arg) => `(${arg.vname} ${arg.vtype.smttypename})`);
 
         if(this.maskname === undefined) {
@@ -103,130 +97,84 @@ class SMTFunction {
     }
 }
 
-class SMTFunctionUninterpreted {
-    readonly fname: string;
-    readonly args: SMTTypeInfo[];
-    readonly result: SMTTypeInfo;
-
-    constructor(fname: string, args: SMTTypeInfo[], result: SMTTypeInfo) {
-        this.fname = fname;
-        this.args = args;
-        this.result = result;
-    }
-
-    emitSMT2(): string {
-        return `(declare-fun ${this.fname} (${this.args.map((arg) => arg.smttypename).join(" ")}) ${this.result.smttypename})`;
-    }
-
-    static areDuplicates(f1: SMTFunctionUninterpreted, f2: SMTFunctionUninterpreted): boolean {
-        if (f1.fname !== f2.fname || f1.args.length !== f2.args.length) {
-            return false;
-        }
-
-        if (f1.result.smttypename !== f2.result.smttypename) {
-            return false;
-        }
-
-        for (let i = 0; i < f1.args.length; ++i) {
-            if (f1.args[i].smttypename !== f2.args[i].smttypename) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-}
-
-class SMTEntityDecl {
+class MorphirEntityDecl {
     readonly iskeytype: boolean;
-    readonly smtname: string;
+    readonly morphirname: string;
     readonly typetag: string;
 
     readonly boxf: string;
     readonly ubf: string;
 
-    constructor(iskeytype: boolean, smtname: string, typetag: string, boxf: string, ubf: string) {
+    constructor(iskeytype: boolean, morphirname: string, typetag: string, boxf: string, ubf: string) {
         this.iskeytype = iskeytype;
-        this.smtname = smtname;
+        this.morphirname = morphirname;
         this.typetag = typetag;
         this.boxf = boxf;
         this.ubf = ubf;
     }
 }
 
-class SMTEntityOfTypeDecl extends SMTEntityDecl {
+class MorphirEntityOfTypeDecl extends MorphirEntityDecl {
     readonly ofsmttype: string;
 
-    constructor(iskeytype: boolean, smtname: string, typetag: string, boxf: string, ubf: string, ofsmttype: string) {
-        super(iskeytype, smtname, typetag, boxf, ubf);
+    constructor(iskeytype: boolean, morphirname: string, typetag: string, boxf: string, ubf: string, ofsmttype: string) {
+        super(iskeytype, morphirname, typetag, boxf, ubf);
         this.ofsmttype = ofsmttype;
     }
 }
 
-class SMTEntityInternalOfTypeDecl extends SMTEntityDecl {
+class MorphirEntityInternalOfTypeDecl extends MorphirEntityDecl {
     readonly ofsmttype: string;
 
-    constructor(smtname: string, typetag: string, boxf: string, ubf: string, ofsmttype: string) {
-        super(false, smtname, typetag, boxf, ubf);
+    constructor(morphirname: string, typetag: string, boxf: string, ubf: string, ofsmttype: string) {
+        super(false, morphirname, typetag, boxf, ubf);
         this.ofsmttype = ofsmttype;
     }
 }
 
-class SMTEntityCollectionTypeDecl extends SMTEntityDecl {
-    constructor(smtname: string, typetag: string, boxf: string, ubf: string) {
-        super(false, smtname, typetag, boxf, ubf);
-    }
-}
-
-class SMTEntityCollectionSeqListTypeDecl extends SMTEntityDecl {
+class MorphirEntityCollectionEntryTypeDecl extends MorphirEntityDecl {
     readonly consf: { cname: string, cargs: { fname: string, ftype: string }[] };
 
-    constructor(smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: string }[] }, boxf: string, ubf: string) {
-        super(false, smtname, typetag, boxf, ubf);
-        this.consf = consf;
-    }
-}
-
-class SMTEntityCollectionSeqMapTypeDecl extends SMTEntityDecl {
-    readonly consf: { cname: string, cargs: { fname: string, ftype: string }[] };
-    readonly entryinfo: SMTEntityCollectionSeqMapEntryTypeDecl;
-
-    constructor(smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: string }[] }, boxf: string, ubf: string, entryinfo: SMTEntityCollectionSeqMapEntryTypeDecl) {
-        super(false, smtname, typetag, boxf, ubf);
-        this.consf = consf;
-        this.entryinfo = entryinfo;
-    }
-}
-
-class SMTEntityCollectionSeqMapEntryTypeDecl extends SMTEntityDecl {
-    readonly consf: { cname: string, cargs: { fname: string, ftype: string }[] };
-
-    constructor(smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: string }[] }) {
-        super(false, smtname, typetag, "INVALID_SPECIAL", "INVALID_SPECIAL");
+    constructor(morphirname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: string }[] }) {
+        super(false, morphirname, typetag, "INVALID_SPECIAL", "INVALID_SPECIAL");
 
         this.consf = consf;
     }
 }
 
-class SMTEntityStdDecl extends SMTEntityDecl {
-    readonly consf: { cname: string, cargs: { fname: string, ftype: SMTTypeInfo }[] };
+class MorphirEntityCollectionTypeDecl extends MorphirEntityDecl {
+    readonly consf: { cname: string, cargs: { fname: string, ftype: string }[] };
+    readonly emptyconst: {fkind: string, fname: string, fexp: string};
+    readonly entrydecl: MorphirEntityCollectionEntryTypeDecl | undefined;
+
+    constructor(morphirname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: string }[] }, boxf: string, ubf: string, emptyconst: {fkind: string, fname: string, fexp: string}, entrydecl: MorphirEntityCollectionEntryTypeDecl | undefined) {
+        super(false, morphirname, typetag, boxf, ubf);
+
+        this.consf = consf;
+        this.emptyconst = emptyconst;
+        this.entrydecl = entrydecl;
+    }
+}
+
+class MorphirEntityStdDecl extends MorphirEntityDecl {
+    readonly consf: { cname: string, cargs: { fname: string, ftype: MorphirTypeInfo }[] };
     
-    constructor(smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: SMTTypeInfo }[] }, boxf: string, ubf: string) {
-        super(false, smtname, typetag, boxf, ubf);
+    constructor(morphirname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: MorphirTypeInfo }[] }, boxf: string, ubf: string) {
+        super(false, morphirname, typetag, boxf, ubf);
         this.consf = consf;
     }
 }
 
-class SMTTupleDecl {
-    readonly smtname: string;
+class MorphirTupleDecl {
+    readonly morphirname: string;
     readonly typetag: string;
 
-    readonly consf: { cname: string, cargs: { fname: string, ftype: SMTTypeInfo }[] };
+    readonly consf: { cname: string, cargs: { fname: string, ftype: MorphirTypeInfo }[] };
     readonly boxf: string;
     readonly ubf: string;
 
-    constructor(smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: SMTTypeInfo }[] }, boxf: string, ubf: string) {
-        this.smtname = smtname;
+    constructor(morphirname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: MorphirTypeInfo }[] }, boxf: string, ubf: string) {
+        this.morphirname = morphirname;
         this.typetag = typetag;
         this.consf = consf;
         this.boxf = boxf;
@@ -234,16 +182,16 @@ class SMTTupleDecl {
     }
 }
 
-class SMTRecordDecl {
-    readonly smtname: string;
+class MorphirRecordDecl {
+    readonly morphirname: string;
     readonly typetag: string;
 
-    readonly consf: { cname: string, cargs: { fname: string, ftype: SMTTypeInfo }[] };
+    readonly consf: { cname: string, cargs: { fname: string, ftype: MorphirTypeInfo }[] };
     readonly boxf: string;
     readonly ubf: string;
 
-    constructor(smtname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: SMTTypeInfo }[] }, boxf: string, ubf: string) {
-        this.smtname = smtname;
+    constructor(morphirname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: MorphirTypeInfo }[] }, boxf: string, ubf: string) {
+        this.morphirname = morphirname;
         this.typetag = typetag;
         this.consf = consf;
         this.boxf = boxf;
@@ -251,28 +199,27 @@ class SMTRecordDecl {
     }
 }
 
-class SMTEphemeralListDecl {
-    readonly smtname: string;
+class MorphirEphemeralListDecl {
+    readonly morphirname: string;
+    readonly consf: { cname: string, cargs: { fname: string, ftype: MorphirTypeInfo }[] };
 
-    readonly consf: { cname: string, cargs: { fname: string, ftype: SMTTypeInfo }[] };
-
-    constructor(smtname: string, consf: { cname: string, cargs: { fname: string, ftype: SMTTypeInfo }[] }) {
-        this.smtname = smtname;
+    constructor(morphirname: string, consf: { cname: string, cargs: { fname: string, ftype: MorphirTypeInfo }[] }) {
+        this.morphirname = morphirname;
         this.consf = consf;
     }
 }
 
-class SMTConstantDecl {
+class MorphirConstantDecl {
     readonly gkey: string;
     readonly optenumname: [MIRResolvedTypeKey, string] | undefined;
-    readonly ctype: SMTTypeInfo;
+    readonly ctype: MorphirTypeInfo;
 
     readonly consfinv: string;
 
-    readonly consfexp: SMTExp;
-    readonly checkf: SMTExp | undefined;
+    readonly consfexp: MorphirExp;
+    readonly checkf: MorphirExp | undefined;
 
-    constructor(gkey: string, optenumname: [MIRResolvedTypeKey, string] | undefined, ctype: SMTTypeInfo, consfinv: string, consfexp: SMTExp, checkf: SMTExp | undefined) {
+    constructor(gkey: string, optenumname: [MIRResolvedTypeKey, string] | undefined, ctype: MorphirTypeInfo, consfinv: string, consfexp: MorphirExp, checkf: MorphirExp | undefined) {
         this.gkey = gkey;
         this.optenumname = optenumname;
         this.ctype = ctype;
@@ -284,52 +231,24 @@ class SMTConstantDecl {
     }
 }
 
-class SMTModelState {
-    readonly arginits: { vname: string, vtype: SMTTypeInfo, vchk: SMTExp | undefined, vinit: SMTExp, callexp: SMTExp }[];
-    readonly resinit: { vname: string, vtype: SMTTypeInfo, vchk: SMTExp | undefined, vinit: SMTExp, callexp: SMTExp } | undefined;
-    readonly argchk: SMTExp[] | undefined;
-    readonly checktype: SMTTypeInfo;
-    readonly fcheck: SMTExp;
-
-    readonly targeterrorcheck: SMTExp;
-    readonly isvaluecheck: SMTExp;
-    readonly isvaluefalsechk: SMTExp;
-
-    constructor(arginits: { vname: string, vtype: SMTTypeInfo, vchk: SMTExp | undefined, vinit: SMTExp, callexp: SMTExp }[], resinit: { vname: string, vtype: SMTTypeInfo, vchk: SMTExp | undefined, vinit: SMTExp, callexp: SMTExp } | undefined, argchk: SMTExp[] | undefined, checktype: SMTTypeInfo, echeck: SMTExp, targeterrorcheck: SMTExp, isvaluecheck: SMTExp, isvaluefalsechk: SMTExp) {
-        this.arginits = arginits;
-        this.resinit = resinit;
-        this.argchk = argchk;
-        this.checktype = checktype;
-        this.fcheck = echeck;
-
-        this.targeterrorcheck = targeterrorcheck;
-        this.isvaluecheck = isvaluecheck;
-        this.isvaluefalsechk = isvaluefalsechk;
-    }
-}
-
-type SMTCallGNode = {
+type MorphirCallGNode = {
     invoke: string,
     callees: Set<string>,
     callers: Set<string>
 };
 
-type SMTCallGInfo = {
-    invokes: Map<string, SMTCallGNode>,
-    topologicalOrder: SMTCallGNode[],
-    roots: SMTCallGNode[],
+type MorphirCallGInfo = {
+    invokes: Map<string, MorphirCallGNode>,
+    topologicalOrder: MorphirCallGNode[],
+    roots: MorphirCallGNode[],
     recursive: (Set<string>)[]
 };
 
-class SMTAssembly {
-    readonly vopts: VerifierOptions;
-    
-    allErrors: { file: string, line: number, pos: number, msg: string }[] = [];
-
-    entityDecls: SMTEntityDecl[] = [];
-    tupleDecls: SMTTupleDecl[] = [];
-    recordDecls: SMTRecordDecl[] = [];
-    ephemeralDecls: SMTEphemeralListDecl[] = [];
+class MorphirAssembly {
+    entityDecls: MorphirEntityDecl[] = [];
+    tupleDecls: MorphirTupleDecl[] = [];
+    recordDecls: MorphirRecordDecl[] = [];
+    ephemeralDecls: MorphirEphemeralListDecl[] = [];
 
     typeTags: string[] = [
         "TypeTag_None",
@@ -377,8 +296,6 @@ class SMTAssembly {
     ];
 
     abstractTypes: string[] = [];
-    indexTags: string[] = [];
-    propertyTags: string[] = [];
 
     subtypeRelation: { ttype: string, atype: string, value: boolean }[] = [];
     hasIndexRelation: { idxtag: string, atype: string, value: boolean }[] = [];
@@ -387,50 +304,42 @@ class SMTAssembly {
     literalRegexs: BSQRegex[] = [];
     validatorRegexs: Map<string, BSQRegex> = new Map<string, BSQRegex>();
 
-    constantDecls: SMTConstantDecl[] = [];
-    
-    uninterpfunctions: SMTFunctionUninterpreted[] = [];
-    uninterpOps: string[] = [];
+    constantDecls: MorphirConstantDecl[] = [];
 
     maskSizes: Set<number> = new Set<number>();
     resultTypes: { hasFlag: boolean, rtname: string, ctype: SMTTypeInfo }[] = [];
-    functions: SMTFunction[] = [];
+    functions: MorphirFunction[] = [];
 
     entrypoint: string;
-    havocfuncs: Set<string> = new Set<string>();
-    model: SMTModelState | undefined = undefined;
 
-    auxCollectionDecls: (SMTEntityCollectionSeqListTypeDecl | SMTEntityCollectionSeqMapTypeDecl)[] = [];
-
-    constructor(vopts: VerifierOptions, entrypoint: string) {
-        this.vopts = vopts;
+    constructor(entrypoint: string) {
         this.entrypoint = entrypoint;
     }
 
-    private static sccVisit(cn: SMTCallGNode, scc: Set<string>, marked: Set<string>, invokes: Map<string, SMTCallGNode>) {
+    private static sccVisit(cn: MorphirCallGNode, scc: Set<string>, marked: Set<string>, invokes: Map<string, MorphirCallGNode>) {
         if (marked.has(cn.invoke)) {
             return;
         }
 
         scc.add(cn.invoke);
         marked.add(cn.invoke);
-        cn.callers.forEach((pred) => SMTAssembly.sccVisit(invokes.get(pred) as SMTCallGNode, scc, marked, invokes));
+        cn.callers.forEach((pred) => MorphirAssembly.sccVisit(invokes.get(pred) as MorphirCallGNode, scc, marked, invokes));
     }
 
-    private static topoVisit(cn: SMTCallGNode, pending: SMTCallGNode[], tordered: SMTCallGNode[], invokes: Map<string, SMTCallGNode>) {
+    private static topoVisit(cn: MorphirCallGNode, pending: MorphirCallGNode[], tordered: MorphirCallGNode[], invokes: Map<string, MorphirCallGNode>) {
         if (pending.findIndex((vn) => vn.invoke === cn.invoke) !== -1 || tordered.findIndex((vn) => vn.invoke === cn.invoke) !== -1) {
             return;
         }
 
         pending.push(cn);
 
-        cn.callees.forEach((succ) => (invokes.get(succ) as SMTCallGNode).callers.add(cn.invoke));
-        cn.callees.forEach((succ) => SMTAssembly.topoVisit(invokes.get(succ) as SMTCallGNode, pending, tordered, invokes));
+        cn.callees.forEach((succ) => (invokes.get(succ) as MorphirCallGNode).callers.add(cn.invoke));
+        cn.callees.forEach((succ) => MorphirAssembly.topoVisit(invokes.get(succ) as MorphirCallGNode, pending, tordered, invokes));
 
         tordered.push(cn);
     }
 
-    private static processBodyInfo(bkey: string, binfo: SMTExp, invokes: Set<string>): SMTCallGNode {
+    private static processBodyInfo(bkey: string, binfo: MorphirExp, invokes: Set<string>): MorphirCallGNode {
         let cn = { invoke: bkey, callees: new Set<string>(), callers: new Set<string>() };
 
         let ac = new Set<string>();
@@ -444,12 +353,12 @@ class SMTAssembly {
         return cn;
     }
 
-    private static constructCallGraphInfo(entryPoints: string[], assembly: SMTAssembly): SMTCallGInfo {
-        let invokes = new Map<string, SMTCallGNode>();
+    private static constructCallGraphInfo(entryPoints: string[], assembly: MorphirAssembly): MorphirCallGInfo {
+        let invokes = new Map<string, MorphirCallGNode>();
 
         const okinv = new Set<string>(assembly.functions.map((f) => f.fname));
         assembly.functions.forEach((smtfun) => {
-            const cn = SMTAssembly.processBodyInfo(smtfun.fname, smtfun.body, okinv);
+            const cn = MorphirAssembly.processBodyInfo(smtfun.fname, smtfun.body, okinv);
             if(smtfun.implicitlambdas !== undefined) {
                 smtfun.implicitlambdas.forEach((cc) => {
                     if(okinv.has(cc)) {
@@ -460,16 +369,16 @@ class SMTAssembly {
             invokes.set(smtfun.fname, cn);
         });
 
-        let roots: SMTCallGNode[] = [];
-        let tordered: SMTCallGNode[] = [];
+        let roots: MorphirCallGNode[] = [];
+        let tordered: MorphirCallGNode[] = [];
         entryPoints.forEach((ivk) => {
-            roots.push(invokes.get(ivk) as SMTCallGNode);
-            SMTAssembly.topoVisit(invokes.get(ivk) as SMTCallGNode, [], tordered, invokes);
+            roots.push(invokes.get(ivk) as MorphirCallGNode);
+            MorphirAssembly.topoVisit(invokes.get(ivk) as MorphirCallGNode, [], tordered, invokes);
         });
 
         assembly.constantDecls.forEach((cdecl) => {
-            roots.push(invokes.get(cdecl.consfinv) as SMTCallGNode);
-            SMTAssembly.topoVisit(invokes.get(cdecl.consfinv) as SMTCallGNode, [], tordered, invokes);
+            roots.push(invokes.get(cdecl.consfinv) as MorphirCallGNode);
+            MorphirAssembly.topoVisit(invokes.get(cdecl.consfinv) as MorphirCallGNode, [], tordered, invokes);
         });
 
         tordered = tordered.reverse();
@@ -478,7 +387,7 @@ class SMTAssembly {
         let recursive: (Set<string>)[] = [];
         for (let i = 0; i < tordered.length; ++i) {
             let scc = new Set<string>();
-            SMTAssembly.sccVisit(tordered[i], scc, marked, invokes);
+            MorphirAssembly.sccVisit(tordered[i], scc, marked, invokes);
 
             if (scc.size > 1 || tordered[i].callees.has(tordered[i].invoke)) {
                 recursive.push(scc);
@@ -488,7 +397,7 @@ class SMTAssembly {
         return { invokes: invokes, topologicalOrder: tordered, roots: roots, recursive: recursive };
     }
 
-    generateSMT2AssemblyInfo(): SMT2FileInfo {
+    generateMorphir2AssemblyInfo(): Morphir2FileInfo {
         const subtypeasserts = this.subtypeRelation.map((tc) => tc.value ? `(assert (SubtypeOf@ ${tc.ttype} ${tc.atype}))` : `(assert (not (SubtypeOf@ ${tc.ttype} ${tc.atype})))`).sort();
         const indexasserts = this.hasIndexRelation.map((hi) => hi.value ? `(assert (HasIndex@ ${hi.idxtag} ${hi.atype}))` : `(assert (not (HasIndex@ ${hi.idxtag} ${hi.atype})))`).sort();
         const propertyasserts = this.hasPropertyRelation.map((hp) => hp.value ? `(assert (HasProperty@ ${hp.pnametag} ${hp.atype}))` : `(assert (not (HasProperty@ ${hp.pnametag} ${hp.atype})))`).sort();
@@ -565,47 +474,35 @@ class SMTAssembly {
             });
 
         const collectiontypeinfo = this.entityDecls
-            .filter((et) => et instanceof SMTEntityCollectionTypeDecl)
+            .filter((et) => (et instanceof SMTEntityCollectionTypeDecl))
             .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
             .map((tt) => {
-                return {
-                    decl: `(define-sort ${tt.smtname} () BTerm)`,
-                    boxf: `(${tt.boxf} (${tt.ubf} BTerm))`
-                };
-            });
-
-        const collectionseqlisttypeinfo = this.auxCollectionDecls
-            .filter((et) => (et instanceof SMTEntityCollectionSeqListTypeDecl))
-            .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
-            .map((tt) => {
+                const ctype = tt as SMTEntityCollectionTypeDecl;
                 return {
                     decl: `(${tt.smtname} 0)`,
-                    consf: `( (${(tt as SMTEntityCollectionSeqListTypeDecl).consf.cname} ${(tt as SMTEntityCollectionSeqListTypeDecl).consf.cargs.map((te) => `(${te.fname} ${te.ftype})`).join(" ")}) )`,
+                    consf: `( (${ctype.consf.cname} ${ctype.consf.cargs.map((te) => `(${te.fname} ${te.ftype})`).join(" ")}) )`,
                     boxf: `(${tt.boxf} (${tt.ubf} ${tt.smtname}))`
                 };
             });
 
-        const collectionseqmapentrytypeinfo = this.auxCollectionDecls
-            .filter((et) => (et instanceof SMTEntityCollectionSeqMapTypeDecl))
+        const collectiontypeinfoconsts = this.entityDecls
+            .filter((et) => (et instanceof SMTEntityCollectionTypeDecl))
             .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
             .map((tt) => {
-                return {
-                    decl: `(${(tt as SMTEntityCollectionSeqMapTypeDecl).entryinfo.smtname} 0)`,
-                    consf: `( (${(tt as SMTEntityCollectionSeqMapTypeDecl).entryinfo.consf.cname} ${(tt as SMTEntityCollectionSeqMapTypeDecl).entryinfo.consf.cargs.map((te) => `(${te.fname} ${te.ftype})`).join(" ")}) )`
-                };
+                const ctype = tt as SMTEntityCollectionTypeDecl;
+                return `(declare-const ${ctype.emptyconst.fname} ${ctype.emptyconst.fkind}) (assert (= ${ctype.emptyconst.fname} ${ctype.emptyconst.fexp}))`;
             });
 
-        const collectionseqmaptypeinfo = this.auxCollectionDecls
-            .filter((et) => (et instanceof SMTEntityCollectionSeqMapTypeDecl))
+        const collectionentrytypeinfo = this.entityDecls
+            .filter((et) => (et instanceof SMTEntityCollectionTypeDecl) && (et as SMTEntityCollectionTypeDecl).entrydecl !== undefined)
             .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
             .map((tt) => {
+                const einfo = (tt as SMTEntityCollectionTypeDecl).entrydecl as SMTEntityCollectionEntryTypeDecl;
                 return {
-                    decl: `(${tt.smtname} 0)`,
-                    consf: `( (${(tt as SMTEntityCollectionSeqMapTypeDecl).consf.cname} ${(tt as SMTEntityCollectionSeqMapTypeDecl).consf.cargs.map((te) => `(${te.fname} ${te.ftype})`).join(" ")}) )`,
-                    boxf: `(${tt.boxf} (${tt.ubf} ${tt.smtname}))`
+                    decl: `(${einfo.smtname} 0)`,
+                    consf: `( (${einfo.consf.cname} ${einfo.consf.cargs.map((te) => `(${te.fname} ${te.ftype})`).join(" ")}) )`
                 };
             });
-
 
         const etypeinfo = this.ephemeralDecls
             .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
@@ -783,25 +680,20 @@ class SMTAssembly {
             TYPE_INFO: { 
                 decls: [
                     ...termtypeinfo.filter((tti) => tti.decl !== undefined).map((tti) => tti.decl as string),
-                    ...collectionseqlisttypeinfo.map((clti) => clti.decl),
-                    ...collectionseqmapentrytypeinfo.map((clti) => clti.decl),
-                    ...collectionseqmaptypeinfo.map((clti) => clti.decl),
+                    ...collectiontypeinfo.map((clti) => clti.decl),
+                    ...collectionentrytypeinfo.map((clti) => clti.decl)
                 ], 
                 constructors: [
                     ...termtypeinfo.filter((tti) => tti.consf !== undefined).map((tti) => tti.consf as string),
-                    ...collectionseqlisttypeinfo.map((clti) => clti.consf),
-                    ...collectionseqmapentrytypeinfo.map((clti) => clti.consf),
-                    ...collectionseqmaptypeinfo.map((clti) => clti.consf),
+                    ...collectiontypeinfo.map((clti) => clti.consf),
+                    ...collectionentrytypeinfo.map((clti) => clti.consf)
                 ], 
                 boxing: [
-                    ...termtypeinfo.map((tti) => tti.boxf),
-                    ...ofinternaltypeinfo.map((ttofi) => ttofi.boxf),
-                    ...collectiontypeinfo.map((cti) => cti.boxf),
-                    ...collectionseqlisttypeinfo.map((clti) => clti.boxf),
-                    ...collectionseqmaptypeinfo.map((clti) => clti.boxf),
+                    ...termtypeinfo.map((tti) => tti.boxf), 
+                    ...ofinternaltypeinfo.map((ttofi) => ttofi.boxf), 
+                    ...collectiontypeinfo.map((cti) => cti.boxf)
                 ] 
             },
-            COLLECTION_INFO: collectiontypeinfo.map((cti) => cti.decl),
             EPHEMERAL_DECLS: { 
                 decls: etypeinfo.map((kti) => kti.decl), 
                 constructors: etypeinfo.map((kti) => kti.consf) 
@@ -815,7 +707,10 @@ class SMTAssembly {
                 constructors: maskinfo.map((mi) => mi.consf) 
             },
             V_MIN_MAX: v_min_max,
-            GLOBAL_DECLS: [...gdecls],
+            GLOBAL_DECLS: [
+                ...collectiontypeinfoconsts,
+                ...gdecls
+            ],
             UF_DECLS: [...ufdecls, ...ufopdecls],
             FUNCTION_DECLS: foutput.reverse(),
             GLOBAL_DEFINITIONS: gdefs,
@@ -856,7 +751,6 @@ class SMTAssembly {
             .replace(";;TUPLE_TYPE_BOXING;;", joinWithIndent(sfileinfo.TUPLE_INFO.boxing, "      "))
             .replace(";;RECORD_TYPE_BOXING;;", joinWithIndent(sfileinfo.RECORD_INFO.boxing, "      "))
             .replace(";;TYPE_BOXING;;", joinWithIndent(sfileinfo.TYPE_INFO.boxing, "      "))
-            .replace(";;COLLECTION_DECLS;;", joinWithIndent(sfileinfo.COLLECTION_INFO, ""))
             .replace(";;EPHEMERAL_DECLS;;", joinWithIndent(sfileinfo.EPHEMERAL_DECLS.decls, "      "))
             .replace(";;EPHEMERAL_CONSTRUCTORS;;", joinWithIndent(sfileinfo.EPHEMERAL_DECLS.constructors, "      "))
             .replace(";;RESULT_DECLS;;", joinWithIndent(sfileinfo.RESULT_INFO.decls, "      "))
@@ -875,11 +769,10 @@ class SMTAssembly {
 }
 
 export {
-    SMTEntityDecl, SMTEntityOfTypeDecl, SMTEntityInternalOfTypeDecl, SMTEntityCollectionTypeDecl, SMTEntityCollectionSeqListTypeDecl, SMTEntityCollectionSeqMapTypeDecl, SMTEntityCollectionSeqMapEntryTypeDecl,
-    SMTEntityStdDecl,
-    SMTTupleDecl, SMTRecordDecl, SMTEphemeralListDecl,
-    SMTConstantDecl,
-    SMTFunction, SMTFunctionUninterpreted,
-    SMTAssembly, SMTModelState,
-    SMT2FileInfo
+    MorphirEntityDecl, MorphirEntityOfTypeDecl, MorphirEntityInternalOfTypeDecl, MorphirEntityCollectionTypeDecl, MorphirEntityCollectionEntryTypeDecl,
+    MorphirEntityStdDecl,
+    MorphirTupleDecl, MorphirRecordDecl, MorphirEphemeralListDecl,
+    MorphirConstantDecl,
+    MorphirFunction,
+    MorphirAssembly, Morphir2FileInfo
 };

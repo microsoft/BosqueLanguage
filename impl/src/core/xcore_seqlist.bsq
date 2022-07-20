@@ -1,0 +1,78 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+//The core namespace implements the primitive concepts used in the bosque core language
+namespace Core;
+
+#if CHECK_LIBS
+__internal entity SeqList<T> provides Some {
+}
+
+internal entity SeqListOps provides Some {
+    __safe internal function s_list_cons_1<T>(v: Vector1<T>): SeqList<T> = s_list_cons_1;
+    __safe internal function s_list_cons_2<T>(v: Vector2<T>): SeqList<T> = s_list_cons_2;
+    __safe internal function s_list_cons_3<T>(v: Vector3<T>): SeqList<T> = s_list_cons_3;
+    __safe internal function s_list_cons_4<T>(v: Vector4<T>): SeqList<T> = s_list_cons_4;
+
+    /*__safe*/ internal function s_list_index_int(start: Int, end: Int, len: Int): SeqList<Int> = s_list_index;
+    /*__safe*/ internal function s_list_index_nat(start: Nat, end: Nat, len: Nat): SeqList<Nat> = s_list_index;
+
+    __safe internal function s_list_size<T>(l: SeqList<T>): Nat = s_list_size;
+
+    __safe internal function s_list_fill<T>(count: Nat, v: T): SeqList<T> = s_list_fill;
+
+    __safe internal function s_list_append<T>(ll: SeqList<T>, rr: SeqList<T>): SeqList<T> = s_list_append;
+
+    __safe internal function s_list_get<T>(l: SeqList<T>, i: Nat): T = s_list_get;
+    __safe internal function s_list_back<T>(l: SeqList<T>): T = s_list_back;
+    __safe internal function s_list_front<T>(l: SeqList<T>): T = s_list_front;
+
+    __safe internal function s_list_set<T>(l: SeqList<T>, i: Nat, v: T): SeqList<T> = s_list_set;
+    __safe internal function s_list_remove<T>(l: SeqList<T>, i: Nat): SeqList<T> = s_list_remove;
+    __safe internal function s_list_insert<T>(l: SeqList<T>, idx: Nat, v: T): SeqList<T> = s_list_insert;
+
+    __safe internal function s_list_pop_back<T>(l: SeqList<T>): SeqList<T> = s_list_pop_back;
+    __safe internal function s_list_pop_front<T>(l: SeqList<T>): SeqList<T> = s_list_pop_front;
+
+    __safe internal function s_list_push_back<T>(l: SeqList<T>, v: T): SeqList<T> = s_list_push_back;
+    __safe internal function s_list_push_front<T>(l: SeqList<T>, v: T): SeqList<T> = s_list_push_front;
+
+    __conditional_safe internal recursive? function s_list_map_pred<T>(l: SeqList<T>, p: recursive? pred(_: T) -> Bool): SeqList<Bool> = s_list_map_pred;
+    __conditional_safe internal recursive? function s_list_map_pred_idx<T>(l: SeqList<T>, p: recursive? pred(_: T, _: Nat) -> Bool): SeqList<Bool> = s_list_map_pred_idx;
+    __conditional_safe internal recursive? function s_list_map_fn<T, U>(l: SeqList<T>, f: recursive? fn(_: T) -> U): SeqList<U> = s_list_map_fn;
+    __conditional_safe internal recursive? function s_list_map_fn_idx<T, U>(l: SeqList<T>, p: recursive? pred(_: T, _: Nat) -> U): SeqList<U> = s_list_map_fn_idx;
+    __conditional_safe internal recursive? function s_list_map_fn_sync<T, U, V>(l1: SeqList<T>, l2: SeqList<U>, f: recursive? fn(_: T, _: U) -> V): SeqList<V> = s_list_map_sync;
+
+    __safe internal function {when T grounded KeyType} s_list_has<T>(l: SeqList<T>, v: T): Bool = s_list_has; 
+    __safe internal function {when T grounded KeyType} s_list_indexof<T>(l: SeqList<T>, v: T): Int = s_list_indexof; 
+    __safe internal function {when T grounded KeyType} s_list_last_indexof<T>(l: SeqList<T>, v: T): Int = s_list_last_indexof; 
+
+    __safe internal function s_list_has_true(l: SeqList<Bool>): Bool = s_list_has_true; 
+    __safe internal function s_list_has_false(l: SeqList<Bool>): Bool = s_list_has_false;
+
+    __safe internal function s_list_all_true(l: SeqList<Bool>): Bool = s_list_all_true; 
+    __safe internal function s_list_all_false(l: SeqList<Bool>): Bool = s_list_all_false;
+
+    __safe internal function s_list_indexof_true(l: SeqList<T>): Int = s_list_indexof_true; 
+    __safe internal function s_list_last_indexof_true(l: SeqList<T>): Int = s_list_last_indexof_true;
+
+    __safe internal function s_list_slice_front<T>(l: SeqList<T>, start: Nat): SeqList<T> = s_list_slice_start;
+    __safe internal function s_list_slice_end<T>(l: SeqList<T>, end: Nat): SeqList<T> = s_list_slice_end;
+    __safe internal function s_list_slice<T>(l: SeqList<T>, start: Nat, length: Nat): SeqList<T> = s_list_slice;
+
+    __safe internal function s_list_mask_select<T>(l: SeqList<T>, mask: SeqList<Bool>): SeqList<T> = s_list_mask_select;
+
+    __safe internal function s_list_reverse<T>(ll: SeqList<T>): SeqList<T> = s_list_reverse;
+
+    /*__conditional_safe*/ internal recursive? function s_list_is_sorted<T>(l: SeqList<T>, cmp: recursive? pred(_: T, _: T) -> Bool): Bool = s_list_is_sorted;
+    
+    __conditional_safe internal recursive? function s_list_reduce<T, U>(l: SeqList<T>, init: U, f: recursive? fn(_: U, _: T) -> U): U = s_list_reduce;
+    __conditional_safe internal recursive? function s_list_reduce_idx<T, U>(l: SeqList<T>, init: U, f: recursive? fn(_: U, _: T, _: Nat) -> U): U = s_list_reduce_idx;
+
+    __conditional_safe internal recursive? function s_list_transduce<T, E, U>(l: SeqList<T>, env: E, op: recursive? fn(_: E, _: T) -> (|E, U|)): (|E, SeqList<U>|) = s_list_transduce;
+    __conditional_safe internal recursive? function s_list_transduce_idx<T, E, U>(l: SeqList<T>, env: E, op: recursive? fn(_: E, _: T, _: Nat) -> (|E, U|)): (|E, SeqList<U>|) = s_list_transduce_idx;
+}
+#endif
+

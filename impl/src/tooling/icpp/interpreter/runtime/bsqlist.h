@@ -317,7 +317,7 @@ public:
             this->iterstack.pop_back();
         }
 
-        rr = static_cast<BSQListTreeRepr*>(rr)->r;
+        rr = static_cast<BSQListTreeRepr*>(this->iterstack.back())->r;
         const BSQListReprType* rt = static_cast<const BSQListReprType*>(GET_TYPE_META_DATA(rr));
         while(rt->lkind == ListReprKind::TreeElement)
         {
@@ -405,7 +405,7 @@ public:
             this->iterstack.pop_back();
         }
 
-        rr = static_cast<BSQListTreeRepr*>(rr)->r;
+        rr = static_cast<BSQListTreeRepr*>(rr)->l;
         const BSQListReprType* rt = static_cast<const BSQListReprType*>(GET_TYPE_META_DATA(rr));
         while(rt->lkind == ListReprKind::TreeElement)
         {

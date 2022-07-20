@@ -662,9 +662,8 @@ enum MIROpTag {
     MIREphemeralListExtend = "MIREphemeralListExtend",
 
     MIRConstructorPrimaryCollectionEmpty = "MIRConstructorPrimaryCollectionEmpty",
+    MIRConstructorPrimaryCollectionOneElement = "MIRConstructorPrimaryCollectionOneElement",
     MIRConstructorPrimaryCollectionSingletons = "MIRConstructorPrimaryCollectionSingletons",
-    MIRConstructorPrimaryCollectionCopies = "MIRConstructorPrimaryCollectionCopies",
-    MIRConstructorPrimaryCollectionMixed = "MIRConstructorPrimaryCollectionMixed",
 
     MIRBinKeyEq = "MIRBinKeyEq",
     MIRBinKeyLess = "MIRBinKeyLess",
@@ -806,12 +805,10 @@ abstract class MIROp {
                 return MIREphemeralListExtend.jparse(jobj);
             case MIROpTag.MIRConstructorPrimaryCollectionEmpty:
                 return MIRConstructorPrimaryCollectionEmpty.jparse(jobj);
+            case MIROpTag.MIRConstructorPrimaryCollectionOneElement:
+                return MIRConstructorPrimaryCollectionOneElement.jparse(jobj);
             case MIROpTag.MIRConstructorPrimaryCollectionSingletons:
                 return MIRConstructorPrimaryCollectionSingletons.jparse(jobj);
-            case MIROpTag.MIRConstructorPrimaryCollectionCopies:
-                return MIRConstructorPrimaryCollectionCopies.jparse(jobj);
-            case MIROpTag.MIRConstructorPrimaryCollectionMixed:
-                return MIRConstructorPrimaryCollectionMixed.jparse(jobj);
             case MIROpTag.MIRBinKeyEq:
                 return MIRBinKeyEq.jparse(jobj);
             case MIROpTag.MIRBinKeyLess:
@@ -2314,23 +2311,47 @@ class MIRConstructorPrimaryCollectionEmpty extends MIROp {
     }
 }
 
+class MIRConstructorPrimaryCollectionOneElement extends MIROp {
+    trgt: MIRRegisterArgument;
+    readonly tkey: MIRResolvedTypeKey;
+    arg: [MIRResolvedTypeKey, MIRArgument];
+
+    constructor(sinfo: SourceInfo, tkey: MIRResolvedTypeKey, arg: [MIRResolvedTypeKey, MIRArgument], trgt: MIRRegisterArgument) {
+        super(MIROpTag.MIRConstructorPrimaryCollectionOneElement, sinfo);
+
+        this.trgt = trgt;
+        this.tkey = tkey;
+        this.arg = arg;
+    }
+
+    getUsedVars(): MIRRegisterArgument[] { return []; }
+    getUsedGlobals(): MIRGlobalVariable[] { return []; }
+    getModVars(): MIRRegisterArgument[] { return [this.trgt]; }
+
+    stringify(): string {
+        return `${this.trgt.stringify()} = ${this.tkey}{}`;
+    }
+
+    jemit(): object {
+        return { ...this.jbemit(), trgt: this.trgt.jemit(), tkey: this.tkey, arg: [this.arg[0], this.arg[1].jemit()] };
+    }
+
+    static jparse(jobj: any): MIROp {
+        return new MIRConstructorPrimaryCollectionOneElement(jparsesinfo(jobj.sinfo), jobj.tkey, [jobj.arg[0], MIRArgument.jparse(jobj.arg[1])], MIRRegisterArgument.jparse(jobj.trgt));
+    }
+}
+
 class MIRConstructorPrimaryCollectionSingletons extends MIROp {
     trgt: MIRRegisterArgument;
     readonly tkey: MIRResolvedTypeKey;
     args: [MIRResolvedTypeKey, MIRArgument][];
-    readonly isAssociativeContainer: boolean;
 
-    constructor(sinfo: SourceInfo, tkey: MIRResolvedTypeKey, args: [MIRResolvedTypeKey, MIRArgument][], trgt: MIRRegisterArgument, isAssociativeContainer: boolean) {
+    constructor(sinfo: SourceInfo, tkey: MIRResolvedTypeKey, args: [MIRResolvedTypeKey, MIRArgument][], trgt: MIRRegisterArgument) {
         super(MIROpTag.MIRConstructorPrimaryCollectionSingletons, sinfo);
 
         this.trgt = trgt;
         this.tkey = tkey;
         this.args = args;
-        this.isAssociativeContainer = isAssociativeContainer;
-    }
-
-    canRaise(): boolean {
-        return this.args.length > 1 && this.isAssociativeContainer;
     }
 
     getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper(this.args.map((arg) => arg[1])); }
@@ -2342,83 +2363,11 @@ class MIRConstructorPrimaryCollectionSingletons extends MIROp {
     }
 
     jemit(): object {
-        return { ...this.jbemit(), trgt: this.trgt.jemit(), tkey: this.tkey, args: this.args.map((arg) => [arg[0], arg[1].jemit()]), isAssociativeContainer: this.isAssociativeContainer };
+        return { ...this.jbemit(), trgt: this.trgt.jemit(), tkey: this.tkey, args: this.args.map((arg) => [arg[0], arg[1].jemit()]) };
     }
 
     static jparse(jobj: any): MIROp {
-        return new MIRConstructorPrimaryCollectionSingletons(jparsesinfo(jobj.sinfo), jobj.tkey, jobj.args.map((jarg: any) => [jarg[0], MIRArgument.jparse(jarg[1])]), MIRRegisterArgument.jparse(jobj.trgt), jobj.isAssociativeContainer);
-    }
-}
-
-class MIRConstructorPrimaryCollectionCopies extends MIROp {
-    trgt: MIRRegisterArgument;
-    readonly tkey: MIRResolvedTypeKey;
-    args: [MIRResolvedTypeKey, MIRArgument][];
-    readonly isAssociativeContainer: boolean;
-
-    constructor(sinfo: SourceInfo, tkey: MIRResolvedTypeKey, args: [MIRResolvedTypeKey, MIRArgument][], trgt: MIRRegisterArgument, isAssociativeContainer: boolean) {
-        super(MIROpTag.MIRConstructorPrimaryCollectionCopies, sinfo);
-
-        this.trgt = trgt;
-        this.tkey = tkey;
-        this.args = args;
-        this.isAssociativeContainer = isAssociativeContainer;
-    }
-
-    getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper(this.args.map((arg) => arg[1])); }
-    getUsedGlobals(): MIRGlobalVariable[] { return globalsOnlyHelper(this.args.map((arg) => arg[1])); }
-    getModVars(): MIRRegisterArgument[] { return [this.trgt]; }
-
-    canRaise(): boolean {
-        return this.isAssociativeContainer;
-    }
-
-    stringify(): string {
-        return `${this.trgt.stringify()} = ${this.tkey}{${this.args.map((arg) => `expand(${arg[1].stringify()})`).join(", ")}}`;
-    }
-
-    jemit(): object {
-        return { ...this.jbemit(), trgt: this.trgt.jemit(), tkey: this.tkey, args: this.args.map((arg) => [arg[0], arg[1].jemit()]), isAssociativeContainer: this.isAssociativeContainer };
-    }
-
-    static jparse(jobj: any): MIROp {
-        return new MIRConstructorPrimaryCollectionCopies(jparsesinfo(jobj.sinfo), jobj.tkey, jobj.args.map((jarg: any) => [jarg[0], MIRArgument.jparse(jarg[1])]), MIRRegisterArgument.jparse(jobj.trgt), jobj.isAssociativeContainer);
-    }
-}
-
-class MIRConstructorPrimaryCollectionMixed extends MIROp {
-    trgt: MIRRegisterArgument;
-    readonly tkey: MIRResolvedTypeKey;
-    args: [boolean, MIRResolvedTypeKey, MIRArgument][];
-    readonly isAssociativeContainer: boolean;
-
-    constructor(sinfo: SourceInfo, tkey: MIRResolvedTypeKey, args: [boolean, MIRResolvedTypeKey, MIRArgument][], trgt: MIRRegisterArgument, isAssociativeContainer: boolean) {
-        super(MIROpTag.MIRConstructorPrimaryCollectionMixed, sinfo,);
-
-        this.trgt = trgt;
-        this.tkey = tkey;
-        this.args = args;
-        this.isAssociativeContainer = isAssociativeContainer;
-    }
-
-    getUsedVars(): MIRRegisterArgument[] { return varsOnlyHelper(this.args.map((tv) => tv[2])); }
-    getUsedGlobals(): MIRGlobalVariable[] { return globalsOnlyHelper(this.args.map((tv) => tv[2])); }
-    getModVars(): MIRRegisterArgument[] { return [this.trgt]; }
-
-    stringify(): string {
-        return `${this.trgt.stringify()} = ${this.tkey}{${this.args.map((arg) => arg[0] ? `expand(${arg[2].stringify()})` : arg[2].stringify()).join(", ")}}`;
-    }
-
-    canRaise(): boolean {
-        return this.isAssociativeContainer;
-    }
-
-    jemit(): object {
-        return { ...this.jbemit(), trgt: this.trgt.jemit(), tkey: this.tkey, args: this.args.map((arg) => [arg[0], arg[1], arg[2].jemit()]), isAssociativeContainer: this.isAssociativeContainer };
-    }
-
-    static jparse(jobj: any): MIROp {
-        return new MIRConstructorPrimaryCollectionMixed(jparsesinfo(jobj.sinfo), jobj.tkey, jobj.args.map((jarg: any) => [jarg[0], jarg[1], MIRArgument.jparse(jarg[2])]), MIRRegisterArgument.jparse(jobj.trgt), jobj.isAssociativeContainer);
+        return new MIRConstructorPrimaryCollectionSingletons(jparsesinfo(jobj.sinfo), jobj.tkey, jobj.args.map((jarg: any) => [jarg[0], MIRArgument.jparse(jarg[1])]), MIRRegisterArgument.jparse(jobj.trgt));
     }
 }
 
@@ -2993,7 +2942,7 @@ export {
     MIRLoadFromEpehmeralList, MIRMultiLoadFromEpehmeralList, MIRSliceEpehmeralList,
     MIRInvokeFixedFunction, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator,
     MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRConstructorEphemeralList, MIRConstructorEntityDirect, MIREphemeralListExtend,
-    MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionSingletons, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionMixed,
+    MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionOneElement, MIRConstructorPrimaryCollectionSingletons,
     MIRBinKeyEq, MIRBinKeyLess, MIRPrefixNotOp,
     MIRLogicAction,
     MIRIsTypeOf,
