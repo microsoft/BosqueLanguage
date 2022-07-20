@@ -462,6 +462,8 @@ public:
     static void* s_map_idx_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* fn, const std::vector<StorageLocationPtr>& params, const BSQListTypeFlavor& resflavor);
     static void* s_map_sync_ne(const BSQListTypeFlavor& lflavor1, const BSQListTypeFlavor& lflavor2, LambdaEvalThunk ee, uint64_t count, void* t1, const BSQListReprType* ttype1, void* t2, const BSQListReprType* ttype2, const BSQPCode* fn, const std::vector<StorageLocationPtr>& params, const BSQListTypeFlavor& resflavor);
 
+    static void* s_filter_map_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* fn, const BSQPCode* p, const std::vector<StorageLocationPtr>& params, const BSQListTypeFlavor& resflavor);
+
     static void s_reduce_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* f, const std::vector<StorageLocationPtr>& params, StorageLocationPtr res);
     static void s_reduce_idx_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* f, const std::vector<StorageLocationPtr>& params, StorageLocationPtr res);
 
@@ -477,21 +479,13 @@ class BSQMapOps
 public:
     static std::map<std::pair<BSQTypeID, BSQTypeID>, BSQMapTypeFlavor> g_flavormap; //map from entry type to the flavors of the repr
 
-    static void* map_cons(const BSQMapTypeFlavor& mflavor, const BSQType* tupletype, const std::vector<StorageLocationPtr>& params)
+    static void* map_cons_one_element(const BSQMapTypeFlavor& mflavor, const BSQType* tupletype, const std::vector<StorageLocationPtr>& params)
     {
-        if(params.size() == 1)
-        {
-            void* repr = Allocator::GlobalAllocator.allocateDynamic(mflavor.treetype);
-            const BSQTupleInfo* tupinfo = dynamic_cast<const BSQTupleInfo*>(tupletype);
+        void* repr = Allocator::GlobalAllocator.allocateDynamic(mflavor.treetype);
+        const BSQTupleInfo* tupinfo = dynamic_cast<const BSQTupleInfo*>(tupletype);
 
-            mflavor.treetype->initializeLeaf(repr, tupletype->indexStorageLocationOffset(params[0], tupinfo->idxoffsets[0]), mflavor.keytype, tupletype->indexStorageLocationOffset(params[0], tupinfo->idxoffsets[1]), mflavor.valuetype);
-            return repr;
-        }
-        else
-        {
-            assert(false);
-            return nullptr;
-        }
+        mflavor.treetype->initializeLeaf(repr, tupletype->indexStorageLocationOffset(params[0], tupinfo->idxoffsets[0]), mflavor.keytype, tupletype->indexStorageLocationOffset(params[0], tupinfo->idxoffsets[1]), mflavor.valuetype);
+        return repr;
     }
 
     static void* s_lookup_ne(void* t, const BSQMapTreeType* ttype, StorageLocationPtr kl, const BSQType* ktype);
@@ -626,9 +620,9 @@ public:
             s_enumerate_for_extract(mflavor, BSQMapTreeType::getRight(tn), ll);
         }
     }
-
-    static void* s_union_ne(const BSQMapTypeFlavor& mflavor, void* t1, const BSQMapTreeType* ttype1, void* t2, const BSQMapTreeType* ttype2);
-
+    
+    static void* s_fast_union_ne(const BSQMapTypeFlavor& mflavor, void* t1, const BSQMapTreeType* ttype1, void* t2, const BSQMapTreeType* ttype2, const std::vector<StorageLocationPtr>& params);
+    
     static void* s_submap_ne(const BSQMapTypeFlavor& mflavor, LambdaEvalThunk ee, void* t, const BSQMapTreeType* ttype, const BSQPCode* pred, const std::vector<StorageLocationPtr>& params);
     static void* s_remap_ne(const BSQMapTypeFlavor& mflavor, LambdaEvalThunk ee, void* t, const BSQMapTreeType* ttype, const BSQPCode* fn, const std::vector<StorageLocationPtr>& params, const BSQMapTypeFlavor& resflavor);
 };

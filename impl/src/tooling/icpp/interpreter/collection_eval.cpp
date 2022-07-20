@@ -837,6 +837,66 @@ void* BSQListOps::s_map_sync_ne(const BSQListTypeFlavor& lflavor1, const BSQList
     return res;
 }
 
+void* BSQListOps::s_filter_map_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* fn, const BSQPCode* p, const std::vector<StorageLocationPtr>& params, const BSQListTypeFlavor& resflavor)
+{
+    const BSQInvokeBodyDecl* icall = dynamic_cast<const BSQInvokeBodyDecl*>(BSQInvokeDecl::g_invokes[fn->code]);
+    const BSQInvokeBodyDecl* pcall = dynamic_cast<const BSQInvokeBodyDecl*>(BSQInvokeDecl::g_invokes[p->code]);
+
+    void* rres = nullptr;
+    {
+        void** tmpl = (void**)GCStack::allocFrame((sizeof(void*) * 2) + lflavor.entrytype->allocinfo.inlinedatasize + resflavor.pv8type->allocinfo.heapsize);
+        uint8_t* esl = ((uint8_t*)tmpl + (sizeof(void*) * 2));
+        uint8_t* pv8l = ((uint8_t*)tmpl + (sizeof(void*) * 2) + lflavor.entrytype->allocinfo.inlinedatasize);
+        tmpl[0] = t;
+
+        std::vector<StorageLocationPtr> plparams = {esl};
+        std::transform(p->cargpos.cbegin(), p->cargpos.cend(), std::back_inserter(plparams), [&params](uint32_t pos) {
+            return params[pos];
+        });
+
+        std::vector<StorageLocationPtr> ilparams = {esl};
+        std::transform(fn->cargpos.cbegin(), fn->cargpos.cend(), std::back_inserter(ilparams), [&params](uint32_t pos) {
+            return params[pos];
+        });
+
+        rres = BSQListOps::list_tree_transform(lflavor, tmpl[0], [&](void* vv, const BSQPartialVectorType* reprtype) {
+            tmpl[1] = vv;
+            int16_t vcount = reprtype->getPVCount(tmpl[1]);
+   
+            size_t j = 0;
+            for(int16_t i = 0; i < vcount; ++i)
+            {
+                lflavor.entrytype->storeValue(esl, reprtype->get(tmpl[1], i));
+                
+                BSQBool found = BSQFALSE;
+                ee.invoke(pcall, plparams, &found);
+                if(found)
+                {
+                    ee.invoke(icall, ilparams, resflavor.pv8type->get(pv8l, j));
+                    j++;
+                }
+            }
+            lflavor.entrytype->clearValue(esl);
+
+            void* pvinto = nullptr;
+            if(j != 0)
+            {
+                pvinto = (void*)Allocator::GlobalAllocator.allocateDynamic((j <= 4) ? resflavor.pv4type : resflavor.pv8type);
+                BSQPartialVectorType::directSetPVData(pvinto, pv8l, j, resflavor.entrytype->allocinfo.inlinedatasize);
+
+                tmpl[1] = nullptr;
+                GC_MEM_ZERO(pv8l, resflavor.pv8type->allocinfo.heapsize);
+            }
+
+            return pvinto;
+        });
+    
+        GCStack::popFrame((sizeof(void*) * 2) + lflavor.entrytype->allocinfo.inlinedatasize + resflavor.pv8type->allocinfo.heapsize);
+    }
+
+    return rres;
+}
+
 void BSQListOps::s_reduce_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk ee, void* t, const BSQListReprType* ttype, const BSQPCode* f, const std::vector<StorageLocationPtr>& params, StorageLocationPtr res)
 {
     BSQListForwardIterator iter(ttype, t);
@@ -1211,40 +1271,23 @@ void* BSQMapOps::s_remove_ne(const BSQMapTypeFlavor& mflavor, void* t, const BSQ
     return res;
 }
 
-void s_union_map_rec_ne(const BSQMapTypeFlavor& mflavor, StorageLocationPtr tnode, BSQMapSpineIterator& ii)
+void* BSQMapOps::s_fast_union_ne(const BSQMapTypeFlavor& mflavor, void* t1, const BSQMapTreeType* ttype1, void* t2, const BSQMapTreeType* ttype2, const std::vector<StorageLocationPtr>& params)
 {
-    auto tmpi = SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(tnode);
-    auto tmpr = BSQMapOps::s_add_ne(mflavor, tmpi, mflavor.treetype, mflavor.treetype->getKeyLocation(ii.lcurr), mflavor.treetype->getKeyLocation(ii.lcurr));
-    SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(tnode, tmpr);
+    void** stck = (void**)GCStack::allocFrame(sizeof(void*) * 2);
+    void* res = nullptr;
 
-    if(BSQMapTreeType::getLeft(ii.lcurr) != nullptr)
-    {
-        ii.moveLeft();
-        s_union_map_rec_ne(mflavor, tnode, ii);
-        ii.pop();
-    }
+    BSQMapSpineIterator iter(ttype2, t2);
+    Allocator::GlobalAllocator.insertCollectionIter(&iter);
 
-    if(BSQMapTreeType::getRight(ii.lcurr) != nullptr)
-    {
-        ii.moveRight();
-        s_union_map_rec_ne(mflavor, tnode, ii);
-        ii.pop();
-    }
-}
+    auto tnp = BSQMapOps::extract_min_and_remaining_tree(mflavor, iter);
+    stck[0] = tnp.first;
+    stck[1] = tnp.second;
+    
+    res = Allocator::GlobalAllocator.allocateDynamic(mflavor.treetype);
+    mflavor.treetype->initializeLR(res, mflavor.treetype->getKeyLocation(stck[0]), mflavor.keytype, mflavor.treetype->getValueLocation(stck[0]), mflavor.valuetype, t1, stck[1]);
 
-void* BSQMapOps::s_union_ne(const BSQMapTypeFlavor& mflavor, void* t1, const BSQMapTreeType* ttype1, void* t2, const BSQMapTreeType* ttype2)
-{
-    void** stck = (void**)GCStack::allocFrame(sizeof(void*));
-    stck[0] = t1;
-
-    BSQMapSpineIterator iter2(ttype2, t2);
-    Allocator::GlobalAllocator.insertCollectionIter(&iter2);
-    s_union_map_rec_ne(mflavor, stck, iter2);
-    Allocator::GlobalAllocator.removeCollectionIter(&iter2);
-
-    void* res = stck[0];
-    GCStack::popFrame(sizeof(void*));
-
+    Allocator::GlobalAllocator.removeCollectionIter(&iter);
+    GCStack::popFrame(sizeof(void*) * 2);
     return res;
 }
 
