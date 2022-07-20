@@ -388,16 +388,16 @@ class SMTEmitter {
         const access4 = this.temitter.generateResultGetSuccess(lentrytype, new SMTVar(ccvar4));
 
         const chk1: SMTExp = chkfun1;
-        const cons1: SMTExp = this.temitter.generateResultTypeConstructorSuccess(tt, this.temitter.coerce(new SMTCallSimple(this.temitter.getSMTConstructorName(vv1).cons, [access1]), vv1, tt));
+        const cons1: SMTExp = this.temitter.generateResultTypeConstructorSuccess(tt, this.temitter.coerceContainerAtomIntoTermRepresentation(new SMTCallSimple(this.temitter.getSMTConstructorName(vv1).cons, [access1]), vv1));
 
         const chk2: SMTExp = SMTCallSimple.makeOrOf(chkfun1, chkfun2);
-        const cons2: SMTExp = this.temitter.generateResultTypeConstructorSuccess(tt, this.temitter.coerce(new SMTCallSimple(this.temitter.getSMTConstructorName(vv2).cons, [access1, access2]), vv2, tt));
+        const cons2: SMTExp = this.temitter.generateResultTypeConstructorSuccess(tt, this.temitter.coerceContainerAtomIntoTermRepresentation(new SMTCallSimple(this.temitter.getSMTConstructorName(vv2).cons, [access1, access2]), vv2));
 
         const chk3: SMTExp = SMTCallSimple.makeOrOf(chkfun1, chkfun2, chkfun3);
-        const cons3: SMTExp = this.temitter.generateResultTypeConstructorSuccess(tt, this.temitter.coerce(new SMTCallSimple(this.temitter.getSMTConstructorName(vv3).cons, [access1, access2, access3]), vv3, tt));
+        const cons3: SMTExp = this.temitter.generateResultTypeConstructorSuccess(tt, this.temitter.coerceContainerAtomIntoTermRepresentation(new SMTCallSimple(this.temitter.getSMTConstructorName(vv3).cons, [access1, access2, access3]), vv3));
 
         const chk4: SMTExp = SMTCallSimple.makeOrOf(chkfun1, chkfun2, chkfun3, chkfun4);
-        const cons4: SMTExp = this.temitter.generateResultTypeConstructorSuccess(tt, this.temitter.coerce(new SMTCallSimple(this.temitter.getSMTConstructorName(vv3).cons, [access1, access2, access3, access4]), vv4, tt));
+        const cons4: SMTExp = this.temitter.generateResultTypeConstructorSuccess(tt, this.temitter.coerceContainerAtomIntoTermRepresentation(new SMTCallSimple(this.temitter.getSMTConstructorName(vv4).cons, [access1, access2, access3, access4]), vv4));
 
         const hbody = new SMTLet("len", clen,
                 new SMTIf(SMTCallSimple.makeOrOf(new SMTCallSimple("<", [new SMTVar("len"), new SMTConst("0")]), new SMTCallSimple("<", [new SMTConst("@CONTAINERMAX"), new SMTVar("len")])),
@@ -490,16 +490,16 @@ class SMTEmitter {
         const access4 = this.temitter.generateResultGetSuccess(lentrytype, new SMTVar(ccvar4));
 
         const chk1: SMTExp = chkfun1;
-        const cons1: SMTExp = this.temitter.generateResultTypeConstructorSuccess(tt, this.temitter.coerce(new SMTCallSimple(this.temitter.getSMTConstructorName(vv1).cons, [access1]), vv1, tt));
+        const cons1: SMTExp = this.temitter.generateResultTypeConstructorSuccess(tt, this.temitter.coerceContainerAtomIntoTermRepresentation(new SMTCallSimple(this.temitter.getSMTConstructorName(vv1).cons, [access1]), vv1));
 
         const chk2: SMTExp = SMTCallSimple.makeOrOf(chkfun1, chkfun2);
-        const cons2: SMTExp = this.temitter.generateResultTypeConstructorSuccess(tt, this.temitter.coerce(new SMTCallSimple(this.temitter.getSMTConstructorName(vv2).cons, [access1, access2]), vv2, tt));
+        const cons2: SMTExp = this.temitter.generateResultTypeConstructorSuccess(tt, this.temitter.coerceContainerAtomIntoTermRepresentation(new SMTCallSimple(this.temitter.getSMTConstructorName(vv2).cons, [access1, access2]), vv2));
 
         const chk3: SMTExp = SMTCallSimple.makeOrOf(chkfun1, chkfun2, chkfun3);
-        const cons3: SMTExp = this.temitter.generateResultTypeConstructorSuccess(tt, this.temitter.coerce(new SMTCallSimple(this.temitter.getSMTConstructorName(vv3).cons, [access1, access2, access3]), vv3, tt));
+        const cons3: SMTExp = this.temitter.generateResultTypeConstructorSuccess(tt, this.temitter.coerceContainerAtomIntoTermRepresentation(new SMTCallSimple(this.temitter.getSMTConstructorName(vv3).cons, [access1, access2, access3]), vv3));
 
         const chk4: SMTExp = SMTCallSimple.makeOrOf(chkfun1, chkfun2, chkfun3, chkfun4);
-        const cons4: SMTExp = this.temitter.generateResultTypeConstructorSuccess(tt, this.temitter.coerce(new SMTCallSimple(this.temitter.getSMTConstructorName(vv3).cons, [access1, access2, access3, access4]), vv4, tt));
+        const cons4: SMTExp = this.temitter.generateResultTypeConstructorSuccess(tt, this.temitter.coerceContainerAtomIntoTermRepresentation(new SMTCallSimple(this.temitter.getSMTConstructorName(vv4).cons, [access1, access2, access3, access4]), vv4));
 
         const smtktype = this.temitter.getSMTTypeFor(tdecl.getTypeK());
         const cmpop: string = smtktype.isGeneralKeyType() ? `${smtktype.smttypename}@less` : "BKey@less";

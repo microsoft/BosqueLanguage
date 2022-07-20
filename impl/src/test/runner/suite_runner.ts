@@ -71,6 +71,10 @@ function generateMASMForSMT(usercode: PackageConfig[], corecode: CodeFileInfo[],
         smtmacros.push("CHK_SMALL_ONLY");
     }
 
+    //////////////////////////////////////////
+    //////////////////////////////////////////
+    smtmacros.push("CHK_SMALL_ONLY");
+
     const coreconfig = new PackageConfig(smtmacros, corecode);
 
     return MIREmitter.generateMASM(BuildApplicationMode.ModelChecker, [coreconfig, ...usercode], buildlevel, entrypoint);

@@ -481,7 +481,7 @@ class SMTBodyEmitter {
             bbody = this.typegen.coerceContainerAtomIntoTermRepresentation(new SMTCallSimple(this.typegen.getSMTConstructorName(v3type).cons, [new SMTVar("arg0"), new SMTVar("arg1"), new SMTVar("arg2")]), v3type);
         }
         else {
-            const lltype = this.assembly.typeMap.get(`LargeList<${etype.typeID}>`) as MIRType;
+            const lltype = this.assembly.typeMap.get(`SeqList<${etype.typeID}>`) as MIRType;
 
             let args: SMTExp[] = [];
             for(let i = 0; i < geninfo.argc; ++i) {
@@ -3804,6 +3804,9 @@ class SMTBodyEmitter {
                 );
 
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+            }
+            case "s_blockingfailure": {
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
             }
             default: {
                 assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
