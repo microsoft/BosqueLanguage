@@ -6,12 +6,17 @@
 namespace Main;
 
 ///////////////////////////////////////////////
-/*
-entrypoint function main(b: Board): Bool {
-    let winner = b.checkAnyWinner();
-    return winner === PlayerMark::x || winner === PlayerMark::o;
+
+const main_empty_board: Board = Board::createEmpty{};
+const main_no_win_2: Board = Main::main_empty_board.setCellMark(BoardPostion{1, 1}, PlayerMark::x).setCellMark(BoardPostion{0, 2}, PlayerMark::o);
+
+entrypoint function main(c: BoardPostion): Bool
+    requires Main::main_no_win_2.isCellEmpty(c);
+{
+    let nb = Main::main_no_win_2.setCellMark(c, PlayerMark::x);
+    return !nb.hasWinner();
 }
-*/
+
 ///////////////////////////////////////////////
 
 

@@ -2897,13 +2897,13 @@ class SMTBodyEmitter {
                     ]);
 
                     const cerrtrgt = new SMTCallSimple("seq.foldl", [
-                        new SMTConst(`(lambda ((@@acc Bool) (@@r ${this.typegen.generateResultType(this.typegen.getMIRType("Bool")).smttypename})) ${SMTCallSimple.makeOrOf(new SMTVar("@@acc"), SMTCallSimple.makeEq(new SMTVar("@@r"), trgterr)).emitSMT2(undefined)}`),
+                        new SMTConst(`(lambda ((@@acc Bool) (@@r ${this.typegen.generateResultType(this.typegen.getMIRType("Bool")).smttypename})) ${SMTCallSimple.makeOrOf(new SMTVar("@@acc"), SMTCallSimple.makeEq(new SMTVar("@@r"), trgterr)).emitSMT2(undefined)})`),
                         new SMTConst("false"),
                         new SMTVar("@maparray")
                     ]);
 
                     const cerrother = new SMTCallSimple("seq.foldl", [
-                        new SMTConst(`(lambda ((@@acc Bool) (@@r ${this.typegen.generateResultType(this.typegen.getMIRType("Bool")).smttypename})) ${SMTCallSimple.makeOrOf(new SMTVar("@@acc"), SMTCallSimple.makeEq(new SMTVar("@@r"), othererr)).emitSMT2(undefined)}`),
+                        new SMTConst(`(lambda ((@@acc Bool) (@@r ${this.typegen.generateResultType(this.typegen.getMIRType("Bool")).smttypename})) ${SMTCallSimple.makeOrOf(new SMTVar("@@acc"), SMTCallSimple.makeEq(new SMTVar("@@r"), othererr)).emitSMT2(undefined)})`),
                         new SMTConst("false"),
                         new SMTVar("@maparray")
                     ]);
@@ -3015,13 +3015,13 @@ class SMTBodyEmitter {
                     ]);
 
                     const cerrtrgt = new SMTCallSimple("seq.foldl", [
-                        new SMTConst(`(lambda ((@@acc Bool) (@@r ${this.typegen.generateResultType(mirresult_T).smttypename})) ${SMTCallSimple.makeOrOf(new SMTVar("@@acc"), SMTCallSimple.makeEq(new SMTVar("@@r"), trgterr)).emitSMT2(undefined)}`),
+                        new SMTConst(`(lambda ((@@acc Bool) (@@r ${this.typegen.generateResultType(mirresult_T).smttypename})) ${SMTCallSimple.makeOrOf(new SMTVar("@@acc"), SMTCallSimple.makeEq(new SMTVar("@@r"), trgterr)).emitSMT2(undefined)})`),
                         new SMTConst("false"),
                         new SMTVar("@maparray")
                     ]);
 
                     const cerrother = new SMTCallSimple("seq.foldl", [
-                        new SMTConst(`(lambda ((@@acc Bool) (@@r ${this.typegen.generateResultType(mirresult_T).smttypename})) ${SMTCallSimple.makeOrOf(new SMTVar("@@acc"), SMTCallSimple.makeEq(new SMTVar("@@r"), othererr)).emitSMT2(undefined)}`),
+                        new SMTConst(`(lambda ((@@acc Bool) (@@r ${this.typegen.generateResultType(mirresult_T).smttypename})) ${SMTCallSimple.makeOrOf(new SMTVar("@@acc"), SMTCallSimple.makeEq(new SMTVar("@@r"), othererr)).emitSMT2(undefined)})`),
                         new SMTConst("false"),
                         new SMTVar("@maparray")
                     ]);
@@ -3075,13 +3075,13 @@ class SMTBodyEmitter {
                     ]);
 
                     const cerrtrgt = new SMTCallSimple("seq.foldl", [
-                        new SMTConst(`(lambda ((@@acc Bool) (@@r ${this.typegen.generateResultType(mirresult_T).smttypename})) ${SMTCallSimple.makeOrOf(new SMTVar("@@acc"), SMTCallSimple.makeEq(new SMTVar("@@r"), trgterr)).emitSMT2(undefined)}`),
+                        new SMTConst(`(lambda ((@@acc Bool) (@@r ${this.typegen.generateResultType(mirresult_T).smttypename})) ${SMTCallSimple.makeOrOf(new SMTVar("@@acc"), SMTCallSimple.makeEq(new SMTVar("@@r"), trgterr)).emitSMT2(undefined)})`),
                         new SMTConst("false"),
                         new SMTVar("@maparray")
                     ]);
 
                     const cerrother = new SMTCallSimple("seq.foldl", [
-                        new SMTConst(`(lambda ((@@acc Bool) (@@r ${this.typegen.generateResultType(mirresult_T).smttypename})) ${SMTCallSimple.makeOrOf(new SMTVar("@@acc"), SMTCallSimple.makeEq(new SMTVar("@@r"), othererr)).emitSMT2(undefined)}`),
+                        new SMTConst(`(lambda ((@@acc Bool) (@@r ${this.typegen.generateResultType(mirresult_T).smttypename})) ${SMTCallSimple.makeOrOf(new SMTVar("@@acc"), SMTCallSimple.makeEq(new SMTVar("@@r"), othererr)).emitSMT2(undefined)})`),
                         new SMTConst("false"),
                         new SMTVar("@maparray")
                     ]);
@@ -3139,13 +3139,13 @@ class SMTBodyEmitter {
                     ]);
 
                     const cerrtrgt = new SMTCallSimple("seq.foldl", [
-                        new SMTConst(`(lambda ((@@acc Bool) (@@r ${this.typegen.generateResultType(mirresult_T).smttypename})) ${SMTCallSimple.makeOrOf(new SMTVar("@@acc"), SMTCallSimple.makeEq(new SMTVar("@@r"), trgterr)).emitSMT2(undefined)}`),
+                        new SMTConst(`(lambda ((@@acc Bool) (@@r ${this.typegen.generateResultType(mirresult_T).smttypename})) ${SMTCallSimple.makeOrOf(new SMTVar("@@acc"), SMTCallSimple.makeEq(new SMTVar("@@r"), trgterr)).emitSMT2(undefined)})`),
                         new SMTConst("false"),
                         new SMTVar("@maparray")
                     ]);
 
                     const cerrother = new SMTCallSimple("seq.foldl", [
-                        new SMTConst(`(lambda ((@@acc Bool) (@@r ${this.typegen.generateResultType(mirresult_T).smttypename})) ${SMTCallSimple.makeOrOf(new SMTVar("@@acc"), SMTCallSimple.makeEq(new SMTVar("@@r"), othererr)).emitSMT2(undefined)}`),
+                        new SMTConst(`(lambda ((@@acc Bool) (@@r ${this.typegen.generateResultType(mirresult_T).smttypename})) ${SMTCallSimple.makeOrOf(new SMTVar("@@acc"), SMTCallSimple.makeEq(new SMTVar("@@r"), othererr)).emitSMT2(undefined)})`),
                         new SMTConst("false"),
                         new SMTVar("@maparray")
                     ]);
@@ -3168,7 +3168,7 @@ class SMTBodyEmitter {
             case "s_list_has": {
                 const sval = this.typegen.generateSeqListTypeGetData(this.typegen.getMIRType(idecl.params[0].type), new SMTVar(args[0].vname));
                 const cbody = new SMTCallSimple("seq.foldl", [
-                    new SMTConst(`(lambda ((@@acc Bool) (@@r ${args[1].vtype.smttypename})) ${SMTCallSimple.makeOrOf(new SMTVar("@@acc"), SMTCallSimple.makeEq(new SMTVar("@@r"), new SMTVar(args[1].vname))).emitSMT2(undefined)}`),
+                    new SMTConst(`(lambda ((@@acc Bool) (@@r ${args[1].vtype.smttypename})) ${SMTCallSimple.makeOrOf(new SMTVar("@@acc"), SMTCallSimple.makeEq(new SMTVar("@@r"), new SMTVar(args[1].vname))).emitSMT2(undefined)})`),
                     new SMTConst("false"),
                     sval
                 ]);
@@ -3207,7 +3207,7 @@ class SMTBodyEmitter {
             case "s_list_has_true": {
                 const sval = this.typegen.generateSeqListTypeGetData(this.typegen.getMIRType(idecl.params[0].type), new SMTVar(args[0].vname));
                 const cbody = new SMTCallSimple("seq.foldl", [
-                    new SMTConst(`(lambda ((@@acc Bool) (@@r Bool)) ${SMTCallSimple.makeOrOf(new SMTVar("@@acc"), new SMTVar("@@r")).emitSMT2(undefined)}`),
+                    new SMTConst(`(lambda ((@@acc Bool) (@@r Bool)) ${SMTCallSimple.makeOrOf(new SMTVar("@@acc"), new SMTVar("@@r")).emitSMT2(undefined)})`),
                     new SMTConst("false"),
                     sval
                 ]);
@@ -3216,7 +3216,7 @@ class SMTBodyEmitter {
             case "s_list_has_false": {
                 const sval = this.typegen.generateSeqListTypeGetData(this.typegen.getMIRType(idecl.params[0].type), new SMTVar(args[0].vname));
                 const cbody = new SMTCallSimple("seq.foldl", [
-                    new SMTConst(`(lambda ((@@acc Bool) (@@r Bool)) ${SMTCallSimple.makeOrOf(new SMTVar("@@acc"), SMTCallSimple.makeNot(new SMTVar("@@r"))).emitSMT2(undefined)}`),
+                    new SMTConst(`(lambda ((@@acc Bool) (@@r Bool)) ${SMTCallSimple.makeOrOf(new SMTVar("@@acc"), SMTCallSimple.makeNot(new SMTVar("@@r"))).emitSMT2(undefined)})`),
                     new SMTConst("false"),
                     sval
                 ]);
@@ -3225,7 +3225,7 @@ class SMTBodyEmitter {
             case "s_list_all_true": {
                 const sval = this.typegen.generateSeqListTypeGetData(this.typegen.getMIRType(idecl.params[0].type), new SMTVar(args[0].vname));
                 const cbody = new SMTCallSimple("seq.foldl", [
-                    new SMTConst(`(lambda ((@@acc Bool) (@@r Bool)) ${SMTCallSimple.makeAndOf(new SMTVar("@@acc"), new SMTVar("@@r")).emitSMT2(undefined)}`),
+                    new SMTConst(`(lambda ((@@acc Bool) (@@r Bool)) ${SMTCallSimple.makeAndOf(new SMTVar("@@acc"), new SMTVar("@@r")).emitSMT2(undefined)})`),
                     new SMTConst("true"),
                     sval
                 ]);
@@ -3234,7 +3234,7 @@ class SMTBodyEmitter {
             case "s_list_all_false": {
                 const sval = this.typegen.generateSeqListTypeGetData(this.typegen.getMIRType(idecl.params[0].type), new SMTVar(args[0].vname));
                 const cbody = new SMTCallSimple("seq.foldl", [
-                    new SMTConst(`(lambda ((@@acc Bool) (@@r Bool)) ${SMTCallSimple.makeAndOf(new SMTVar("@@acc"), SMTCallSimple.makeNot(new SMTVar("@@r"))).emitSMT2(undefined)}`),
+                    new SMTConst(`(lambda ((@@acc Bool) (@@r Bool)) ${SMTCallSimple.makeAndOf(new SMTVar("@@acc"), SMTCallSimple.makeNot(new SMTVar("@@r"))).emitSMT2(undefined)})`),
                     new SMTConst("true"),
                     sval
                 ]);
@@ -3518,7 +3518,7 @@ class SMTBodyEmitter {
                 const accesskey = this.typegen.generateSeqMapEntryTypeGetKey(mt, new SMTVar("@@x"));
 
                 const cbody = new SMTCallSimple("seq.foldl", [
-                    new SMTConst(`(lambda ((@@acc Bool) (@@x ${entrytype.smttypename})) ${SMTCallSimple.makeOrOf(new SMTVar("@@acc"), SMTCallSimple.makeEq(accesskey, new SMTVar(args[1].vname))).emitSMT2(undefined)}`),
+                    new SMTConst(`(lambda ((@@acc Bool) (@@x ${entrytype.smttypename})) ${SMTCallSimple.makeOrOf(new SMTVar("@@acc"), SMTCallSimple.makeEq(accesskey, new SMTVar(args[1].vname))).emitSMT2(undefined)})`),
                     new SMTConst("false"),
                     mval
                 ]);
@@ -3589,13 +3589,13 @@ class SMTBodyEmitter {
                     ]);
 
                     const cerrtrgt = new SMTCallSimple("seq.foldl", [
-                        new SMTConst(`(lambda ((@@acc Bool) (@@r ${this.typegen.generateResultType(this.typegen.getMIRType("Bool")).smttypename})) ${SMTCallSimple.makeOrOf(new SMTVar("@@acc"), SMTCallSimple.makeEq(new SMTVar("@@r"), trgterr)).emitSMT2(undefined)}`),
+                        new SMTConst(`(lambda ((@@acc Bool) (@@r ${this.typegen.generateResultType(this.typegen.getMIRType("Bool")).smttypename})) ${SMTCallSimple.makeOrOf(new SMTVar("@@acc"), SMTCallSimple.makeEq(new SMTVar("@@r"), trgterr)).emitSMT2(undefined)})`),
                         new SMTConst("false"),
                         new SMTVar("@maparray")
                     ]);
 
                     const cerrother = new SMTCallSimple("seq.foldl", [
-                        new SMTConst(`(lambda ((@@acc Bool) (@@r ${this.typegen.generateResultType(this.typegen.getMIRType("Bool")).smttypename})) ${SMTCallSimple.makeOrOf(new SMTVar("@@acc"), SMTCallSimple.makeEq(new SMTVar("@@r"), othererr)).emitSMT2(undefined)}`),
+                        new SMTConst(`(lambda ((@@acc Bool) (@@r ${this.typegen.generateResultType(this.typegen.getMIRType("Bool")).smttypename})) ${SMTCallSimple.makeOrOf(new SMTVar("@@acc"), SMTCallSimple.makeEq(new SMTVar("@@r"), othererr)).emitSMT2(undefined)})`),
                         new SMTConst("false"),
                         new SMTVar("@maparray")
                     ]);
@@ -3674,13 +3674,13 @@ class SMTBodyEmitter {
                     ]);
 
                     const cerrtrgt = new SMTCallSimple("seq.foldl", [
-                        new SMTConst(`(lambda ((@@acc Bool) (@@r ${this.typegen.generateResultType(mirresult_V).smttypename})) ${SMTCallSimple.makeOrOf(new SMTVar("@@acc"), SMTCallSimple.makeEq(new SMTVar("@@r"), trgterr)).emitSMT2(undefined)}`),
+                        new SMTConst(`(lambda ((@@acc Bool) (@@r ${this.typegen.generateResultType(mirresult_V).smttypename})) ${SMTCallSimple.makeOrOf(new SMTVar("@@acc"), SMTCallSimple.makeEq(new SMTVar("@@r"), trgterr)).emitSMT2(undefined)})`),
                         new SMTConst("false"),
                         new SMTVar("@maparray")
                     ]);
 
                     const cerrother = new SMTCallSimple("seq.foldl", [
-                        new SMTConst(`(lambda ((@@acc Bool) (@@r ${this.typegen.generateResultType(mirresult_V).smttypename})) ${SMTCallSimple.makeOrOf(new SMTVar("@@acc"), SMTCallSimple.makeEq(new SMTVar("@@r"), othererr)).emitSMT2(undefined)}`),
+                        new SMTConst(`(lambda ((@@acc Bool) (@@r ${this.typegen.generateResultType(mirresult_V).smttypename})) ${SMTCallSimple.makeOrOf(new SMTVar("@@acc"), SMTCallSimple.makeEq(new SMTVar("@@r"), othererr)).emitSMT2(undefined)})`),
                         new SMTConst("false"),
                         new SMTVar("@maparray")
                     ]);

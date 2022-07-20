@@ -80,10 +80,6 @@ function generateMASM(usercode: PackageConfig, buildlevel: BuildLevel, smallmode
         smtmacros.push("CHK_SMALL_ONLY");
     }
 
-    //////////////////////////////////////////
-    //////////////////////////////////////////
-    smtmacros.push("CHK_SMALL_ONLY");
-
     const coreconfig = new PackageConfig(smtmacros, corecode);
 
     return MIREmitter.generateMASM(BuildApplicationMode.ModelChecker, [coreconfig, usercode], buildlevel, entrypoint);
