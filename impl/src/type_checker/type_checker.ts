@@ -3031,6 +3031,11 @@ class TypeChecker {
 
                     return [env.setUniformResultExpression(fsig.resultType)];
                 }
+                else if (fdecl.decl.invoke.body !== undefined && fdecl.decl.invoke.body.body === "special_extract") {
+                    this.m_emitter.emitExtract(exp.sinfo, this.m_emitter.registerResolvedTypeReference(fsig.params[0].type as ResolvedType), this.m_emitter.registerResolvedTypeReference(fsig.resultType), rargs.args[0], trgt);
+
+                    return [env.setUniformResultExpression(fsig.resultType)];
+                }
                 else {
                     const ootype = this.m_emitter.registerResolvedTypeReference(this.resolveOOTypeFromDecls(fdecl.contiainingType, fdecl.binds));
                     const ckey = this.m_emitter.registerStaticCall(this.resolveOOTypeFromDecls(fdecl.contiainingType, fdecl.binds), [ootype, fdecl.contiainingType, fdecl.binds], fdecl.decl, exp.name, callbinds, rargs.pcodes, rargs.cinfo);

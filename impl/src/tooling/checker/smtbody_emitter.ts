@@ -470,15 +470,15 @@ class SMTBodyEmitter {
         let bbody: SMTExp = new SMTConst("[INVALID]");
         if(geninfo.argc === 1) {
             const v1type = this.assembly.typeMap.get(`Vector1<${etype.typeID}>`) as MIRType;
-            bbody = this.typegen.coerce(new SMTCallSimple(this.typegen.getSMTConstructorName(v1type).cons, [new SMTVar("arg0")]), v1type, geninfo.resulttype);
+            bbody = this.typegen.coerceContainerAtomIntoTermRepresentation(new SMTCallSimple(this.typegen.getSMTConstructorName(v1type).cons, [new SMTVar("arg0")]), v1type);
         }
         else if(geninfo.argc === 2) {
             const v2type = this.assembly.typeMap.get(`Vector2<${etype.typeID}>`) as MIRType;
-            bbody = this.typegen.coerce(new SMTCallSimple(this.typegen.getSMTConstructorName(v2type).cons, [new SMTVar("arg0"), new SMTVar("arg1")]), v2type, geninfo.resulttype);
+            bbody = this.typegen.coerceContainerAtomIntoTermRepresentation(new SMTCallSimple(this.typegen.getSMTConstructorName(v2type).cons, [new SMTVar("arg0"), new SMTVar("arg1")]), v2type);
         }
         else if(geninfo.argc === 3) {
             const v3type = this.assembly.typeMap.get(`Vector3<${etype.typeID}>`) as MIRType;
-            bbody = this.typegen.coerce(new SMTCallSimple(this.typegen.getSMTConstructorName(v3type).cons, [new SMTVar("arg0"), new SMTVar("arg1"), new SMTVar("arg2")]), v3type, geninfo.resulttype);
+            bbody = this.typegen.coerceContainerAtomIntoTermRepresentation(new SMTCallSimple(this.typegen.getSMTConstructorName(v3type).cons, [new SMTVar("arg0"), new SMTVar("arg1"), new SMTVar("arg2")]), v3type);
         }
         else {
             const lltype = this.assembly.typeMap.get(`LargeList<${etype.typeID}>`) as MIRType;
@@ -488,7 +488,7 @@ class SMTBodyEmitter {
                 args.push(new SMTCallSimple("seq.unit", [new SMTVar(`arg${i}`)]));
             }
 
-            bbody = this.typegen.coerce(this.typegen.generateSeqListTypeConstructorSeq(lltype, new SMTCallSimple("seq.++", args)), lltype, geninfo.resulttype);
+            bbody = this.typegen.coerceContainerAtomIntoTermRepresentation(this.typegen.generateSeqListTypeConstructorSeq(lltype, new SMTCallSimple("seq.++", args)), lltype);
         }
 
         return SMTFunction.create(this.typegen.lookupFunctionName(geninfo.inv), args, this.typegen.getSMTTypeFor(geninfo.resulttype), bbody);
@@ -1661,12 +1661,11 @@ class SMTBodyEmitter {
 
     processConstructorPrimaryCollectionOneElement(op: MIRConstructorPrimaryCollectionOneElement, continuation: SMTExp): SMTExp {
         const constype = this.assembly.entityDecls.get(op.tkey) as MIRPrimitiveCollectionEntityTypeDecl;
-        const resulttype = this.typegen.getMIRType(op.tkey);
         const arg = this.argToSMT(op.arg[1]);
 
         if(constype instanceof MIRPrimitiveListEntityTypeDecl) {
             const v1type = this.assembly.typeMap.get(`Vector1<${constype.getTypeT().typeID}>`) as MIRType;
-            const consexp = this.typegen.coerce(new SMTCallSimple(this.typegen.getSMTConstructorName(v1type).cons, [arg]), v1type, resulttype);
+            const consexp = this.typegen.coerceContainerAtomIntoTermRepresentation(new SMTCallSimple(this.typegen.getSMTConstructorName(v1type).cons, [arg]), v1type);
       
             return new SMTLet(this.varToSMTName(op.trgt).vname, consexp, continuation);
         }
@@ -1683,7 +1682,7 @@ class SMTBodyEmitter {
             assert(constype instanceof MIRPrimitiveMapEntityTypeDecl);
             
             const v1type = this.assembly.typeMap.get(`Vector1<[${constype.getTypeK().typeID}, ${constype.getTypeV().typeID}]>`) as MIRType;
-            const consexp = this.typegen.coerce(new SMTCallSimple(this.typegen.getSMTConstructorName(v1type).cons, [arg]), v1type, resulttype);
+            const consexp = this.typegen.coerceContainerAtomIntoTermRepresentation(new SMTCallSimple(this.typegen.getSMTConstructorName(v1type).cons, [arg]), v1type);
       
             return new SMTLet(this.varToSMTName(op.trgt).vname, consexp, continuation);
         }

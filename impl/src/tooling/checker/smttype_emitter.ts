@@ -621,6 +621,10 @@ class SMTTypeEmitter {
         }
     }
 
+    coerceContainerAtomIntoTermRepresentation(exp: SMTExp, from: MIRType): SMTExp {
+        return this.coerceFromAtomicToTerm(exp, from);
+    }
+
     generateTupleIndexGetFunction(tt: MIRTupleType, idx: number): string {
         this.internTypeName(tt.typeID);
         return `${this.lookupTypeName(tt.typeID)}@_${idx}`;
