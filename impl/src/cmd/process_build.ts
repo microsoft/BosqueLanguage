@@ -93,6 +93,7 @@ function processBuildActionSymbolic(args: string[]) {
     const noerr = { file: "[No Error Trgt]", line: -1, pos: -1 };
 
     let smtonly = args.includes("--smtlib");
+    let smallmodel = args.includes("--small-model-only");
     let vopts = generateStandardVOpts(SymbolicActionMode.ChkTestSymbolic);
 
     if (args[1] === "chk") {
@@ -175,10 +176,10 @@ function processBuildActionSymbolic(args: string[]) {
 
     //bosque build smt [err|chk|eval] [package_path.json] [--config cname] [--output out]
     if (smtonly) {
-        workflowEmitToFile(path.join(output.path, cfg.name + ".smt2"), userpackage, cfg.buildlevel, false, timeout, vopts, entrypoint, noerr, true);
+        workflowEmitToFile(path.join(output.path, cfg.name + ".smt2"), userpackage, cfg.buildlevel, smallmodel, false, timeout, vopts, entrypoint, noerr, true);
     }
     else {
-        workflowEmitToFile(path.join(output.path, cfg.name + ".json"), userpackage, cfg.buildlevel, false, timeout, vopts, entrypoint, noerr, false);
+        workflowEmitToFile(path.join(output.path, cfg.name + ".json"), userpackage, cfg.buildlevel, smallmodel, false, timeout, vopts, entrypoint, noerr, false);
     }
 }
 

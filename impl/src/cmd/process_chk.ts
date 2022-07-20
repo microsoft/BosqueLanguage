@@ -44,6 +44,8 @@ function processTestAction(args: string[]) {
             process.exit(1);
         }
 
+        let smallmodel = args.includes("--small-model-only");
+
         const srcfiles = loadUserSrc(process.cwd(), [entryglob, ...files]);
         if(srcfiles === undefined) {
             process.stderr.write(chalk.red("Failed when loading source files\n"));
@@ -54,7 +56,7 @@ function processTestAction(args: string[]) {
 
         //bosque test testfile.bsqtest ... --files ... [--flavors (sym | icpp | err | chk)*]
 
-        runtests(userpackage, [], [path.resolve(process.cwd(), entryfile)], "test", true, {}, "extra", flavors, ["*"]);
+        runtests(userpackage, [], [path.resolve(process.cwd(), entryfile)], "test", smallmodel, true, {}, "extra", flavors, ["*"]);
     }
     else {
         let workingdir = process.cwd();
@@ -91,6 +93,8 @@ function processTestAction(args: string[]) {
             process.exit(1);
         }
 
+        let smallmodel = args.includes("--small-model-only");
+
         const userpackage = [{macros: [...cfg.macros, ...cfg.globalmacros], files: srcfiles}];
 
         let dirs: string[] = ["*"];
@@ -100,7 +104,7 @@ function processTestAction(args: string[]) {
 
         //bosque test [package_path.json] [--config cname]
 
-        runtests(userpackage, [], pckg.src.testfiles.map((tf) => path.resolve(workingdir, tf.path)), cfg.buildlevel, true, {}, "extra", cfg.params.flavors, dirs);
+        runtests(userpackage, [], pckg.src.testfiles.map((tf) => path.resolve(workingdir, tf.path)), cfg.buildlevel, smallmodel, true, {}, "extra", cfg.params.flavors, dirs);
     }
 }
 
@@ -142,11 +146,13 @@ function processAppTestAction(args: string[]) {
             process.exit(1);
         }
 
+        let smallmodel = args.includes("--small-model-only");
+
         const userpackage = [{macros: [] as string[], files: srcfiles}];
 
         //bosque apptest testfile.bsqapi ... --files ... [--flavors (sym | icpp | err | chk)*]
 
-        runtests(userpackage, [], [path.resolve(process.cwd(), entryfile)], "test", true, {}, "extra", flavors, ["*"]);
+        runtests(userpackage, [], [path.resolve(process.cwd(), entryfile)], "test", true, smallmodel, {}, "extra", flavors, ["*"]);
     }
     else {
         let workingdir = process.cwd();
@@ -183,6 +189,8 @@ function processAppTestAction(args: string[]) {
             process.exit(1);
         }
 
+        let smallmodel = args.includes("--small-model-only");
+
         const userpackage = [{macros: [...cfg.macros, ...cfg.globalmacros], files: srcfiles}];
 
         let dirs: string[] = ["*"];
@@ -192,7 +200,7 @@ function processAppTestAction(args: string[]) {
 
         //bosque apptest [package_path.json] [--config cname]
 
-        runtests(userpackage, [], pckg.src.entrypoints.map((ef) => path.resolve(workingdir, ef.path)), cfg.buildlevel, true, {}, "extra", cfg.params.flavors, dirs);
+        runtests(userpackage, [], pckg.src.entrypoints.map((ef) => path.resolve(workingdir, ef.path)), cfg.buildlevel, true, smallmodel, {}, "extra", cfg.params.flavors, dirs);
     }
 }
 
