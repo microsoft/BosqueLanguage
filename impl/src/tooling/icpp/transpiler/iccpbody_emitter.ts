@@ -5,7 +5,7 @@
 
 import { MIRAssembly, MIRConstantDecl, MIREntityType, MIREphemeralListType, MIRFieldDecl, MIRInvokeBodyDecl, MIRInvokeDecl, MIRInvokePrimitiveDecl, MIRObjectEntityTypeDecl, MIRPrimitiveCollectionEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRRecordType, MIRTupleType, MIRType } from "../../../compiler/mir_assembly";
 import { ICPPTypeEmitter } from "./icpptype_emitter";
-import { MIRAbort, MIRArgGuard, MIRArgument, MIRAssertCheck, MIRBasicBlock, MIRBinKeyEq, MIRBinKeyLess, MIRConstantArgument, MIRConstantBigInt, MIRConstantBigNat, MIRConstantDataString, MIRConstantDecimal, MIRConstantFalse, MIRConstantFloat, MIRConstantInt, MIRConstantNat, MIRConstantNone, MIRConstantNothing, MIRConstantRational, MIRConstantRegex, MIRConstantString, MIRConstantStringOf, MIRConstantTrue, MIRConstantTypedNumber, MIRConstructorEntityDirect, MIRConstructorEphemeralList, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionMixed, MIRConstructorPrimaryCollectionSingletons, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConvertValue, MIRDebug, MIRDeclareGuardFlagLocation, MIREntityProjectToEphemeral, MIREntityUpdate, MIREphemeralListExtend, MIRExtract, MIRFieldKey, MIRGlobalKey, MIRGlobalVariable, MIRGuard, MIRGuardedOptionInject, MIRInject, MIRInvokeFixedFunction, MIRInvokeKey, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRIsTypeOf, MIRJump, MIRJumpCond, MIRJumpNone, MIRLoadConst, MIRLoadField, MIRLoadFromEpehmeralList, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadUnintVariableValue, MIRLogicAction, MIRMaskGuard, MIRMultiLoadFromEpehmeralList, MIROp, MIROpTag, MIRPhi, MIRPrefixNotOp, MIRRecordHasProperty, MIRRecordProjectToEphemeral, MIRRecordUpdate, MIRRegisterArgument, MIRRegisterAssign, MIRResolvedTypeKey, MIRReturnAssign, MIRReturnAssignOfCons, MIRSetConstantGuardFlag, MIRSliceEpehmeralList, MIRStatmentGuard, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRTupleHasIndex, MIRTupleProjectToEphemeral, MIRTupleUpdate, MIRVarLifetimeEnd, MIRVarLifetimeStart } from "../../../compiler/mir_ops";
+import { MIRAbort, MIRArgGuard, MIRArgument, MIRAssertCheck, MIRBasicBlock, MIRBinKeyEq, MIRBinKeyLess, MIRConstantArgument, MIRConstantBigInt, MIRConstantBigNat, MIRConstantDataString, MIRConstantDecimal, MIRConstantFalse, MIRConstantFloat, MIRConstantInt, MIRConstantNat, MIRConstantNone, MIRConstantNothing, MIRConstantRational, MIRConstantRegex, MIRConstantString, MIRConstantStringOf, MIRConstantTrue, MIRConstantTypedNumber, MIRConstructorEntityDirect, MIRConstructorEphemeralList, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionOneElement, MIRConstructorPrimaryCollectionSingletons, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConvertValue, MIRDebug, MIRDeclareGuardFlagLocation, MIREntityProjectToEphemeral, MIREntityUpdate, MIREphemeralListExtend, MIRExtract, MIRFieldKey, MIRGlobalKey, MIRGlobalVariable, MIRGuard, MIRGuardedOptionInject, MIRInject, MIRInvokeFixedFunction, MIRInvokeKey, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRIsTypeOf, MIRJump, MIRJumpCond, MIRJumpNone, MIRLoadConst, MIRLoadField, MIRLoadFromEpehmeralList, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadUnintVariableValue, MIRLogicAction, MIRMaskGuard, MIRMultiLoadFromEpehmeralList, MIROp, MIROpTag, MIRPhi, MIRPrefixNotOp, MIRRecordHasProperty, MIRRecordProjectToEphemeral, MIRRecordUpdate, MIRRegisterArgument, MIRRegisterAssign, MIRResolvedTypeKey, MIRReturnAssign, MIRReturnAssignOfCons, MIRSetConstantGuardFlag, MIRSliceEpehmeralList, MIRStatmentGuard, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRTupleHasIndex, MIRTupleProjectToEphemeral, MIRTupleUpdate, MIRVarLifetimeEnd, MIRVarLifetimeStart } from "../../../compiler/mir_ops";
 import { Argument, ArgumentTag, EMPTY_CONST_POSITION, FALSE_VALUE_POSITION, ICPPGuard, ICPPOp, ICPPOpEmitter, ICPPStatementGuard, NONE_VALUE_POSITION, NOTHING_VALUE_POSITION, OpCodeTag, ParameterInfo, TargetVar, TRUE_VALUE_POSITION } from "./icpp_exp";
 import { SourceInfo } from "../../../ast/parser";
 import { ICPPEntityLayoutInfo, ICPPEphemeralListLayoutInfo, ICPPFunctionParameter, ICPPInvokeBodyDecl, ICPPInvokeDecl, ICPPInvokePrimitiveDecl, ICPPLayoutInfo, ICPPPCode, ICPPRecordLayoutInfo, ICPPTupleLayoutInfo, TranspilerOptions, UNIVERSAL_TOTAL_SIZE } from "./icpp_assembly";
@@ -50,7 +50,7 @@ class ICPPBodyEmitter {
     requiredUpdateEntityWithCheck: { inv: string, arglayouttype: MIRType, argflowtype: MIRType, updates: [MIRFieldKey, MIRResolvedTypeKey][], resulttype: MIRType }[] = [];
 
     requiredSingletonConstructorsList: { inv: string, argc: number, resulttype: MIRType }[] = [];
-    requiredSingletonConstructorsMap: { inv: string, argc: number, argtupletype: MIRTupleType, resulttype: MIRType }[] = [];
+    requiredSingleElementConstructorsMap: { inv: string, argtupletype: MIRTupleType, resulttype: MIRType }[] = [];
 
     requiredTupleAppend: { inv: string, args: {layout: MIRType, flow: MIRType}[], resulttype: MIRType }[] = [];
     requiredRecordMerge: { inv: string, args: {layout: MIRType, flow: MIRType}[], resulttype: MIRType }[] = [];
@@ -163,8 +163,8 @@ class ICPPBodyEmitter {
         return `$ListSingletonCons->${resulttype.typeID}#${argc}`;
     }
 
-    private generateSingletonConstructorsMap(argc: number, resulttype: MIRType): string {
-        return `$MapSingletonCons->${resulttype.typeID}#${argc}`;
+    private generateSingleElementConstructorsMap(resulttype: MIRType): string {
+        return `$MapSingletonCons->${resulttype.typeID}`;
     }
 
     private generateTupleAppendInvName(args: { flow: MIRType, layout: MIRType }[], resulttype: MIRType): string {
@@ -350,15 +350,11 @@ class ICPPBodyEmitter {
         return new ICPPInvokePrimitiveDecl(geninfo.inv, geninfo.inv, "[Generated]", new SourceInfo(-1, -1, -1 ,-1), new SourceInfo(-1, -1, -1 ,-1), false, params, geninfo.resulttype.typeID, geninfo.resulttype.typeID, "s_list_build_k", new Map<string, MIRResolvedTypeKey>().set("T", etype), new Map<string, ICPPPCode>());
     }
 
-    generateSingletonConstructorMap(geninfo: { inv: string, argc: number, argtupletype: MIRTupleType, resulttype: MIRType }): ICPPInvokeDecl {
+    generateSingleElementConstructorMap(geninfo: { inv: string, argtupletype: MIRTupleType, resulttype: MIRType }): ICPPInvokeDecl {
         const ldecl = this.assembly.entityDecls.get(geninfo.resulttype.typeID) as MIRPrimitiveMapEntityTypeDecl;
 
-        let params: ICPPFunctionParameter[] = [];
-        for(let j = 0; j < geninfo.argc; ++j) {
-            params.push(new ICPPFunctionParameter(`arg${j}`, geninfo.argtupletype.typeID));
-        }
-        
-        return new ICPPInvokePrimitiveDecl(geninfo.inv, geninfo.inv, "[Generated]", new SourceInfo(-1, -1, -1 ,-1), new SourceInfo(-1, -1, -1 ,-1), false, params, geninfo.resulttype.typeID, geninfo.resulttype.typeID, "s_map_build_k", new Map<string, MIRResolvedTypeKey>().set("K", ldecl.getTypeK().typeID).set("V", ldecl.getTypeV().typeID), new Map<string, ICPPPCode>());
+        const params: ICPPFunctionParameter[] = [new ICPPFunctionParameter("arg0", geninfo.argtupletype.typeID)];
+        return new ICPPInvokePrimitiveDecl(geninfo.inv, geninfo.inv, "[Generated]", new SourceInfo(-1, -1, -1 ,-1), new SourceInfo(-1, -1, -1 ,-1), false, params, geninfo.resulttype.typeID, geninfo.resulttype.typeID, "s_map_build_1", new Map<string, MIRResolvedTypeKey>().set("K", ldecl.getTypeK().typeID).set("V", ldecl.getTypeV().typeID), new Map<string, ICPPPCode>());
     }
 
     constructor(assembly: MIRAssembly, typegen: ICPPTypeEmitter, vopts: TranspilerOptions) {
@@ -1166,14 +1162,49 @@ class ICPPBodyEmitter {
         return ICPPOpEmitter.genInvokeFixedFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.tkey), op.tkey, icall, exps, -1, ICPPOpEmitter.genNoStatmentGuard());
     }
 
-    processConstructorPrimaryCollectionSingletonsMap_Helper(op: MIRConstructorPrimaryCollectionSingletons, argtupletype: MIRTupleType, exps: Argument[]): ICPPOp {
-        const icall = this.generateSingletonConstructorsMap(exps.length, this.typegen.getMIRType(op.tkey));
-        if(this.requiredSingletonConstructorsMap.findIndex((vv) => vv.inv === icall) === -1) {
-            const geninfo = { inv: icall, argc: exps.length, argtupletype: argtupletype, resulttype: this.typegen.getMIRType(op.tkey) };
-            this.requiredSingletonConstructorsMap.push(geninfo);
+    processConstructorPrimaryCollectionSingleElementList_Helper(op: MIRConstructorPrimaryCollectionOneElement, exp: Argument): ICPPOp {
+        const icall = this.generateSingletonConstructorsList(1, this.typegen.getMIRType(op.tkey));
+        if(this.requiredSingletonConstructorsList.findIndex((vv) => vv.inv === icall) === -1) {
+            const geninfo = { inv: icall, argc: 1, resulttype: this.typegen.getMIRType(op.tkey) };
+            this.requiredSingletonConstructorsList.push(geninfo);
         }
             
-        return ICPPOpEmitter.genInvokeFixedFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.tkey), op.tkey, icall, exps, -1, ICPPOpEmitter.genNoStatmentGuard());
+        return ICPPOpEmitter.genInvokeFixedFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.tkey), op.tkey, icall, [exp], -1, ICPPOpEmitter.genNoStatmentGuard());
+    }
+
+    processConstructorPrimaryCollectionSingleElementMap_Helper(op: MIRConstructorPrimaryCollectionOneElement, argtupletype: MIRTupleType, exp: Argument): ICPPOp {
+        const icall = this.generateSingleElementConstructorsMap(this.typegen.getMIRType(op.tkey));
+        if(this.requiredSingleElementConstructorsMap.findIndex((vv) => vv.inv === icall) === -1) {
+            const geninfo = { inv: icall, argtupletype: argtupletype, resulttype: this.typegen.getMIRType(op.tkey) };
+            this.requiredSingleElementConstructorsMap.push(geninfo);
+        }
+            
+        return ICPPOpEmitter.genInvokeFixedFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.tkey), op.tkey, icall, [exp], -1, ICPPOpEmitter.genNoStatmentGuard());
+    }
+
+    processConstructorPrimaryCollectionOneElement(op: MIRConstructorPrimaryCollectionOneElement): ICPPOp {
+        const constype = this.assembly.entityDecls.get(op.tkey) as MIRPrimitiveCollectionEntityTypeDecl;
+
+        const arg = this.argToICPPLocation(op.arg[1]);
+
+        if(constype instanceof MIRPrimitiveListEntityTypeDecl) {
+            return this.processConstructorPrimaryCollectionSingleElementList_Helper(op, arg);
+        }
+        else if (constype instanceof MIRPrimitiveStackEntityTypeDecl) {
+            return NOT_IMPLEMENTED("MIRPrimitiveStackEntityTypeDecl@cons");
+        }
+        else if (constype instanceof MIRPrimitiveQueueEntityTypeDecl) {
+            return NOT_IMPLEMENTED("MIRPrimitiveQueueEntityTypeDecl@cons");
+        }
+        else if (constype instanceof MIRPrimitiveSetEntityTypeDecl) {
+            return NOT_IMPLEMENTED("MIRPrimitiveSetEntityTypeDecl@cons");
+        }
+        else {
+            assert(constype instanceof MIRPrimitiveMapEntityTypeDecl);
+            
+            const tupleargtype = (this.assembly.typeMap.get(op.arg[0]) as MIRType).getUniqueTupleTargetType();
+            return this.processConstructorPrimaryCollectionSingleElementMap_Helper(op, tupleargtype, arg);
+        }
     }
 
     processConstructorPrimaryCollectionSingletons(op: MIRConstructorPrimaryCollectionSingletons): ICPPOp {
@@ -1186,24 +1217,9 @@ class ICPPBodyEmitter {
         else if (constype instanceof MIRPrimitiveStackEntityTypeDecl) {
             return NOT_IMPLEMENTED("MIRPrimitiveStackEntityTypeDecl@cons");
         }
-        else if (constype instanceof MIRPrimitiveQueueEntityTypeDecl) {
+        else {
             return NOT_IMPLEMENTED("MIRPrimitiveQueueEntityTypeDecl@cons");
         }
-        else if (constype instanceof MIRPrimitiveSetEntityTypeDecl) {
-            return NOT_IMPLEMENTED("MIRPrimitiveSetEntityTypeDecl@cons");
-        }
-        else {
-            const tupleargtype = (this.assembly.typeMap.get(op.args[0][0]) as MIRType).getUniqueTupleTargetType();
-            return this.processConstructorPrimaryCollectionSingletonsMap_Helper(op, tupleargtype, args);
-        }
-    }
-
-    processConstructorPrimaryCollectionCopies(op: MIRConstructorPrimaryCollectionCopies): ICPPOp {
-        return NOT_IMPLEMENTED("processConstructorPrimaryCollectionCopies");
-    }
-
-    processConstructorPrimaryCollectionMixed(op: MIRConstructorPrimaryCollectionMixed): ICPPOp {
-        return NOT_IMPLEMENTED("processConstructorPrimaryCollectionMixed");
     }
 
     processBinKeyEq(op: MIRBinKeyEq): ICPPOp {
@@ -1444,14 +1460,11 @@ class ICPPBodyEmitter {
             case MIROpTag.MIRConstructorPrimaryCollectionEmpty: {
                 return this.processConstructorPrimaryCollectionEmpty(op as MIRConstructorPrimaryCollectionEmpty);
             }
+            case MIROpTag.MIRConstructorPrimaryCollectionOneElement: {
+                return this.processConstructorPrimaryCollectionOneElement(op as MIRConstructorPrimaryCollectionOneElement);
+            }
             case MIROpTag.MIRConstructorPrimaryCollectionSingletons: {
                 return this.processConstructorPrimaryCollectionSingletons(op as MIRConstructorPrimaryCollectionSingletons);
-            }
-            case MIROpTag.MIRConstructorPrimaryCollectionCopies: {
-                return this.processConstructorPrimaryCollectionCopies(op as MIRConstructorPrimaryCollectionCopies);
-            }
-            case MIROpTag.MIRConstructorPrimaryCollectionMixed: {
-                return this.processConstructorPrimaryCollectionMixed(op as MIRConstructorPrimaryCollectionMixed);
             }
             case MIROpTag.MIRBinKeyEq: {
                 return this.processBinKeyEq(op as MIRBinKeyEq);

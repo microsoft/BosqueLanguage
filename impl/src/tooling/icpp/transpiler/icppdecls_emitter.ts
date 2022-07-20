@@ -189,8 +189,8 @@ class ICPPEmitter {
             this.icppasm.invokenames.add(scl.inv);
         });
 
-        this.bemitter.requiredSingletonConstructorsMap.forEach((scm) => {
-            this.icppasm.invdecls.push(this.bemitter.generateSingletonConstructorMap(scm));
+        this.bemitter.requiredSingleElementConstructorsMap.forEach((scm) => {
+            this.icppasm.invdecls.push(this.bemitter.generateSingleElementConstructorMap(scm));
             this.icppasm.invokenames.add(scm.inv);
         });
 
