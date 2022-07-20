@@ -7,28 +7,316 @@
 namespace Core;
 
 #if CHECK_LIBS
+internal typedef MapVector<K grounded KeyType, V> = Vector1<[K, V]> | Vector2<[K, V]> | Vector3<[K, V]> | Vector4<[K, V]>;
+
+internal typedef MapRepr<K grounded KeyType, V> = None | Vector1<[K, V]> | Vector2<[K, V]> | Vector3<[K, V]> | Vector4<[K, V]> | SeqMap<K, V>;
+
 internal entity MapOps provides Some {
-    __safe internal function s_map_empty<K grounded KeyType, V>(m: Map<K, V>): Bool = s_map_empty; 
-    __safe internal function s_map_count<K grounded KeyType, V>(m: Map<K, V>): Nat = s_map_count; 
+    internal function s_into<K grounded KeyType, V>(m: MapRepr<K, V>): Map<K, V> = special_inject;
+    internal function s_value<K grounded KeyType, V>(m: Map<K, V>): MapRepr<K, V> = special_extract;
 
-    __safe internal function s_map_entries<K grounded KeyType, V>(m: Map<K, V>): List<[K, V]> = s_map_entries;
+    internal function s_vector_to_seqmap<K grounded KeyType, V>(m: MapVector<K, V>): SeqMap<K, V> {
+        if(l.is<Vector1<[K, V]>>()) {
+            return SeqMapOps::s_map_cons_1<K, V>(m.v0);
+        }
+        elif(l.is<Vector2<[K, V]>>()) {
+            return SeqMapOps::s_map_cons_2<K, V>(m.v0, m.v1);
+        }
+        elif(l.is<Vector3<[K, V]>>()) {
+            return SeqMapOps::s_map_cons_3<K, V>(m.v0, m.v1, m.v2);
+        }
+        else {
+            return SeqMapOps::s_map_cons_4<K, V>(m.v0, m.v1, m.v2, m.v3);
+        }
+    }
 
-    __safe internal function s_map_min_key<K grounded KeyType, V>(m: Map<K, V>): K = s_map_min_key;
-    __safe internal function s_map_max_key<K grounded KeyType, V>(m: Map<K, V>): K = s_map_max_key; 
+    internal function s_seqmap_to_vector_or_none<K grounded KeyType, V>(l: SeqMap<K, V>, len: Nat): MapVector<K, V> | None {
+        if(len == 0n) {
+            return none;
+        }
+        elif(len == 1n) {
+            return Vector1<[K, V]>{SeqMapOps::s_map_get_elem_order<K, V>(m, 0)};
+        }
+        elif(len == 2n) {
+            return Vector2<[K, V]>{SeqMapOps::s_map_get_elem_order<K, V>(m, 0), SeqMapOps::s_map_get_elem_order<K, V>(m, 1)};
+        }
+        elif(len == 3n) {
+            return Vector3<[K, V]>{SeqMapOps::s_map_get_elem_order<K, V>(m, 0), SeqMapOps::s_map_get_elem_order<K, V>(m, 1), SeqMapOps::s_map_get_elem_order<K, V>(m, 2)};
+        }
+        else {
+            return Vector4<[K, V]>{SeqMapOps::s_map_get_elem_order<K, V>(m, 0), SeqMapOps::s_map_get_elem_order<K, V>(m, 1), SeqMapOps::s_map_get_elem_order<K, V>(m, 2), SeqMapOps::s_map_get_elem_order<K, V>(m, 3)};
+        }
+    }
 
-    __safe internal function s_map_has<K grounded KeyType, V>(m: Map<K, V>, k: K): Bool = s_map_has; 
-    __safe internal function s_map_get<K grounded KeyType, V>(m: Map<K, V>, k: K): V = s_map_get;
-    __safe internal function s_map_find<K grounded KeyType, V>(m: Map<K, V>, k: K): (|V, Bool|) = s_map_find;
+    internal function s_ensure_seq_repr<K grounded KeyType, V>(m: MapVector<K, V> | SeqMap<K, V>): SeqMap<K, V> {
+        if(l.is<SeqMap<K, V>>()) {
+            return m;
+        }
+        else {
+            return MapOps::s_vector_to_seqmap<K, V>(m);
+        }
+    }
+
+    internal function s_ensure_std_repr<K grounded KeyType, V>(m: MapVector<K, V> | SeqMap<K, V> | None): MapRepr<K, V> {
+        if(m.is<SeqMap<K, V>>()) {
+            let count = SeqMapOps::s_map_size<K, V>(m);
+            if(count > 4) {
+                return l;
+            }
+            else {
+                return MapOps::s_seqmap_to_vector_or_none<K, V>(m, count);
+            }
+        }
+        else {
+            return m;
+        }
+    }
+
+    internal function s_fast_union_helper<K grounded KeyType, V>(l: MapRepr<K, V>, r: MapRepr<K, V>): MapRepr<K, V> {
+        if(/\(l.is<Vector1<[K, V]>>(), r.is<Vector1<[K, V]>>())) {
+            let ll = s_safeAs<MapRepr<K, V>, Vector1<[K, V]>>(l);
+            let rr = s_safeAs<MapRepr<K, V>, Vector1<[K, V]>>(r);
+            return Vector2<[K, V]>{ll.v0, rr.v0};
+        }
+        elif(/\(l.is<Vector1<[K, V]>>(), r.is<Vector2<[K, V]>>())) {
+            let ll = s_safeAs<MapRepr<K, V>, Vector1<[K, V]>>(l);
+            let rr = s_safeAs<MapRepr<K, V>, Vector2<[K, V]>>(r);
+            return Vector3<[K, V]>{ll.v0, rr.v0, rr.v1};
+        }
+        elif(/\(l.is<Vector1<[K, V]>>(), r.is<Vector3<[K, V]>>())) {
+            let ll = s_safeAs<MapRepr<K, V>, Vector1<[K, V]>>(l);
+            let rr = s_safeAs<MapRepr<K, V>, Vector3<[K, V]>>(r);
+            return Vector4<[K, V]>{ll.v0, rr.v0, rr.v1, rr.v2};
+        }
+        elif(/\(l.is<Vector2<[K, V]>>(), r.is<Vector1<[K, V]>>())) {
+            let ll = s_safeAs<MapRepr<T>, Vector2<[K, V]>>(l);
+            let rr = s_safeAs<MapRepr<T>, Vector1<[K, V]>>(r);
+            return Vector3<[K, V]>{ll.v0, ll.v1, rr.v0};
+        }
+        elif(/\(l.is<Vector2<[K, V]>>(), r.is<Vector2<[K, V]>>())) {
+            let ll = s_safeAs<MapRepr<K, V>, Vector2<[K, V]>>(l);
+            let rr = s_safeAs<MapRepr<K, V>, Vector2<[K, V]>>(r);
+            return Vector4<[K, V]>{ll.v0, ll.v1, rr.v0, rr.v1};
+        }
+        elif(/\(l.is<Vector1<[K, V]>>(), r.is<Vector3<[K, V]>>())) {
+            let ll = s_safeAs<MapRepr<K, V>, Vector1<[K, V]>>(l);
+            let rr = s_safeAs<MapRepr<K, V>, Vector3<[K, V]>>(r);
+            return Vector4<[K, V]>{ll.v0, rr.v0, rr.v1, rr.v2};
+        }
+        else {
+#if CHK_SMALL_ONLY
+            return s_blockingfailure<MapRepr<K, V>>();
+#else
+            let ll = MapOps::s_ensure_seq_repr<K, V>(l);
+            let rr = MapOps::s_ensure_seq_repr<K, V>(r);
+            return SeqMapOps::s_map_union_fast<K, V>(ll, rr);
+#endif
+        }
+    }
     
-    __safe internal function s_map_union_fast<K grounded KeyType, V>(m1: Map<K, V>, m2: Map<K, V>): Map<K, V> = s_map_union_fast; 
+    internal function s_map_empty<K grounded KeyType, V>(m: Map<K, V>): Bool {
+        return MapOps::s_value<K, V>(m) === none;
+    }
 
-    __conditional_safe internal recursive? function s_map_map_pred<K grounded KeyType, V>(m: Map<K, V>, p: recursive? pred(_: K, _: V) -> Bool): List<Bool> = s_map_map_pred;
-    __safe internal function s_map_mask_select<K grounded KeyType, V>(m: Map<K, V>, mask: List<Bool>): Map<K, V> = s_map_mask_select;
+    internal function s_map_count<K grounded KeyType, V>(m: Map<K, V>): Nat {
+        let mm = MapOps::s_value<K, V>(m);
 
-    __conditional_safe internal recursive? function s_map_remap<K grounded KeyType, V, U>(m: Map<K, V>, f: recursive? fn(k: K, v: V) -> U): Map<K, U> = s_map_remap;
+        if(mm === none) {
+            return 0n;
+        }
+        elif(mm.is<Vector1<[K, V]>>()) {
+            return 1n;
+        }
+        elif(mm.is<Vector2<[K, V]>>()) {
+            return 2n;
+        }
+        elif(mm.is<Vector3<[K, V]>>()) {
+            return 3n;
+        }
+        elif(mm.is<Vector4<[K, V]>>()) {
+            return 4n;
+        }
+        else {
+#if CHK_SMALL_ONLY
+            return s_blockingfailure<Nat>();
+#else
+            return SeqMapOps::s_map_size<K, V>(mm);
+#endif
+        }
+    }
 
-    __safe internal function s_map_add<K grounded KeyType, V>(m: Map<K, V>, k: K, vtup: [K, V]): Map<K, V> = s_map_add; 
-    __safe internal function s_map_set<K grounded KeyType, V>(m: Map<K, V>, k: K, vtup: [K, V]): Map<K, V> = s_map_set;
-    __safe internal function s_map_remove<K grounded KeyType, V>(m: Map<K, V>, k: K): Map<K, V> = s_map_remove;  
+    internal function s_map_entries<K grounded KeyType, V>(m: Map<K, V>): List<[K, V]> {
+        let mm = MapOps::s_value<K, V>(m);
+
+        if(mm.is<SeqMap<K, V>>()) {
+#if CHK_SMALL_ONLY
+            return s_blockingfailure<List<[K, V]>>();
+#else
+            return ListOps::s_into<[K, V]>(SeqMapOps::s_map_entries<K, V>(mm));
+#endif
+        }
+        else {
+            return ListOps::s_into<[K, V]>(s_safeAs<MapRepr<T>, MapVector<T>>(mm));
+        }
+    }
+
+    internal function s_map_min_key<K grounded KeyType, V>(m: Map<K, V>): K {
+        let mm = MapOps::s_value<K, V>(m);
+
+        if(mm.is<SeqMap<K, V>>()) {
+#if CHK_SMALL_ONLY
+            return s_blockingfailure<K>();
+#else
+            return SeqMapOps::s_map_min_key<K, V>(mm);
+#endif
+        }
+        else {
+            return VectorOps::s_map_min_elem<K, V>(s_safeAs<MapRepr<T>, MapVector<T>>(mm));
+        }
+    }
+
+    internal function s_map_max_key<K grounded KeyType, V>(m: Map<K, V>): K {
+        let mm = MapOps::s_value<K, V>(m);
+
+        if(mm.is<SeqMap<K, V>>()) {
+#if CHK_SMALL_ONLY
+            return s_blockingfailure<K>();
+#else
+            return SeqMapOps::s_map_mac_key<K, V>(mm);
+#endif
+        }
+        else {
+            return VectorOps::s_map_max_elem<K, V>(s_safeAs<MapRepr<T>, MapVector<T>>(mm));
+        }
+    }
+
+    internal function s_map_has<K grounded KeyType, V>(m: Map<K, V>, k: K): Bool {
+        let mm = MapOps::s_value<K, V>(m);
+
+        if(mm.is<SeqMap<K, V>>()) {
+#if CHK_SMALL_ONLY
+            return s_blockingfailure<Bool>();
+#else
+            return SeqMapOps::s_map_has<K, V>(mm, k);
+#endif
+        }
+        else {
+            return VectorOps::s_map_has_key<[K, V]>(s_safeAs<MapRepr<T>, MapVector<T>>(mm), k);
+        }
+    }
+
+    internal function s_map_get<K grounded KeyType, V>(m: Map<K, V>, k: K): V {
+        let mm = MapOps::s_value<K, V>(m);
+
+        if(mm.is<SeqMap<K, V>>()) {
+#if CHK_SMALL_ONLY
+            return s_blockingfailure<Bool>();
+#else
+            return SeqMapOps::s_map_get<K, V>(mm, k);
+#endif
+        }
+        else {
+            return VectorOps::s_map_get_key<K, V>(s_safeAs<MapRepr<T>, MapVector<T>>(mm), k);
+        }
+    }
+    
+    internal function s_map_union_fast<K grounded KeyType, V>(m1: Map<K, V>, m2: Map<K, V>): Map<K, V> {
+        return MapOps::s_into<K, V>(MapOps::s_fast_union_helper<K, V>(MapOps::s_value<K, V>(m1), MapOps::s_value<K, V>(m2)));
+    }
+
+    internal recursive? function s_map_filter_pred<K grounded KeyType, V>(m: Map<K, V>, p: recursive? pred(_: K, _: V) -> Bool): Map<K, V> {
+        let mm = MapOps::s_value<K, V>(m);
+
+        if(mm.is<SeqMap<K, V>>()) {
+#if CHK_SMALL_ONLY
+            return s_blockingfailure<Map<K, V>>();
+#else
+            let mask = SeqMapOps::s_map_map_pred<T>[recursive?](mm, p);
+            if(SeqListOps::s_list_all_false(mask)) {
+                return Map<K, V>{};
+            }
+            elif(SeqListOps::s_list_all_true(mask)) {
+                return m;
+            }
+            else {
+                let resl = MapOps::s_ensure_std_repr<K, V>(SeqMapOps::s_map_mask_select<K, V>(mm, mask));
+                return MapOps::s_into<K, V>(resl);
+            }
+#endif
+        }
+        else {
+            return MapOps::s_into<K, V>(VectorOps::s_map_filter_pred<K, V>[recursive?](s_safeAs<MapRepr<T>, MapVector<T>>(mm), p));
+        }
+    }
+
+    internal recursive? function s_map_remap<K grounded KeyType, V, U>(m: Map<K, V>, f: recursive? fn(k: K, v: V) -> U): Map<K, U> {
+        let mm = MapOps::s_value<K, V>(m);
+
+        if(mm.is<SeqMap<K, V>>()) {
+#if CHK_SMALL_ONLY
+            return s_blockingfailure<Map<K, V>>();
+#else
+            return MapOps::s_into<K, V>(SeqMapOps::s_map_remap<K, V>[recursive?](mm, f));
+#endif
+        }
+        else {
+            return MapOps::s_into<K, V>(VectorOps::s_map_remap<K, V>[recursive?](s_safeAs<MapRepr<T>, MapVector<T>>(mm), f));
+        }
+    }
+
+    internal function s_map_add<K grounded KeyType, V>(m: Map<K, V>, k: K, vtup: [K, V]): Map<K, V> {
+        let mm = MapOps::s_value<K, V>(m);
+
+        if(mm.is<SeqMap<K, V>>()) {
+#if CHK_SMALL_ONLY
+            return s_blockingfailure<Map<K, V>>();
+#else
+            return MapOps::s_into<K, V>(SeqMapOps::s_map_add<K, V>(mm, k, vtup.1));
+#endif
+        }
+        else {
+            if(mm.is<Vector4<[K, V]>>()) {
+#if CHK_SMALL_ONLY
+                return s_blockingfailure<Map<K, V>>();
+#else
+                return MapOps::s_into<K, V>(SeqMapOps::s_map_add<K, V>(MapOps::s_vector_to_seqmap<K, V>(mm), k, vtup.1));
+#endif
+            }
+            else {
+                return MapOps::s_into<K, V>(VectorOps::s_map_add<K, V>[recursive?](s_safeAs<MapRepr<T>, MapVector<T>>(mm), f));
+            }
+        }
+    }
+
+    internal function s_map_set<K grounded KeyType, V>(m: Map<K, V>, k: K, vtup: [K, V]): Map<K, V>  {
+        let mm = MapOps::s_value<K, V>(m);
+
+        if(mm.is<SeqMap<K, V>>()) {
+#if CHK_SMALL_ONLY
+            return s_blockingfailure<Map<K, V>>();
+#else
+            return MapOps::s_into<K, V>(SeqMapOps::s_map_set<K, V>(mm, k, vtup.1));
+#endif
+        }
+        else {
+            return MapOps::s_into<K, V>(VectorOps::s_map_set<K, V>(s_safeAs<MapRepr<T>, MapVector<T>>(mm), k, vtup));
+        }
+    }
+
+    internal function s_map_remove<K grounded KeyType, V>(m: Map<K, V>, k: K): Map<K, V>  {
+        let mm = MapOps::s_value<K, V>(m);
+
+        if(mm.is<SeqMap<K, V>>()) {
+#if CHK_SMALL_ONLY
+            return s_blockingfailure<Map<K, V>>();
+#else
+            let res = MapOps::s_ensure_std_repr<K, V>(SeqMapOps::s_list_remove<K, V>(mm, k));
+            return MapOps::s_into<K, V>(res);
+#endif
+        }
+        else {
+            return MapOps::s_into<K, V>(VectorOps::s_map_remove<K, V>(s_safeAs<MapRepr<T>, MapVector<T>>(mm), k));
+        }
+    }
 }
 #endif

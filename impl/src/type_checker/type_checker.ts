@@ -1274,21 +1274,38 @@ class TypeChecker {
         if (eargs.length === 0) {
             this.m_emitter.emitConstructorPrimaryCollectionEmpty(sinfo, tkey, trgt);
         }
+        else if (eargs.length === 1 && !eargs[0][1]) {
+            this.m_emitter.emitConstructorPrimaryCollectionOneElement(sinfo, tkey, [this.m_emitter.registerResolvedTypeReference(eargs[0][0]), eargs[0][2]], trgt);
+        }
+        else if (eargs.length === 1 && eargs[0][0].isSameType(resulttype)) {
+            //special case where we expand a (say) List<Int> into a List<Int>
+            this.m_emitter.emitRegisterStore(sinfo, eargs[0][2], trgt, this.m_emitter.registerResolvedTypeReference(eargs[0][0]), undefined);
+        }
         else {
-            if (eargs.every((v) => !v[1])) {
-                this.m_emitter.emitConstructorPrimaryCollectionSingletons(sinfo, tkey, eargs.map<[MIRType, MIRArgument]>((arg) => [this.m_emitter.registerResolvedTypeReference(arg[0]), arg[2]]), trgt, isassociative);
+            if (!isassociative && eargs.every((v) => !v[1])) {
+                this.m_emitter.emitConstructorPrimaryCollectionSingletons(sinfo, tkey, eargs.map<[MIRType, MIRArgument]>((arg) => [this.m_emitter.registerResolvedTypeReference(arg[0]), arg[2]]), trgt);
             }
-            else if (eargs.every((v) => v[1])) {
-                if(eargs.length === 1 && eargs[0][0].isSameType(resulttype)) {
-                    //special case where we expand a (say) List<Int> into a List<Int>
-                    this.m_emitter.emitRegisterStore(sinfo, eargs[0][2], trgt, this.m_emitter.registerResolvedTypeReference(eargs[0][0]), undefined);
+            else if (eargs.every((v) => !v[1])) {
+                //TODO: need to handle for set as well
+                assert(oftype.object.isMapType());
+
+                const addop = oftype.object.staticFunctions.find(ff => ff.name === "s_initializer_add");
+                const opbinds = this.m_assembly.resolveBindsForCallComplete([], [], oftype.binds, new Map<string, ResolvedType>(), new Map<string, ResolvedType>()) as Map<string, ResolvedType>;
+                const opkey = this.m_emitter.registerStaticCall(resulttype, [this.m_emitter.registerResolvedTypeReference(resulttype), oftype.object, oftype.binds], addop as StaticFunctionDecl, "s_initializer_add", opbinds, [], []);
+
+                let acctemp = this.m_emitter.generateTmpRegister();
+                this.m_emitter.emitConstructorPrimaryCollectionOneElement(sinfo, tkey, [this.m_emitter.registerResolvedTypeReference(eargs[0][0]), eargs[0][2]], acctemp);
+                for(let i = 1; i < eargs.length; ++i) {
+                    const acctempold = acctemp;
+                    acctemp = (i + 1 === eargs.length) ? trgt : this.m_emitter.generateTmpRegister();
+
+                    this.m_emitter.emitInvokeFixedFunction(sinfo, opkey, [acctempold, eargs[i][2]], undefined, this.m_emitter.registerResolvedTypeReference(resulttype), acctemp);
                 }
-                else {
-                    this.m_emitter.emitConstructorPrimaryCollectionCopies(sinfo, tkey, eargs.map<[MIRType, MIRArgument]>((arg) => [this.m_emitter.registerResolvedTypeReference(arg[0]), arg[2]]), trgt, isassociative);
-                }
+
             }
             else {
-                this.m_emitter.emitConstructorPrimaryCollectionMixed(sinfo, tkey, eargs.map<[boolean, MIRType, MIRArgument]>((arg) => [arg[1], this.m_emitter.registerResolvedTypeReference(arg[0]), arg[2]]), trgt, isassociative);
+                //TODO: need to do unroll for append and mixed cases too!!!
+                assert(false);
             }
         }
 
@@ -3011,6 +3028,11 @@ class TypeChecker {
 
                 if (fdecl.decl.invoke.body !== undefined && fdecl.decl.invoke.body.body === "special_inject") {
                     this.m_emitter.emitInject(exp.sinfo, this.m_emitter.registerResolvedTypeReference(fsig.params[0].type as ResolvedType), this.m_emitter.registerResolvedTypeReference(fsig.resultType), rargs.args[0], trgt);
+
+                    return [env.setUniformResultExpression(fsig.resultType)];
+                }
+                else if (fdecl.decl.invoke.body !== undefined && fdecl.decl.invoke.body.body === "special_extract") {
+                    this.m_emitter.emitExtract(exp.sinfo, this.m_emitter.registerResolvedTypeReference(fsig.params[0].type as ResolvedType), this.m_emitter.registerResolvedTypeReference(fsig.resultType), rargs.args[0], trgt);
 
                     return [env.setUniformResultExpression(fsig.resultType)];
                 }

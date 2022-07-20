@@ -118,7 +118,7 @@ class SMTTypeEmitter {
         return this.isUniqueTupleType(tt) || this.isUniqueRecordType(tt) || this.isUniqueEntityType(tt) || this.isUniqueEphemeralType(tt);
     }
 
-    getSMTTypeFor(tt: MIRType): SMTTypeInfo {
+    getSMTTypeFor(tt: MIRType, fordecl?: boolean): SMTTypeInfo {
         if(this.typeDataMap.has(tt.typeID)) {
             return this.typeDataMap.get(tt.typeID) as SMTTypeInfo;
         }
@@ -131,7 +131,7 @@ class SMTTypeEmitter {
             return new SMTTypeInfo(this.lookupTypeName(tt.typeID), `TypeTag_${this.lookupTypeName(tt.typeID)}`, tt.typeID);
         }
         else if(this.isUniqueEntityType(tt)) {
-            return this.getSMTTypeInfoForEntity(tt, this.assembly.entityDecls.get(tt.typeID) as MIREntityTypeDecl);
+            return this.getSMTTypeInfoForEntity(tt, this.assembly.entityDecls.get(tt.typeID) as MIREntityTypeDecl, fordecl || false);
         }
         else if (this.isUniqueEphemeralType(tt)) {
             return new SMTTypeInfo(this.lookupTypeName(tt.typeID), `TypeTag_${this.lookupTypeName(tt.typeID)}`, tt.typeID);
@@ -144,7 +144,7 @@ class SMTTypeEmitter {
         }
     }
 
-    private getSMTTypeInfoForEntity(tt: MIRType, entity: MIREntityTypeDecl): SMTTypeInfo {
+    private getSMTTypeInfoForEntity(tt: MIRType, entity: MIREntityTypeDecl, fordecl: boolean): SMTTypeInfo {
         if(entity instanceof MIRInternalEntityTypeDecl) {
             if(entity instanceof MIRPrimitiveInternalEntityTypeDecl) {
                 if (this.isType(tt, "None")) {
@@ -220,6 +220,12 @@ class SMTTypeEmitter {
                     return new SMTTypeInfo("bsq_regex", "TypeTag_Regex", entity.tkey);
                 }
                 else {
+                    if(entity.name === "SeqList") {
+                        return new SMTTypeInfo(this.lookupTypeName(entity.tkey), `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
+                    }
+                    else if (entity.name === "SeqMap") {
+                        return new SMTTypeInfo(this.lookupTypeName(entity.tkey), `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
+                    }
                     assert(false, "Unknown primitive internal entity");
                 }
             }
@@ -237,19 +243,24 @@ class SMTTypeEmitter {
             }
             else if (entity instanceof MIRConstructableInternalEntityTypeDecl) {
                 //Convert all refs of the type into refs to the underlying type
-                const ulltype = this.getSMTTypeFor(this.getMIRType(entity.fromtype));
+                const ulltype = this.getSMTTypeFor(this.getMIRType(entity.fromtype), fordecl);
                 return new SMTTypeInfo(ulltype.smttypename, `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
             }
             else {
                 assert(entity instanceof MIRPrimitiveCollectionEntityTypeDecl, "Should be a collection type");
 
-                if(entity instanceof MIRPrimitiveListEntityTypeDecl) {
-                    return new SMTTypeInfo(this.lookupTypeName(entity.tkey), `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
+                if(fordecl) {
+                    return new SMTTypeInfo("BTerm", "[BTERM]", tt.typeID);
                 }
                 else {
-                    assert(entity instanceof MIRPrimitiveMapEntityTypeDecl);
+                    if (entity instanceof MIRPrimitiveListEntityTypeDecl) {
+                        return new SMTTypeInfo(this.lookupTypeName(entity.tkey), `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
+                    }
+                    else {
+                        assert(entity instanceof MIRPrimitiveMapEntityTypeDecl);
 
-                    return new SMTTypeInfo(this.lookupTypeName(entity.tkey), `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
+                        return new SMTTypeInfo(this.lookupTypeName(entity.tkey), `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
+                    }
                 }
             }
         }
@@ -610,6 +621,10 @@ class SMTTypeEmitter {
         }
     }
 
+    coerceContainerAtomIntoTermRepresentation(exp: SMTExp, from: MIRType): SMTExp {
+        return this.coerceFromAtomicToTerm(exp, from);
+    }
+
     generateTupleIndexGetFunction(tt: MIRTupleType, idx: number): string {
         this.internTypeName(tt.typeID);
         return `${this.lookupTypeName(tt.typeID)}@_${idx}`;
@@ -678,66 +693,70 @@ class SMTTypeEmitter {
         return new SMTCallSimple(`$GuardResult_${this.getSMTTypeFor(ttype).smttypename}@flag`, [exp]);
     }
 
-    generateListTypeConsInfoSeq(ttype: MIRType): {cons: string, seqf: string} {
+    generateSeqListTypeConsInfoSeq(ttype: MIRType): {cons: string, seqf: string} {
         return {cons: `${this.getSMTTypeFor(ttype).smttypename}@cons`, seqf: `${this.getSMTTypeFor(ttype).smttypename}_seq`};
     }
 
-    generateListTypeConstructorSeq(ttype: MIRType, seq: SMTExp): SMTExp {
-        const consinfo = this.generateListTypeConsInfoSeq(ttype);
+    generateSeqListTypeConstructorSeq(ttype: MIRType, seq: SMTExp): SMTExp {
+        const consinfo = this.generateSeqListTypeConsInfoSeq(ttype);
         return new SMTCallSimple(consinfo.cons, [seq]);
     }
 
-    generateListTypeGetData(ttype: MIRType, ll: SMTExp): SMTExp {
-        return new SMTCallSimple(this.generateListTypeConsInfoSeq(ttype).seqf, [ll]);
+    generateSeqListTypeGetData(ttype: MIRType, ll: SMTExp): SMTExp {
+        return new SMTCallSimple(this.generateSeqListTypeConsInfoSeq(ttype).seqf, [ll]);
     }
 
-    generateListTypeGetLength(ttype: MIRType, ll: SMTExp): SMTExp {
-        return new SMTCallSimple("seq.len", [this.generateListTypeGetData(ttype, ll)]);
+    generateSeqListTypeGetLength(ttype: MIRType, ll: SMTExp): SMTExp {
+        return new SMTCallSimple("seq.len", [this.generateSeqListTypeGetData(ttype, ll)]);
     }
 
-    generateListTypeGetLengthMinus1(ttype: MIRType, ll: SMTExp): SMTExp {
-        const len = this.generateListTypeGetLength(ttype, ll);
+    generateSeqListTypeGetLengthMinus1(ttype: MIRType, ll: SMTExp): SMTExp {
+        const len = this.generateSeqListTypeGetLength(ttype, ll);
         return new SMTCallSimple("-", [len, new SMTConst("1")]);
     }
 
-    generateMapEntryType(ttype: MIRType): SMTTypeInfo {
+    generateSeqMapEntryType(ttype: MIRType): SMTTypeInfo {
         return new SMTTypeInfo(`$MapEntry_${this.getSMTTypeFor(ttype).smttypename}`, "[INTERNAL RESULT]", "[INTERNAL RESULT]");
     }
 
-    generateMapEntryTypeConsInfo(ttype: MIRType): {cons: string, keyf: string, valf: string} {
+    generateSeqMapEntryTypeConsInfo(ttype: MIRType): {cons: string, keyf: string, valf: string} {
         return {cons: `$MapEntry_${this.getSMTTypeFor(ttype).smttypename}@cons`, keyf: `$MapEntry_${this.getSMTTypeFor(ttype).smttypename}_key`, valf: `$MapEntry_${this.getSMTTypeFor(ttype).smttypename}_value`};
     }
 
-    generateMapEntryTypeConstructor(ttype: MIRType, key: SMTExp, val: SMTExp): SMTExp {
-        const consinfo = this.generateMapEntryTypeConsInfo(ttype);
+    generateSeqMapEntryTypeConstructor(ttype: MIRType, key: SMTExp, val: SMTExp): SMTExp {
+        const consinfo = this.generateSeqMapEntryTypeConsInfo(ttype);
         return new SMTCallSimple(consinfo.cons, [key, val]);
     }
 
-    generateMapEntryTypeGetKey(ttype: MIRType, entry: SMTExp): SMTExp {
-        const consinfo = this.generateMapEntryTypeConsInfo(ttype);
+    generateSeqMapEntryTypeGetKey(ttype: MIRType, entry: SMTExp): SMTExp {
+        const consinfo = this.generateSeqMapEntryTypeConsInfo(ttype);
         return new SMTCallSimple(consinfo.keyf, [entry]);
     }
 
-    generateMapEntryTypeGetValue(ttype: MIRType, entry: SMTExp): SMTExp {
-        const consinfo = this.generateMapEntryTypeConsInfo(ttype);
+    generateSeqMapEntryTypeGetValue(ttype: MIRType, entry: SMTExp): SMTExp {
+        const consinfo = this.generateSeqMapEntryTypeConsInfo(ttype);
         return new SMTCallSimple(consinfo.valf, [entry]);
     }
 
-    generateMapTypeConsInfo(ttype: MIRType): {cons: string, seqf: string} {
+    generateSeqMapTypeConsInfo(ttype: MIRType): {cons: string, seqf: string} {
         return {cons: `${this.getSMTTypeFor(ttype).smttypename}@cons`, seqf: `${this.getSMTTypeFor(ttype).smttypename}_seq`};
     }
 
-    generateMapTypeConstructor(ttype: MIRType, seq: SMTExp): SMTExp {
-        const consinfo = this.generateMapTypeConsInfo(ttype);
+    generateSeqMapTypeConstructor(ttype: MIRType, seq: SMTExp): SMTExp {
+        const consinfo = this.generateSeqMapTypeConsInfo(ttype);
         return new SMTCallSimple(consinfo.cons, [seq]);
     }
 
-    generateMapTypeGetData(ttype: MIRType, mm: SMTExp): SMTExp {
-        return new SMTCallSimple(this.generateMapTypeConsInfo(ttype).seqf, [mm]);
+    generateSeqMapTypeGetData(ttype: MIRType, mm: SMTExp): SMTExp {
+        return new SMTCallSimple(this.generateSeqMapTypeConsInfo(ttype).seqf, [mm]);
     }
 
-    generateMapTypeGetLength(ttype: MIRType, mm: SMTExp): SMTExp {
-        return new SMTCallSimple("seq.len", [this.generateMapTypeGetData(ttype, mm)]);
+    generateSeqMapTypeGetLength(ttype: MIRType, mm: SMTExp): SMTExp {
+        return new SMTCallSimple("seq.len", [this.generateSeqMapTypeGetData(ttype, mm)]);
+    }
+
+    generateSeqMapTypeGetLengthMinus1(ttype: MIRType, mm: SMTExp): SMTExp {
+        return new SMTCallSimple("-", [new SMTCallSimple("seq.len", [this.generateSeqMapTypeGetData(ttype, mm)]), new SMTConst("1")]);
     }
 
     generateHavocConstructorName(tt: MIRType): string {

@@ -688,7 +688,7 @@ class Lexer {
                         macrostack.push("scan")
                     }
                     else if (macro[0] === "#else") {
-                        mode = "normal";
+                        mode = macrostack[macrostack.length - 1];
                     }
                     else {
                         mode = macrostack.pop() as "scan" | "normal";
@@ -4151,6 +4151,12 @@ class Parser {
                 }
                 else if(ename === "Map") {
                     attributes.push("__map_type");
+                }
+                else if(ename === "SeqList") {
+                    attributes.push("__seqlist_type");
+                }
+                else if(ename === "SeqMap") {
+                    attributes.push("__seqmap_type");
                 }
                 else {
                     //not special

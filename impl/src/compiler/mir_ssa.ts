@@ -4,7 +4,7 @@
 //-------------------------------------------------------------------------------------------------------
 
 import * as assert from "assert";
-import { MIRArgGuard, MIRArgument, MIRAssertCheck, MIRConvertValue, MIRDebug, MIREntityProjectToEphemeral, MIREntityUpdate, MIRGuard, MIRLoadConst, MIRLoadField, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadUnintVariableValue, MIRMaskGuard, MIROp, MIROpTag, MIRRecordHasProperty, MIRRecordProjectToEphemeral, MIRRecordUpdate, MIRRegisterArgument, MIRTupleHasIndex, MIRTupleProjectToEphemeral, MIRTupleUpdate, MIRResolvedTypeKey, MIRLoadFromEpehmeralList, MIRMultiLoadFromEpehmeralList, MIRSliceEpehmeralList, MIRInvokeFixedFunction, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRConstructorEphemeralList, MIRConstructorPrimaryCollectionEmpty, MIREphemeralListExtend, MIRConstructorPrimaryCollectionSingletons, MIRConstructorPrimaryCollectionCopies, MIRConstructorPrimaryCollectionMixed, MIRBinKeyEq, MIRBinKeyLess, MIRPrefixNotOp, MIRIsTypeOf, MIRJumpCond, MIRJumpNone, MIRReturnAssign, MIRReturnAssignOfCons, MIRPhi, MIRBody, MIRBasicBlock, MIRStatmentGuard, MIRRegisterAssign, MIRInject, MIRGuardedOptionInject, MIRLogicAction, MIRConstructorEntityDirect } from "./mir_ops";
+import { MIRArgGuard, MIRArgument, MIRAssertCheck, MIRConvertValue, MIRDebug, MIREntityProjectToEphemeral, MIREntityUpdate, MIRGuard, MIRLoadConst, MIRLoadField, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadUnintVariableValue, MIRMaskGuard, MIROp, MIROpTag, MIRRecordHasProperty, MIRRecordProjectToEphemeral, MIRRecordUpdate, MIRRegisterArgument, MIRTupleHasIndex, MIRTupleProjectToEphemeral, MIRTupleUpdate, MIRResolvedTypeKey, MIRLoadFromEpehmeralList, MIRMultiLoadFromEpehmeralList, MIRSliceEpehmeralList, MIRInvokeFixedFunction, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRConstructorEphemeralList, MIRConstructorPrimaryCollectionEmpty, MIREphemeralListExtend, MIRConstructorPrimaryCollectionSingletons, MIRConstructorPrimaryCollectionOneElement, MIRBinKeyEq, MIRBinKeyLess, MIRPrefixNotOp, MIRIsTypeOf, MIRJumpCond, MIRJumpNone, MIRReturnAssign, MIRReturnAssignOfCons, MIRPhi, MIRBody, MIRBasicBlock, MIRStatmentGuard, MIRRegisterAssign, MIRInject, MIRGuardedOptionInject, MIRLogicAction, MIRConstructorEntityDirect } from "./mir_ops";
 import { SourceInfo } from "../ast/parser";
 import { FlowLink, BlockLiveSet, computeBlockLinks, computeBlockLiveVars, topologicalOrder } from "./mir_info";
 import { MIRAssembly, MIRType } from "./mir_assembly";
@@ -337,21 +337,15 @@ function assignSSA(op: MIROp, ssastate: SSAState): MIROp {
             cc.trgt = convertToSSA(cc.trgt, cc.tkey, ssastate);
             return op;
         }
+        case MIROpTag.MIRConstructorPrimaryCollectionOneElement: {
+            const cc = op as MIRConstructorPrimaryCollectionOneElement;
+            cc.arg = [cc.arg[0], processSSA_Use(cc.arg[1], ssastate)];
+            cc.trgt = convertToSSA(cc.trgt, cc.tkey, ssastate);
+            return op;
+        }
         case MIROpTag.MIRConstructorPrimaryCollectionSingletons: {
             const cc = op as MIRConstructorPrimaryCollectionSingletons;
             cc.args = processSSAUse_RemapStructuredArgs<[MIRResolvedTypeKey, MIRArgument]>(cc.args, (v) => [v[0], processSSA_Use(v[1], ssastate)]);
-            cc.trgt = convertToSSA(cc.trgt, cc.tkey, ssastate);
-            return op;
-        }
-        case MIROpTag.MIRConstructorPrimaryCollectionCopies: {
-            const cc = op as MIRConstructorPrimaryCollectionCopies;
-            cc.args = processSSAUse_RemapStructuredArgs<[MIRResolvedTypeKey, MIRArgument]>(cc.args, (v) => [v[0], processSSA_Use(v[1], ssastate)]);
-            cc.trgt = convertToSSA(cc.trgt, cc.tkey, ssastate);
-            return op;
-        }
-        case MIROpTag.MIRConstructorPrimaryCollectionMixed: {
-            const cc = op as MIRConstructorPrimaryCollectionMixed;
-            cc.args = processSSAUse_RemapStructuredArgs<[boolean, MIRResolvedTypeKey, MIRArgument]>(cc.args, (v) => [v[0], v[1], processSSA_Use(v[2], ssastate)]);
             cc.trgt = convertToSSA(cc.trgt, cc.tkey, ssastate);
             return op;
         }

@@ -42,9 +42,9 @@ internal entity ListOps provides Some {
 
     internal recursive? function s_list_single_index_of<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): Int = s_list_single_index_of;
 
-    internal function s_list_has<T>(l: List<T>, v: T): Bool = s_list_has; 
-    internal function s_list_indexof<T>(l: List<T>, v: T): Int = s_list_indexof; 
-    internal function s_list_last_indexof<T>(l: List<T>, v: T): Int = s_list_last_indexof; 
+    internal function s_list_has<T grounded KeyType>(l: List<T>, v: T): Bool = s_list_has; 
+    internal function s_list_indexof<T grounded KeyType>(l: List<T>, v: T): Int = s_list_indexof; 
+    internal function s_list_last_indexof<T grounded KeyType>(l: List<T>, v: T): Int = s_list_last_indexof; 
 
     internal recursive? function s_list_filter_pred<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): List<T> = s_list_filter_pred;
     internal recursive? function s_list_filter_pred_idx<T>(l: List<T>, p: recursive? pred(_: T, _: Nat) -> Bool): List<T> = s_list_filter_pred_idx;
@@ -53,14 +53,13 @@ internal entity ListOps provides Some {
     internal recursive? function s_list_map_fn_idx<T, U>(l: List<T>, f: recursive? fn(_: T, _: Nat) -> U): List<U> = s_list_map_idx;
     internal recursive? function s_list_map_fn_sync<T, U, V>(l1: List<T>, l2: List<U>, f: recursive? fn(_: T, _: U) -> V): List<V> = s_list_map_sync;
 
+    internal recursive? function s_list_filter_map_fn<T, U>(l: SeqList<T>, p: recursive? pred(_: T) -> Bool, f: recursive? fn(_: T) -> U): SeqList<U> = s_list_filter_map_fn;
+
     internal function s_list_slice_front<T>(l: List<T>, start: Nat): List<T> = s_list_slice_start;
     internal function s_list_slice_end<T>(l: List<T>, end: Nat): List<T> = s_list_slice_end;
     internal function s_list_slice<T>(l: List<T>, start: Nat, length: Nat): List<T> = s_list_slice;
 
     internal function s_list_reverse<T>(ll: List<T>): List<T> = s_list_reverse;
-
-    internal recursive? function s_list_sort<T>(l: List<T>, cmp: recursive? pred(_: T, _: T) -> Bool): List<T> = s_list_sort;
-    internal recursive? function s_list_uniqueify<T>(l: List<T>, cmp: recursive? pred(_: T, _: T) -> Bool): List<T> = s_list_uniqueify;
 
     internal recursive? function s_list_reduce<T, U>(l: List<T>, iv: U, f: recursive? fn(_: U, _: T) -> U): U = s_list_reduce;
     internal recursive? function s_list_reduce_idx<T, U>(l: List<T>, iv: U, f: recursive? fn(_: U, _: T, _: Nat) -> U): U = s_list_reduce_idx;
