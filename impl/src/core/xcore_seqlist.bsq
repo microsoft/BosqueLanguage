@@ -11,10 +11,10 @@ __internal entity SeqList<T> provides Some {
 }
 
 internal entity SeqListOps provides Some {
-    __safe internal function s_list_cons_1<T>(Vector1<T>): SeqList<T> = s_list_cons_1;
-    __safe internal function s_list_cons_2<T>(Vector2<T>): SeqList<T> = s_list_cons_2;
-    __safe internal function s_list_cons_3<T>(Vector3<T>): SeqList<T> = s_list_cons_3;
-    __safe internal function s_list_cons_4<T>(Vector4<T>): SeqList<T> = s_list_cons_4;
+    __safe internal function s_list_cons_1<T>(v: Vector1<T>): SeqList<T> = s_list_cons_1;
+    __safe internal function s_list_cons_2<T>(v: Vector2<T>): SeqList<T> = s_list_cons_2;
+    __safe internal function s_list_cons_3<T>(v: Vector3<T>): SeqList<T> = s_list_cons_3;
+    __safe internal function s_list_cons_4<T>(v: Vector4<T>): SeqList<T> = s_list_cons_4;
 
     /*__safe*/ internal function s_list_index_int(start: Int, end: Int, len: Int): SeqList<Int> = s_list_index;
     /*__safe*/ internal function s_list_index_nat(start: Nat, end: Nat, len: Nat): SeqList<Nat> = s_list_index;

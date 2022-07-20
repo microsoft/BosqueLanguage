@@ -2044,7 +2044,25 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                     });
                 }
 #else
-                xxxx; //TODO: implement in Bosque for runtime -- merge sort?
+               //TODO: implement in Bosque for runtime -- insertion sort is slow so do a merge sort or something better?
+               return ListOps::s_list_reduce<T, List<T>>[recursive?](this, List<T>{}, recursive? fn(acc: List<T>, v: T): List<T> => {
+                    if(ListOps::s_empty<T>(acc)) {
+                        return List<T>{v};
+                    }
+                    else {
+                        let iidx = ListOps::s_list_find_pred<T>[recursive?](acc, recursive? pred(accv: T): Bool => cmp[recursive?](accv, v));
+                            
+                        if(iidx == -1i) {
+                            return ListOps::s_list_push_back<T>(acc, v);
+                        }
+                        elif(iidx == 0) {
+                            return ListOps::s_list_push_front<T>(acc, v);
+                        }
+                        else {
+                            return ListOps::s_list_insert<T>(acc, iidx, v);
+                        }
+                    }
+                });
 #endif
             }
         }
@@ -2062,11 +2080,11 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
 #if CHECK_LIBS
                 //TODO: this is rough, maybe a special \forall UF type thing would be better
                 return ListOps::s_list_reduce<T, List<T>>[recursive?](this, List<T>{}, recursive? fn(acc: List<T>, v: T): List<T> => {
+                    let vk = keyf[recursive?](v);
                     if(ListOps::s_empty<T>(acc)) {
                         return List<T>{v};
                     }
                     else {
-                        let vk = keyf[recursive?](v);
                         let hasv = ListOps::s_list_has_pred<T>[recursive?](acc, recursive? pred(accv: T): Bool => KeyType<K>::equal(keyf[recursive?](accv), kv));
                         if(hasv) {
                             return acc;
@@ -2077,7 +2095,20 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                     }
                 });
 #else
-                xxxx; //TODO: implement in Bosque for runtime -- use map and reduce
+                return ListOps::s_list_reduce<T, List<T>>[recursive?](this, [List<T>{}, Map<K, T>{}], recursive? fn(acc: [List<T>, Map<K, T>], v: T): List<T> => {
+                    let vk = keyf[recursive?](v);
+                    if(ListOps::s_empty<T>(acc)) {
+                        return [List<T>{v}, Map<K, V>{vk => v}];
+                    }
+                    else {
+                        if(acc.1.has(kv)) {
+                            return acc;
+                        }
+                        else {
+                            return [ListOps::s_list_push_back<T>(acc.0, v), acc.1.add(kv, v)];
+                        }
+                    }
+                });
 #endif
             }
         }

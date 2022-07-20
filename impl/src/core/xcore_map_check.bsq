@@ -58,7 +58,7 @@ internal entity MapOps provides Some {
     }
 
     internal function s_ensure_std_repr<K grounded KeyType, V>(m: MapVector<K, V> | SeqMap<K, V> | None): MapRepr<K, V> {
-        if(l.is<SeqMap<K V>>()) {
+        if(m.is<SeqMap<K, V>>()) {
             let count = SeqMapOps::s_map_size<K, V>(m);
             if(count > 4) {
                 return l;

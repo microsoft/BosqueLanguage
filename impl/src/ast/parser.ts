@@ -688,7 +688,7 @@ class Lexer {
                         macrostack.push("scan")
                     }
                     else if (macro[0] === "#else") {
-                        mode = "normal";
+                        mode = macrostack[macrostack.length - 1];
                     }
                     else {
                         mode = macrostack.pop() as "scan" | "normal";

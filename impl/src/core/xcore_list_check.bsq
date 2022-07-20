@@ -60,7 +60,7 @@ internal entity ListOps provides Some {
     internal function s_ensure_std_repr<T>(l: ListVector<T> | SeqList<T> | None): ListRepr<T> {
         if(l.is<SeqList<T>>()) {
             let count = SeqListOps::s_list_size<T>(l);
-            if(count > 4) {
+            if(count > 4n) {
                 return l;
             }
             else {
@@ -657,7 +657,7 @@ internal entity ListOps provides Some {
         }
     }
 
-    internal recursive? s_list_filter_map_fn<T, U>(l: List<T>, p: recursive? pred(_: T) -> Bool, f: recursive? fn(_: T) -> U): List<U> {
+    internal recursive? function s_list_filter_map_fn<T, U>(l: List<T>, p: recursive? pred(_: T) -> Bool, f: recursive? fn(_: T) -> U): List<U> {
         let ll = ListOps::s_value<T>(l);
 
         if(ll.is<SeqList<T>>()) {
@@ -695,7 +695,7 @@ internal entity ListOps provides Some {
 #endif
         }
         else {
-            return ListOps::s_into<T>(VectorOps::s_list_slice_front<T>(ll, start));
+            return ListOps::s_into<T>(VectorOps::s_list_slice_front<T>(s_safeAs<ListRepr<T>, ListVector<T>>(ll), start));
         }
     }
 
@@ -711,7 +711,7 @@ internal entity ListOps provides Some {
 #endif
         }
         else {
-            return ListOps::s_into<T>(VectorOps::s_list_slice_end<T>(ll, end));
+            return ListOps::s_into<T>(VectorOps::s_list_slice_end<T>(s_safeAs<ListRepr<T>, ListVector<T>>(ll), end));
         }
     }
 
@@ -727,11 +727,11 @@ internal entity ListOps provides Some {
 #endif
         }
         else {
-            return ListOps::s_into<T>(VectorOps::s_list_slice<T>(ll, start, length));
+            return ListOps::s_into<T>(VectorOps::s_list_slice<T>(s_safeAs<ListRepr<T>, ListVector<T>>(ll), start, length));
         }
     }
 
-    internal function s_list_reverse<T>(ll: List<T>): List<T> {
+    internal function s_list_reverse<T>(l: List<T>): List<T> {
         let ll = ListOps::s_value<T>(l);
 
         if(ll.is<SeqList<T>>()) {
@@ -742,7 +742,7 @@ internal entity ListOps provides Some {
 #endif
         }
         else {
-            return VectorOps::s_list_reverse<T>(ll);
+            return VectorOps::s_list_reverse<T>(s_safeAs<ListRepr<T>, ListVector<T>>(ll));
         }
     }
 
@@ -757,7 +757,7 @@ internal entity ListOps provides Some {
 #endif
         }
         else {
-            return VectorOps::s_list_is_sorted<T>[recursive?](ll, cmp);
+            return VectorOps::s_list_is_sorted<T>[recursive?](s_safeAs<ListRepr<T>, ListVector<T>>(ll), cmp);
         }
     }
 
@@ -772,7 +772,7 @@ internal entity ListOps provides Some {
 #endif
         }
         else {
-            return VectorOps::s_list_reduce<T, U>[recursive?](ll, init, f);
+            return VectorOps::s_list_reduce<T, U>[recursive?](s_safeAs<ListRepr<T>, ListVector<T>>(ll), init, f);
         }
     }
 
@@ -787,7 +787,7 @@ internal entity ListOps provides Some {
 #endif
         }
         else {
-            return VectorOps::s_list_reduce_idx<T, U>[recursive?](ll, init, f);
+            return VectorOps::s_list_reduce_idx<T, U>[recursive?](s_safeAs<ListRepr<T>, ListVector<T>>(ll), init, f);
         }
     }
 
@@ -803,7 +803,7 @@ internal entity ListOps provides Some {
 #endif
         }
         else {
-            let e, r = VectorOps::s_list_transduce<T, E, U>[recursive?](ll, env, op);
+            let e, r = VectorOps::s_list_transduce<T, E, U>[recursive?](s_safeAs<ListRepr<T>, ListVector<T>>(ll), env, op);
             return (|e, ListOps::s_into<U>(r)|);
         }
     }
@@ -820,7 +820,7 @@ internal entity ListOps provides Some {
 #endif
         }
         else {
-            let e, r = VectorOps::s_list_transduce<T, E, U>[recursive?](ll, env, op);
+            let e, r = VectorOps::s_list_transduce<T, E, U>[recursive?](s_safeAs<ListRepr<T>, ListVector<T>>(ll), env, op);
             return (|e, ListOps::s_into<U>(r)|);
         }
     }
