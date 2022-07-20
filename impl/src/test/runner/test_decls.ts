@@ -12,6 +12,8 @@ const PARALLEL_COUNT_SMT = process.platform !== "win32" ? 4 : 1;
 
 const SMT_TIMEOUT = 10000;
 
+const SMT_SMALL_MODEL_ONLY_DEFAULT = false;
+
 //TODO: should compute max consts in program and then set these limits (numerics) to make sure we can cover them 
 const SMT_VOPTS_CHK = {
     INT_MIN: -32768,
@@ -116,7 +118,7 @@ class SymTestInternalChkShouldFail {
 }
 
 export {
-    PARALLEL_COUNT_ICPP, PARALLEL_COUNT_SMT, SMT_TIMEOUT,
+    PARALLEL_COUNT_ICPP, PARALLEL_COUNT_SMT, SMT_TIMEOUT, SMT_SMALL_MODEL_ONLY_DEFAULT,
     SMT_VOPTS_CHK, SMT_VOPTS_ERR,
     TestResultKind,
     ICPPTest, SymTest, SymTestInternalChkShouldFail

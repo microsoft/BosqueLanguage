@@ -7,6 +7,7 @@ import * as FS from "fs";
 import * as Path from "path";
 
 import { Category, runtests } from "../runner/suite_runner";
+import { SMT_SMALL_MODEL_ONLY_DEFAULT } from "../runner/test_decls";
 
 let opts: Category[] = [];
 let dirs: string[] = [];
@@ -56,5 +57,5 @@ const testfiles: string[] = [];
 
 const pckg = {macros: [] as string[], files: testfiles};
 
-runtests([pckg], [], testfiles, "debug", true, {}, "extra", ["sym", "icpp", "err", "chk", "symexec"], dirs);
+runtests([pckg], [], testfiles, "debug", SMT_SMALL_MODEL_ONLY_DEFAULT, true, {}, "extra", ["sym", "icpp", "err", "chk", "symexec"], dirs);
 
