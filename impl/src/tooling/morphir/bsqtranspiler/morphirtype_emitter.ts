@@ -608,22 +608,22 @@ class MorphirTypeEmitter {
 
     generateTupleIndexGetFunction(tt: MIRTupleType, idx: number): string {
         this.internTypeName(tt.typeID);
-        return `${this.lookupTypeName(tt.typeID)}@_${idx}`;
+        return `${this.lookupTypeName(tt.typeID)}__${idx}`;
     } 
 
     generateRecordPropertyGetFunction(tt: MIRRecordType, pname: string): string {
         this.internTypeName(tt.typeID);
-        return `${this.lookupTypeName(tt.typeID)}@_${pname}`;
+        return `${this.lookupTypeName(tt.typeID)}__${pname}`;
     }
 
     generateEntityFieldGetFunction(tt: MIREntityTypeDecl, field: MIRFieldDecl): string {
         this.internTypeName(tt.tkey);
-        return `${this.lookupTypeName(tt.tkey)}@_${field.fname}`;
+        return `${this.lookupTypeName(tt.tkey)}__${field.fname}`;
     }
 
     generateEphemeralListGetFunction(tt: MIREphemeralListType, idx: number): string {
         this.internTypeName(tt.typeID);
-        return `${this.lookupTypeName(tt.typeID)}@_${idx}`;
+        return `${this.lookupTypeName(tt.typeID)}__${idx}`;
     }
 
     generateResultType(ttype: MIRType): MorphirTypeInfo {
