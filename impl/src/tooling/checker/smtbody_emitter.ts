@@ -2487,7 +2487,7 @@ class SMTBodyEmitter {
 
             let rexp: SMTExp = new SMTConst("[UNITIALIZED FLOW]");
             if(jop.tag === MIROpTag.MIRAbort) {
-                ; //No continuation so just leave uninit
+                ; //No continuation so just leave as there is not continuation and let op processing handle it
             }
             else if (jop.tag === MIROpTag.MIRJump) {
                 rexp = this.getNextBlockExp(blocks, smtexps, bb.label, (jop as MIRJump).trgtblock);

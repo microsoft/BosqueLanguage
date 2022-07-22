@@ -113,7 +113,7 @@ class MorphirBodyEmitter {
 
     generateUFConstantForType(tt: MIRType): string {
         const ctype = this.typegen.getMorphirTypeFor(tt);
-        const ufcname = `${ctype.morphirtypename}@uicons_UF`;
+        const ufcname = `${ctype.morphirtypename}__uicons_UF`;
         
         if(this.requiredUFConsts.find((cc) => cc.morphirtypename === ctype.morphirtypename) === undefined) {
             this.requiredUFConsts.push(ctype);
@@ -154,11 +154,11 @@ class MorphirBodyEmitter {
     private generateGeneralCallValueProcessing(callertype: MIRType, calleetype: MIRType, gcall: MorphirExp, trgt: MIRRegisterArgument, continuation: MorphirExp): MorphirLet {
         const cres = this.generateTempName();
         
-        const callersmt = this.typegen.getMorphirTypeFor(callertype);
-        const calleesmt = this.typegen.getMorphirTypeFor(calleetype);
+        const callermph = this.typegen.getMorphirTypeFor(callertype);
+        const calleemph = this.typegen.getMorphirTypeFor(calleetype);
 
         const okpath = new MorphirLet(this.varToMorphirName(trgt).vname, this.typegen.generateResultGetSuccess(calleetype, new MorphirVar(cres)), continuation);
-        const errpath = (callersmt.morphirtypename === calleesmt.morphirtypename) ? new MorphirVar(cres) : this.typegen.generateResultTypeConstructorError(callertype, this.typegen.generateResultGetError(calleetype, new MorphirVar(cres)));
+        const errpath = (callermph.morphirtypename === calleemph.morphirtypename) ? new MorphirVar(cres) : this.typegen.generateResultTypeConstructorError(callertype, this.typegen.generateResultGetError(calleetype, new MorphirVar(cres)));
 
         const icond = new MorphirIf(this.typegen.generateResultIsErrorTest(calleetype, new MorphirVar(cres)), errpath, okpath);
         return new MorphirLet(cres, gcall, icond);
@@ -242,22 +242,6 @@ class MorphirBodyEmitter {
         const shortfnames = fields.map((fname) => (this.assembly.fieldDecls.get(fname[0]) as MIRFieldDecl).fname).join(",");
         const fullname = `$EntityUpdate!${argflowtype.typeID}!{${fnames}}=!${resulttype.typeID}`;
         const shortname = `EntityUpdate_${argflowtype.typeID}__${shortfnames}_`;
-
-        this.typegen.internFunctionName(fullname, shortname);
-        return fullname;
-    }
-
-    private generateSingletonConstructorsList(argc: number, resulttype: MIRType): string {
-        const fullname = `$ListSingletonCons!${argc}!${resulttype.typeID}`;
-        const shortname = `ListSingletonCons_${argc}_${resulttype.typeID}`;
-
-        this.typegen.internFunctionName(fullname, shortname);
-        return fullname;
-    }
-
-    private generateSingletonConstructorsMap(argc: number, resulttype: MIRType): string {
-        const fullname = `$MapSingletonCons!${argc}!${resulttype.typeID}`;
-        const shortname = `MapSingletonCons_${argc}_${resulttype.typeID}`;
 
         this.typegen.internFunctionName(fullname, shortname);
         return fullname;
@@ -681,9 +665,9 @@ class MorphirBodyEmitter {
                     action = this.typegen.generateResultTypeConstructorSuccess(geninfo.resulttype, this.typegen.coerce(gcall, atype, geninfo.resulttype));
                 }
                 else {
-                    const smtaatype = this.typegen.getMorphirTypeFor(atype);
-                    const smtgresult = this.typegen.getMorphirTypeFor(geninfo.resulttype);
-                    if(smtaatype.morphirtypename === smtgresult.morphirtypename) {
+                    const mphaatype = this.typegen.getMorphirTypeFor(atype);
+                    const mphgresult = this.typegen.getMorphirTypeFor(geninfo.resulttype);
+                    if(mphaatype.morphirtypename === mphgresult.morphirtypename) {
                         action = gcall;
                     }
                     else {
@@ -928,7 +912,7 @@ class MorphirBodyEmitter {
             const rval = (cval as MIRConstantRegex).value;
             const ere = this.assembly.literalRegexs.findIndex((re) => re.restr === rval.restr);
 
-            return new MorphirCallSimple("bsq_regex@cons", [new MorphirConst(`${ere}`)]);
+            return new MorphirCallSimple("bsq_regex__cons", [new MorphirConst(`${ere}`)]);
         }
     }
 
@@ -1106,19 +1090,19 @@ class MorphirBodyEmitter {
             const cc = new MorphirCallSimple(this.typegen.lookupFunctionName(icall), [argpp]);
 
             const callbind = this.generateTempName();
-            const smtcallvar = new MorphirVar(callbind);
+            const mphcallvar = new MorphirVar(callbind);
             let ncont: MorphirExp = new MorphirConst("[UNDEF]");
 
             if(op.guard instanceof MIRMaskGuard) {
                 const pm = this.pendingMask.find((mm) => mm.maskname === (op.guard as MIRMaskGuard).gmask) as MorphirMaskConstruct;
-                pm.entries[(op.guard as MIRMaskGuard).gindex] = this.typegen.generateAccessWithSetGuardResultGetFlag(this.typegen.getMIRType(op.resulttype), smtcallvar);
+                pm.entries[(op.guard as MIRMaskGuard).gindex] = this.typegen.generateAccessWithSetGuardResultGetFlag(this.typegen.getMIRType(op.resulttype), mphcallvar);
 
-                ncont = new MorphirLet(this.varToMorphirName(op.trgt).vname, this.typegen.generateAccessWithSetGuardResultGetValue(this.typegen.getMIRType(op.resulttype), smtcallvar), continuation);
+                ncont = new MorphirLet(this.varToMorphirName(op.trgt).vname, this.typegen.generateAccessWithSetGuardResultGetValue(this.typegen.getMIRType(op.resulttype), mphcallvar), continuation);
             }
             else {
                 ncont = new MorphirLetMulti([
-                    { vname: this.varToMorphirName((op.guard as MIRArgGuard).greg as MIRRegisterArgument).vname, value: this.typegen.generateAccessWithSetGuardResultGetFlag(this.typegen.getMIRType(op.resulttype), smtcallvar) },
-                    { vname: this.varToMorphirName(op.trgt).vname, value: this.typegen.generateAccessWithSetGuardResultGetValue(this.typegen.getMIRType(op.resulttype), smtcallvar) }
+                    { vname: this.varToMorphirName((op.guard as MIRArgGuard).greg as MIRRegisterArgument).vname, value: this.typegen.generateAccessWithSetGuardResultGetFlag(this.typegen.getMIRType(op.resulttype), mphcallvar) },
+                    { vname: this.varToMorphirName(op.trgt).vname, value: this.typegen.generateAccessWithSetGuardResultGetValue(this.typegen.getMIRType(op.resulttype), mphcallvar) }
                 ], continuation);
             }
 
@@ -1179,19 +1163,19 @@ class MorphirBodyEmitter {
             const cc = new MorphirCallSimple(this.typegen.lookupFunctionName(icall), [argpp]);
 
             const callbind = this.generateTempName();
-            const smtcallvar = new MorphirVar(callbind);
+            const mphcallvar = new MorphirVar(callbind);
             let ncont: MorphirExp = new MorphirConst("[UNDEF]");
 
             if(op.guard instanceof MIRMaskGuard) {
                 const pm = this.pendingMask.find((mm) => mm.maskname === (op.guard as MIRMaskGuard).gmask) as MorphirMaskConstruct;
-                pm.entries[(op.guard as MIRMaskGuard).gindex] = this.typegen.generateAccessWithSetGuardResultGetFlag(this.typegen.getMIRType(op.resulttype), smtcallvar);
+                pm.entries[(op.guard as MIRMaskGuard).gindex] = this.typegen.generateAccessWithSetGuardResultGetFlag(this.typegen.getMIRType(op.resulttype), mphcallvar);
 
-                ncont = new MorphirLet(this.varToMorphirName(op.trgt).vname, this.typegen.generateAccessWithSetGuardResultGetValue(this.typegen.getMIRType(op.resulttype), smtcallvar), continuation);
+                ncont = new MorphirLet(this.varToMorphirName(op.trgt).vname, this.typegen.generateAccessWithSetGuardResultGetValue(this.typegen.getMIRType(op.resulttype), mphcallvar), continuation);
             }
             else {
                 ncont = new MorphirLetMulti([
-                    { vname: this.varToMorphirName((op.guard as MIRArgGuard).greg as MIRRegisterArgument).vname, value: this.typegen.generateAccessWithSetGuardResultGetFlag(this.typegen.getMIRType(op.resulttype), smtcallvar) },
-                    { vname: this.varToMorphirName(op.trgt).vname, value: this.typegen.generateAccessWithSetGuardResultGetValue(this.typegen.getMIRType(op.resulttype), smtcallvar) }
+                    { vname: this.varToMorphirName((op.guard as MIRArgGuard).greg as MIRRegisterArgument).vname, value: this.typegen.generateAccessWithSetGuardResultGetFlag(this.typegen.getMIRType(op.resulttype), mphcallvar) },
+                    { vname: this.varToMorphirName(op.trgt).vname, value: this.typegen.generateAccessWithSetGuardResultGetValue(this.typegen.getMIRType(op.resulttype), mphcallvar) }
                 ], continuation);
             }
 
@@ -1688,13 +1672,13 @@ class MorphirBodyEmitter {
     generateBinKeyCmpFor(cmptype: MIRType, lhstype: MIRType, lhsexp: MorphirExp, rhstype: MIRType, rhsexp: MorphirExp): MorphirExp {
         if(lhstype.typeID === cmptype.typeID && rhstype.typeID === cmptype.typeID && this.typegen.isUniqueType(cmptype)) {
             const oftype = this.typegen.getMorphirTypeFor(cmptype);
-            return new MorphirCallSimple(`${oftype.smttypename}@less`, [lhsexp, rhsexp]);
+            return new MorphirCallSimple(`${oftype.morphirtypename}__less`, [lhsexp, rhsexp]);
         }
         else {
             const lhs = this.typegen.coerceToKey(lhsexp, lhstype);
             const rhs = this.typegen.coerceToKey(rhsexp, rhstype);
 
-            return new MorphirCallSimple("BKey@less", [lhs, rhs]);
+            return new MorphirCallSimple("BKey__less", [lhs, rhs]);
         }
     }
 
@@ -1934,14 +1918,11 @@ class MorphirBodyEmitter {
             case MIROpTag.MIRConstructorPrimaryCollectionEmpty: {
                 return this.processConstructorPrimaryCollectionEmpty(op as MIRConstructorPrimaryCollectionEmpty, continuation);
             }
+            case MIROpTag.MIRConstructorPrimaryCollectionOneElement: {
+                return this.processConstructorPrimaryCollectionOneElement(op as MIRConstructorPrimaryCollectionOneElement, continuation);
+            }
             case MIROpTag.MIRConstructorPrimaryCollectionSingletons: {
                 return this.processConstructorPrimaryCollectionSingletons(op as MIRConstructorPrimaryCollectionSingletons, continuation);
-            }
-            case MIROpTag.MIRConstructorPrimaryCollectionCopies: {
-                return this.processConstructorPrimaryCollectionCopies(op as MIRConstructorPrimaryCollectionCopies, continuation);
-            }
-            case MIROpTag.MIRConstructorPrimaryCollectionMixed: {
-                return this.processConstructorPrimaryCollectionMixed(op as MIRConstructorPrimaryCollectionMixed, continuation);
             }
             case MIROpTag.MIRBinKeyEq: {
                 return this.processBinKeyEq(op as MIRBinKeyEq, continuation);
@@ -1976,16 +1957,16 @@ class MorphirBodyEmitter {
     }
 
     processGenerateResultUnderflowCheck(sinfo: SourceInfo, arg0: MorphirExp, arg1: MorphirExp , oftype: MIRType, val: MorphirExp): MorphirExp {
-        return new MorphirIf(new MorphirCallSimple("<", [arg1, arg0]), this.generateErrorCreate(sinfo, oftype, "Unsigned Underflow"), this.typegen.generateResultTypeConstructorSuccess(oftype, val));
+        return new MorphirIf(new MorphirCallSimple("<", [arg1, arg0]), this.typegen.generateErrorResultAssert(oftype, this.currentFile, sinfo), val);
     }
 
     processGenerateResultWithZeroArgCheck(sinfo: SourceInfo, zero: MorphirConst, not0arg: MorphirExp, oftype: MIRType, val: MorphirExp): MorphirExp {
         const chkzero = MorphirCallSimple.makeEq(zero, not0arg);
-        return new MorphirIf(chkzero, this.generateErrorCreate(sinfo, oftype, "Div by 0"), this.typegen.generateResultTypeConstructorSuccess(oftype, val));
+        return new MorphirIf(chkzero, this.typegen.generateErrorResultAssert(oftype, this.currentFile, sinfo), this.typegen.generateResultTypeConstructorSuccess(oftype, val));
     }
 
     processDefaultOperatorInvokePrimitiveType(sinfo: SourceInfo, trgt: MIRRegisterArgument, op: MIRInvokeKey, args: MorphirExp[], continuation: MorphirExp): MorphirExp {
-        let smte: MorphirExp = new MorphirConst("[INVALID]");
+        let mphe: MorphirExp = new MorphirConst("[INVALID]");
         let erropt = false;
         let rtype = this.typegen.getMIRType("Bool"); //default for all the compare ops
 
@@ -1993,215 +1974,215 @@ class MorphirBodyEmitter {
             //op unary +
             case "__i__Core::+=prefix=(Int)": {
                 rtype = this.typegen.getMIRType("Int");
-                smte = args[0];
+                mphe = args[0];
                 break;
             }
             case "__i__Core::+=prefix=(Nat)": {
                 rtype = this.typegen.getMIRType("Nat");
-                smte = args[0];
+                mphe = args[0];
                 break;
             }
             case "__i__Core::+=prefix=(BigInt)": {
                 rtype = this.typegen.getMIRType("BigInt");
-                smte = args[0];
+                mphe = args[0];
                 break;
             }
             case "__i__Core::+=prefix=(BigNat)": {
                 rtype = this.typegen.getMIRType("BigNat");
-                smte = args[0];
+                mphe = args[0];
                 break;
             }
             case "__i__Core::+=prefix=(Rational)": {
                 rtype = this.typegen.getMIRType("Rational");
-                smte = args[0];
+                mphe = args[0];
                 break;
             }
             case "__i__Core::+=prefix=(Float)": {
                 rtype = this.typegen.getMIRType("Float");
-                smte = args[0];
+                mphe = args[0];
                 break;
             }
             case "__i__Core::+=prefix=(Decimal)": {
                 rtype = this.typegen.getMIRType("Decimal");
-                smte = args[0];
+                mphe = args[0];
                 break;
             }
             //op unary -
             case "__i__Core::-=prefix=(Int)": {
                 rtype = this.typegen.getMIRType("Int");
-                smte = new MorphirCallSimple("*", [args[0], new MorphirConst("-1")]);
+                mphe = new MorphirCallSimple("-", args);
                 break;
             }
             case "__i__Core::-=prefix=(BigInt)": {
                 rtype = this.typegen.getMIRType("BigInt");
-                smte = new MorphirCallSimple("*", [args[0], new MorphirConst("-1")]);
+                mphe = new MorphirCallSimple("-", args);
                 break;
             }
             case "__i__Core::-=prefix=(Rational)": {
                 rtype = this.typegen.getMIRType("Rational");
-                smte = new MorphirCallSimple("-", args);
+                mphe = new MorphirCallSimple("-", args);
                 break;
             }
             case "__i__Core::-=prefix=(Float)": {
                 rtype = this.typegen.getMIRType("Float");
-                smte = new MorphirCallSimple("-", args);
+                mphe = new MorphirCallSimple("-", args);
                 break;
             }
             case "__i__Core::-=prefix=(Decimal)": {
                 rtype = this.typegen.getMIRType("Decimal");
-                smte = new MorphirCallSimple("-", args);
+                mphe = new MorphirCallSimple("-", args);
                 break;
             }
             //op infix +
             case "__i__Core::+=infix=(Int, Int)": {
                 rtype = this.typegen.getMIRType("Int");
-                smte = new MorphirCallSimple("+", args);
+                mphe = new MorphirCallSimple("+", args, true);
                 break;
             }
             case "__i__Core::+=infix=(Nat, Nat)": {
                 rtype = this.typegen.getMIRType("Nat");
-                smte = new MorphirCallSimple("+", args);
+                mphe = new MorphirCallSimple("+", args, true);
                 break;
             }
             case "__i__Core::+=infix=(BigInt, BigInt)": {
                 rtype = this.typegen.getMIRType("BigInt");
-                smte = new MorphirCallSimple("+", args);
+                mphe = new MorphirCallSimple("+", args, true);
                 break;
             }
             case "__i__Core::+=infix=(BigNat, BigNat)": {
                 rtype = this.typegen.getMIRType("BigNat");
-                smte = new MorphirCallSimple("+", args);
+                mphe = new MorphirCallSimple("+", args, true);
                 break;
             }
             case "__i__Core::+=infix=(Rational, Rational)": {
                 rtype = this.typegen.getMIRType("Rational");
-                smte = new MorphirCallSimple("+", args);
+                mphe = new MorphirCallSimple("+", args, true);
                 break;
             }
             case "__i__Core::+=infix=(Float, Float)": {
                 rtype = this.typegen.getMIRType("Float");
-                smte = new MorphirCallSimple("+", args);
+                mphe = new MorphirCallSimple("+", args, true);
                 break;
             }
             case "__i__Core::+=infix=(Decimal, Decimal)": {
                 rtype = this.typegen.getMIRType("Decmial");
-                smte = new MorphirCallSimple("+", args);
+                mphe = new MorphirCallSimple("+", args, true);
                 break;
             }
             //op infix -
             case "__i__Core::-=infix=(Int, Int)": {
                 rtype = this.typegen.getMIRType("Int");
-                smte = new MorphirCallSimple("-", args);
+                mphe = new MorphirCallSimple("-", args, true);
                 break;
             }
             case "__i__Core::-=infix=(Nat, Nat)": {
                 rtype = this.typegen.getMIRType("Nat");
-                smte = this.processGenerateResultUnderflowCheck(sinfo, args[0], args[1], rtype, new MorphirCallSimple("-", args));
+                mphe = this.processGenerateResultUnderflowCheck(sinfo, args[0], args[1], rtype, new MorphirCallSimple("-", args, true));
                 erropt = true;
                 break;
             }
             case "__i__Core::-=infix=(BigInt, BigInt)": {
                 rtype = this.typegen.getMIRType("BigInt");
-                smte = new MorphirCallSimple("-", args);
+                mphe = new MorphirCallSimple("-", args);
                 break;
             }
             case "__i__Core::-=infix=(BigNat, BigNat)": {
                 rtype = this.typegen.getMIRType("BigNat");
-                smte = this.processGenerateResultUnderflowCheck(sinfo, args[0], args[1], rtype, new MorphirCallSimple("-", args));
+                mphe = this.processGenerateResultUnderflowCheck(sinfo, args[0], args[1], rtype, new MorphirCallSimple("-", args, true));
                 erropt = true;
                 break
             }
             case "__i__Core::-=infix=(Rational, Rational)": {
                 rtype = this.typegen.getMIRType("Rational");
-                smte = new MorphirCallSimple("-", args);
+                mphe = new MorphirCallSimple("-", args, true);
                 break;
             }
             case "__i__Core::-=infix=(Float, Float)": {
                 rtype = this.typegen.getMIRType("Float");
-                smte = new MorphirCallSimple("-", args);
+                mphe = new MorphirCallSimple("-", args, true);
                 break;
             }
             case "__i__Core::-=infix=(Decimal, Decimal)": {
                 rtype = this.typegen.getMIRType("Decmial");
-                smte = new MorphirCallSimple("-", args);
+                mphe = new MorphirCallSimple("-", args, true);
                 break;
             }
             //op infix *
             case "__i__Core::*=infix=(Int, Int)": {
                 rtype = this.typegen.getMIRType("Int");
-                smte = new MorphirCallSimple("*", args);
+                mphe = new MorphirCallSimple("*", args, true);
                 break;
             }
             case "__i__Core::*=infix=(Nat, Nat)": {
                 rtype = this.typegen.getMIRType("Nat");
-                smte = new MorphirCallSimple("*", args);
+                mphe = new MorphirCallSimple("*", args, true);
                 break;
             }
             case "__i__Core::*=infix=(BigInt, BigInt)": {
                 rtype = this.typegen.getMIRType("BigInt");
-                smte = new MorphirCallSimple("*", args);
+                mphe = new MorphirCallSimple("*", args, true);
                 break;
             }
             case "__i__Core::*=infix=(BigNat, BigNat)": {
                 rtype = this.typegen.getMIRType("BigNat");
-                smte = new MorphirCallSimple("*", args);
+                mphe = new MorphirCallSimple("*", args, true);
                 break;
             }
             case "__i__Core::*=infix=(Rational, Rational)": {
                 rtype = this.typegen.getMIRType("Rational");
-                smte = new MorphirCallSimple("*", args);
+                mphe = new MorphirCallSimple("*", args, true);
                 break;
             }
             case "__i__Core::*=infix=(Float, Float)": {
                 rtype = this.typegen.getMIRType("Float");
-                smte = new MorphirCallSimple("*", args);
+                mphe = new MorphirCallSimple("*", args, true);
                 break;
             }
             case "__i__Core::*=infix=(Decimal, Decimal)": {
                 rtype = this.typegen.getMIRType("Decmial");
-                smte = new MorphirCallSimple("*", args);
+                mphe = new MorphirCallSimple("*", args, true);
                 break;
             }
             //op infix /
             case "__i__Core::/=infix=(Int, Int)": {
                 rtype = this.typegen.getMIRType("Int");
-                smte = this.processGenerateResultWithZeroArgCheck(sinfo, new MorphirConst("BInt@zero"), args[1], rtype, new MorphirCallSimple("/", args));
+                mphe = this.processGenerateResultWithZeroArgCheck(sinfo, new MorphirConst("BInt__zero"), args[1], rtype, new MorphirCallSimple("/", args, true));
                 erropt = true;
                 break;
             }
             case "__i__Core::/=infix=(Nat, Nat)": {
                 rtype = this.typegen.getMIRType("Nat");
-                smte = this.processGenerateResultWithZeroArgCheck(sinfo, new MorphirConst("BNat@zero"), args[1], rtype, new MorphirCallSimple("/", args));
+                mphe = this.processGenerateResultWithZeroArgCheck(sinfo, new MorphirConst("BNat__zero"), args[1], rtype, new MorphirCallSimple("/", args, true));
                 erropt = true;
                 break;
             }
             case "__i__Core::/=infix=(BigInt, BigInt)": {
                 rtype = this.typegen.getMIRType("BigInt");
-                smte = this.processGenerateResultWithZeroArgCheck(sinfo, new MorphirConst("BBigInt@zero"), args[1], rtype, new MorphirCallSimple("/", args));
+                mphe = this.processGenerateResultWithZeroArgCheck(sinfo, new MorphirConst("BBigInt__zero"), args[1], rtype, new MorphirCallSimple("/", args, true));
                 erropt = true;
                 break;
             }
             case "__i__Core::/=infix=(BigNat, BigNat)": {
                 rtype = this.typegen.getMIRType("BigNat");
-                smte = this.processGenerateResultWithZeroArgCheck(sinfo, new MorphirConst("BBigNat@zero"), args[1], rtype, new MorphirCallSimple("/", args));
+                mphe = this.processGenerateResultWithZeroArgCheck(sinfo, new MorphirConst("BBigNat__zero"), args[1], rtype, new MorphirCallSimple("/", args, true));
                 erropt = true;
                 break
             }
             case "__i__Core::/=infix=(Rational, Rational)": {
                 rtype = this.typegen.getMIRType("Rational");
-                smte = this.processGenerateResultWithZeroArgCheck(sinfo, new MorphirConst("BRational@zero"), args[1], rtype, new MorphirCallSimple("/", args));
+                mphe = this.processGenerateResultWithZeroArgCheck(sinfo, new MorphirConst("BRational__zero"), args[1], rtype, new MorphirCallSimple("/", args, true));
                 erropt = true;
                 break;
             }
             case "__i__Core::/=infix=(Float, Float)": {
                 rtype = this.typegen.getMIRType("Float");
-                smte = this.processGenerateResultWithZeroArgCheck(sinfo, new MorphirConst("BFloat@zero"), args[1], rtype, new MorphirCallSimple("/", args));
+                mphe = this.processGenerateResultWithZeroArgCheck(sinfo, new MorphirConst("BFloat__zero"), args[1], rtype, new MorphirCallSimple("/", args, true));
                 erropt = true;
                 break;
             }
             case "__i__Core::/=infix=(Decimal, Decimal)": {
                 rtype = this.typegen.getMIRType("Decimal");
-                smte = this.processGenerateResultWithZeroArgCheck(sinfo, new MorphirConst("BDecimal@zero"), args[1], rtype, new MorphirCallSimple("/", args));
+                mphe = this.processGenerateResultWithZeroArgCheck(sinfo, new MorphirConst("BDecimal__zero"), args[1], rtype, new MorphirCallSimple("/", args, true));
                 erropt = true;
                 break;
             }
@@ -2213,7 +2194,7 @@ class MorphirBodyEmitter {
             case "__i__Core::===infix=(Rational, Rational)":
             case "__i__Core::===infix=(Float, Float)":
             case "__i__Core::===infix=(Decimal, Decimal)": {
-                smte = MorphirCallSimple.makeEq(args[0], args[1]);
+                mphe = MorphirCallSimple.makeEq(args[0], args[1]);
                 break;
             }
             //op infix !=
@@ -2224,123 +2205,123 @@ class MorphirBodyEmitter {
             case "__i__Core::!==infix=(Rational, Rational)":
             case "__i__Core::!==infix=(Float, Float)":
             case "__i__Core::!==infix=(Decimal, Decimal)": {
-                smte = MorphirCallSimple.makeNotEq(args[0], args[1]);
+                mphe = MorphirCallSimple.makeNotEq(args[0], args[1]);
                 break;
             }
             //op infix <
             case "__i__Core::<=infix=(Int, Int)": {
-                smte = new MorphirCallSimple("<", args);
+                mphe = new MorphirCallSimple("<", args, true);
                 break;
             }
             case "__i__Core::<=infix=(Nat, Nat)": {
-                smte = new MorphirCallSimple("<", args);
+                mphe = new MorphirCallSimple("<", args, true);
                 break;
             }
             case "__i__Core::<=infix=(BigInt, BigInt)": {
-                smte = new MorphirCallSimple("<", args);
+                mphe = new MorphirCallSimple("<", args, true);
                 break;
             }
             case "__i__Core::<=infix=(BigNat, BigNat)": {
-                smte = new MorphirCallSimple("<", args);
+                mphe = new MorphirCallSimple("<", args, true);
                 break;
             }
             case "__i__Core::<=infix=(Rational, Rational)": {
-                smte = new MorphirCallSimple("<", args);
+                mphe = new MorphirCallSimple("<", args, true);
                 break;
             }
             case "__i__Core::<=infix=(Float, Float)": {
-                smte = new MorphirCallSimple("<", args);
+                mphe = new MorphirCallSimple("<", args, true);
                 break;
             }
             case "__i__Core::<=infix=(Decimal, Decimal)": {
-                smte = new MorphirCallSimple("<", args);
+                mphe = new MorphirCallSimple("<", args, true);
                 break;
             }
             //op infix >
             case "__i__Core::>=infix=(Int, Int)": {
-                smte = new MorphirCallSimple(">", args);
+                mphe = new MorphirCallSimple(">", args, true);
                 break;
             }
             case "__i__Core::>=infix=(Nat, Nat)": {
-                smte = new MorphirCallSimple(">", args);
+                mphe = new MorphirCallSimple(">", args, true);
                 break;
             }
             case "__i__Core::>=infix=(BigInt, BigInt)": {
-                smte = new MorphirCallSimple(">", args);
+                mphe = new MorphirCallSimple(">", args, true);
                 break;
             }
             case "__i__Core::>=infix=(BigNat, BigNat)": {
-                smte = new MorphirCallSimple(">", args);
+                mphe = new MorphirCallSimple(">", args, true);
                 break;
             }
             case "__i__Core::>=infix=(Rational, Rational)": {
-                smte = new MorphirCallSimple(">", args);
+                mphe = new MorphirCallSimple(">", args, true);
                 break;
             }
             case "__i__Core::>=infix=(Float, Float)": {
-                smte = new MorphirCallSimple(">", args);
+                mphe = new MorphirCallSimple(">", args, true);
                 break;
             }
             case "__i__Core::>=infix=(Decimal, Decimal)": {
-                smte = new MorphirCallSimple(">", args);
+                mphe = new MorphirCallSimple(">", args, true);
                 break;
             }
             //op infix <=
             case "__i__Core::<==infix=(Int, Int)": {
-                smte = new MorphirCallSimple("<=", args);
+                mphe = new MorphirCallSimple("<=", args, true);
                 break;
             }
             case "__i__Core::<==infix=(Nat, Nat)": {
-                smte = new MorphirCallSimple("<=", args);
+                mphe = new MorphirCallSimple("<=", args, true);
                 break;
             }
             case "__i__Core::<==infix=(BigInt, BigInt)":  {
-                smte = new MorphirCallSimple("<=", args);
+                mphe = new MorphirCallSimple("<=", args, true);
                 break;
             }
             case "__i__Core::<==infix=(BigNat, BigNat)": {
-                smte = new MorphirCallSimple("<=", args);
+                mphe = new MorphirCallSimple("<=", args, true);
                 break;
             }
             case "__i__Core::<==infix=(Rational, Rational)": {
-                smte = new MorphirCallSimple("<=", args);
+                mphe = new MorphirCallSimple("<=", args, true);
                 break;
             }
             case "__i__Core::<==infix=(Float, Float)": {
-                smte = new MorphirCallSimple("<=", args);
+                mphe = new MorphirCallSimple("<=", args, true);
                 break;
             }
             case "__i__Core::<==infix=(Decimal, Decimal)": {
-                smte = new MorphirCallSimple("<=", args);
+                mphe = new MorphirCallSimple("<=", args, true);
                 break;
             }
             //op infix >=
             case "__i__Core::>==infix=(Int, Int)": {
-                smte = new MorphirCallSimple(">=", args);
+                mphe = new MorphirCallSimple(">=", args, true);
                 break;
             }
             case "__i__Core::>==infix=(Nat, Nat)": {
-                smte = new MorphirCallSimple(">=", args);
+                mphe = new MorphirCallSimple(">=", args, true);
                 break;
             }
             case "__i__Core::>==infix=(BigInt, BigInt)": {
-                smte = new MorphirCallSimple(">=", args);
+                mphe = new MorphirCallSimple(">=", args, true);
                 break;
             }
             case "__i__Core::>==infix=(BigNat, BigNat)": {
-                smte = new MorphirCallSimple(">=", args);
+                mphe = new MorphirCallSimple(">=", args, true);
                 break;
             }
             case "__i__Core::>==infix=(Rational, Rational)":{
-                smte = new MorphirCallSimple(">=", args);
+                mphe = new MorphirCallSimple(">=", args, true);
                 break;
             }
             case "__i__Core::>==infix=(Float, Float)":{
-                smte = new MorphirCallSimple(">=", args);
+                mphe = new MorphirCallSimple(">=", args, true);
                 break;
             }
             case "__i__Core::>==infix=(Decimal, Decimal)":{
-                smte = new MorphirCallSimple(">=", args);
+                mphe = new MorphirCallSimple(">=", args, true);
                 break;
             }
             default: {
@@ -2349,18 +2330,18 @@ class MorphirBodyEmitter {
         }
 
         if (!erropt) {
-            return new MorphirLet(this.varToMorphirName(trgt).vname, smte, continuation);
+            return new MorphirLet(this.varToMorphirName(trgt).vname, mphe, continuation);
         }
         else {
             const cres = this.generateTempName();
 
             const okpath = new MorphirLet(this.varToMorphirName(trgt).vname, this.typegen.generateResultGetSuccess(rtype, new MorphirVar(cres)), continuation);
-            const smtrtype = this.typegen.getMorphirTypeFor(rtype);
-            const smtcurrenttype = this.typegen.getMorphirTypeFor(this.currentRType);
-            const errpath = (smtrtype.smttypename === smtcurrenttype.smttypename) ? new MorphirVar(cres) : this.typegen.generateResultTypeConstructorError(this.currentRType, this.typegen.generateResultGetError(rtype, new MorphirVar(cres)));
+            const mphrtype = this.typegen.getMorphirTypeFor(rtype);
+            const mphcurrenttype = this.typegen.getMorphirTypeFor(this.currentRType);
+            const errpath = (mphrtype.morphirtypename === mphcurrenttype.morphirtypename) ? new MorphirVar(cres) : this.typegen.generateResultTypeConstructorError(this.currentRType, this.typegen.generateResultGetError(rtype, new MorphirVar(cres)));
 
             const icond = new MorphirIf(this.typegen.generateResultIsErrorTest(rtype, new MorphirVar(cres)), errpath, okpath);
-            return new MorphirLet(cres, smte, icond);
+            return new MorphirLet(cres, mphe, icond);
         }
     }
 
@@ -2442,26 +2423,26 @@ class MorphirBodyEmitter {
 
             let rexp: MorphirExp = new MorphirConst("[UNITIALIZED FLOW]");
             if(jop.tag === MIROpTag.MIRAbort) {
-                ; //No continuation so just leave uninit
+                ; //No continuation so just leave as there is not continuation and let op processing handle it
             }
             else if (jop.tag === MIROpTag.MIRJump) {
                 rexp = this.getNextBlockExp(blocks, MorphirExps, bb.label, (jop as MIRJump).trgtblock);
             }
             else if (jop.tag === MIROpTag.MIRJumpCond) {
-                const smtcond = this.argToMorphir((jop as MIRJumpCond).arg);
+                const mphcond = this.argToMorphir((jop as MIRJumpCond).arg);
                 const texp = this.getNextBlockExp(blocks, MorphirExps, bb.label, (jop as MIRJumpCond).trueblock);
                 const fexp = this.getNextBlockExp(blocks, MorphirExps, bb.label, (jop as MIRJumpCond).falseblock);
                 
-                rexp = new MorphirIf(smtcond, texp, fexp);
+                rexp = new MorphirIf(mphcond, texp, fexp);
             }
             else {
                 assert(jop.tag === MIROpTag.MIRJumpNone);
 
-                const smtcond = this.generateNoneCheck((jop as MIRJumpNone).arg, this.typegen.getMIRType((jop as MIRJumpNone).arglayouttype));
+                const mphcond = this.generateNoneCheck((jop as MIRJumpNone).arg, this.typegen.getMIRType((jop as MIRJumpNone).arglayouttype));
                 const nexp = this.getNextBlockExp(blocks, MorphirExps, bb.label, (jop as MIRJumpNone).noneblock);
                 const sexp = this.getNextBlockExp(blocks, MorphirExps, bb.label, (jop as MIRJumpNone).someblock);
                 
-                rexp = new MorphirIf(smtcond, nexp, sexp);
+                rexp = new MorphirIf(mphcond, nexp, sexp);
             }
 
             for (let i = bb.ops.length - 1; i >= 0; --i) {
@@ -2478,12 +2459,12 @@ class MorphirBodyEmitter {
         return MorphirExps.get("entry") as MorphirExp;
     }
 
-    generateSMTInvoke(idecl: MIRInvokeDecl): MorphirFunction | undefined {
+    generateMorphirInvoke(idecl: MIRInvokeDecl): MorphirFunction | undefined {
         this.currentFile = idecl.srcFile;
         this.currentRType = this.typegen.getMIRType(idecl.resultType);
 
         const args = idecl.params.map((arg) => {
-            return { vname: this.varStringToSMT(arg.name).vname, vtype: this.typegen.getMorphirTypeFor(this.typegen.getMIRType(arg.type)) };
+            return { vname: this.varStringToMorphir(arg.name).vname, vtype: this.typegen.getMorphirTypeFor(this.typegen.getMIRType(arg.type)) };
         });
 
         const issafe = this.isSafeInvoke(idecl.ikey);
@@ -2496,7 +2477,7 @@ class MorphirBodyEmitter {
                 return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, restype, body);
             }
             else {
-                return MorphirFunction.createWithMask(this.typegen.lookupFunctionName(idecl.ikey), args, "@maskparam@", idecl.masksize, restype, body);
+                return MorphirFunction.createWithMask(this.typegen.lookupFunctionName(idecl.ikey), args, "__maskparam__", idecl.masksize, restype, body);
             }
         }
         else {
@@ -2508,15 +2489,15 @@ class MorphirBodyEmitter {
 
     generateBuiltinFunction(idecl: MIRInvokePrimitiveDecl): MorphirFunction | undefined {
         const args = idecl.params.map((arg) => {
-            return { vname: this.varStringToSMT(arg.name).vname, vtype: this.typegen.getMorphirTypeFor(this.typegen.getMIRType(arg.type)) };
+            return { vname: this.varStringToMorphir(arg.name).vname, vtype: this.typegen.getMorphirTypeFor(this.typegen.getMIRType(arg.type)) };
         });
 
         const issafe = this.isSafeInvoke(idecl.ikey);
 
         const mirrestype = this.typegen.getMIRType(idecl.resultType);
-        const smtrestype = this.typegen.getMorphirTypeFor(mirrestype);
+        const mphrestype = this.typegen.getMorphirTypeFor(mirrestype);
 
-        const chkrestype = issafe ? smtrestype : this.typegen.generateResultType(mirrestype);
+        const chkrestype = issafe ? mphrestype : this.typegen.generateResultType(mirrestype);
 
         switch(idecl.implkey) {
             case "default": 
@@ -2528,8 +2509,9 @@ class MorphirBodyEmitter {
             }
             case "validator_accepts": {
                 const bsqre = this.assembly.validatorRegexs.get(idecl.enclosingDecl as MIRResolvedTypeKey) as BSQRegex;
-                const lre = bsqre.compileToPatternToSMT(true);
+                const lre = bsqre.compileToJS();
 
+                xxxx;
                 let accept = new MorphirCallSimple("str.in.re", [new MorphirVar(args[0].vname), new MorphirConst(lre)]);
                 return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, accept);
             }
@@ -2661,5 +2643,5 @@ class MorphirBodyEmitter {
 }
 
 export {
-     SMTBodyEmitter
+     MorphirBodyEmitter
 };
