@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { MIRAssembly, MIRConceptType, MIRConstructableEntityTypeDecl, MIREntityType, MIREntityTypeDecl, MIREphemeralListType, MIRFieldDecl, MIRInvokeBodyDecl, MIRInvokeDecl, MIRInvokePrimitiveDecl, MIRObjectEntityTypeDecl, MIRPCode, MIRPrimitiveCollectionEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRRecordType, MIRTupleType, MIRType } from "../../../compiler/mir_assembly";
+import { MIRAssembly, MIRConceptType, MIRConstructableEntityTypeDecl, MIREntityType, MIREntityTypeDecl, MIREphemeralListType, MIRFieldDecl, MIRInvokeBodyDecl, MIRInvokeDecl, MIRInvokePrimitiveDecl, MIRObjectEntityTypeDecl, MIRPrimitiveCollectionEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRRecordType, MIRTupleType, MIRType } from "../../../compiler/mir_assembly";
 import { MorphirTypeEmitter } from "./morphirtype_emitter";
 import { MIRAbort, MIRArgGuard, MIRArgument, MIRAssertCheck, MIRBasicBlock, MIRBinKeyEq, MIRBinKeyLess, MIRConstantArgument, MIRConstantBigInt, MIRConstantBigNat, MIRConstantDataString, MIRConstantDecimal, MIRConstantFalse, MIRConstantFloat, MIRConstantInt, MIRConstantNat, MIRConstantNone, MIRConstantNothing, MIRConstantRational, MIRConstantRegex, MIRConstantString, MIRConstantStringOf, MIRConstantTrue, MIRConstantTypedNumber, MIRConstructorEntityDirect, MIRConstructorEphemeralList, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionOneElement, MIRConstructorPrimaryCollectionSingletons, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConvertValue, MIRDeclareGuardFlagLocation, MIREntityProjectToEphemeral, MIREntityUpdate, MIREphemeralListExtend, MIRExtract, MIRFieldKey, MIRGlobalVariable, MIRGuard, MIRGuardedOptionInject, MIRInject, MIRInvokeFixedFunction, MIRInvokeKey, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRIsTypeOf, MIRJump, MIRJumpCond, MIRJumpNone, MIRLoadConst, MIRLoadField, MIRLoadFromEpehmeralList, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadUnintVariableValue, MIRLogicAction, MIRMaskGuard, MIRMultiLoadFromEpehmeralList, MIROp, MIROpTag, MIRPhi, MIRPrefixNotOp, MIRRecordHasProperty, MIRRecordProjectToEphemeral, MIRRecordUpdate, MIRRegisterArgument, MIRRegisterAssign, MIRResolvedTypeKey, MIRReturnAssign, MIRReturnAssignOfCons, MIRSetConstantGuardFlag, MIRSliceEpehmeralList, MIRStatmentGuard, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRTupleHasIndex, MIRTupleProjectToEphemeral, MIRTupleUpdate, MIRVirtualMethodKey } from "../../../compiler/mir_ops";
 import { MorphirCallSimple, MorphirCallGeneral, MorphirCallGeneralWOptMask, MorphirCond, MorphirConst, MorphirExp, MorphirIf, MorphirLet, MorphirLetMulti, MorphirMaskConstruct, MorphirVar, MorphirCallGeneralWPassThroughMask, MorphirTypeInfo } from "./morphir_exp";
@@ -707,11 +707,11 @@ class MorphirBodyEmitter {
 
     private generateSubtypeCheckEntity(arg: MIRArgument, layout: MIRType, flow: MIRType, ofentity: MIRType): MorphirExp {
         if(flow.options.every((opt) => (opt instanceof MIRTupleType) || (opt instanceof MIRRecordType))) {
-            return new MorphirConst("false");
+            return new MorphirConst("False");
         }
 
         if (this.typegen.isUniqueEntityType(flow)) {
-            return new MorphirConst(flow.typeID === ofentity.typeID ? "true" : "false");
+            return new MorphirConst(flow.typeID === ofentity.typeID ? "True" : "False");
         }
         else {
             const accessTypeTag = this.typegen.getMorphirTypeFor(layout).isGeneralTermType() ? new MorphirCallSimple("GetTypeTag__BTerm", [this.argToMorphir(arg)]) : new MorphirCallSimple("GetTypeTag__BKey", [this.argToMorphir(arg)]);
@@ -721,7 +721,7 @@ class MorphirBodyEmitter {
 
     private generateSubtypeCheckConcept(arg: MIRArgument, layout: MIRType, flow: MIRType, ofconcept: MIRType): MorphirExp {
         if (this.typegen.isUniqueEntityType(flow) || this.typegen.isUniqueTupleType(flow) || this.typegen.isUniqueRecordType(flow)) {
-            return new MorphirConst(this.assembly.subtypeOf(flow, ofconcept) ? "true" : "false");
+            return new MorphirConst(this.assembly.subtypeOf(flow, ofconcept) ? "True" : "False");
         }
         else {
             const accessTypeTag = this.typegen.getMorphirTypeFor(layout).isGeneralTermType() ? new MorphirCallSimple("GetTypeTag__BTerm", [this.argToMorphir(arg)]) : new MorphirCallSimple("GetTypeTag__BKey", [this.argToMorphir(arg)]);
@@ -744,11 +744,11 @@ class MorphirBodyEmitter {
 
     private generateSubtypeCheckTuple(arg: MIRArgument, layout: MIRType, flow: MIRType, oftuple: MIRType): MorphirExp {
         if(flow.options.every((opt) => (opt instanceof MIREntityType) || (opt instanceof MIRRecordType))) {
-            return new MorphirConst("false");
+            return new MorphirConst("False");
         }
 
         if (this.typegen.isUniqueTupleType(flow)) {
-            return new MorphirConst(this.assembly.subtypeOf(flow, oftuple) ? "true" : "false");
+            return new MorphirConst(this.assembly.subtypeOf(flow, oftuple) ? "True" : "False");
         }
         else {
             const accessTypeTag = new MorphirCallSimple("GetTypeTag__BTerm", [this.argToMorphir(arg)]);
@@ -758,11 +758,11 @@ class MorphirBodyEmitter {
 
     private generateSubtypeCheckRecord(arg: MIRArgument, layout: MIRType, flow: MIRType, ofrecord: MIRType): MorphirExp {
         if(flow.options.every((opt) => (opt instanceof MIREntityType) || (opt instanceof MIRTupleType))) {
-            return new MorphirConst("false");
+            return new MorphirConst("False");
         }
 
         if (this.typegen.isUniqueRecordType(flow)) {
-            return new MorphirConst(this.assembly.subtypeOf(flow, ofrecord) ? "true" : "false");
+            return new MorphirConst(this.assembly.subtypeOf(flow, ofrecord) ? "True" : "False");
         }
         else {
             const accessTypeTag = new MorphirCallSimple("GetTypeTag__BTerm", [this.argToMorphir(arg)]);
@@ -842,10 +842,10 @@ class MorphirBodyEmitter {
             return new MorphirConst("bsq_nothing__literal");
         }
         else if (cval instanceof MIRConstantTrue) {
-            return new MorphirConst("true");
+            return new MorphirConst("True");
         }
         else if (cval instanceof MIRConstantFalse) {
-            return new MorphirConst("false");
+            return new MorphirConst("False");
         }
         else if (cval instanceof MIRConstantInt) {
             return new MorphirConst(cval.value.slice(0, cval.value.length - 1));
@@ -930,57 +930,54 @@ class MorphirBodyEmitter {
 
     generateNoneCheck(arg: MIRArgument, argtype: MIRType): MorphirExp {
         if (this.typegen.isType(argtype, "None")) {
-            return new MorphirConst("true");
+            return new MorphirConst("True");
         }
         else if (!this.assembly.subtypeOf(this.typegen.getMIRType("None"), argtype)) {
-            return new MorphirConst("false");
+            return new MorphirConst("False");
         }
         else {
-            xxxx;
             const trepr = this.typegen.getMorphirTypeFor(argtype);
             if(trepr.isGeneralKeyType()) {
-                return MorphirCallSimple.makeEq(this.argToMorphir(arg), new MorphirConst("BKey@none"));
+                return new MorphirCallSimple("__isNone_KeyType", [this.argToMorphir(arg)]);
             }
             else {
-                return MorphirCallSimple.makeEq(this.argToMorphir(arg), new MorphirConst("BTerm@none"));
+                return new MorphirCallSimple("__isNone_Term", [this.argToMorphir(arg)]);
             }
         }
     }
 
     generateSomeCheck(arg: MIRArgument, argtype: MIRType): MorphirExp {
         if (this.typegen.isType(argtype, "None")) {
-            return new MorphirConst("false");
+            return new MorphirConst("False");
         }
         else if (!this.assembly.subtypeOf(this.typegen.getMIRType("None"), argtype)) {
-            return new MorphirConst("true");
+            return new MorphirConst("True");
         }
         else {
-            xxxx;
             const trepr = this.typegen.getMorphirTypeFor(argtype);
             if(trepr.isGeneralKeyType()) {
-                return MorphirCallSimple.makeNotEq(this.argToMorphir(arg), new MorphirConst("BKey@none"));
+                return new MorphirCallSimple("__isSome_KeyType", [this.argToMorphir(arg)]);
             }
             else {
-                return MorphirCallSimple.makeNotEq(this.argToMorphir(arg), new MorphirConst("BTerm@none"));
+                return new MorphirCallSimple("__isSome_Term", [this.argToMorphir(arg)]);
             }
         }
     }
     
     generateNothingCheck(arg: MIRArgument, argtype: MIRType): MorphirExp {
         if (this.typegen.isType(argtype, "Nothing")) {
-            return new MorphirConst("true");
+            return new MorphirConst("True");
         }
         else if (!this.assembly.subtypeOf(this.typegen.getMIRType("Nothing"), argtype)) {
-            return new MorphirConst("false");
+            return new MorphirConst("False");
         }
         else {
-            xxxx;
             const trepr = this.typegen.getMorphirTypeFor(argtype);
             if(trepr.isGeneralKeyType()) {
-                return MorphirCallSimple.makeEq(this.argToMorphir(arg), new MorphirConst("BKey@nothing"));
+                return new MorphirCallSimple("__isNothing_KeyType", [this.argToMorphir(arg)]);
             }
             else {
-                return MorphirCallSimple.makeEq(this.argToMorphir(arg), new MorphirConst("BTerm@nothing"));
+                return new MorphirCallSimple("__isNothing_Term", [this.argToMorphir(arg)]);
             }
         }
     }
@@ -1009,7 +1006,7 @@ class MorphirBodyEmitter {
 
     processSetConstantGuardFlag(op: MIRSetConstantGuardFlag) {
         const pm = this.pendingMask.find((mm) => mm.maskname === op.name) as MorphirMaskConstruct;
-        pm.entries[op.position] = new MorphirConst(op.flag ? "true" : "false");
+        pm.entries[op.position] = new MorphirConst(op.flag ? "True" : "False");
     }
 
     processConvertValue(op: MIRConvertValue, continuation: MorphirExp): MorphirExp {
@@ -1114,13 +1111,13 @@ class MorphirBodyEmitter {
 
             if(op.guard instanceof MIRMaskGuard) {
                 const pm = this.pendingMask.find((mm) => mm.maskname === (op.guard as MIRMaskGuard).gmask) as MorphirMaskConstruct;
-                pm.entries[(op.guard as MIRMaskGuard).gindex] = new MorphirConst("true");
+                pm.entries[(op.guard as MIRMaskGuard).gindex] = new MorphirConst("True");
 
                 return new MorphirLet(this.varToMorphirName(op.trgt).vname, idxr, continuation);
             }
             else {
                 return new MorphirLetMulti([
-                    { vname: this.varToMorphirName((op.guard as MIRArgGuard).greg as MIRRegisterArgument).vname, value: new MorphirConst("true") },
+                    { vname: this.varToMorphirName((op.guard as MIRArgGuard).greg as MIRRegisterArgument).vname, value: new MorphirConst("True") },
                     { vname: this.varToMorphirName(op.trgt).vname, value: idxr }
                 ], continuation);
             }
@@ -1187,13 +1184,13 @@ class MorphirBodyEmitter {
             
             if(op.guard instanceof MIRMaskGuard) {
                 const pm = this.pendingMask.find((mm) => mm.maskname === (op.guard as MIRMaskGuard).gmask) as MorphirMaskConstruct;
-                pm.entries[(op.guard as MIRMaskGuard).gindex] = new MorphirConst("true");
+                pm.entries[(op.guard as MIRMaskGuard).gindex] = new MorphirConst("True");
 
                 return new MorphirLet(this.varToMorphirName(op.trgt).vname, idxr, continuation);
             }
             else {
                 return new MorphirLetMulti([
-                    { vname: this.varToMorphirName((op.guard as MIRArgGuard).greg as MIRRegisterArgument).vname, value: new MorphirConst("true") },
+                    { vname: this.varToMorphirName((op.guard as MIRArgGuard).greg as MIRRegisterArgument).vname, value: new MorphirConst("True") },
                     { vname: this.varToMorphirName(op.trgt).vname, value: idxr }
                 ], continuation);
             }
@@ -1654,7 +1651,7 @@ class MorphirBodyEmitter {
         const mirlhslayout = this.typegen.getMIRType(op.lhslayouttype);
         const mirrhslayout = this.typegen.getMIRType(op.rhslayouttype);
 
-        let eqcmp: MorphirExp = new MorphirConst("false");
+        let eqcmp: MorphirExp = new MorphirConst("False");
         if(mirlhslayout.typeID === mirrhslayout.typeID && this.typegen.isUniqueType(mirlhslayout) && this.typegen.isUniqueType(mirrhslayout)) {
             eqcmp = MorphirCallSimple.makeEq(this.argToMorphir(op.lhs), this.argToMorphir(op.rhs));
         }
@@ -1715,10 +1712,10 @@ class MorphirBodyEmitter {
         const flow = this.typegen.getMIRType(op.srcflowtype);
         const oftype = this.typegen.getMIRType(op.chktype);
 
-        let ttop: MorphirExp = new MorphirConst("false");
+        let ttop: MorphirExp = new MorphirConst("False");
         if(this.assembly.subtypeOf(flow, oftype)) {
             //also handles the oftype is Any case
-            ttop = new MorphirConst("true");
+            ttop = new MorphirConst("True");
         }
         else if(this.typegen.isType(oftype, "None")) {
             ttop = this.generateNoneCheck(op.arg, layout);
@@ -1749,13 +1746,13 @@ class MorphirBodyEmitter {
                     return this.generateSubtypeCheckRecord(op.arg, layout, flow, mtype);
                 }
             })
-            .filter((test) => !(test instanceof MorphirConst) || test.cname !== "false");
+            .filter((test) => !(test instanceof MorphirConst) || test.cname !== "False");
     
             if(tests.length === 0) {
-                ttop = new MorphirConst("false");
+                ttop = new MorphirConst("False");
             }
-            else if(tests.findIndex((test) => (test instanceof MorphirConst) && test.cname === "true") !== -1) {
-                ttop = new MorphirConst("true");
+            else if(tests.findIndex((test) => (test instanceof MorphirConst) && test.cname === "True") !== -1) {
+                ttop = new MorphirConst("True");
             }
             else if(tests.length === 1) {
                 ttop = tests[0];
@@ -2511,8 +2508,8 @@ class MorphirBodyEmitter {
                 const bsqre = this.assembly.validatorRegexs.get(idecl.enclosingDecl as MIRResolvedTypeKey) as BSQRegex;
                 const lre = bsqre.compileToJS();
 
-                xxxx;
-                let accept = new MorphirCallSimple("str.in.re", [new MorphirVar(args[0].vname), new MorphirConst(lre)]);
+                let recons = new MorphirCallSimple("withDefault", [new MorphirConst("Regex.never"), new MorphirCallSimple("Regex.fromString", [new MorphirConst(lre)])]);
+                let accept = new MorphirCallSimple("Regex.contains", [recons, new MorphirVar(args[0].vname)]);
                 return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, accept);
             }
             case "number_nattoint": {

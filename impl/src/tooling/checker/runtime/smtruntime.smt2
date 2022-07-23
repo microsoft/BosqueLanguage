@@ -39,7 +39,7 @@
     ) (
     ( 
       (RecordPropertyTag_$Invalid)
-      ;;RecordPropertyTag;;
+      ;;PROPERTY_TAG_DECLS;;
     )
 ))
 
