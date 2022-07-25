@@ -31,11 +31,11 @@ class MorphirTypeInfo {
     }
 
     isGeneralKeyType(): boolean {
-        return this.morphirtypename === "MKey";
+        return this.morphirtypename === "BKey";
     }
 
     isGeneralTermType(): boolean {
-        return this.morphirtypename === "MTerm";
+        return this.morphirtypename === "BTerm";
     }
 }
 

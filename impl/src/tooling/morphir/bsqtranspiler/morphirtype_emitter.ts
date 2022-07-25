@@ -124,16 +124,16 @@ class MorphirTypeEmitter {
 
         this.internTypeName(tt.typeID);
         if(this.isUniqueTupleType(tt)) {
-            return new MorphirTypeInfo(this.lookupTypeName(tt.typeID), `BSQRuntime.TypeTag.TypeTag_${this.lookupTypeName(tt.typeID)}`, tt.typeID);
+            return new MorphirTypeInfo(this.lookupTypeName(tt.typeID), `BSQRuntime.TypeTag_${this.lookupTypeName(tt.typeID)}`, tt.typeID);
         }
         else if(this.isUniqueRecordType(tt)) {
-            return new MorphirTypeInfo(this.lookupTypeName(tt.typeID), `BSQRuntime.TypeTag.TypeTag_${this.lookupTypeName(tt.typeID)}`, tt.typeID);
+            return new MorphirTypeInfo(this.lookupTypeName(tt.typeID), `BSQRuntime.TypeTag_${this.lookupTypeName(tt.typeID)}`, tt.typeID);
         }
         else if(this.isUniqueEntityType(tt)) {
             return this.getMorphirTypeInfoForEntity(tt, this.assembly.entityDecls.get(tt.typeID) as MIREntityTypeDecl);
         }
         else if (this.isUniqueEphemeralType(tt)) {
-            return new MorphirTypeInfo(this.lookupTypeName(tt.typeID), `BSQRuntime.TypeTag.TypeTag_${this.lookupTypeName(tt.typeID)}`, tt.typeID);
+            return new MorphirTypeInfo(this.lookupTypeName(tt.typeID), `BSQRuntime.TypeTag_${this.lookupTypeName(tt.typeID)}`, tt.typeID);
         }
         else if(this.assembly.subtypeOf(tt, this.getMIRType("KeyType"))) {
             return new MorphirTypeInfo("BKey", "[BKEY]", tt.typeID);
@@ -147,136 +147,138 @@ class MorphirTypeEmitter {
         if(entity instanceof MIRInternalEntityTypeDecl) {
             if(entity instanceof MIRPrimitiveInternalEntityTypeDecl) {
                 if (this.isType(tt, "None")) {
-                    return new MorphirTypeInfo("BNone", "BSQRuntime.TypeTag.TypeTag_None", entity.tkey);
+                    return new MorphirTypeInfo("BNone", "BSQRuntime.TypeTag_None", entity.tkey);
                 }
                 else if (this.isType(tt, "Nothing")) {
-                    return new MorphirTypeInfo("BNothing", "BSQRuntime.TypeTag.TypeTag_Nothing", entity.tkey);
+                    return new MorphirTypeInfo("BNothing", "BSQRuntime.TypeTag_Nothing", entity.tkey);
                 }
                 else if (this.isType(tt, "Bool")) {
-                    return new MorphirTypeInfo("Bool", "BSQRuntime.TypeTag.TypeTag_Bool", entity.tkey);
+                    return new MorphirTypeInfo("Bool", "BSQRuntime.TypeTag_Bool", entity.tkey);
                 }
                 else if (this.isType(tt, "Int")) {
-                    return new MorphirTypeInfo("BInt", "BSQRuntime.TypeTag.TypeTag_Int", entity.tkey);
+                    return new MorphirTypeInfo("BInt", "BSQRuntime.TypeTag_Int", entity.tkey);
                 }
                 else if (this.isType(tt, "Nat")) {
-                    return new MorphirTypeInfo("BNat", "BSQRuntime.TypeTag.TypeTag_Nat", entity.tkey);
+                    return new MorphirTypeInfo("BNat", "BSQRuntime.TypeTag_Nat", entity.tkey);
                 }
                 else if (this.isType(tt, "BigInt")) {
-                    return new MorphirTypeInfo("BBigInt", "BSQRuntime.TypeTag.TypeTag_BigInt", entity.tkey);
+                    return new MorphirTypeInfo("BBigInt", "BSQRuntime.TypeTag_BigInt", entity.tkey);
                 }
                 else if (this.isType(tt, "BigNat")) {
-                    return new MorphirTypeInfo("BBigNat", "BSQRuntime.TypeTag.TypeTag_BigInt", entity.tkey);
+                    return new MorphirTypeInfo("BBigNat", "BSQRuntime.TypeTag_BigInt", entity.tkey);
                 }
                 else if (this.isType(tt, "Float")) {
-                    return new MorphirTypeInfo("BFloat", "BSQRuntime.TypeTag.TypeTag_Float", entity.tkey);
+                    return new MorphirTypeInfo("BFloat", "BSQRuntime.TypeTag_Float", entity.tkey);
                 }
                 else if (this.isType(tt, "Decimal")) {
-                    return new MorphirTypeInfo("BDecimal", "BSQRuntime.TypeTag.TypeTag_Decimal", entity.tkey);
+                    return new MorphirTypeInfo("BDecimal", "BSQRuntime.TypeTag_Decimal", entity.tkey);
                 }
                 else if (this.isType(tt, "Rational")) {
-                    return new MorphirTypeInfo("BRational", "BSQRuntime.TypeTag.TypeTag_Rational", entity.tkey);
+                    return new MorphirTypeInfo("BRational", "BSQRuntime.TypeTag_Rational", entity.tkey);
                 }
                 else if (this.isType(tt, "String")) {
-                    return new MorphirTypeInfo("BString", "BSQRuntime.TypeTag.TypeTag_String", entity.tkey);
+                    return new MorphirTypeInfo("BString", "BSQRuntime.TypeTag_String", entity.tkey);
                 }
                 else if (this.isType(tt, "ByteBuffer")) {
-                    return new MorphirTypeInfo("BByteBuffer", "BSQRuntime.TypeTag.TypeTag_ByteBuffer", entity.tkey);
+                    return new MorphirTypeInfo("BByteBuffer", "BSQRuntime.TypeTag_ByteBuffer", entity.tkey);
                 }
                 else if(this.isType(tt, "DateTime")) {
-                    return new MorphirTypeInfo("BDateTime", "BSQRuntime.TypeTag.TypeTag_DateTime", entity.tkey);
+                    return new MorphirTypeInfo("BDateTime", "BSQRuntime.TypeTag_DateTime", entity.tkey);
                 }
                 else if(this.isType(tt, "UTCDateTime")) {
-                    return new MorphirTypeInfo("BUTCDateTime", "BSQRuntime.TypeTag.TypeTag_UTCDateTime", entity.tkey);
+                    return new MorphirTypeInfo("BUTCDateTime", "BSQRuntime.TypeTag_UTCDateTime", entity.tkey);
                 }
                 else if(this.isType(tt, "CalendarDate")) {
-                    return new MorphirTypeInfo("BCalendarDate", "BSQRuntime.TypeTag.TypeTag_CalendarDate", entity.tkey);
+                    return new MorphirTypeInfo("BCalendarDate", "BSQRuntime.TypeTag_CalendarDate", entity.tkey);
                 }
                 else if(this.isType(tt, "RelativeTime")) {
-                    return new MorphirTypeInfo("BRelativeTime", "BSQRuntime.TypeTag.TypeTag_RelativeTime", entity.tkey);
+                    return new MorphirTypeInfo("BRelativeTime", "BSQRuntime.TypeTag_RelativeTime", entity.tkey);
                 }
                 else if(this.isType(tt, "TickTime")) {
-                    return new MorphirTypeInfo("BTickTime", "BSQRuntime.TypeTag.TypeTag_TickTime", entity.tkey);
+                    return new MorphirTypeInfo("BTickTime", "BSQRuntime.TypeTag_TickTime", entity.tkey);
                 }
                 else if(this.isType(tt, "LogicalTime")) {
-                    return new MorphirTypeInfo("BLogicalTime", "BSQRuntime.TypeTag.TypeTag_LogicalTime", entity.tkey);
+                    return new MorphirTypeInfo("BLogicalTime", "BSQRuntime.TypeTag_LogicalTime", entity.tkey);
                 }
                 else if(this.isType(tt, "ISOTimeStamp")) {
-                    return new MorphirTypeInfo("BISOTimeStamp", "BSQRuntime.TypeTag.TypeTag_ISOTimeStamp", entity.tkey);
+                    return new MorphirTypeInfo("BISOTimeStamp", "BSQRuntime.TypeTag_ISOTimeStamp", entity.tkey);
                 }
                 else if(this.isType(tt, "UUID4")) {
-                    return new MorphirTypeInfo("BUUID4", "BSQRuntime.TypeTag.TypeTag_UUID4", entity.tkey);
+                    return new MorphirTypeInfo("BUUID4", "BSQRuntime.TypeTag_UUID4", entity.tkey);
                 }
                 else if(this.isType(tt, "UUID7")) {
-                    return new MorphirTypeInfo("BUUID7", "BSQRuntime.TypeTag.TypeTag_UUID7", entity.tkey);
+                    return new MorphirTypeInfo("BUUID7", "BSQRuntime.TypeTag_UUID7", entity.tkey);
                 }
                 else if(this.isType(tt, "SHAContentHash")) {
-                    return new MorphirTypeInfo("BSHAContentHash", "BSQRuntime.TypeTag.TypeTag_SHAContentHash", entity.tkey);
+                    return new MorphirTypeInfo("BSHAContentHash", "BSQRuntime.TypeTag_SHAContentHash", entity.tkey);
                 }
                 else if(this.isType(tt, "LatLongCoordinate")) {
-                    return new MorphirTypeInfo("BLatLongCoordinate", "BSQRuntime.TypeTag.TypeTag_LatLongCoordinate", entity.tkey);
+                    return new MorphirTypeInfo("BLatLongCoordinate", "BSQRuntime.TypeTag_LatLongCoordinate", entity.tkey);
                 }
                 else if(this.isType(tt, "Regex")) {
-                    return new MorphirTypeInfo("BRegex", "BSQRuntime.TypeTag.TypeTag_Regex", entity.tkey);
+                    return new MorphirTypeInfo("BRegex", "BSQRuntime.TypeTag_Regex", entity.tkey);
                 }
                 else {
                     assert(false, "Unknown primitive internal entity");
                 }
             }
             else if (entity instanceof MIRStringOfInternalEntityTypeDecl) {
-                return new MorphirTypeInfo(this.lookupTypeName(entity.tkey), `BSQRuntime.TypeTag.TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
+                return new MorphirTypeInfo(this.lookupTypeName(entity.tkey), `BSQRuntime.TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
             }
             else if (entity instanceof MIRDataStringInternalEntityTypeDecl) {
-                return new MorphirTypeInfo(this.lookupTypeName(entity.tkey), `BSQRuntime.TypeTag.TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
+                return new MorphirTypeInfo(this.lookupTypeName(entity.tkey), `BSQRuntime.TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
             }
             else if (entity instanceof MIRDataBufferInternalEntityTypeDecl) {
-                return new MorphirTypeInfo(this.lookupTypeName(entity.tkey), `BSQRuntime.TypeTag.TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
+                return new MorphirTypeInfo(this.lookupTypeName(entity.tkey), `BSQRuntime.TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
             }
             else if (entity instanceof MIRConstructableInternalEntityTypeDecl) {
                 //Convert all refs of the type into refs to the underlying type
                 const ulltype = this.getMorphirTypeFor(this.getMIRType(entity.fromtype));
-                return new MorphirTypeInfo(ulltype.morphirtypename, `BSQRuntime.TypeTag.TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
+                return new MorphirTypeInfo(ulltype.morphirtypename, `BSQRuntime.TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
             }
             else {
                 assert(entity instanceof MIRPrimitiveCollectionEntityTypeDecl, "Should be a collection type");
 
                 if(entity instanceof MIRPrimitiveListEntityTypeDecl) {
-                    return new MorphirTypeInfo(this.lookupTypeName(entity.tkey), `BSQRuntime.TypeTag.TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
+                    return new MorphirTypeInfo(this.lookupTypeName(entity.tkey), `BSQRuntime.TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
                 }
                 else {
                     assert(entity instanceof MIRPrimitiveMapEntityTypeDecl);
 
-                    return new MorphirTypeInfo(this.lookupTypeName(entity.tkey), `BSQRuntime.TypeTag.TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
+                    return new MorphirTypeInfo(this.lookupTypeName(entity.tkey), `BSQRuntime.TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
                 }
             }
         }
         else if (entity instanceof MIREnumEntityTypeDecl) {
-            return new MorphirTypeInfo(this.lookupTypeName(entity.tkey), `BSQRuntime.TypeTag.TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
+            return new MorphirTypeInfo(this.lookupTypeName(entity.tkey), `BSQRuntime.TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
         }
         else if (entity instanceof MIRConstructableEntityTypeDecl) {
-            return new MorphirTypeInfo(this.lookupTypeName(entity.tkey), `BSQRuntime.TypeTag.TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
+            return new MorphirTypeInfo(this.lookupTypeName(entity.tkey), `BSQRuntime.TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
         }
         else {
-            return new MorphirTypeInfo(this.lookupTypeName(entity.tkey), `BSQRuntime.TypeTag.TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
+            return new MorphirTypeInfo(this.lookupTypeName(entity.tkey), `BSQRuntime.TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
         }
     }
 
-    getMorphirConstructorName(tt: MIRType): { cons: string, box: string, bfield: string } {
+    getMorphirConstructorName(tt: MIRType): { cons: string, box: string, unbox: string, default: string } {
         assert(tt.options.length === 1);
         this.internTypeName(tt.typeID);
 
-        const kfix = this.assembly.subtypeOf(tt, this.getMIRType("KeyType")) ? "bkey_" : "bobject_"
+        const mname = this.lookupTypeName(tt.typeID);
+        const kfix = this.assembly.subtypeOf(tt, this.getMIRType("KeyType")) ? "BKey" : "BObject"
+
         if (this.isUniqueTupleType(tt)) {
-            return { cons: `${this.lookupTypeName(tt.typeID)}__cons`, box: `${this.lookupTypeName(tt.typeID)}__box`, bfield: `${kfix}${this.lookupTypeName(tt.typeID)}__value` };
+            return { cons: `${mname}`, box: `${mname}_box`, unbox: `unbox__${kfix}${mname}`, default: `bsq${mname.toLocaleLowerCase()}_default`};
         }
         else if (this.isUniqueRecordType(tt)) {
-            return { cons: `${this.lookupTypeName(tt.typeID)}__cons`, box: `${this.lookupTypeName(tt.typeID)}__box`, bfield: `${kfix}${this.lookupTypeName(tt.typeID)}__value` };
+            return { cons: `${this.lookupTypeName(tt.typeID)}`, box: `${this.lookupTypeName(tt.typeID)}_box`, unbox: `unbox__${kfix}${mname}`, default: `bsq${mname.toLocaleLowerCase()}_default` };
         }
         else if (this.isUniqueEntityType(tt)) {
-            return { cons: `${this.lookupTypeName(tt.typeID)}__cons`, box: `${this.lookupTypeName(tt.typeID)}__box`, bfield: `${kfix}${this.lookupTypeName(tt.typeID)}__value` };
+            return { cons: `${this.lookupTypeName(tt.typeID)}`, box: `${this.lookupTypeName(tt.typeID)}_box`, unbox: `unbox__${kfix}${mname}`, default: `bsq${mname.toLocaleLowerCase()}_default` };
         }
         else {
             assert(this.isUniqueEphemeralType(tt), "should not be other options")
-            return { cons: `${this.lookupTypeName(tt.typeID)}__cons`, box: "[UNDEF_EPHEMERAL_BOX]", bfield: "[UNDEF_EPHEMERAL_BOX]" };
+            return { cons: `${this.lookupTypeName(tt.typeID)}__cons`, box: "[UNDEF_EPHEMERAL_BOX]", unbox: "[UNDEF_EPHEMERAL_BOX]", default: "[UNDEF_EPHEMERAL_DEFAULT]" };
         }
     }
 
@@ -284,7 +286,7 @@ class MorphirTypeEmitter {
         assert(this.assembly.subtypeOf(from, this.getMIRType("KeyType")));
 
         if (from.typeID === "None") {
-            return new MorphirConst("bkey__none");
+            return new MorphirConst("bkey_none");
         }
         else {
             const smtfrom = this.getMorphirTypeFor(from);
@@ -293,74 +295,74 @@ class MorphirTypeEmitter {
 
             if (this.isType(from, "Bool")) {
                 oftypetag = smtfrom.morphirtypetag;
-                objval = new MorphirCallSimple("BSQKey_bool__box", [exp]);
+                objval = new MorphirCallSimple("BKeyBool_box", [exp]);
             }
             else if (this.isType(from, "Int")) {
                 oftypetag = smtfrom.morphirtypetag;
-                objval = new MorphirCallSimple("bsqkey_int__box", [exp]);
+                objval = new MorphirCallSimple("BKeyBInt_box", [exp]);
             }
             else if (this.isType(from, "Nat")) {
                 oftypetag = smtfrom.morphirtypetag;
-                objval = new MorphirCallSimple("bsqkey_nat__box", [exp]);
+                objval = new MorphirCallSimple("BKeyBNat_box", [exp]);
             }
             else if (this.isType(from, "BigInt")) {
                 oftypetag = smtfrom.morphirtypetag;
-                objval = new MorphirCallSimple("bsqkey_bigint__box", [exp]);
+                objval = new MorphirCallSimple("BKeyBBigInt_box", [exp]);
             }
             else if (this.isType(from, "BigNat")) {
                 oftypetag = smtfrom.morphirtypetag;
-                objval = new MorphirCallSimple("bsqkey_bignat__box", [exp]);
+                objval = new MorphirCallSimple("BKeyBBigNat_box", [exp]);
             }
             else if (this.isType(from, "String")) {
                 oftypetag = smtfrom.morphirtypetag;
-                objval = new MorphirCallSimple("bsqkey_string__box", [exp]);
+                objval = new MorphirCallSimple("BKeyBString_box", [exp]);
             }
             else if(this.isType(from, "UTCDateTime")) {
                 oftypetag = smtfrom.morphirtypetag;
-                objval = new MorphirCallSimple("bsqkey_utcdatetime__box", [exp]);
+                objval = new MorphirCallSimple("BKeyBUTCDateTime_box", [exp]);
             }
             else if(this.isType(from, "CalendarDate")) {
                 oftypetag = smtfrom.morphirtypetag;
-                objval = new MorphirCallSimple("bsqkey_calendardate__box", [exp]);
+                objval = new MorphirCallSimple("BKeyBCalendarDate_box", [exp]);
             }
             else if(this.isType(from, "RelativeTime")) {
                 oftypetag = smtfrom.morphirtypetag;
-                objval = new MorphirCallSimple("bsqkey_relativetimetime__box", [exp]);
+                objval = new MorphirCallSimple("BKeyBRelativeTime_box", [exp]);
             }
             else if(this.isType(from, "TickTime")) {
                 oftypetag = smtfrom.morphirtypetag;
-                objval = new MorphirCallSimple("bsqkey_ticktime__box", [exp]);
+                objval = new MorphirCallSimple("BKeyBTickTime_box", [exp]);
             }
             else if(this.isType(from, "LogicalTime")) {
                 oftypetag = smtfrom.morphirtypetag;
-                objval = new MorphirCallSimple("bsqkey_logicaltime__box", [exp]);
+                objval = new MorphirCallSimple("BKeyBLogicalTime_box", [exp]);
             }
             else if(this.isType(from, "ISOTimeStamp")) {
                 oftypetag = smtfrom.morphirtypetag;
-                objval = new MorphirCallSimple("bsqkey_isotimestamp__box", [exp]);
+                objval = new MorphirCallSimple("BKeyBISOTimeStamp_box", [exp]);
             }
             else if(this.isType(from, "UUID4")) {
                 oftypetag = smtfrom.morphirtypetag;
-                objval = new MorphirCallSimple("bsqkey_uuid4__box", [exp]);
+                objval = new MorphirCallSimple("BKeyBUUID4_box", [exp]);
             }
             else if(this.isType(from, "UUID7")) {
                 oftypetag = smtfrom.morphirtypetag;
-                objval = new MorphirCallSimple("bsqkey_uuid7__box", [exp]);
+                objval = new MorphirCallSimple("BKeyBUUID7_box", [exp]);
             }
             else if(this.isType(from, "SHAContentHash")) {
                 oftypetag = smtfrom.morphirtypetag;
-                objval = new MorphirCallSimple("bsqkey_shacontenthash__box", [exp]);
+                objval = new MorphirCallSimple("BKeyBSHAContentHash_box", [exp]);
             }
             else {
                 const entity = this.assembly.entityDecls.get(from.typeID) as MIREntityTypeDecl;
 
                 if (entity instanceof MIRStringOfInternalEntityTypeDecl) {
                     oftypetag = this.getMorphirTypeFor(this.getMIRType("String")).morphirtypetag;
-                    objval = new MorphirCallSimple("bsqkey_string__box", [exp]);
+                    objval = new MorphirCallSimple("BKeyBString_box", [exp]);
                 }
                 else if (entity instanceof MIRDataStringInternalEntityTypeDecl) {
                     oftypetag = this.getMorphirTypeFor(this.getMIRType("String")).morphirtypetag;
-                    objval = new MorphirCallSimple("bsqkey_string__box", [exp]);
+                    objval = new MorphirCallSimple("BKeyBString_box", [exp]);
                 }
                 else if (entity instanceof MIRConstructableInternalEntityTypeDecl) {
                     oftypetag = this.getMorphirTypeFor(this.getMIRType(entity.fromtype)).morphirtypetag;
@@ -368,7 +370,7 @@ class MorphirTypeEmitter {
                 }
                 else if (entity instanceof MIREnumEntityTypeDecl) {
                     oftypetag = this.getMorphirTypeFor(this.getMIRType("Nat")).morphirtypetag;
-                    objval = new MorphirCallSimple("bsqkey_nat__box", [exp]);
+                    objval = new MorphirCallSimple("BKeyBNat_box", [exp]);
                 }
                 else if (entity instanceof MIRConstructableEntityTypeDecl) {
                     oftypetag = this.getMorphirTypeFor(this.getMIRType(entity.basetype)).morphirtypetag;
@@ -381,16 +383,16 @@ class MorphirTypeEmitter {
                 }
             }
 
-            return new MorphirCallSimple("BKey__box", [new MorphirConst(smtfrom.morphirtypetag), new MorphirConst(oftypetag), objval as MorphirExp]);
+            return new MorphirCallSimple("BKey", [new MorphirConst(smtfrom.morphirtypetag), new MorphirConst(oftypetag), objval as MorphirExp]);
         }
     }
 
     private coerceFromAtomicToTerm(exp: MorphirExp, from: MIRType): MorphirExp {
         if (from.typeID === "None") {
-            return new MorphirConst(`BTerm__none`);
+            return new MorphirConst(`bterm_none`);
         }
         else if (from.typeID === "Nothing") {
-            return new MorphirConst(`BTerm__nothing`);
+            return new MorphirConst(`bterm_nothing`);
         }
         else {
             if(this.assembly.subtypeOf(from, this.getMIRType("KeyType"))) {
