@@ -780,8 +780,6 @@ bsqterm_default : BTerm
 bsqterm_default = 
     bterm_nothing
 
---COLLECTION_DECLS--
-
 getTypeTag_BKey : BKey -> TypeTag
 getTypeTag_BKey t =
     let (BKey tag _) = t in tag
@@ -789,15 +787,15 @@ getTypeTag_BKey t =
 getTypeTag_BTerm : BTerm -> TypeTag
 getTypeTag_BTerm t = 
     case t of 
-        (BKeyObject kk) -> 
-            getTypeTag_BKey(kk)
-        (BTermObject tag _) ->
+        BKeyObject kk -> 
+            getTypeTag_BKey kk
+        BTermObject tag _ ->
             tag
 
 getTermObj_BKey : BTerm -> BKey
 getTermObj_BKey t =
     case t of 
-        (BKeyObject obj) ->
+        BKeyObject obj ->
             obj
         _ -> 
             bkey_none
@@ -805,26 +803,48 @@ getTermObj_BKey t =
 getTermObj_BTerm : BTerm -> BObject
 getTermObj_BTerm t = 
     case t of 
-        (BTermObject _ obj) ->
+        BTermObject _ obj ->
             obj
         _ -> 
             BObjectBNothing_box
 
-result_is_success : (Result a String) -> Bool
+type alias MapEntry k v = 
+    {
+        key: k,
+        val: v
+    }
+
+result_is_success : (Result String a) -> Bool
 result_is_success r = 
     case r of 
-        (Ok _) ->
+        Ok _ ->
             True
         _ -> 
             False
 
-result_is_error : (Result a String) -> Bool
+result_is_error : (Result String a) -> Bool
 result_is_error r = 
     case r of 
-        (Err _) ->
+        Err _ ->
             True
         _ -> 
             False
+
+result_success_get_value : (Result String a) -> a -> a
+result_success_get_value r d = 
+    case r of 
+        Ok v -> 
+            v
+        _ -> 
+            d
+
+result_error_get_value : (Result String a) -> String
+result_error_get_value r = 
+    case r of 
+        Err e -> 
+            e
+        _ -> 
+            "[NO ERROR INFO]"
 
 --EPHEMERAL_DECLS--
 

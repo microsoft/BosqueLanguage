@@ -99,7 +99,7 @@ class MorphirBodyEmitter {
     }
 
     private generateTypeCheckName(argflowtype: MIRType, oftype: MIRType): string {
-        return `SubtypeCheck__${this.typegen.lookupTypeName(argflowtype.typeID)}_oftype_${this.typegen.lookupTypeName(oftype.typeID)}`;
+        return `subtype_check_${this.typegen.lookupTypeName(argflowtype.typeID)}_oftype_${this.typegen.lookupTypeName(oftype.typeID)}`;
     }
 
     private registerRequiredTypeCheck(argflowtype: MIRType, oftype: MIRType): string {
@@ -124,7 +124,7 @@ class MorphirBodyEmitter {
 
     private generateBoolForGuard(guard: MIRGuard): MorphirExp {
         if(guard instanceof MIRMaskGuard) {
-            return new MorphirCallSimple(`Mask__${guard.gsize}__${guard.gindex}`, [this.varStringToMorphir(guard.gmask)]);
+            return new MorphirCallSimple(`mask_${guard.gsize}_${guard.gindex}`, [this.varStringToMorphir(guard.gmask)]);
         }
         else {
             return this.argToMorphir((guard as MIRArgGuard).greg);
@@ -166,7 +166,7 @@ class MorphirBodyEmitter {
 
     private generateLoadVirtualTupleInvName(argflowtype: MIRType, idx: number, resulttype: MIRType, guard: MIRGuard | undefined): string {
         const fullname = `$TupleLoad!${argflowtype.typeID}!${idx}!${resulttype.typeID}${guard !== undefined ? "_WG" : ""}`;
-        const shortname = `TupleLoad_${this.typegen.lookupTypeName(argflowtype.typeID)}__${idx}_`;
+        const shortname = `tuple_load_${this.typegen.lookupTypeName(argflowtype.typeID)}__${idx}_`;
 
         this.typegen.internFunctionName(fullname, shortname);
         return fullname;
@@ -174,7 +174,7 @@ class MorphirBodyEmitter {
 
     private generateLoadVirtualPropertyInvName(argflowtype: MIRType, pname: string, resulttype: MIRType, guard: MIRGuard | undefined): string {
         const fullname = `$RecordLoad!${argflowtype.typeID}!${pname}!${resulttype.typeID}${guard !== undefined ? "_WG" : ""}`;
-        const shortname = `RecordLoad_${this.typegen.lookupTypeName(argflowtype.typeID)}__${pname}_`;
+        const shortname = `record_load_${this.typegen.lookupTypeName(argflowtype.typeID)}__${pname}_`;
 
         this.typegen.internFunctionName(fullname, shortname);
         return fullname;
@@ -183,7 +183,7 @@ class MorphirBodyEmitter {
     private generateLoadVirtualFieldInvName(argflowtype: MIRType, fkey: MIRFieldKey, resulttype: MIRType): string {
         const fdecl = this.assembly.fieldDecls.get(fkey) as MIRFieldDecl;
         const fullname = `$EntityLoad!${argflowtype.typeID}!${fkey}!${resulttype.typeID}`;
-        const shortname = `EntityLoad_${this.typegen.lookupTypeName(argflowtype.typeID)}__${fdecl.fname}_`;
+        const shortname = `entity_load_${this.typegen.lookupTypeName(argflowtype.typeID)}__${fdecl.fname}_`;
 
         this.typegen.internFunctionName(fullname, shortname);
         return fullname;
@@ -192,7 +192,7 @@ class MorphirBodyEmitter {
     private generateProjectVirtualTupleInvName(argflowtype: MIRType, indecies: number[], resulttype: MIRType): string {
         const idxs = indecies.map((idx) => `${idx}`).join(",");
         const fullname = `$TupleProject!${argflowtype.typeID}[${idxs}]!${resulttype.typeID}`;
-        const shortname = `TupleProject_${this.typegen.lookupTypeName(argflowtype.typeID)}__${idxs}_`;
+        const shortname = `tuple_project_${this.typegen.lookupTypeName(argflowtype.typeID)}__${idxs}_`;
 
         this.typegen.internFunctionName(fullname, shortname);
         return fullname;
@@ -201,7 +201,7 @@ class MorphirBodyEmitter {
     private generateProjectVirtualRecordInvName(argflowtype: MIRType, properties: string[], resulttype: MIRType): string {
         const pnames = properties.join(",");
         const fullname = `$RecordProject!${argflowtype.typeID}{${pnames}}${resulttype.typeID}`;
-        const shortname = `RecordProject_${this.typegen.lookupTypeName(argflowtype.typeID)}__${pnames}_`;
+        const shortname = `record_project_${this.typegen.lookupTypeName(argflowtype.typeID)}__${pnames}_`;
 
         this.typegen.internFunctionName(fullname, shortname);
         return fullname;
@@ -211,7 +211,7 @@ class MorphirBodyEmitter {
         const fkeys = fields.join(",");
         const shortkeys = fields.map((fn) => (this.assembly.fieldDecls.get(fn) as MIRFieldDecl).fname).join(",")
         const fullname = `$EntityProject!${argflowtype.typeID}!{${fkeys}}!${resulttype.typeID}`;
-        const shortname = `EntityProject_${this.typegen.lookupTypeName(argflowtype.typeID)}__${shortkeys}_`;
+        const shortname = `entity_project_${this.typegen.lookupTypeName(argflowtype.typeID)}__${shortkeys}_`;
 
         this.typegen.internFunctionName(fullname, shortname);
         return fullname;
@@ -221,7 +221,7 @@ class MorphirBodyEmitter {
         const idxs = indecies.map((idx) => `(${idx[0]} ${idx[1]})`).join(",");
         const shortidxs = indecies.map((idx) => idx[0]).join(",");
         const fullname = `$TupleUpdate!${argflowtype.typeID}![${idxs}]=!${resulttype.typeID}`;
-        const shortname = `TupleUpdate_${this.typegen.lookupTypeName(argflowtype.typeID)}__${shortidxs}_`;
+        const shortname = `tuple_update_${this.typegen.lookupTypeName(argflowtype.typeID)}__${shortidxs}_`;
 
         this.typegen.internFunctionName(fullname, shortname);
         return fullname;
@@ -231,7 +231,7 @@ class MorphirBodyEmitter {
         const pnames = properties.map((pname) => `(${pname[0]} ${pname[1]})`).join(",");
         const shortpnames = properties.map((pname) => pname[0]).join(",");
         const fullname = `$RecordUpdate!${argflowtype.typeID}!{${pnames}}=!${resulttype.typeID}`;
-        const shortname = `RecordUpdate_${this.typegen.lookupTypeName(argflowtype.typeID)}__${shortpnames}_`;
+        const shortname = `record_update_${this.typegen.lookupTypeName(argflowtype.typeID)}__${shortpnames}_`;
 
         this.typegen.internFunctionName(fullname, shortname);
         return fullname;
@@ -241,7 +241,7 @@ class MorphirBodyEmitter {
         const fnames = fields.map((fname) => `(${fname[0]} ${fname[1]})`).join(",");
         const shortfnames = fields.map((fname) => (this.assembly.fieldDecls.get(fname[0]) as MIRFieldDecl).fname).join(",");
         const fullname = `$EntityUpdate!${argflowtype.typeID}!{${fnames}}=!${resulttype.typeID}`;
-        const shortname = `EntityUpdate_${argflowtype.typeID}__${shortfnames}_`;
+        const shortname = `entity_update_${argflowtype.typeID}__${shortfnames}_`;
 
         this.typegen.internFunctionName(fullname, shortname);
         return fullname;
@@ -249,7 +249,7 @@ class MorphirBodyEmitter {
 
     private generateVirtualInvokeFunctionName(argflowtype: MIRType, fname: MIRVirtualMethodKey, shortvname: string, optmask: boolean, resulttype: MIRType): string {
         const fullname = `$VirtualInvoke!${argflowtype.typeID}!${fname}${optmask ? "_WM_" : ""}!${resulttype.typeID}`;
-        const shortname = `VirtualInvoke_${this.typegen.lookupTypeName(argflowtype.typeID)}__${shortvname}_`;
+        const shortname = `virtual_invoke_${this.typegen.lookupTypeName(argflowtype.typeID)}__${shortvname}_`;
 
         this.typegen.internFunctionName(fullname, shortname);
         return fullname;
@@ -259,7 +259,7 @@ class MorphirBodyEmitter {
         const rnames = `(${rcvrtypes.join(",")})`;
         const shortrnames = `(${rcvrtypes.map((tt) => this.typegen.getMIRType(tt).typeID).join(",")})`;
         const fullname = `$VirtualOperator!${fname}${rnames}!${resulttype.typeID}`;
-        const shortname = `VirtualOperator_${shortvname}${shortrnames}`;
+        const shortname = `virtual_operator_${shortvname}${shortrnames}`;
 
         this.typegen.internFunctionName(fullname, shortname);
         return fullname;

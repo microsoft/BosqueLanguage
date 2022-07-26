@@ -629,7 +629,7 @@ class MorphirTypeEmitter {
     }
 
     generateResultType(ttype: MIRType): MorphirTypeInfo {
-        return new MorphirTypeInfo(`Result ${this.getMorphirTypeFor(ttype).morphirtypename} String`, "[INTERNAL RESULT]", "[INTERNAL RESULT]");
+        return new MorphirTypeInfo(`Result String ${this.getMorphirTypeFor(ttype).morphirtypename}`, "[INTERNAL RESULT]", "[INTERNAL RESULT]");
     }
 
     generateResultTypeConstructorSuccess(ttype: MIRType, val: MorphirExp): MorphirExp {
@@ -654,45 +654,32 @@ class MorphirTypeEmitter {
 
     generateResultGetSuccess(ttype: MIRType, exp: MorphirExp): MorphirExp {
         const ufcname = `${this.getMorphirTypeFor(ttype).morphirtypename}@uicons_UF`;
-        return new MorphirCallSimple("Result__success__get__value", [exp, new MorphirConst(ufcname)]);
+        return new MorphirCallSimple("result_success_get_value", [exp, new MorphirConst(ufcname)]);
     }
 
     generateResultGetError(ttype: MIRType, exp: MorphirExp): MorphirExp {
-        return new MorphirCallSimple("Result__error__get__value", [exp]);
+        return new MorphirCallSimple("result_error_get_value", [exp]);
     }
     
     generateAccessWithSetGuardResultType(ttype: MIRType): MorphirTypeInfo {
-        return new MorphirTypeInfo(`GuardResult__${this.getMorphirTypeFor(ttype).morphirtypename}`, "[INTERNAL GUARD RESULT]", "[INTERNAL GUARD RESULT]");
+        return new MorphirTypeInfo(`GuardResult_${this.getMorphirTypeFor(ttype).morphirtypename}`, "[INTERNAL GUARD RESULT]", "[INTERNAL GUARD RESULT]");
     }
 
     generateAccessWithSetGuardResultTypeConstructorLoad(ttype: MIRType, value: MorphirExp, flag: boolean): MorphirExp {
-        return new MorphirCallSimple(`GuardResult__${this.getMorphirTypeFor(ttype).morphirtypename}__cons`, [value, new MorphirConst(flag ? "true" : "false")]);
+        return new MorphirCallSimple(`GuardResult_${this.getMorphirTypeFor(ttype).morphirtypename}_cons`, [value, new MorphirConst(flag ? "true" : "false")]);
     }
 
     generateAccessWithSetGuardResultGetValue(ttype: MIRType, exp: MorphirExp): MorphirExp {
         const ufcname = `${this.getMorphirTypeFor(ttype).morphirtypename}@uicons_UF`;
-        return new MorphirCallSimple(`GuardResult__${this.getMorphirTypeFor(ttype).morphirtypename}__result`, [exp, new MorphirConst(ufcname)]);
+        return new MorphirCallSimple(`guard_result_${this.getMorphirTypeFor(ttype).morphirtypename}_result`, [exp, new MorphirConst(ufcname)]);
     }
 
     generateAccessWithSetGuardResultGetFlag(ttype: MIRType, exp: MorphirExp): MorphirExp {
-        return new MorphirCallSimple(`GuardResult__${this.getMorphirTypeFor(ttype).morphirtypename}__flag`, [exp]);
-    }
-
-    generateListTypeConsInfoSeq(ttype: MIRType): {cons: string, seqf: string} {
-        return {cons: `${this.getMorphirTypeFor(ttype).morphirtypename}__cons`, seqf: `${this.getMorphirTypeFor(ttype).morphirtypename}_seq`};
-    }
-
-    generateListTypeConstructorSeq(ttype: MIRType, seq: MorphirExp): MorphirExp {
-        const consinfo = this.generateListTypeConsInfoSeq(ttype);
-        return new MorphirCallSimple(consinfo.cons, [seq]);
-    }
-
-    generateListTypeGetData(ttype: MIRType, ll: MorphirExp): MorphirExp {
-        return new MorphirCallSimple(this.generateListTypeConsInfoSeq(ttype).seqf, [ll]);
+        return new MorphirCallSimple(`guard_result_${this.getMorphirTypeFor(ttype).morphirtypename}_flag`, [exp]);
     }
 
     generateListTypeGetLength(ttype: MIRType, ll: MorphirExp): MorphirExp {
-        return new MorphirCallSimple("length", [this.generateListTypeGetData(ttype, ll)]);
+        return new MorphirCallSimple("length", [ll]);
     }
 
     generateListTypeGetLengthMinus1(ttype: MIRType, ll: MorphirExp): MorphirExp {
@@ -700,44 +687,8 @@ class MorphirTypeEmitter {
         return new MorphirCallSimple("-", [len, new MorphirConst("1")], true);
     }
 
-    generateMapEntryType(ttype: MIRType): MorphirTypeInfo {
-        return new MorphirTypeInfo(`MapEntry__${this.getMorphirTypeFor(ttype).morphirtypename}`, "[INTERNAL RESULT]", "[INTERNAL RESULT]");
-    }
-
-    generateMapEntryTypeConsInfo(ttype: MIRType): {cons: string, keyf: string, valf: string} {
-        return {cons: `MapEntry__${this.getMorphirTypeFor(ttype).morphirtypename}__cons`, keyf: `MapEntry__${this.getMorphirTypeFor(ttype).morphirtypename}_key`, valf: `MapEntry__${this.getMorphirTypeFor(ttype).morphirtypename}_value`};
-    }
-
-    generateMapEntryTypeConstructor(ttype: MIRType, key: MorphirExp, val: MorphirExp): MorphirExp {
-        const consinfo = this.generateMapEntryTypeConsInfo(ttype);
-        return new MorphirCallSimple(consinfo.cons, [key, val]);
-    }
-
-    generateMapEntryTypeGetKey(ttype: MIRType, entry: MorphirExp): MorphirExp {
-        const consinfo = this.generateMapEntryTypeConsInfo(ttype);
-        return new MorphirCallSimple(consinfo.keyf, [entry]);
-    }
-
-    generateMapEntryTypeGetValue(ttype: MIRType, entry: MorphirExp): MorphirExp {
-        const consinfo = this.generateMapEntryTypeConsInfo(ttype);
-        return new MorphirCallSimple(consinfo.valf, [entry]);
-    }
-
-    generateMapTypeConsInfo(ttype: MIRType): {cons: string, seqf: string} {
-        return {cons: `${this.getMorphirTypeFor(ttype).morphirtypename}__cons`, seqf: `${this.getMorphirTypeFor(ttype).morphirtypename}_seq`};
-    }
-
-    generateMapTypeConstructor(ttype: MIRType, seq: MorphirExp): MorphirExp {
-        const consinfo = this.generateMapTypeConsInfo(ttype);
-        return new MorphirCallSimple(consinfo.cons, [seq]);
-    }
-
-    generateMapTypeGetData(ttype: MIRType, mm: MorphirExp): MorphirExp {
-        return new MorphirCallSimple(this.generateMapTypeConsInfo(ttype).seqf, [mm]);
-    }
-
     generateMapTypeGetLength(ttype: MIRType, mm: MorphirExp): MorphirExp {
-        return new MorphirCallSimple("length", [this.generateMapTypeGetData(ttype, mm)]);
+        return new MorphirCallSimple("length", [mm]);
     }
 }
 
