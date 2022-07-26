@@ -574,6 +574,10 @@ unbox_BKeyBSHAContentHash k =
 type BKey = 
     BKey TypeTag BKeyObject
 
+bkey_extract_value : BKey -> BKeyObject
+bkey_extract_value k = 
+    let (BKey _ obj) = k in obj
+
 bkey_none : BKey
 bkey_none = 
     BKey TypeTag_None BKeyNone_box
@@ -695,6 +699,7 @@ type BObject =
       | BObjectBRational_box BRational
       | BObjectBByteBuffer_box BByteBuffer
       | BObjectBDateTime_box BDateTime
+      | BObjectBLatLongCoordinate_box BLatLongCoordinate
       | BObjectRegex_box Regex.Regex
       --TUPLE_TYPE_BOXING--
       --RECORD_TYPE_BOXING--
@@ -741,6 +746,14 @@ unbox_BObjectBDateTime k =
         _ -> 
             bsqdatetime_default
 
+unbox_BObjectBLatLongCoordinate : BObject -> BLatLongCoordinate
+unbox_BObjectBLatLongCoordinate k =
+    case k of 
+        BObjectBLatLongCoordinate_box t -> 
+            t
+        _ -> 
+            bsqlatlongcoordinate_default
+
 unbox_BObjectRegex : BObject -> Regex.Regex
 unbox_BObjectRegex k =
     case k of 
@@ -780,6 +793,38 @@ getTypeTag_BTerm t =
             getTypeTag_BKey(kk)
         (BTermObject tag _) ->
             tag
+
+getTermObj_BKey : BTerm -> BKey
+getTermObj_BKey t =
+    case t of 
+        (BKeyObject obj) ->
+            obj
+        _ -> 
+            bkey_none
+
+getTermObj_BTerm : BTerm -> BObject
+getTermObj_BTerm t = 
+    case t of 
+        (BTermObject _ obj) ->
+            obj
+        _ -> 
+            BObjectBNothing_box
+
+result_is_success : (Result a String) -> Bool
+result_is_success r = 
+    case r of 
+        (Ok _) ->
+            True
+        _ -> 
+            False
+
+result_is_error : (Result a String) -> Bool
+result_is_error r = 
+    case r of 
+        (Err _) ->
+            True
+        _ -> 
+            False
 
 --EPHEMERAL_DECLS--
 
