@@ -1027,13 +1027,7 @@ class SMTBodyEmitter {
             return new SMTConst("false");
         }
         else {
-            const trepr = this.typegen.getSMTTypeFor(argtype);
-            if(trepr.isGeneralKeyType()) {
-                return SMTCallSimple.makeEq(this.argToSMT(arg), new SMTConst("BKey@nothing"));
-            }
-            else {
-                return SMTCallSimple.makeEq(this.argToSMT(arg), new SMTConst("BTerm@nothing"));
-            }
+            return SMTCallSimple.makeEq(this.argToSMT(arg), new SMTConst("BTerm@nothing"));
         }
     }
 

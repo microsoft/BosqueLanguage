@@ -12,16 +12,13 @@ type Morphir2FileInfo = {
     ORDINAL_TYPE_TAG_DECLS: string[],
     ABSTRACT_TYPE_TAG_DECLS: string[],
     SUBTYPE_DECLS: string[],
-    STRING_TYPE_ALIAS: string,
     OF_TYPE_DECLS: string[],
     KEY_BOX_OPS: string[],
-    TUPLE_INFO: { decls: string[], boxing: string[] },
-    RECORD_INFO: { decls: string[], boxing: string[] },
-    TYPE_INFO: { decls: string[], constructors: string[], boxing: string[] }
+    TUPLE_INFO: { decls: string[], boxing: string[], unboxing: string[] },
+    RECORD_INFO: { decls: string[], boxing: string[], unboxing: string[] },
+    TYPE_INFO: { decls: string[], constructors: string[], boxing: string[], unboxing: string[] }
     EPHEMERAL_DECLS: { decls: string[] },
-    RESULT_INFO: { decls: string[], constructors: string[] },
     MASK_INFO: { decls: string[], constructors: string[] },
-    V_MIN_MAX: string[],
     GLOBAL_DECLS: string[],
     UF_DECLS: string[],
     FUNCTION_DECLS: string[],
@@ -63,36 +60,19 @@ class MorphirFunction {
     }
 
     emitMorphir(): string {
-        const args = this.args.map((arg) => `(${arg.vname} ${arg.vtype.smttypename})`);
-        const body = this.body.emitSMT2("  ");
+        const declargs = this.args.map((arg) => `${arg.vtype.morphirtypename}`).join(" -> ");
+        const implargs = this.args.map((arg) => `${arg.vname} `).join(" ");
+        const body = this.body.emitMorphir("  ");
 
         if(this.maskname === undefined) {
-            return `(define-fun ${this.fname} (${args.join(" ")}) ${this.result.smttypename}\n${body}\n)`;
+            const decl = `${this.fname} ${declargs} -> ${this.result.morphirtypename}\n`;
+            const impl = `${this.fname} ${implargs} = \n${body}\n`;
+            return decl + impl;
         }
         else {
-            return `(define-fun ${this.fname} (${args.join(" ")} (${this.maskname} $Mask_${this.masksize})) ${this.result.smttypename}\n${body}\n)`;
-        }
-    }
-
-    emitMorphir_DeclOnly(): string {
-        const args = this.args.map((arg) => `(${arg.vname} ${arg.vtype.smttypename})`);
-
-        if(this.maskname === undefined) {
-            return `(${this.fname} (${args.join(" ")}) ${this.result.smttypename})`;
-        }
-        else {
-            return `(${this.fname} (${args.join(" ")} (${this.maskname} $Mask_${this.masksize})) ${this.result.smttypename})`;
-        }
-    }
-
-    emitMorphir_SingleDeclOnly(): string {
-        const args = this.args.map((arg) => `(${arg.vname} ${arg.vtype.smttypename})`);
-
-        if(this.maskname === undefined) {
-            return `${this.fname} (${args.join(" ")}) ${this.result.smttypename}`;
-        }
-        else {
-            return `${this.fname} (${args.join(" ")} (${this.maskname} $Mask_${this.masksize})) ${this.result.smttypename}`;
+            const decl = `${this.fname} ${declargs} -> mask_${this.masksize} -> ${this.result.morphirtypename}\n`;
+            const impl = `${this.fname} ${implargs} ${this.maskname} = \n${body}\n`;
+            return decl + impl;
         }
     }
 }

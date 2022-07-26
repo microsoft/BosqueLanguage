@@ -457,7 +457,7 @@ class MorphirBodyEmitter {
             largs.push(`arg${i}`);
         }
 
-        const bbody = this.typegen.generateListTypeConstructorSeq(geninfo.resulttype, new MorphirConst(`[${largs.join(", ")}]`));
+        const bbody = new MorphirConst(`[${largs.join(", ")}]`);
         return MorphirFunction.create(this.typegen.lookupFunctionName(geninfo.inv), args, this.typegen.getMorphirTypeFor(geninfo.resulttype), bbody);
     }
 
@@ -470,7 +470,7 @@ class MorphirBodyEmitter {
         if(geninfo.argc === 1) {
             const vkey = new MorphirCallSimple(this.typegen.generateTupleIndexGetFunction(geninfo.argtupletype, 0), [new MorphirVar("arg0")]);
             const vval = new MorphirCallSimple(this.typegen.generateTupleIndexGetFunction(geninfo.argtupletype, 1), [new MorphirVar("arg0")]);
-            const consexp = this.typegen.generateMapTypeConstructor(geninfo.resulttype, new MorphirConst(`[${this.typegen.generateMapEntryTypeConstructor(geninfo.resulttype, vkey, vval).emitMorphir(undefined)}]`));
+            const consexp = new MorphirConst(`[MapEntry ${vkey.emitMorphir(undefined)} ${vval.emitMorphir(undefined)}]`);
             
             return MorphirFunction.create(this.typegen.lookupFunctionName(geninfo.inv), args, this.typegen.getMorphirTypeFor(geninfo.resulttype), consexp);
         }
@@ -714,7 +714,7 @@ class MorphirBodyEmitter {
             return new MorphirConst(flow.typeID === ofentity.typeID ? "True" : "False");
         }
         else {
-            const accessTypeTag = this.typegen.getMorphirTypeFor(layout).isGeneralTermType() ? new MorphirCallSimple("GetTypeTag__BTerm", [this.argToMorphir(arg)]) : new MorphirCallSimple("GetTypeTag__BKey", [this.argToMorphir(arg)]);
+            const accessTypeTag = this.typegen.getMorphirTypeFor(layout).isGeneralTermType() ? new MorphirCallSimple("getTypeTag_BTerm", [this.argToMorphir(arg)]) : new MorphirCallSimple("getTypeTag_BKey", [this.argToMorphir(arg)]);
             return MorphirCallSimple.makeEq(accessTypeTag, new MorphirConst(`TypeTag_${this.typegen.lookupTypeName(ofentity.typeID)}`));
         }
     }
@@ -724,13 +724,13 @@ class MorphirBodyEmitter {
             return new MorphirConst(this.assembly.subtypeOf(flow, ofconcept) ? "True" : "False");
         }
         else {
-            const accessTypeTag = this.typegen.getMorphirTypeFor(layout).isGeneralTermType() ? new MorphirCallSimple("GetTypeTag__BTerm", [this.argToMorphir(arg)]) : new MorphirCallSimple("GetTypeTag__BKey", [this.argToMorphir(arg)]);
+            const accessTypeTag = this.typegen.getMorphirTypeFor(layout).isGeneralTermType() ? new MorphirCallSimple("getTypeTag_BTerm", [this.argToMorphir(arg)]) : new MorphirCallSimple("getTypeTag_BKey", [this.argToMorphir(arg)]);
             
             const occ = ofconcept.options[0] as MIRConceptType;
             let tests: MorphirExp[] = [];
             for(let i = 0; i < occ.ckeys.length; ++i) {
                 this.processSubtypeTagCheck(flow, ofconcept);
-                tests.push(new MorphirCallSimple("SubtypeOf__", [accessTypeTag, new MorphirConst(`AbstractTypeTag_${this.typegen.lookupTypeName(occ.ckeys[i])}`)]));
+                tests.push(new MorphirCallSimple("subtypeOf", [accessTypeTag, new MorphirConst(`AbstractTypeTag_${this.typegen.lookupTypeName(occ.ckeys[i])}`)]));
             }
 
             if(tests.length === 1) {
@@ -751,7 +751,7 @@ class MorphirBodyEmitter {
             return new MorphirConst(this.assembly.subtypeOf(flow, oftuple) ? "True" : "False");
         }
         else {
-            const accessTypeTag = new MorphirCallSimple("GetTypeTag__BTerm", [this.argToMorphir(arg)]);
+            const accessTypeTag = new MorphirCallSimple("getTypeTag_BTerm", [this.argToMorphir(arg)]);
             return MorphirCallSimple.makeEq(accessTypeTag, new MorphirConst(`TypeTag_${this.typegen.lookupTypeName(oftuple.typeID)}`));
         }
     }
@@ -765,7 +765,7 @@ class MorphirBodyEmitter {
             return new MorphirConst(this.assembly.subtypeOf(flow, ofrecord) ? "True" : "False");
         }
         else {
-            const accessTypeTag = new MorphirCallSimple("GetTypeTag__BTerm", [this.argToMorphir(arg)]);
+            const accessTypeTag = new MorphirCallSimple("getTypeTag_BTerm", [this.argToMorphir(arg)]);
             return MorphirCallSimple.makeEq(accessTypeTag, new MorphirConst(`TypeTag_${this.typegen.lookupTypeName(ofrecord.typeID)}`));
         }
     }
@@ -786,7 +786,7 @@ class MorphirBodyEmitter {
     }
 
     generateTempName(): string {
-        return `tmp__var__${this.tmpvarctr++}`;
+        return `tmp_var_${this.tmpvarctr++}`;
     }
 
     isSafeInvoke(mkey: MIRInvokeKey): boolean {
@@ -836,10 +836,10 @@ class MorphirBodyEmitter {
 
     constantToMorphir(cval: MIRConstantArgument): MorphirExp {
         if (cval instanceof MIRConstantNone) {
-            return new MorphirConst("bsq_none__literal");
+            return new MorphirConst("bsqnone_literal");
         }
         else if (cval instanceof MIRConstantNothing) {
-            return new MorphirConst("bsq_nothing__literal");
+            return new MorphirConst("bsqnothing_literal");
         }
         else if (cval instanceof MIRConstantTrue) {
             return new MorphirConst("True");
@@ -861,10 +861,10 @@ class MorphirBodyEmitter {
         }
         else if (cval instanceof MIRConstantRational) {
             if(/^0\/[0-9]+R$/.test(cval.value)) {
-                return new MorphirConst("BRational__zero");
+                return new MorphirConst("bRational_zero");
             }
             else if(/^1\/1R$/.test(cval.value)) {
-                return new MorphirConst("BRational__one");
+                return new MorphirConst("bRational_one");
             }
             else {
                 return NOT_IMPLEMENTED("BRational mixed");
@@ -872,10 +872,10 @@ class MorphirBodyEmitter {
         }
         else if (cval instanceof MIRConstantFloat) {
             if(/^0([.]0+)?f$/.test(cval.value)) {
-                return new MorphirConst("BFloat__zero");
+                return new MorphirConst("bFloat_zero");
             }
             else if(/^1([.]0+)?f$/.test(cval.value)) {
-                return new MorphirConst("BFloat__one");
+                return new MorphirConst("bFloat_one");
             }
             else {
                 const fval = cval.value.slice(0, cval.value.length - 1);
@@ -884,10 +884,10 @@ class MorphirBodyEmitter {
         }
         else if (cval instanceof MIRConstantDecimal) {
             if(/^0([.]0+)?d$/.test(cval.value)) {
-                return new MorphirConst("BDecimal__zero");
+                return new MorphirConst("bDecimal_zero");
             }
             else if(/^1([.]0+)?d$/.test(cval.value)) {
-                return new MorphirConst("BDecimal__one");
+                return new MorphirConst("bDecimal_one");
             }
             else {
                 const dval = cval.value.slice(0, cval.value.length - 1);
@@ -911,8 +911,9 @@ class MorphirBodyEmitter {
 
             const rval = (cval as MIRConstantRegex).value;
             const ere = this.assembly.literalRegexs.findIndex((re) => re.restr === rval.restr);
+            const mre = this.assembly.literalRegexs[ere].compileToJS();
 
-            return new MorphirCallSimple("bsq_regex__cons", [new MorphirConst(`${ere}`)]);
+            return new MorphirConst(mre);
         }
     }
 
@@ -938,10 +939,10 @@ class MorphirBodyEmitter {
         else {
             const trepr = this.typegen.getMorphirTypeFor(argtype);
             if(trepr.isGeneralKeyType()) {
-                return new MorphirCallSimple("__isNone_KeyType", [this.argToMorphir(arg)]);
+                return new MorphirCallSimple("isBKeyNone", [this.argToMorphir(arg)]);
             }
             else {
-                return new MorphirCallSimple("__isNone_Term", [this.argToMorphir(arg)]);
+                return new MorphirCallSimple("isBTermNone", [this.argToMorphir(arg)]);
             }
         }
     }
@@ -956,10 +957,10 @@ class MorphirBodyEmitter {
         else {
             const trepr = this.typegen.getMorphirTypeFor(argtype);
             if(trepr.isGeneralKeyType()) {
-                return new MorphirCallSimple("__isSome_KeyType", [this.argToMorphir(arg)]);
+                return new MorphirCallSimple("isBKeySome", [this.argToMorphir(arg)]);
             }
             else {
-                return new MorphirCallSimple("__isSome_Term", [this.argToMorphir(arg)]);
+                return new MorphirCallSimple("isBTermSome", [this.argToMorphir(arg)]);
             }
         }
     }
@@ -972,13 +973,7 @@ class MorphirBodyEmitter {
             return new MorphirConst("False");
         }
         else {
-            const trepr = this.typegen.getMorphirTypeFor(argtype);
-            if(trepr.isGeneralKeyType()) {
-                return new MorphirCallSimple("__isNothing_KeyType", [this.argToMorphir(arg)]);
-            }
-            else {
-                return new MorphirCallSimple("__isNothing_Term", [this.argToMorphir(arg)]);
-            }
+            return new MorphirCallSimple("isBTermNothing", [this.argToMorphir(arg)]);
         }
     }
 
@@ -1039,16 +1034,16 @@ class MorphirBodyEmitter {
         const argtype = this.typegen.getMorphirTypeFor(this.typegen.getMIRType(op.arglayouttype));
 
         this.processIndexTagCheck(op.idx, this.typegen.getMIRType(op.argflowtype));
-        const accessTypeTag = argtype.isGeneralTermType() ? new MorphirCallSimple("GetTypeTag__BTerm", [this.argToMorphir(op.arg)]) : new MorphirCallSimple("GetTypeTag__BKey", [this.argToMorphir(op.arg)]);
-        return new MorphirLet(this.varToMorphirName(op.trgt).vname, new MorphirCallSimple("HasIndex__", [accessTypeTag, new MorphirConst(`TupleIndexTag_${op.idx}`)]), continuation);
+        const accessTypeTag = argtype.isGeneralTermType() ? new MorphirCallSimple("getTypeTag_BTerm", [this.argToMorphir(op.arg)]) : new MorphirCallSimple("getTypeTag_BKey", [this.argToMorphir(op.arg)]);
+        return new MorphirLet(this.varToMorphirName(op.trgt).vname, new MorphirCallSimple("hasIndex", [accessTypeTag, new MorphirConst(`TupleIndexTag_${op.idx}`)]), continuation);
     }
 
     processRecordHasProperty(op: MIRRecordHasProperty, continuation: MorphirExp): MorphirExp {
         const argtype = this.typegen.getMorphirTypeFor(this.typegen.getMIRType(op.arglayouttype));
 
         this.processPropertyTagCheck(op.pname, this.typegen.getMIRType(op.argflowtype));
-        const accessTypeTag = argtype.isGeneralTermType() ? new MorphirCallSimple("GetTypeTag__BTerm", [this.argToMorphir(op.arg)]) : new MorphirCallSimple("GetTypeTag__BKey", [this.argToMorphir(op.arg)]);
-        return new MorphirLet(this.varToMorphirName(op.trgt).vname, new MorphirCallSimple("HasProperty__", [accessTypeTag, new MorphirConst(`RecordPropertyTag_${op.pname}`)]), continuation);
+        const accessTypeTag = argtype.isGeneralTermType() ? new MorphirCallSimple("getTypeTag_BTerm", [this.argToMorphir(op.arg)]) : new MorphirCallSimple("getTypeTag_BKey", [this.argToMorphir(op.arg)]);
+        return new MorphirLet(this.varToMorphirName(op.trgt).vname, new MorphirCallSimple("hasProperty", [accessTypeTag, new MorphirConst(`RecordPropertyTag_${op.pname}`)]), continuation);
     }
 
     processLoadTupleIndex(op: MIRLoadTupleIndex, continuation: MorphirExp): MorphirExp {
@@ -1600,8 +1595,7 @@ class MorphirBodyEmitter {
     }
 
     processConstructorPrimaryCollectionEmpty(op: MIRConstructorPrimaryCollectionEmpty, continuation: MorphirExp): MorphirExp {
-        const emptyconst = this.typegen.getMorphirTypeFor(this.typegen.getMIRType(op.tkey)).morphirtypename + "__empty";
-        return new MorphirLet(this.varToMorphirName(op.trgt).vname, new MorphirConst(emptyconst), continuation);
+        return new MorphirLet(this.varToMorphirName(op.trgt).vname, new MorphirConst("[]"), continuation);
     }
 
     processConstructorPrimaryCollectionOneElement(op: MIRConstructorPrimaryCollectionOneElement, continuation: MorphirExp): MorphirExp {
@@ -1628,7 +1622,7 @@ class MorphirBodyEmitter {
 
             const kexp = new MorphirCallSimple(this.typegen.generateTupleIndexGetFunction(entrytup, 0), [arg]);
             const vexp = new MorphirCallSimple(this.typegen.generateTupleIndexGetFunction(entrytup, 1), [arg]);
-            return new MorphirLet(this.varToMorphirName(op.trgt).vname, new MorphirConst(`[(${kexp.emitMorphir(undefined)}, ${vexp.emitMorphir(undefined)})]`), continuation);
+            return new MorphirLet(this.varToMorphirName(op.trgt).vname, new MorphirConst(`[MapEntry ${kexp.emitMorphir(undefined)} ${vexp.emitMorphir(undefined)}]`), continuation);
         }
     }
 
@@ -1669,13 +1663,13 @@ class MorphirBodyEmitter {
     generateBinKeyCmpFor(cmptype: MIRType, lhstype: MIRType, lhsexp: MorphirExp, rhstype: MIRType, rhsexp: MorphirExp): MorphirExp {
         if(lhstype.typeID === cmptype.typeID && rhstype.typeID === cmptype.typeID && this.typegen.isUniqueType(cmptype)) {
             const oftype = this.typegen.getMorphirTypeFor(cmptype);
-            return new MorphirCallSimple(`${oftype.morphirtypename}__less`, [lhsexp, rhsexp]);
+            return new MorphirCallSimple(`${oftype.morphirtypename}_less`, [lhsexp, rhsexp]);
         }
         else {
             const lhs = this.typegen.coerceToKey(lhsexp, lhstype);
             const rhs = this.typegen.coerceToKey(rhsexp, rhstype);
 
-            return new MorphirCallSimple("BKey__less", [lhs, rhs]);
+            return new MorphirCallSimple("BKey_less", [lhs, rhs]);
         }
     }
 
@@ -2143,43 +2137,43 @@ class MorphirBodyEmitter {
             //op infix /
             case "__i__Core::/=infix=(Int, Int)": {
                 rtype = this.typegen.getMIRType("Int");
-                mphe = this.processGenerateResultWithZeroArgCheck(sinfo, new MorphirConst("BInt__zero"), args[1], rtype, new MorphirCallSimple("/", args, true));
+                mphe = this.processGenerateResultWithZeroArgCheck(sinfo, new MorphirConst("bInt_zero"), args[1], rtype, new MorphirCallSimple("//", args, true));
                 erropt = true;
                 break;
             }
             case "__i__Core::/=infix=(Nat, Nat)": {
                 rtype = this.typegen.getMIRType("Nat");
-                mphe = this.processGenerateResultWithZeroArgCheck(sinfo, new MorphirConst("BNat__zero"), args[1], rtype, new MorphirCallSimple("/", args, true));
+                mphe = this.processGenerateResultWithZeroArgCheck(sinfo, new MorphirConst("bNat_zero"), args[1], rtype, new MorphirCallSimple("//", args, true));
                 erropt = true;
                 break;
             }
             case "__i__Core::/=infix=(BigInt, BigInt)": {
                 rtype = this.typegen.getMIRType("BigInt");
-                mphe = this.processGenerateResultWithZeroArgCheck(sinfo, new MorphirConst("BBigInt__zero"), args[1], rtype, new MorphirCallSimple("/", args, true));
+                mphe = this.processGenerateResultWithZeroArgCheck(sinfo, new MorphirConst("bBigInt_zero"), args[1], rtype, new MorphirCallSimple("//", args, true));
                 erropt = true;
                 break;
             }
             case "__i__Core::/=infix=(BigNat, BigNat)": {
                 rtype = this.typegen.getMIRType("BigNat");
-                mphe = this.processGenerateResultWithZeroArgCheck(sinfo, new MorphirConst("BBigNat__zero"), args[1], rtype, new MorphirCallSimple("/", args, true));
+                mphe = this.processGenerateResultWithZeroArgCheck(sinfo, new MorphirConst("bBigNat_zero"), args[1], rtype, new MorphirCallSimple("//", args, true));
                 erropt = true;
                 break
             }
             case "__i__Core::/=infix=(Rational, Rational)": {
                 rtype = this.typegen.getMIRType("Rational");
-                mphe = this.processGenerateResultWithZeroArgCheck(sinfo, new MorphirConst("BRational__zero"), args[1], rtype, new MorphirCallSimple("/", args, true));
+                mphe = this.processGenerateResultWithZeroArgCheck(sinfo, new MorphirConst("bRational_zero"), args[1], rtype, new MorphirCallSimple("/", args, true));
                 erropt = true;
                 break;
             }
             case "__i__Core::/=infix=(Float, Float)": {
                 rtype = this.typegen.getMIRType("Float");
-                mphe = this.processGenerateResultWithZeroArgCheck(sinfo, new MorphirConst("BFloat__zero"), args[1], rtype, new MorphirCallSimple("/", args, true));
+                mphe = this.processGenerateResultWithZeroArgCheck(sinfo, new MorphirConst("bFloat_zero"), args[1], rtype, new MorphirCallSimple("/", args, true));
                 erropt = true;
                 break;
             }
             case "__i__Core::/=infix=(Decimal, Decimal)": {
                 rtype = this.typegen.getMIRType("Decimal");
-                mphe = this.processGenerateResultWithZeroArgCheck(sinfo, new MorphirConst("BDecimal__zero"), args[1], rtype, new MorphirCallSimple("/", args, true));
+                mphe = this.processGenerateResultWithZeroArgCheck(sinfo, new MorphirConst("bDecimal_zero"), args[1], rtype, new MorphirCallSimple("/", args, true));
                 erropt = true;
                 break;
             }
@@ -2542,12 +2536,12 @@ class MorphirBodyEmitter {
             case "number_biginttofloat":
             case "number_biginttodecimal":
             case "number_biginttorational": {
-                return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new MorphirCallSimple("to_real", [new MorphirVar(args[0].vname)]));
+                return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new MorphirCallSimple("toFloat", [new MorphirVar(args[0].vname)]));
             }
             case "number_floattobigint":
             case "number_decimaltobigint": 
             case "number_rationaltobigint": {
-                return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new MorphirCallSimple("to_int", [new MorphirVar(args[0].vname)]));
+                return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new MorphirCallSimple("round", [new MorphirVar(args[0].vname)]));
             }
             case "number_floattodecimal":
             case "number_floattorational":
@@ -2559,32 +2553,15 @@ class MorphirBodyEmitter {
             }
             case "float_floor":
             case "decimal_floor": {
-                const floor = new MorphirIf(
-                    new MorphirCallSimple("<=", [new MorphirVar("vvround"), new MorphirVar(args[0].vname)]),
-                    new MorphirCallSimple("to_int", [new MorphirVar(args[0].vname)]),
-                    new MorphirCallSimple("-", [new MorphirCallSimple("to_int", [new MorphirVar(args[0].vname)]), new MorphirConst("1")])
-                );
-                const vvround = new MorphirLet("vvround", new MorphirCallSimple("to_real", [new MorphirCallSimple("to_int", [new MorphirVar(args[0].vname)])]), new MorphirCallSimple("to_real", [floor]));
-                return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, vvround);
+                return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new MorphirCallSimple("floor", [new MorphirVar(args[0].vname)]));
             }
             case "float_ceil":
             case "decimal_ceil": {
-                const ceil = new MorphirIf(
-                    new MorphirCallSimple(">=", [new MorphirVar("vvround"), new MorphirVar(args[0].vname)]),
-                    new MorphirCallSimple("to_int", [new MorphirVar(args[0].vname)]),
-                    new MorphirCallSimple("+", [new MorphirCallSimple("to_int", [new MorphirVar(args[0].vname)]), new MorphirConst("1")])
-                );
-                const vvround = new MorphirLet("vvround", new MorphirCallSimple("to_real", [new MorphirCallSimple("to_int", [new MorphirVar(args[0].vname)])]), new MorphirCallSimple("to_real", [ceil]));
-                return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, vvround);
+                return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new MorphirCallSimple("ceiling", [new MorphirVar(args[0].vname)]));
             }
             case "float_truncate":
             case "decimal_truncate":  {
-                const truncate = new MorphirIf(
-                    new MorphirCallSimple(">=", [new MorphirVar(args[0].vname), new MorphirConst("0.0")]),
-                    new MorphirCallSimple("to_int", [new MorphirVar(args[0].vname)]),
-                    new MorphirCallSimple("-", [new MorphirCallSimple("to_int", [new MorphirCallSimple("-", [new MorphirVar(args[0].vname)])])])
-                );
-                return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, truncate);
+                return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new MorphirCallSimple("truncate", [new MorphirVar(args[0].vname)]));
             }
             case "float_power":
             case "decimal_power": {
@@ -2596,39 +2573,39 @@ class MorphirBodyEmitter {
                 return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, rr);
             }
             case "string_empty": {
-                return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, MorphirCallSimple.makeEq(new MorphirCallSimple("str.len", [new MorphirVar(args[0].vname)]), new MorphirConst("0")));
+                return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new MorphirCallSimple("isEmpty", [new MorphirVar(args[0].vname)]));
             }
             case "string_append": {
-                return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new MorphirCallSimple("str.++", [new MorphirVar(args[0].vname), new MorphirVar(args[1].vname)]));
+                return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new MorphirCallSimple("append", [new MorphirVar(args[0].vname), new MorphirVar(args[1].vname)]));
             }
             case "bytebuffer_getformat": {
-                return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new MorphirCallSimple("BByteBuffer@format", [new MorphirVar(args[0].vname)]));
+                return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new MorphirConst(`${args[0].vname}.format`));
             }
             case "bytebuffer_getcompression": {
-                return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new MorphirCallSimple("BByteBuffer@compress", [new MorphirVar(args[0].vname)]));
+                return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new MorphirConst(`${args[0].vname}.compress`));
             }
             case "datetime_create": {
-                const dd = new MorphirCallSimple("BDateTime@cons", args.map((arg) => new MorphirVar(arg.vname)));
+                const dd = new MorphirCallSimple("bdatetime_cons", args.map((arg) => new MorphirVar(arg.vname)));
                 return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);
             }
             case "utcdatetime_create": {
-                const dd = new MorphirCallSimple("BUTCDateTime@cons", args.map((arg) => new MorphirVar(arg.vname)));
+                const dd = new MorphirCallSimple("butcdatetime_cons", args.map((arg) => new MorphirVar(arg.vname)));
                 return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);
             }
             case "calendardate_create": {
-                const dd = new MorphirCallSimple("BCalendarDate@cons", args.map((arg) => new MorphirVar(arg.vname)));
+                const dd = new MorphirCallSimple("bcalendardate_cons", args.map((arg) => new MorphirVar(arg.vname)));
                 return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);
             }
             case "relativetime_create": {
-                const dd = new MorphirCallSimple("BRelativeTime@cons", args.map((arg) => new MorphirVar(arg.vname)));
+                const dd = new MorphirCallSimple("brelativetime_cons", args.map((arg) => new MorphirVar(arg.vname)));
                 return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);
             }
             case "isotimestamp_create": {
-                const dd = new MorphirCallSimple("BISOTimeStamp@cons", args.map((arg) => new MorphirVar(arg.vname)));
+                const dd = new MorphirCallSimple("bisotimestamp_cons", args.map((arg) => new MorphirVar(arg.vname)));
                 return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);
             }
             case "latlongcoordinate_create": {
-                const dd = new MorphirCallSimple("BLatLongCoordinate@cons", args.map((arg) => new MorphirVar(arg.vname)));
+                const dd = new MorphirCallSimple("blatlongcoordinate_cons", args.map((arg) => new MorphirVar(arg.vname)));
                 return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);
             }
             default: {

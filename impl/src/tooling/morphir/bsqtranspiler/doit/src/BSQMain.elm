@@ -94,8 +94,16 @@ type alias BUUID7 =
 type alias BSHAContentHash = 
     String
 
-type alias BByteBuffer 
-    = List Int
+type alias BByteBuffer = 
+    {
+        format: Int,
+        compress: Int,
+        data: List Int
+    }
+
+bbytebuffer_cons : Int -> Int -> List Int -> BByteBuffer
+bbytebuffer_const f c d = 
+    {format = f, compress = c, data = d}
 
 type alias BDateTime = 
     {
@@ -107,6 +115,10 @@ type alias BDateTime =
         tzdata: String
     }
 
+bdatetime_cons : Int -> Int -> Int -> Int -> Int -> String -> BDateTime
+bdatetime_cons yy mm dd h m tz = 
+    {year = yy, month = mm, day = dd, hour = h, min = m, tzdata = tz}
+
 type alias BUTCDateTime = 
     {
         year: Int,
@@ -116,6 +128,10 @@ type alias BUTCDateTime =
         min: Int
     }
 
+butcdatetime_cons : Int -> Int -> Int -> Int -> Int -> BUTCDateTime
+butcdatetime_cons yy mm dd h m = 
+    {year = yy, month = mm, day = dd, hour = h, min = m}
+
 type alias BCalendarDate = 
     {
         year: Int,
@@ -123,11 +139,19 @@ type alias BCalendarDate =
         day: Int
     }
 
+bcalendardate_cons : Int -> Int -> Int -> BCalendarDate
+bcalendardate_cons yy mm dd = 
+    {year = yy, month = mm, day = dd}
+
 type alias BRelativeTime = 
     {
         hour: Int,
         min: Int
     }
+
+brelativetime_cons : Int -> Int -> BRelativeTime
+brelativetime_cons h m = 
+    {hour = h, min = m}
 
 type alias BISOTimeStamp = 
     {
@@ -140,11 +164,19 @@ type alias BISOTimeStamp =
         millis: Int
     }
 
+bisotimestamp_cons : Int -> Int -> Int -> Int -> Int -> Int -> Int -> BISOTimeStamp
+bisotimestamp_cons yy mm dd h m s ms= 
+    {year = yy, month = mm, day = dd, hour = h, min = m, sec = s, millis = ms}
+
 type alias BLatLongCoordinate = 
     {
         lat: Float,
         long: Float
     }
+
+blatlongcoordinate_cons : Float -> Float -> BLatLongCoordinate
+blatlongcoordinate_cons latv longv = 
+    {lat = latv, long = longv}
 
 bInt_zero : BInt
 bInt_zero = 
@@ -370,7 +402,7 @@ bsqshacontenthash_default =
 
 bsqbytebuffer_default : BByteBuffer
 bsqbytebuffer_default = 
-    []
+    {format = 0, compress = 0, data = []}
 
 bsqdatetime_default : BDateTime
 bsqdatetime_default = 
@@ -585,7 +617,7 @@ bkey_none =
 bsqkey_default : BKey
 bsqkey_default = 
     bkey_none
-
+        
 bkey_less : BKey -> BKey -> Bool
 bkey_less k1 k2 = 
     let (BKey tag1 obj1) = k1 in
@@ -807,6 +839,30 @@ getTermObj_BTerm t =
             obj
         _ -> 
             BObjectBNothing_box
+
+isBKeyNone : BKey -> Bool
+isBKeyNone k = 
+    getTypeTag_BKey k == TypeTag_None
+
+isBTermNone : BTerm -> Bool
+isBTermNone t = 
+    getTypeTag_BTerm t == TypeTag_None
+
+isBTermNothing : BTerm -> Bool
+isBTermNothing t = 
+    getTypeTag_BTerm t == TypeTag_Nothing
+
+isBKeySome : BKey -> Bool
+isBKeySome k = 
+    getTypeTag_BKey k /= TypeTag_None
+
+isBTermSome : BTerm -> Bool
+isBTermSome t = 
+    getTypeTag_BTerm t /= TypeTag_None
+
+isBTermSomething : BTerm -> Bool
+isBTermSomething t = 
+    getTypeTag_BTerm t /= TypeTag_Nothing
 
 type alias MapEntry k v = 
     {
