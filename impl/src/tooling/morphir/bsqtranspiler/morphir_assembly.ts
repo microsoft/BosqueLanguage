@@ -71,15 +71,15 @@ class MorphirFunction {
     emitMorphir(): string {
         const declargs = this.args.map((arg) => `${arg.vtype.morphirtypename}`).join(" -> ");
         const implargs = this.args.map((arg) => `${arg.vname}`).join(" ");
-        const body = this.body.emitMorphir("  ");
+        const body = this.body.emitMorphir("    ");
 
         if(this.maskname === undefined) {
-            const decl = `${this.fname} ${declargs} -> ${this.result.morphirtypename}\n`;
+            const decl = `${this.fname} : ${declargs} -> ${this.result.morphirtypename}\n`;
             const impl = `${this.fname} ${implargs} = \n${body}\n`;
             return decl + impl;
         }
         else {
-            const decl = `${this.fname} ${declargs} -> mask_${this.masksize} -> ${this.result.morphirtypename}\n`;
+            const decl = `${this.fname} : ${declargs} -> mask_${this.masksize} -> ${this.result.morphirtypename}\n`;
             const impl = `${this.fname} ${implargs} ${this.maskname} = \n${body}\n`;
             return decl + impl;
         }
@@ -375,7 +375,7 @@ class MorphirAssembly {
         const indexasserts = this.hasIndexRelation.map((hi) => `    | (${hi.idxtag} ${hi.atype}) -> \n        True`).sort();
         const propertyasserts = this.hasPropertyRelation.map((hp) => `    | (${hp.pnametag} ${hp.atype}) -> \n        True`).sort();
 
-        const keytypeorder: string[] = [...this.keytypeTags].sort().map((ktt, i) => `        TypeTag_OrdinalOf ${ktt} -> \n            ${i}`);
+        const keytypeorder: string[] = [...this.keytypeTags].sort().map((ktt, i) => `        ${ktt} -> \n            ${i}`);
 
         const termtupleinfo = this.tupleDecls
             .sort((t1, t2) => t1.morphirname.localeCompare(t2.morphirname))
@@ -416,8 +416,8 @@ class MorphirAssembly {
             return {
                 decl: `type alias ${kt.morphirname} = ${eokt.ofsmttype}`,
                 boxf: `${kt.boxf} ${kt.morphirname}`,
-                unboxfdecl: `${kt.ubf} : BKey -> ${kt.morphirname}`,
-                unboxfimpl: `${kt.ubf} k = \n    case k of\n        ${kt.boxf} v -> \n            v\n        _ -> \n            bsq${kt.typetag.toLowerCase()}_default`,
+                unboxfdecl: `${kt.ubf} : BKeyObject -> ${kt.morphirname}`,
+                unboxfimpl: `${kt.ubf} k = \n    case k of\n        BKey${eokt.ofsmttype}_box v -> \n            v\n        _ -> \n            bsq${kt.typetag.toLowerCase()}_default`,
                 defaultdecl: `bsq${kt.typetag.toLowerCase()}_default : ${kt.morphirname}`,
                 defaultimpl: `bsq${kt.typetag.toLowerCase()}_default = \n    bsq${eokt.ofsmttype.toLowerCase()}_default`
             };
@@ -432,8 +432,8 @@ class MorphirAssembly {
                 return {
                     decl: `type alias ${kt.morphirname} = ${eokt.ofsmttype}`,
                     boxf: `${kt.boxf} ${kt.morphirname}`,
-                    unboxfdecl: `${kt.ubf} : BTerm -> ${kt.morphirname}`,
-                    unboxfimpl: `${kt.ubf} t = \n    case t of\n        ${kt.boxf} v -> \n            v\n        _ -> \n            bsq${kt.typetag.toLowerCase()}_default`,
+                    unboxfdecl: `${kt.ubf} : BObject -> ${kt.morphirname}`,
+                    unboxfimpl: `${kt.ubf} t = \n    case t of\n        BTerm${eokt.ofsmttype}_box v -> \n            v\n        _ -> \n            bsq${kt.typetag.toLowerCase()}_default`,
                     defaultdecl: `bsq${kt.typetag.toLowerCase()}_default : ${kt.morphirname}`,
                     defaultimpl: `bsq${kt.typetag.toLowerCase()}_default = \n    bsq${eokt.ofsmttype.toLowerCase()}_default`
                 };

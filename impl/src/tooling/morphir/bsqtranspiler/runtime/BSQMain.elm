@@ -5,8 +5,6 @@ import Regex exposing(..)
 
 type TypeTag = 
     TypeTag_Invalid
-    | TypeTag_None
-    | TypeTag_Nothing
 --TYPE_TAG_DECLS--
 
 ordinalOf : TypeTag -> Int
@@ -350,64 +348,64 @@ bsqbool_default : Bool
 bsqbool_default = 
     False
 
-bsqint_default : BInt 
-bsqint_default = 
+bsqbint_default : BInt 
+bsqbint_default = 
     0
 
-bsqnat_default : BNat
-bsqnat_default = 
+bsqbnat_default : BNat
+bsqbnat_default = 
     0
 
-bsqbigint_default : BBigInt 
-bsqbigint_default = 
+bsqbbigint_default : BBigInt 
+bsqbbigint_default = 
     0
 
-bsqbignat_default : BBigNat
-bsqbignat_default = 
+bsqbbignat_default : BBigNat
+bsqbbignat_default = 
     0
 
-bsqfloat_default : BFloat
-bsqfloat_default = 
+bsqbfloat_default : BFloat
+bsqbfloat_default = 
     0.0
 
-bsqdecimal_default : BDecimal
-bsqdecimal_default = 
+bsqbdecimal_default : BDecimal
+bsqbdecimal_default = 
     0.0
 
-bsqrational_default : BRational
-bsqrational_default = 
+bsqbrational_default : BRational
+bsqbrational_default = 
     0.0
 
-bsqstring_default : BString
-bsqstring_default = 
+bsqbstring_default : BString
+bsqbstring_default = 
     ""
 
-bsqticktime_default : BTickTime
-bsqticktime_default = 
+bsqbticktime_default : BTickTime
+bsqbticktime_default = 
     0
 
-bsqlogicaltime_default : BLogicalTime
-bsqlogicaltime_default = 
+bsqblogicaltime_default : BLogicalTime
+bsqblogicaltime_default = 
     0
 
-bsquuid4_default : BUUID4
-bsquuid4_default = 
+bsqbuuid4_default : BUUID4
+bsqbuuid4_default = 
     "0x0"
 
-bsquuid7_default : BUUID7
-bsquuid7_default = 
+bsqbuuid7_default : BUUID7
+bsqbuuid7_default = 
     "0x0"
 
-bsqshacontenthash_default : BSHAContentHash
-bsqshacontenthash_default = 
+bsqbshacontenthash_default : BSHAContentHash
+bsqbshacontenthash_default = 
     "0x0"
 
-bsqbytebuffer_default : BByteBuffer
-bsqbytebuffer_default = 
+bsqbbytebuffer_default : BByteBuffer
+bsqbbytebuffer_default = 
     {format = 0, compress = 0, data = []}
 
-bsqdatetime_default : BDateTime
-bsqdatetime_default = 
+bsqbdatetime_default : BDateTime
+bsqbdatetime_default = 
     {
         year = 0,
         month = 0,
@@ -417,8 +415,8 @@ bsqdatetime_default =
         tzdata = "UTC"
     }
 
-bsqutcdatetime_default : BUTCDateTime
-bsqutcdatetime_default =  
+bsqbutcdatetime_default : BUTCDateTime
+bsqbutcdatetime_default =  
     {
         year = 0,
         month = 0,
@@ -427,23 +425,23 @@ bsqutcdatetime_default =
         min = 0
     }
 
-bsqcalendardate_default : BCalendarDate
-bsqcalendardate_default = 
+bsqbcalendardate_default : BCalendarDate
+bsqbcalendardate_default = 
     {
         year = 0,
         month = 0,
         day = 0
     }
 
-bsqrelativetime_default : BRelativeTime
-bsqrelativetime_default = 
+bsqbrelativetime_default : BRelativeTime
+bsqbrelativetime_default = 
     {
         hour = 0,
         min = 0
     }
 
-bsqisotimestamp_default : BISOTimeStamp
-bsqisotimestamp_default = 
+bsqbisotimestamp_default : BISOTimeStamp
+bsqbisotimestamp_default = 
     {
         year = 0,
         month = 0,
@@ -454,8 +452,8 @@ bsqisotimestamp_default =
         millis = 0
     }
 
-bsqlatlongcoordinate_default : BLatLongCoordinate
-bsqlatlongcoordinate_default = 
+bsqblatlongcoordinate_default : BLatLongCoordinate
+bsqblatlongcoordinate_default = 
     {
         lat = 0.0,
         long = 0.0
@@ -535,7 +533,7 @@ unbox_BKeyBUTCDateTime k =
         BKeyBUTCDateTime_box t -> 
             t
         _ -> 
-            bsqutcdatetime_default
+            bsqbutcdatetime_default
 
 
 unbox_BKeyBCalendarDate : BKeyObject -> BCalendarDate
@@ -544,7 +542,7 @@ unbox_BKeyBCalendarDate k =
         BKeyBCalendarDate_box t -> 
             t
         _ -> 
-            bsqcalendardate_default
+            bsqbcalendardate_default
 
 unbox_BKeyBRelativeTime : BKeyObject -> BRelativeTime
 unbox_BKeyBRelativeTime k =
@@ -552,7 +550,7 @@ unbox_BKeyBRelativeTime k =
         BKeyBRelativeTime_box t -> 
             t
         _ -> 
-            bsqrelativetime_default
+            bsqbrelativetime_default
 
 unbox_BKeyBTickTime : BKeyObject -> BTickTime
 unbox_BKeyBTickTime k =
@@ -560,7 +558,7 @@ unbox_BKeyBTickTime k =
         BKeyBTickTime_box t -> 
             t
         _ -> 
-            bsqticktime_default
+            bsqbticktime_default
 
 unbox_BKeyBLogicalTime : BKeyObject -> BLogicalTime
 unbox_BKeyBLogicalTime k =
@@ -568,7 +566,7 @@ unbox_BKeyBLogicalTime k =
         BKeyBLogicalTime_box t -> 
             t
         _ -> 
-            bsqlogicaltime_default
+            bsqblogicaltime_default
 
 unbox_BKeyBISOTimeStamp : BKeyObject -> BISOTimeStamp
 unbox_BKeyBISOTimeStamp k =
@@ -576,7 +574,7 @@ unbox_BKeyBISOTimeStamp k =
         BKeyBISOTimeStamp_box t -> 
             t
         _ -> 
-            bsqisotimestamp_default
+            bsqbisotimestamp_default
 
 
 unbox_BKeyBUUID4 : BKeyObject -> BUUID4
@@ -585,7 +583,7 @@ unbox_BKeyBUUID4 k =
         BKeyBUUID4_box u -> 
             u
         _ -> 
-            bsquuid4_default
+            bsqbuuid4_default
 
 unbox_BKeyBUUID7 : BKeyObject -> BUUID7
 unbox_BKeyBUUID7 k =
@@ -593,7 +591,7 @@ unbox_BKeyBUUID7 k =
         BKeyBUUID7_box u -> 
             u
         _ -> 
-            bsquuid7_default
+            bsqbuuid7_default
 
 unbox_BKeyBSHAContentHash : BKeyObject -> BSHAContentHash
 unbox_BKeyBSHAContentHash k =
@@ -601,7 +599,7 @@ unbox_BKeyBSHAContentHash k =
         BKeyBSHAContentHash_box h -> 
             h
         _ -> 
-            bsqshacontenthash_default
+            bsqbshacontenthash_default
 
 --KEY_UNBOX_OPS--
 
@@ -618,8 +616,8 @@ bkey_none : BKey
 bkey_none = 
     BKey TypeTag_None BKeyNone_box
 
-bsqkey_default : BKey
-bsqkey_default = 
+bsqbkey_default : BKey
+bsqbkey_default = 
     bkey_none
         
 bkey_less : BKey -> BKey -> Bool
@@ -747,7 +745,7 @@ unbox_BObjectBFloat k =
         BObjectBFloat_box f -> 
             f
         _ -> 
-            bsqfloat_default
+            bsqbfloat_default
 
 unbox_BObjectBDecimal : BObject -> BDecimal
 unbox_BObjectBDecimal k =
@@ -755,7 +753,7 @@ unbox_BObjectBDecimal k =
         BObjectBDecimal_box d -> 
             d
         _ -> 
-            bsqdecimal_default
+            bsqbdecimal_default
 
 unbox_BObjectBRational : BObject -> BRational
 unbox_BObjectBRational k =
@@ -763,7 +761,7 @@ unbox_BObjectBRational k =
         BObjectBRational_box f -> 
             f
         _ -> 
-            bsqrational_default
+            bsqbrational_default
 
 unbox_BObjectByteBuffer : BObject -> BByteBuffer
 unbox_BObjectByteBuffer k =
@@ -771,7 +769,7 @@ unbox_BObjectByteBuffer k =
         BObjectBByteBuffer_box b -> 
             b
         _ -> 
-            bsqbytebuffer_default
+            bsqbbytebuffer_default
 
 unbox_BObjectBDateTime : BObject -> BDateTime
 unbox_BObjectBDateTime k =
@@ -779,7 +777,7 @@ unbox_BObjectBDateTime k =
         BObjectBDateTime_box t -> 
             t
         _ -> 
-            bsqdatetime_default
+            bsqbdatetime_default
 
 unbox_BObjectBLatLongCoordinate : BObject -> BLatLongCoordinate
 unbox_BObjectBLatLongCoordinate k =
@@ -787,7 +785,7 @@ unbox_BObjectBLatLongCoordinate k =
         BObjectBLatLongCoordinate_box t -> 
             t
         _ -> 
-            bsqlatlongcoordinate_default
+            bsqblatlongcoordinate_default
 
 unbox_BObjectRegex : BObject -> Regex.Regex
 unbox_BObjectRegex k =
@@ -813,8 +811,8 @@ bterm_nothing : BTerm
 bterm_nothing = 
     BTermObject TypeTag_Nothing BObjectBNothing_box
 
-bsqterm_default : BTerm
-bsqterm_default = 
+bsqbterm_default : BTerm
+bsqbterm_default = 
     bterm_nothing
 
 getTypeTag_BKey : BKey -> TypeTag

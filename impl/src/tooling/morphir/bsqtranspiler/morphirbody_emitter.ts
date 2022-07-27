@@ -61,7 +61,7 @@ class MorphirBodyEmitter {
 
     varStringToMorphir(name: string): MorphirVar {
         if (name === "$$return") {
-            return new MorphirVar("__return__");
+            return new MorphirVar("$$return");
         }
         else {
             return new MorphirVar(name);
