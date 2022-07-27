@@ -11,7 +11,7 @@ import { MIRInvokeKey } from "../../../compiler/mir_ops";
 import { MorphirBodyEmitter } from "./morphirbody_emitter";
 import { MorphirTypeEmitter } from "./morphirtype_emitter";
 import { MorphirAssembly, MorphirConstantDecl, MorphirEntityCollectionTypeDecl, MorphirEntityInternalOfTypeDecl, MorphirEntityOfTypeDecl, MorphirEntityStdDecl, MorphirEphemeralListDecl, MorphirRecordDecl, MorphirTupleDecl } from "./morphir_assembly";
-import { MorphirConst } from "./morphir_exp";
+import { MorphirCallSimple, MorphirConst, MorphirIf, MorphirLet, MorphirVar } from "./morphir_exp";
 
 class MorphirEmitter {
     readonly temitter: MorphirTypeEmitter;
@@ -360,13 +360,18 @@ class MorphirEmitter {
             }
 
             if((this.callsafety.get(cdecl.ivalue) as {safe: boolean, trgt: boolean}).safe) {
-                this.assembly.constantDecls.push(new MorphirConstantDecl(smtname, optenumname, ctype, consf, new MorphirConst(consf), undefined));
+                this.assembly.constantDecls.push(new MorphirConstantDecl(smtname, optenumname, ctype, consf, new MorphirCallSimple(consf, [])));
             }
             else {
-                const rconsf = this.temitter.generateResultGetSuccess(this.temitter.getMIRType(cdecl.declaredType), new MorphirConst(consf));
-                const rcheck = this.temitter.generateResultIsSuccessTest(this.temitter.getMIRType(cdecl.declaredType), new MorphirConst(consf));
+                const rconsf = new MorphirLet("gval", new MorphirCallSimple(consf, []), 
+                    new MorphirIf(
+                        this.temitter.generateResultIsSuccessTest(this.temitter.getMIRType(cdecl.declaredType), new MorphirVar("gval")),
+                        this.temitter.generateResultGetSuccess(this.temitter.getMIRType(cdecl.declaredType), new MorphirVar("gval")),
+                        new MorphirConst(`$bsq${ctype.morphirtypename.toLowerCase()}_default`)
+                    )
+                );
 
-                this.assembly.constantDecls.push(new MorphirConstantDecl(smtname, optenumname, ctype, consf, rconsf, rcheck));
+                this.assembly.constantDecls.push(new MorphirConstantDecl(smtname, optenumname, ctype, consf, rconsf));
             }
         });
 

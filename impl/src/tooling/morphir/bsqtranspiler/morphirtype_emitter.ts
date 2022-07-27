@@ -268,13 +268,13 @@ class MorphirTypeEmitter {
         const kfix = this.assembly.subtypeOf(tt, this.getMIRType("KeyType")) ? "BKey" : "BObject"
 
         if (this.isUniqueTupleType(tt)) {
-            return { cons: `${mname}`, box: `${mname}_box`, unbox: `unbox_${kfix}${mname}`, default: `bsq${mname.toLocaleLowerCase()}_default`};
+            return { cons: `${mname}`, box: `${mname}_box`, unbox: `unbox_${kfix}${mname}`, default: `bsq${mname.toLowerCase()}_default`};
         }
         else if (this.isUniqueRecordType(tt)) {
-            return { cons: `${this.lookupTypeName(tt.typeID)}`, box: `${this.lookupTypeName(tt.typeID)}_box`, unbox: `unbox_${kfix}${mname}`, default: `bsq${mname.toLocaleLowerCase()}_default` };
+            return { cons: `${this.lookupTypeName(tt.typeID)}`, box: `${this.lookupTypeName(tt.typeID)}_box`, unbox: `unbox_${kfix}${mname}`, default: `bsq${mname.toLowerCase()}_default` };
         }
         else if (this.isUniqueEntityType(tt)) {
-            return { cons: `${this.lookupTypeName(tt.typeID)}`, box: `${this.lookupTypeName(tt.typeID)}_box`, unbox: `unbox_${kfix}${mname}`, default: `bsq${mname.toLocaleLowerCase()}_default` };
+            return { cons: `${this.lookupTypeName(tt.typeID)}`, box: `${this.lookupTypeName(tt.typeID)}_box`, unbox: `unbox_${kfix}${mname}`, default: `bsq${mname.toLowerCase()}_default` };
         }
         else {
             assert(this.isUniqueEphemeralType(tt), "should not be other options")

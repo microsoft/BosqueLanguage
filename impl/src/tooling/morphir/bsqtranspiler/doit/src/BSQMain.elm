@@ -910,9 +910,9 @@ result_error_get_value r =
 
 --EPHEMERAL_DECLS--
 
---GLOBAL_DECLS--
+--MASK_INFO--
 
---DEFAULT_VALUES--
+--GLOBAL_DECLS--
 
 --FUNCTION_DECLS--
 
