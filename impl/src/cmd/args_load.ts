@@ -13,6 +13,8 @@ import { cleanCommentsStringsFromFileContents } from "../ast/parser";
 
 type CmdTag = "run" | "symrun" | "build" | "test" | "apptest" | "fuzz" | "morphir-chk";
 
+const DEFAULT_SMALL_MODEL_ONLY = false;
+
 function help(cmd: CmdTag | undefined) {
     if(cmd === "run" || cmd === undefined) {
         process.stdout.write("Run Application:\n");
@@ -24,27 +26,27 @@ function help(cmd: CmdTag | undefined) {
 
     if(cmd === "symrun" || cmd === undefined) {
         process.stdout.write("Symbolic Run Application:\n");
-        process.stdout.write("bosque symrun [package_path.json] [--small-model-only] [--entrypoint fname] [--config cname]\n");
-        process.stdout.write("bosque symrun [package_path.json] [--small-model-only] [--entrypoint fname] [--config cname] --args \"[...]\"\n\n");
+        process.stdout.write("bosque symrun [package_path.json] [--entrypoint fname] [--config cname]\n");
+        process.stdout.write("bosque symrun [package_path.json] [--entrypoint fname] [--config cname] --args \"[...]\"\n\n");
     }
 
     if(cmd === "build" || cmd === undefined) {
         process.stdout.write("Build Application:\n");
         process.stdout.write("bosque build node [package_path.json] [--config cname] [out]\n");
         process.stdout.write("bosque build bytecode [package_path.json] [--config cname] [out]\n");
-        process.stdout.write("bosque build sym chk|eval [--smtlib] [--small-model-only] [package_path.json] [--entrypoint fname] [--config cname] [out]\n");
+        process.stdout.write("bosque build sym chk|eval [--smtlib] [package_path.json] [--entrypoint fname] [--config cname] [out]\n");
         process.stdout.write("bosque build morphir [morphir_path.json] [out]\n\n");
     }
 
     if(cmd === "test" || cmd === undefined) {
         process.stdout.write("Unit-Test Application:\n");
-        process.stdout.write("bosque test [package_path.json] [--small-model-only] [--config cname]\n");
+        process.stdout.write("bosque test [package_path.json] [--config cname]\n");
         process.stdout.write("bosque test testfile.bsqtest ... --files ... [--flavors (sym | icpp | err | chk)*]\n\n");
     }
 
     if(cmd === "apptest" || cmd === undefined) {
         process.stdout.write("EntryPoint Test Application:\n");
-        process.stdout.write("bosque apptest [package_path.json] [--small-model-only] [--config cname]\n");
+        process.stdout.write("bosque apptest [package_path.json] [--config cname]\n");
         process.stdout.write("bosque apptest testfile.bsqtest ... --files ... [--flavors (sym | icpp | err | chk)*]\n\n");
     }
 
@@ -526,5 +528,6 @@ function loadUserSrc(workingdir: string, files: URIPathGlob[]): string[] | undef
 export {
     CmdTag,
     help,
-    tryLoadPackage, extractEntryPointKnownFile, extractEntryPointsAll, extractEntryPoint, isStdInArgs, extractArgs, extractOutput, extractFiles, extractConfig, extractTestFlags, loadUserSrc
+    tryLoadPackage, extractEntryPointKnownFile, extractEntryPointsAll, extractEntryPoint, isStdInArgs, extractArgs, extractOutput, extractFiles, extractConfig, extractTestFlags, loadUserSrc,
+    DEFAULT_SMALL_MODEL_ONLY
 };
