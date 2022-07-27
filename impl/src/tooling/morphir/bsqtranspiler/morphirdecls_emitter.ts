@@ -4,14 +4,14 @@
 //-------------------------------------------------------------------------------------------------------
 
 import * as assert  from "assert";
-import { BSQRegex } from "../../../ast/bsqregex";
 
-import { MIRAssembly, MIRConstructableEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIRDataBufferInternalEntityTypeDecl, MIRDataStringInternalEntityTypeDecl, MIREnumEntityTypeDecl, MIRObjectEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRStringOfInternalEntityTypeDecl, } from "../../../compiler/mir_assembly";
+import { MIRAssembly, MIRConceptType, MIRConstructableEntityTypeDecl, MIRConstructableInternalEntityTypeDecl, MIRDataBufferInternalEntityTypeDecl, MIRDataStringInternalEntityTypeDecl, MIREnumEntityTypeDecl, MIRInvokeDecl, MIRObjectEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRRecordType, MIRStringOfInternalEntityTypeDecl, MIRTupleType, } from "../../../compiler/mir_assembly";
 import { constructCallGraphInfo, markSafeCalls } from "../../../compiler/mir_callg";
 import { MIRInvokeKey } from "../../../compiler/mir_ops";
 import { MorphirBodyEmitter } from "./morphirbody_emitter";
 import { MorphirTypeEmitter } from "./morphirtype_emitter";
-import { MorphirAssembly } from "./morphir_assembly";
+import { MorphirAssembly, MorphirConstantDecl, MorphirEntityCollectionTypeDecl, MorphirEntityInternalOfTypeDecl, MorphirEntityOfTypeDecl, MorphirEntityStdDecl, MorphirEphemeralListDecl, MorphirRecordDecl, MorphirTupleDecl } from "./morphir_assembly";
+import { MorphirConst } from "./morphir_exp";
 
 class MorphirEmitter {
     readonly temitter: MorphirTypeEmitter;
@@ -38,11 +38,11 @@ class MorphirEmitter {
         const consdecl = {
             cname: consfuncs.cons, 
             cargs: edecl.fields.map((fd) => {
-                return { fname: this.temitter.generateEntityFieldGetFunction(edecl, fd), ftype: this.temitter.getMorphirTypeFor(this.temitter.getMIRType(fd.declaredType), true) };
+                return { fname: this.temitter.generateEntityFieldGetFunction(edecl, fd), ftype: this.temitter.getMorphirTypeFor(this.temitter.getMIRType(fd.declaredType)) };
             })
         };
 
-        const smtdecl = new SMTEntityStdDecl(smttype.smttypename, smttype.smttypetag, consdecl, consfuncs.box, consfuncs.bfield);
+        const smtdecl = new MorphirEntityStdDecl(smttype.morphirtypename, smttype.morphirtypetag, consdecl, consfuncs.box, consfuncs.unbox);
         this.assembly.entityDecls.push(smtdecl);
     }
     
@@ -52,7 +52,7 @@ class MorphirEmitter {
 
         const consfuncs = this.temitter.getMorphirConstructorName(mirtype);
 
-        const smtdecl = new SMTEntityOfTypeDecl(true, smttype.smttypename, smttype.smttypetag, consfuncs.box, consfuncs.bfield, "BString");
+        const smtdecl = new MorphirEntityOfTypeDecl(true, smttype.morphirtypename, smttype.morphirtypetag, consfuncs.box, consfuncs.unbox, "BString");
         this.assembly.entityDecls.push(smtdecl);
     }
             
@@ -62,7 +62,7 @@ class MorphirEmitter {
 
         const consfuncs = this.temitter.getMorphirConstructorName(mirtype);
 
-        const smtdecl = new SMTEntityOfTypeDecl(true, smttype.smttypename, smttype.smttypetag, consfuncs.box, consfuncs.bfield, "BString");
+        const smtdecl = new MorphirEntityOfTypeDecl(true, smttype.morphirtypename, smttype.morphirtypetag, consfuncs.box, consfuncs.unbox, "BString");
         this.assembly.entityDecls.push(smtdecl);
     }
             
@@ -72,7 +72,7 @@ class MorphirEmitter {
 
         const consfuncs = this.temitter.getMorphirConstructorName(mirtype);
 
-        const smtdecl = new SMTEntityOfTypeDecl(false, smttype.smttypename, smttype.smttypetag, consfuncs.box, consfuncs.bfield, "BByteBuffer");
+        const smtdecl = new MorphirEntityOfTypeDecl(false, smttype.morphirtypename, smttype.morphirtypetag, consfuncs.box, consfuncs.unbox, "BByteBuffer");
         this.assembly.entityDecls.push(smtdecl);
     }
 
@@ -84,7 +84,7 @@ class MorphirEmitter {
         const oftype = this.temitter.getMorphirTypeFor(this.temitter.getMIRType(edecl.basetype));
         const iskey = this.bemitter.assembly.subtypeOf(this.temitter.getMIRType(edecl.valuetype), this.temitter.getMIRType("KeyType"));
 
-        const smtdecl = new SMTEntityOfTypeDecl(iskey, smttype.smttypename, smttype.smttypetag, consfuncs.box, consfuncs.bfield, oftype.smttypename);
+        const smtdecl = new MorphirEntityOfTypeDecl(iskey, smttype.morphirtypename, smttype.morphirtypetag, consfuncs.box, consfuncs.unbox, oftype.morphirtypename);
         this.assembly.entityDecls.push(smtdecl);
     }
 
@@ -95,7 +95,7 @@ class MorphirEmitter {
         const consfuncs = this.temitter.getMorphirConstructorName(mirtype);
         const oftype = this.temitter.getMorphirTypeFor(this.temitter.getMIRType(edecl.fromtype));
         
-        const smtdecl = new SMTEntityInternalOfTypeDecl(this.temitter.lookupTypeName(edecl.tkey), smttype.smttypetag, consfuncs.box, consfuncs.bfield, oftype.smttypename);
+        const smtdecl = new MorphirEntityInternalOfTypeDecl(this.temitter.lookupTypeName(edecl.tkey), smttype.morphirtypetag, consfuncs.box, consfuncs.unbox, oftype.morphirtypename);
         this.assembly.entityDecls.push(smtdecl);
     }
 
@@ -105,7 +105,7 @@ class MorphirEmitter {
 
         const consfuncs = this.temitter.getMorphirConstructorName(mirtype);
 
-        const smtdecl = new SMTEntityOfTypeDecl(true, smttype.smttypename, smttype.smttypetag, consfuncs.box, consfuncs.bfield, "BNat");
+        const smtdecl = new MorphirEntityOfTypeDecl(true, smttype.morphirtypename, smttype.morphirtypetag, consfuncs.box, consfuncs.unbox, "BNat");
         this.assembly.entityDecls.push(smtdecl);
     }
 
@@ -115,7 +115,7 @@ class MorphirEmitter {
 
         const consfuncs = this.temitter.getMorphirConstructorName(mirtype);
 
-        const smtdecl = new SMTEntityCollectionTypeDecl(smttype.smttypename, smttype.smttypetag, consfuncs.box, consfuncs.bfield);
+        const smtdecl = new MorphirEntityCollectionTypeDecl(smttype.morphirtypename, smttype.morphirtypetag, `List ${this.temitter.getMorphirTypeFor(edecl.getTypeT()).morphirtypename}`, consfuncs.box, consfuncs.unbox);
         this.assembly.entityDecls.push(smtdecl);
     }
 
@@ -137,7 +137,7 @@ class MorphirEmitter {
 
         const consfuncs = this.temitter.getMorphirConstructorName(mirtype);
 
-        const smtdecl = new SMTEntityCollectionTypeDecl(smttype.smttypename, smttype.smttypetag, consfuncs.box, consfuncs.bfield);
+        const smtdecl = new MorphirEntityCollectionTypeDecl(smttype.morphirtypename, smttype.morphirtypetag, `List (MapEntry ${this.temitter.getMorphirTypeFor(edecl.getTypeK()).morphirtypename} ${this.temitter.getMorphirTypeFor(edecl.getTypeV()).morphirtypename})`, consfuncs.box, consfuncs.unbox);
         this.assembly.entityDecls.push(smtdecl);
     }
 
@@ -174,27 +174,15 @@ class MorphirEmitter {
                 const ikey = worklist[mi];
 
                 const idcl = (assembly.invokeDecls.get(ikey) || assembly.primitiveInvokeDecls.get(ikey)) as MIRInvokeDecl;
-                const finfo = this.bemitter.generateSMTInvoke(idcl);
+                const finfo = this.bemitter.generateMorphirInvoke(idcl);
                 this.processVirtualInvokes();
                 this.processVirtualEntityUpdates();
 
                 if (finfo !== undefined) {
-                    if (finfo instanceof SMTFunction) {
-                        this.assembly.functions.push(finfo);
-                    }
-                    else {
-                        this.assembly.uninterpfunctions.push(finfo);
-                    }
+                    this.assembly.functions.push(finfo);
                 }
             }
         }
-
-        assembly.typeMap.forEach((tt) => {
-            const restype = this.temitter.getMorphirTypeFor(tt);
-            if (this.assembly.resultTypes.find((rtt) => rtt.ctype.smttypename === restype.smttypename) === undefined) {
-                this.assembly.resultTypes.push(({ hasFlag: false, rtname: tt.typeID, ctype: restype }));
-            }
-        });
 
         this.bemitter.requiredLoadVirtualTupleIndex.forEach((rvlt) => this.assembly.functions.push(this.bemitter.generateLoadTupleIndexVirtual(rvlt)));
         this.bemitter.requiredLoadVirtualRecordProperty.forEach((rvlr) => this.assembly.functions.push(this.bemitter.generateLoadRecordPropertyVirtual(rvlr)));
@@ -204,47 +192,12 @@ class MorphirEmitter {
         this.bemitter.requiredProjectVirtualRecordProperty.forEach((rvpr) => this.assembly.functions.push(this.bemitter.generateProjectRecordPropertyVirtual(rvpr)));
         this.bemitter.requiredProjectVirtualEntityField.forEach((rvpe) => this.assembly.functions.push(this.bemitter.generateProjectEntityFieldVirtual(rvpe)));
     
-        this.bemitter.requiredSingletonConstructorsList.forEach((scl) => this.assembly.functions.push(this.bemitter.generateSingletonConstructorList(scl)));
-        
         this.bemitter.requiredUpdateVirtualTuple.forEach((rvut) => this.assembly.functions.push(this.bemitter.generateUpdateTupleIndexVirtual(rvut)));
         this.bemitter.requiredUpdateVirtualRecord.forEach((rvur) => this.assembly.functions.push(this.bemitter.generateUpdateRecordPropertyVirtual(rvur)));
 
-        const mirep = assembly.invokeDecls.get(entrypoint) as MIRInvokeDecl;
-        
-        const iargs = mirep.params.map((param, i) => {
-            const mirptype = this.temitter.getMIRType(param.type);
-            const vname = this.bemitter.varStringToSMT(param.name).vname;
-
-            let ufuncs: SMTFunctionUninterpreted[] = [];
-            this.walkAndGenerateHavocType(mirptype, this.assembly.havocfuncs, []);
-            ufuncs.forEach((uf) => {
-                if(this.assembly.uninterpfunctions.find((f) => SMTFunctionUninterpreted.areDuplicates(f, uf)) === undefined) {
-                    this.assembly.uninterpfunctions.push(uf);
-                }
-            });
-
-            const vexp = this.temitter.generateHavocConstructorCall(mirptype, new SMTCallSimple("seq.unit", [new SMTConst("0")]), new SMTConst(i.toString()));
-            return { vname: vname, vtype: this.temitter.generateResultType(mirptype), vinit: vexp, vchk: this.temitter.generateResultIsSuccessTest(mirptype, new SMTVar(vname)), callexp: this.temitter.generateResultGetSuccess(mirptype, new SMTVar(vname)) };
-        });
-
-        const restype = this.temitter.getMIRType(mirep.resultType);
-        let rarg:  { vname: string, vtype: SMTTypeInfo, vchk: SMTExp | undefined, vinit: SMTExp, callexp: SMTExp } | undefined = undefined;
-        if (this.vopts.ActionMode === SymbolicActionMode.EvaluateSymbolic) {
-            let ufuncs: SMTFunctionUninterpreted[] = [];
-            this.walkAndGenerateHavocType(restype, this.assembly.havocfuncs, ufuncs);
-            ufuncs.forEach((uf) => {
-                if (this.assembly.uninterpfunctions.find((f) => SMTFunctionUninterpreted.areDuplicates(f, uf)) === undefined) {
-                    this.assembly.uninterpfunctions.push(uf);
-                }
-            });
-
-            const resvexp = this.temitter.generateHavocConstructorCall(restype, new SMTConst("(as seq.empty (Seq BNat))"), new SMTConst("1"));
-            rarg = { vname: "_@smtres@_arg", vtype: this.temitter.generateResultType(restype), vinit: resvexp, vchk: this.temitter.generateResultIsSuccessTest(restype, new SMTVar("_@smtres@_arg")), callexp: this.temitter.generateResultGetSuccess(restype, new SMTVar("_@smtres@_arg")) };
-        }
-
         assembly.entityDecls.forEach((edcl) => {
             const mirtype = this.temitter.getMIRType(edcl.tkey);
-            const ttag = this.temitter.getMorphirTypeFor(mirtype).smttypetag;
+            const ttag = this.temitter.getMorphirTypeFor(mirtype).morphirtypetag;
 
             if (!this.assembly.typeTags.includes(ttag)) {
                 this.assembly.typeTags.push(ttag);
@@ -298,12 +251,6 @@ class MorphirEmitter {
             else if (edcl.attributes.includes("__map_type")) {
                 this.processPrimitiveMapEntityDecl(edcl as MIRPrimitiveMapEntityTypeDecl);
             }
-            else if(edcl.attributes.includes("__seqlist_type")) {
-                this.processPrimitiveSeqListEntityDecl(edcl as MIRPrimitiveInternalEntityTypeDecl);
-            }
-            else if(edcl.attributes.includes("__seqmap_type")) {
-                this.processPrimitiveSeqMapEntityDecl(edcl as MIRPrimitiveInternalEntityTypeDecl);
-            }
             else {
                 //Don't need to do anything
             }
@@ -319,7 +266,7 @@ class MorphirEmitter {
 
                 assembly.typeMap.forEach((mtype) => {
                     if(this.temitter.isUniqueType(mtype) && assembly.subtypeOf(mtype, stc.t)) {
-                        const ttag = this.temitter.getMorphirTypeFor(mtype).smttypetag;
+                        const ttag = this.temitter.getMorphirTypeFor(mtype).morphirtypetag;
 
                         if(this.assembly.subtypeRelation.find((ee) => ee.ttype === ttag && ee.atype === atname) === undefined) {
                             const issub = assembly.subtypeOf(mtype, stc.oftype);
@@ -332,14 +279,10 @@ class MorphirEmitter {
 
         this.bemitter.requiredIndexTagChecks.forEach((itc) => {
             const itag = `TupleIndexTag_${itc.idx}`;
-            if(!this.assembly.indexTags.includes(itag)) {
-                this.assembly.indexTags.push(itag);
-            }
-
             assembly.typeMap.forEach((mtype) => {
                 if (this.temitter.isUniqueType(mtype) && assembly.subtypeOf(mtype, itc.oftype)) {
                     const ttype = mtype.options[0] as MIRTupleType;
-                    const ttag = this.temitter.getMorphirTypeFor(mtype).smttypetag;
+                    const ttag = this.temitter.getMorphirTypeFor(mtype).morphirtypetag;
 
                     if (this.assembly.hasIndexRelation.find((ee) => ee.idxtag === itag && ee.atype === ttag) === undefined) {
                         const hasidx = itc.idx < ttype.entries.length;
@@ -351,14 +294,10 @@ class MorphirEmitter {
 
         this.bemitter.requiredRecordTagChecks.forEach((rtc) => {
             const ptag = `RecordPropertyTag_${rtc.pname}`;
-            if(!this.assembly.propertyTags.includes(ptag)) {
-                this.assembly.propertyTags.push(ptag);
-            }
-
             assembly.typeMap.forEach((mtype) => {
                 if (this.temitter.isUniqueType(mtype) && assembly.subtypeOf(mtype, rtc.oftype)) {
                     const ttype = mtype.options[0] as MIRRecordType;
-                    const ttag = this.temitter.getMorphirTypeFor(mtype).smttypetag;
+                    const ttag = this.temitter.getMorphirTypeFor(mtype).morphirtypetag;
 
                     if (this.assembly.hasPropertyRelation.find((ee) => ee.pnametag === ptag && ee.atype === ttag) === undefined) {
                         const haspname = ttype.entries.find((entry) => entry.pname === rtc.pname) !== undefined;
@@ -370,44 +309,32 @@ class MorphirEmitter {
 
         assembly.tupleDecls.forEach((ttup) => {
             const mirtype = this.temitter.getMIRType(ttup.typeID);
-            const ttag = this.temitter.getMorphirTypeFor(mirtype).smttypetag;
+            const ttag = this.temitter.getMorphirTypeFor(mirtype).morphirtypetag;
 
             this.assembly.typeTags.push(ttag);
-            ttup.entries.map((entry) => {
-                const etype = this.temitter.getMorphirTypeFor(entry);
-                if (this.assembly.resultTypes.find((rtt) => rtt.ctype.smttypename === etype.smttypename) === undefined) {
-                    this.assembly.resultTypes.push(({ hasFlag: true, rtname: entry.typeID, ctype: etype }));
-                }
-            });
             
             const smttype = this.temitter.getMorphirTypeFor(mirtype);
             const ops = this.temitter.getMorphirConstructorName(mirtype);
             const consargs = ttup.entries.map((entry, i) => {
-                return { fname: this.temitter.generateTupleIndexGetFunction(ttup, i), ftype: this.temitter.getMorphirTypeFor(entry, true) };
+                return { fname: this.temitter.generateTupleIndexGetFunction(ttup, i), ftype: this.temitter.getMorphirTypeFor(entry) };
             });
 
-            this.assembly.tupleDecls.push(new SMTTupleDecl(smttype.smttypename, ttag, { cname: ops.cons, cargs: consargs }, ops.box, ops.bfield));
+            this.assembly.tupleDecls.push(new MorphirTupleDecl(smttype.morphirtypename, ttag, { cname: ops.cons, cargs: consargs }, ops.box, ops.unbox));
         });
 
         assembly.recordDecls.forEach((trec) => {
             const mirtype = this.temitter.getMIRType(trec.typeID);
-            const ttag = this.temitter.getMorphirTypeFor(mirtype).smttypetag;
+            const ttag = this.temitter.getMorphirTypeFor(mirtype).morphirtypetag;
 
             this.assembly.typeTags.push(ttag);
-            trec.entries.map((entry) => {
-                const etype = this.temitter.getMorphirTypeFor(entry.ptype);
-                if (this.assembly.resultTypes.find((rtt) => rtt.ctype.smttypename === etype.smttypename) === undefined) {
-                    this.assembly.resultTypes.push(({ hasFlag: true, rtname: entry.ptype.typeID, ctype: etype }));
-                }
-            });
 
             const smttype = this.temitter.getMorphirTypeFor(mirtype);
             const ops = this.temitter.getMorphirConstructorName(mirtype);
             const consargs = trec.entries.map((entry) => {
-                return { fname: this.temitter.generateRecordPropertyGetFunction(trec, entry.pname), ftype: this.temitter.getMorphirTypeFor(entry.ptype, true) };
+                return { fname: this.temitter.generateRecordPropertyGetFunction(trec, entry.pname), ftype: this.temitter.getMorphirTypeFor(entry.ptype) };
             });
 
-            this.assembly.recordDecls.push(new SMTRecordDecl(smttype.smttypename, ttag, { cname: ops.cons, cargs: consargs }, ops.box, ops.bfield));
+            this.assembly.recordDecls.push(new MorphirRecordDecl(smttype.morphirtypename, ttag, { cname: ops.cons, cargs: consargs }, ops.box, ops.unbox));
         });
 
         assembly.ephemeralListDecls.forEach((ephl) => {
@@ -416,10 +343,10 @@ class MorphirEmitter {
             const smttype = this.temitter.getMorphirTypeFor(mirtype);
             const ops = this.temitter.getMorphirConstructorName(mirtype);
             const consargs = ephl.entries.map((entry, i) => {
-                return { fname: this.temitter.generateEphemeralListGetFunction(ephl, i), ftype: this.temitter.getMorphirTypeFor(entry, true) };
+                return { fname: this.temitter.generateEphemeralListGetFunction(ephl, i), ftype: this.temitter.getMorphirTypeFor(entry) };
             });
 
-            this.assembly.ephemeralDecls.push(new SMTEphemeralListDecl(smttype.smttypename, { cname: ops.cons, cargs: consargs }));
+            this.assembly.ephemeralDecls.push(new MorphirEphemeralListDecl(smttype.morphirtypename, { cname: ops.cons, cargs: consargs }));
         });
 
         assembly.constantDecls.forEach((cdecl) => {
@@ -433,13 +360,13 @@ class MorphirEmitter {
             }
 
             if((this.callsafety.get(cdecl.ivalue) as {safe: boolean, trgt: boolean}).safe) {
-                this.assembly.constantDecls.push(new SMTConstantDecl(smtname, optenumname, ctype, consf, new SMTConst(consf), undefined));
+                this.assembly.constantDecls.push(new MorphirConstantDecl(smtname, optenumname, ctype, consf, new MorphirConst(consf), undefined));
             }
             else {
-                const rconsf = this.temitter.generateResultGetSuccess(this.temitter.getMIRType(cdecl.declaredType), new SMTConst(consf));
-                const rcheck = this.temitter.generateResultIsSuccessTest(this.temitter.getMIRType(cdecl.declaredType), new SMTConst(consf));
+                const rconsf = this.temitter.generateResultGetSuccess(this.temitter.getMIRType(cdecl.declaredType), new MorphirConst(consf));
+                const rcheck = this.temitter.generateResultIsSuccessTest(this.temitter.getMIRType(cdecl.declaredType), new MorphirConst(consf));
 
-                this.assembly.constantDecls.push(new SMTConstantDecl(smtname, optenumname, ctype, consf, rconsf, rcheck));
+                this.assembly.constantDecls.push(new MorphirConstantDecl(smtname, optenumname, ctype, consf, rconsf, rcheck));
             }
         });
 

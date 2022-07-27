@@ -23,15 +23,16 @@ type Morphir2FileInfo = {
     TUPLE_TYPE_DECLS: string[],
     RECORD_TYPE_DECLS: string[],
     TYPE_DECLS: string[],
-
-    TUPLE_INFO: { decls: string[], boxing: string[], unboxing: string[] },
-    RECORD_INFO: { decls: string[], boxing: string[], unboxing: string[] },
-    TYPE_INFO: { decls: string[], constructors: string[], boxing: string[], unboxing: string[] }
-    EPHEMERAL_DECLS: { decls: string[] },
-    MASK_INFO: { decls: string[], constructors: string[] },
+    TUPLE_TYPE_BOXING: string[],
+    RECORD_TYPE_BOXING: string[],
+    TYPE_BOXING: string[],
+    TERM_DEFAULT: string[],
+    TERM_UNBOX_OPS: string[],
+    EPHEMERAL_DECLS: string[],
     GLOBAL_DECLS: string[],
+    DEFAULT_VALUES: string[],
     FUNCTION_DECLS: string[],
-    GLOBAL_DEFINITIONS: string[],
+    GLOBAL_DEFINITIONS: string[]
 };
 
 class MorphirFunction {
@@ -494,8 +495,9 @@ class MorphirAssembly {
             .sort((t1, t2) => t1.morphirname.localeCompare(t2.morphirname))
             .map((et) => {
                 return {
-                    decl: `(${et.smtname} 0)`,
-                    consf: `( (${et.consf.cname} ${et.consf.cargs.map((ke) => `(${ke.fname} ${ke.ftype.smttypename})`).join(" ")}) )`
+                    decl: `type alias ${et.morphirname} = {${et.consf.cargs.map((te) => `${te.fname}: ${te.ftype.morphirtypename})`).join(" ")}}`,
+                    consfdecl: `${et.consf.cname} : ${et.consf.cargs.map((te) => `${te.ftype.morphirtypename}`).join(" -> ")} -> ${et.morphirname}`,
+                    consfimpl: `${et.consf.cname} ${et.consf.cargs.map((te) => `arg_${te.fname}`).join(" ")} = {${et.consf.cargs.map((te) => `${te.fname} = arg_${te.fname})`).join(" ")}}`
                 };
             });
 
@@ -515,14 +517,7 @@ class MorphirAssembly {
 
         const gdecls = this.constantDecls
             .sort((c1, c2) => c1.gkey.localeCompare(c2.gkey))
-            .map((c) => `(declare-const ${c.gkey} ${c.ctype.smttypename})`);
-
-        const ufdecls = this.uninterpfunctions
-            .sort((uf1, uf2) => uf1.fname.localeCompare(uf2.fname))
-            .map((uf) => uf.emitSMT2());
-
-        const ufopdecls = this.uninterpOps
-            .sort((pf1, pf2) => pf1.localeCompare(pf2));
+            .map((c) => `(declare-const ${c.gkey} ${c.ctype.morphirtypename})`);
 
         const gdefs = this.constantDecls
             .sort((c1, c2) => c1.gkey.localeCompare(c2.gkey))
@@ -534,45 +529,6 @@ class MorphirAssembly {
                     return `(assert ${c.checkf.emitSMT2(undefined)}) (assert (= ${c.gkey} ${c.consfexp.emitSMT2(undefined)}))`;
                 }
             });
-
-        const mmodel = this.model as SMTModelState;
-        let action: string[] = [];
-        mmodel.arginits.map((iarg) => {
-            action.push(`(declare-const ${iarg.vname} ${iarg.vtype.smttypename})`);
-
-            action.push(`(assert (= ${iarg.vname} ${iarg.vinit.emitSMT2(undefined)}))`);
-
-            if(iarg.vchk !== undefined) {
-                action.push(`(assert ${iarg.vchk.emitSMT2(undefined)})`);
-            }
-        });
-
-        if(mmodel.argchk !== undefined) {
-            action.push(...mmodel.argchk.map((chk) => `(assert ${chk.emitSMT2(undefined)})`));
-        }
-
-        action.push(`(declare-const _@smtres@ ${mmodel.checktype.smttypename})`);
-        action.push(`(assert (= _@smtres@ ${mmodel.fcheck.emitSMT2(undefined)}))`);
-
-        if (this.vopts.ActionMode === SymbolicActionMode.ErrTestSymbolic) {
-            action.push(`(assert ${mmodel.targeterrorcheck.emitSMT2(undefined)})`);
-        }
-        else if(this.vopts.ActionMode === SymbolicActionMode.ChkTestSymbolic) {
-            action.push(`(assert ${mmodel.isvaluecheck.emitSMT2(undefined)})`);
-            action.push(`(assert ${mmodel.isvaluefalsechk.emitSMT2(undefined)})`)
-        }
-        else {
-            action.push(`(assert ${mmodel.isvaluecheck.emitSMT2(undefined)})`);
-        
-            const resi = mmodel.resinit as { vname: string, vtype: SMTTypeInfo, vchk: SMTExp | undefined, vinit: SMTExp, callexp: SMTExp };
-            action.push(`(declare-const ${resi.vname} ${resi.vtype.smttypename})`);
-            action.push(`(assert (= ${resi.vname} ${resi.vinit.emitSMT2(undefined)}))`);
-            if(resi.vchk !== undefined) {
-                action.push(`(assert ${resi.vchk.emitSMT2(undefined)})`);
-            }
-
-            action.push(`(assert (= ${resi.vname} _@smtres@))`);
-        }
 
         let foutput: string[] = [];
         let doneset: Set<string> = new Set<string>();
@@ -597,31 +553,28 @@ class MorphirAssembly {
                     const cf = worklist.shift() as string;
                     const crf = this.functions.find((f) => f.fname === cf) as MorphirFunction;
 
-                    const decl = crf.emitSMT2_SingleDeclOnly();
-                    const impl = crf.body.emitSMT2("  ");
+                    const impl = crf.emitMorphir();
 
                     if (cscc !== undefined) {
                         cscc.forEach((v) => doneset.add(v));
                     }
 
-                    foutput.push(`(define-fun-rec ${decl}\n ${impl}\n)`);
+                    foutput.push(impl);
                 }
                 else {
-                    let decls: string[] = [];
                     let impls: string[] = [];
                     while (worklist.length !== 0) {
                         const cf = worklist.shift() as string;
                         const crf = this.functions.find((f) => f.fname === cf) as MorphirFunction;
 
-                        decls.push(crf.emitSMT2_DeclOnly());
-                        impls.push(crf.body.emitSMT2("  "));
+                        impls.push(crf.emitMorphir());
                     }
 
                     if (cscc !== undefined) {
                         cscc.forEach((v) => doneset.add(v));
                     }
 
-                    foutput.push(`(define-funs-rec (\n  ${decls.join("\n  ")}\n) (\n${impls.join("\n")}))`);
+                    foutput.push(impls.join("\n"));
                 }
             }
         }   
@@ -635,32 +588,42 @@ class MorphirAssembly {
             SUBTYPE_DECLS: subtypeasserts,
             TUPLE_HAS_INDEX_DECLS: indexasserts,
             RECORD_HAS_PROPERTY_DECLS: propertyasserts,
-            OF_TYPE_DECLS: [...keyoftypeinfo.map((kti) => kti.decl), ...oftypeinfo.map((oti) => oti.decl)],
-            KEY_BOX_OPS: keyoftypeinfo.map((kb) =>  `    | ${kb.boxf}`),
-            KEY_UNBOX_OPS: keyoftypeinfo.map((kb) => kb.unboxfdecl + kb.unboxfimpl),
-            KEY_DEFAULT_OPS: keyoftypeinfo.map((kb) => kb.defaultdecl + kb.defaultimpl),
-            TUPLE_TYPE_DECLS: termtupleinfo.map((ti) => ti.decl),
-            RECORD_TYPE_DECLS: termrecordinfo.map((ri) => ri.decl),
-            TYPE_DECLS: [...ofinternaltypeinfo.map((oti) => oti.decl), ...collectiontypeinfo.map((cti) => cti.decl), ...termtypeinfo.map((ti) => ti.decl)],
-            
+            OF_TYPE_DECLS: [...keyoftypeinfo.map((kti) => kti.decl).sort(), ...oftypeinfo.map((oti) => oti.decl).sort()],
+            KEY_BOX_OPS: keyoftypeinfo.map((kb) =>  `    | ${kb.boxf}`).sort(),
+            KEY_UNBOX_OPS: keyoftypeinfo.map((kb) => kb.unboxfdecl + kb.unboxfimpl).sort(),
+            KEY_DEFAULT_OPS: keyoftypeinfo.map((kb) => kb.defaultdecl + kb.defaultimpl).sort(),
+            TUPLE_TYPE_DECLS: termtupleinfo.map((ti) => ti.decl).sort(),
+            RECORD_TYPE_DECLS: termrecordinfo.map((ri) => ri.decl).sort(),
+            TYPE_DECLS: [...ofinternaltypeinfo.map((oti) => oti.decl).sort(), ...collectiontypeinfo.map((cti) => cti.decl).sort(), ...termtypeinfo.map((ti) => ti.decl).sort()],   
+            TUPLE_TYPE_BOXING: termtupleinfo.map((ti) => ti.boxf).sort().map((ttb) => `    | ${ttb}`),
+            RECORD_TYPE_BOXING: termrecordinfo.map((ri) => ri.boxf).sort().map((trb) => `    | ${trb}`),
+            TYPE_BOXING: [
+                ...ofinternaltypeinfo.map((oti) => oti.boxf).sort().map((ttb) => `    | ${ttb}`), 
+                ...collectiontypeinfo.map((cti) => cti.boxf).sort().map((ttb) => `    | ${ttb}`), 
+                ...termtypeinfo.map((ti) => ti.boxf).sort().map((ttb) => `    | ${ttb}`)
+            ],
+            TERM_DEFAULT: [
+                ...termtupleinfo.map((tti) => tti.defaultdecl + tti.defaultimpl).sort(),
+                ...termrecordinfo.map((tti) => tti.defaultdecl + tti.defaultimpl).sort(),
+                ...ofinternaltypeinfo.map((tti) => tti.defaultdecl + tti.defaultimpl).sort(),
+                ...collectiontypeinfo.map((tti) => tti.defaultdecl + tti.defaultimpl).sort(),
+                ...termtypeinfo.map((tti) => tti.defaultdecl + tti.defaultimpl).sort()
+            ],
+            TERM_UNBOX_OPS: [
+                ...termtupleinfo.map((tti) => tti.unboxfdecl + tti.unboxfimpl).sort(),
+                ...termrecordinfo.map((tti) => tti.unboxfdecl + tti.unboxfimpl).sort(),
+                ...ofinternaltypeinfo.map((tti) => tti.unboxfdecl + tti.unboxfimpl).sort(),
+                ...collectiontypeinfo.map((tti) => tti.unboxfdecl + tti.unboxfimpl).sort(),
+                ...termtypeinfo.map((tti) => tti.unboxfdecl + tti.unboxfimpl).sort()
+            ],
 
-            TYPE_INFO: { 
-                decls: [
-                    ...termtypeinfo.filter((tti) => tti.decl !== undefined).map((tti) => tti.decl as string),
-                    ...collectiontypeinfo.map((clti) => clti.decl),
-                    ...collectionentrytypeinfo.map((clti) => clti.decl)
-                ], 
-                constructors: [
-                    ...termtypeinfo.filter((tti) => tti.consf !== undefined).map((tti) => tti.consf as string),
-                    ...collectiontypeinfo.map((clti) => clti.consf),
-                    ...collectionentrytypeinfo.map((clti) => clti.consf)
-                ], 
-                boxing: [
-                    ...termtypeinfo.map((tti) => tti.boxf), 
-                    ...ofinternaltypeinfo.map((ttofi) => ttofi.boxf), 
-                    ...collectiontypeinfo.map((cti) => cti.boxf)
-                ] 
-            },
+            EPHEMERAL_DECLS: string[],
+            GLOBAL_DECLS: string[],
+            DEFAULT_VALUES: string[],
+            FUNCTION_DECLS: string[],
+            GLOBAL_DEFINITIONS: string[]
+
+            
             EPHEMERAL_DECLS: { 
                 decls: etypeinfo.map((kti) => kti.decl), 
                 constructors: etypeinfo.map((kti) => kti.consf) 
@@ -677,7 +640,7 @@ class MorphirAssembly {
     }
 
     buildMorphir2file(morphirruntime: string): string {
-        const sfileinfo = this.generateSMT2AssemblyInfo();
+        const sfileinfo = this.generateMorphir2AssemblyInfo();
     
         function joinWithIndent(data: string[], indent: string): string {
             if (data.length === 0) {
@@ -688,7 +651,7 @@ class MorphirAssembly {
             }
         }
 
-        const contents = smtruntime
+        const contents = morphirruntime
             .replace(";;TYPE_TAG_DECLS;;", joinWithIndent(sfileinfo.TYPE_TAG_DECLS, "      "))
             .replace(";;ORDINAL_TAG_DECLS;;", joinWithIndent(sfileinfo.ORDINAL_TYPE_TAG_DECLS, ""))
             .replace(";;ABSTRACT_TYPE_TAG_DECLS;;", joinWithIndent(sfileinfo.ABSTRACT_TYPE_TAG_DECLS, "      "))

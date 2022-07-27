@@ -798,7 +798,9 @@ unbox_BObjectRegex k =
         _ -> 
             Regex.never
 
---TERM_DEFAULT_AND_UNBOX_OPS--
+--TERM_DEFAULT--
+
+--TERM_UNBOX_OPS--
 
 type BTerm = 
     BKeyObject BKey
