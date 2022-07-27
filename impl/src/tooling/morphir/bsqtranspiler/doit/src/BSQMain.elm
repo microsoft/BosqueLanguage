@@ -12,7 +12,7 @@ type TypeTag =
 ordinalOf : TypeTag -> Int
 ordinalOf tt = 
     case tt of 
-        --ORDINAL_TAG_DECLS--
+        --ORDINAL_TYPE_TAG_DECLS--
         _ -> 
             -1
 
@@ -26,7 +26,7 @@ type TupleIndexTag =
 
 type RecordPropertyTag = 
     RecordPropertyTag_Invalid
-    --TYPE_TAG_DECLS--
+    --PROPERTY_TAG_DECLS--
 
 subtypeOf : TypeTag -> AbstractTypeTag -> Bool
 subtypeOf tt oftype = 
@@ -249,6 +249,8 @@ bsqnothing_literal =
 bsqnone_less : BNone -> BNone -> Bool
 bsqnone_less _ _ = 
     False
+
+--OF_TYPE_DECLS--
 
 bool_less : Bool -> Bool -> Bool
 bool_less k1 k2 = 
@@ -601,7 +603,9 @@ unbox_BKeyBSHAContentHash k =
         _ -> 
             bsqshacontenthash_default
 
---KEY_DEFAULT_AND_UNBOX_OPS--
+--KEY_UNBOX_OPS--
+
+--KEY_DEFAULT_OPS--
 
 type BKey = 
     BKey TypeTag BKeyObject

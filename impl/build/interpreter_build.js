@@ -22,7 +22,8 @@ let includes = " ";
 let outfile = "";
 if(process.platform === "darwin") {
     compiler = "clang++";
-    ccflags = "-O0 -g -DBSQ_DEBUG_BUILD -Wall -std=c++20 -fsanitize=address";
+    ccflags = "-O0 -g -DBSQ_DEBUG_BUILD -Wall -std=c++20 -fsanitize=address -fsanitize=memory -fsanitize=undefined";
+    //TODO: probably want to make -fsanitize=leak clean as well
     includes = includeheaders.map((ih) => `-I ${ih}`).join(" ");
     outfile = "-o " + outexec+ "/icpp";
 }

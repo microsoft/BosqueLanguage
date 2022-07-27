@@ -11,19 +11,27 @@ type Morphir2FileInfo = {
     TYPE_TAG_DECLS: string[],
     ORDINAL_TYPE_TAG_DECLS: string[],
     ABSTRACT_TYPE_TAG_DECLS: string[],
+    INDEX_TAG_DECLS: string[],
+    PROPERTY_TAG_DECLS: string[],
     SUBTYPE_DECLS: string[],
+    TUPLE_HAS_INDEX_DECLS: string[],
+    RECORD_HAS_PROPERTY_DECLS: string[],
     OF_TYPE_DECLS: string[],
     KEY_BOX_OPS: string[],
+    KEY_UNBOX_OPS: string[],
+    KEY_DEFAULT_OPS: string[],
+    TUPLE_TYPE_DECLS: string[],
+    RECORD_TYPE_DECLS: string[],
+    TYPE_DECLS: string[],
+
     TUPLE_INFO: { decls: string[], boxing: string[], unboxing: string[] },
     RECORD_INFO: { decls: string[], boxing: string[], unboxing: string[] },
     TYPE_INFO: { decls: string[], constructors: string[], boxing: string[], unboxing: string[] }
     EPHEMERAL_DECLS: { decls: string[] },
     MASK_INFO: { decls: string[], constructors: string[] },
     GLOBAL_DECLS: string[],
-    UF_DECLS: string[],
     FUNCTION_DECLS: string[],
     GLOBAL_DEFINITIONS: string[],
-    ACTION: string[]
 };
 
 class MorphirFunction {
@@ -112,27 +120,13 @@ class MorphirEntityInternalOfTypeDecl extends MorphirEntityDecl {
     }
 }
 
-class MorphirEntityCollectionEntryTypeDecl extends MorphirEntityDecl {
-    readonly consf: { cname: string, cargs: { fname: string, ftype: string }[] };
-
-    constructor(morphirname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: string }[] }) {
-        super(false, morphirname, typetag, "INVALID_SPECIAL", "INVALID_SPECIAL");
-
-        this.consf = consf;
-    }
-}
-
 class MorphirEntityCollectionTypeDecl extends MorphirEntityDecl {
-    readonly consf: { cname: string, cargs: { fname: string, ftype: string }[] };
-    readonly emptyconst: {fkind: string, fname: string, fexp: string};
-    readonly entrydecl: MorphirEntityCollectionEntryTypeDecl | undefined;
+    readonly underlyingtype: string;
 
-    constructor(morphirname: string, typetag: string, consf: { cname: string, cargs: { fname: string, ftype: string }[] }, boxf: string, ubf: string, emptyconst: {fkind: string, fname: string, fexp: string}, entrydecl: MorphirEntityCollectionEntryTypeDecl | undefined) {
+    constructor(morphirname: string, typetag: string, underlyingtype: string, boxf: string, ubf: string) {
         super(false, morphirname, typetag, boxf, ubf);
 
-        this.consf = consf;
-        this.emptyconst = emptyconst;
-        this.entrydecl = entrydecl;
+        this.underlyingtype = underlyingtype;
     }
 }
 
@@ -231,8 +225,9 @@ class MorphirAssembly {
     ephemeralDecls: MorphirEphemeralListDecl[] = [];
 
     typeTags: string[] = [
-        "TypeTag_None",
-        "TypeTag_Nothing",
+        //"TypeTag_None",
+        //"TypeTag_Nothing",
+        //Already set in file
         "TypeTag_Bool",
         "TypeTag_Int",
         "TypeTag_Nat",
@@ -287,7 +282,6 @@ class MorphirAssembly {
     constantDecls: MorphirConstantDecl[] = [];
 
     maskSizes: Set<number> = new Set<number>();
-    resultTypes: { hasFlag: boolean, rtname: string, ctype: SMTTypeInfo }[] = [];
     functions: MorphirFunction[] = [];
 
     entrypoint: string;
@@ -378,136 +372,131 @@ class MorphirAssembly {
     }
 
     generateMorphir2AssemblyInfo(): Morphir2FileInfo {
-        const subtypeasserts = this.subtypeRelation.map((tc) => tc.value ? `(assert (SubtypeOf@ ${tc.ttype} ${tc.atype}))` : `(assert (not (SubtypeOf@ ${tc.ttype} ${tc.atype})))`).sort();
-        const indexasserts = this.hasIndexRelation.map((hi) => hi.value ? `(assert (HasIndex@ ${hi.idxtag} ${hi.atype}))` : `(assert (not (HasIndex@ ${hi.idxtag} ${hi.atype})))`).sort();
-        const propertyasserts = this.hasPropertyRelation.map((hp) => hp.value ? `(assert (HasProperty@ ${hp.pnametag} ${hp.atype}))` : `(assert (not (HasProperty@ ${hp.pnametag} ${hp.atype})))`).sort();
+        const subtypeasserts = this.subtypeRelation.map((tc) => `    | (${tc.ttype} ${tc.atype}) -> \n        True`).sort();
+        const indexasserts = this.hasIndexRelation.map((hi) => `    | (${hi.idxtag} ${hi.atype}) -> \n        True`).sort();
+        const propertyasserts = this.hasPropertyRelation.map((hp) => `    | (${hp.pnametag} ${hp.atype}) -> \n        True`).sort();
 
-        const keytypeorder: string[] = [...this.keytypeTags].sort().map((ktt, i) => `(assert (= (TypeTag_OrdinalOf ${ktt}) ${i}))`);
-
-        const v_min_max: string[] = [
-            `(declare-const @BINTMIN Int) (assert (= @BINTMIN ${this.vopts.INT_MIN}))`,
-            `(declare-const @BINTMAX Int) (assert (= @BINTMAX ${this.vopts.INT_MAX}))`,
-            `(declare-const @BNATMAX Int) (assert (= @BNATMAX ${this.vopts.NAT_MAX}))`,
-            `(declare-const @SLENMAX Int) (assert (= @SLENMAX ${this.vopts.SLEN_MAX}))`,
-            `(declare-const @BLENMAX Int) (assert (= @BLENMAX ${this.vopts.BLEN_MAX}))`,
-            `(declare-const @CONTAINERMAX Int) (assert (= @CONTAINERMAX ${this.vopts.CONTAINER_MAX}))`
-        ];
+        const keytypeorder: string[] = [...this.keytypeTags].sort().map((ktt, i) => `    TypeTag_OrdinalOf ${ktt} -> \n        ${i}`);
 
         const termtupleinfo = this.tupleDecls
-            .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
+            .sort((t1, t2) => t1.morphirname.localeCompare(t2.morphirname))
             .map((kt) => {
                 return {
-                    decl: `(${kt.smtname} 0)`,
-                    consf: `( (${kt.consf.cname} ${kt.consf.cargs.map((ke) => `(${ke.fname} ${ke.ftype.smttypename})`).join(" ")}) )`,
-                    boxf: `(${kt.boxf} (${kt.ubf} ${kt.smtname}))`
+                    decl: `type alias ${kt.morphirname} = {${kt.consf.cargs.map((ke) => `${ke.fname}: ${ke.ftype.morphirtypename})`).join(" ")}}`,
+                    consfdecl: `${kt.consf.cname} : ${kt.consf.cargs.map((ke) => `${ke.ftype.morphirtypename}`).join(" -> ")} -> ${kt.morphirname}`,
+                    consfimpl: `${kt.consf.cname} ${kt.consf.cargs.map((ke) => `arg_${ke.fname}`).join(" ")} = {${kt.consf.cargs.map((ke) => `${ke.fname} = arg_${ke.fname})`).join(" ")}}`,
+                    boxf: `${kt.boxf} ${kt.morphirname}`,
+                    unboxfdecl: `${kt.ubf} : BTerm -> ${kt.morphirname}`,
+                    unboxfimpl: `${kt.ubf} t = \n    case t of\n        ${kt.boxf} v -> \n            v\n        _ -> \n            bsq${kt.typetag.toLocaleLowerCase()}_default`,
+                    defaultdecl: `bsq${kt.typetag.toLocaleLowerCase()}_default : ${kt.morphirname}`,
+                    defaultimpl: `bsq${kt.typetag.toLocaleLowerCase()}_default = \n    {${kt.consf.cargs.map((ke) => `${ke.fname} = bsq${ke.ftype.typeID.toLocaleLowerCase()}_default`).join(" ")}}`
                 };
             });
 
         const termrecordinfo = this.recordDecls
-            .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
+            .sort((t1, t2) => t1.morphirname.localeCompare(t2.morphirname))
             .map((kt) => {
                 return {
-                    decl: `(${kt.smtname} 0)`,
-                    consf: `( (${kt.consf.cname} ${kt.consf.cargs.map((ke) => `(${ke.fname} ${ke.ftype.smttypename})`).join(" ")}) )`,
-                    boxf: `(${kt.boxf} (${kt.ubf} ${kt.smtname}))`
+                    decl: `type alias ${kt.morphirname} = {${kt.consf.cargs.map((ke) => `${ke.fname}: ${ke.ftype.morphirtypename})`).join(" ")}}`,
+                    consfdecl: `${kt.consf.cname} : ${kt.consf.cargs.map((ke) => `${ke.ftype.morphirtypename}`).join(" -> ")} -> ${kt.morphirname}`,
+                    consfimpl: `${kt.consf.cname} ${kt.consf.cargs.map((ke) => `arg_${ke.fname}`).join(" ")} = {${kt.consf.cargs.map((ke) => `${ke.fname} = arg_${ke.fname})`).join(" ")}}`,
+                    boxf: `${kt.boxf} ${kt.morphirname}`,
+                    unboxfdecl: `${kt.ubf} : BTerm -> ${kt.morphirname}`,
+                    unboxfimpl: `${kt.ubf} t = \n    case t of\n        ${kt.boxf} v -> \n            v\n        _ -> \n            bsq${kt.typetag.toLocaleLowerCase()}_default`,
+                    defaultdecl: `bsq${kt.typetag.toLocaleLowerCase()}_default : ${kt.morphirname}`,
+                    defaultimpl: `bsq${kt.typetag.toLocaleLowerCase()}_default = \n    {${kt.consf.cargs.map((ke) => `${ke.fname} = bsq${ke.ftype.typeID.toLocaleLowerCase()}_default`).join(" ")}}`
                 };
             });
 
-        const keytypeinfo = this.entityDecls
-            .filter((et) => (et instanceof SMTEntityOfTypeDecl) && et.iskeytype)
-            .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
-            .map((kt) => {
-                return {
-                    decl: `(define-sort ${kt.smtname} () ${(kt as SMTEntityOfTypeDecl).ofsmttype})`,
-                    boxf: `(${kt.boxf} (${kt.ubf} ${kt.smtname}))`
-                };
-            });
+        const keyoftypeinfo = this.entityDecls
+        .filter((et) => (et instanceof MorphirEntityOfTypeDecl) && et.iskeytype)
+        .sort((t1, t2) => t1.morphirname.localeCompare(t2.morphirname))
+        .map((kt) => {
+            const eokt = kt as MorphirEntityOfTypeDecl;
+
+            return {
+                decl: `type alias ${kt.morphirname} = ${eokt.ofsmttype}`,
+                boxf: `${kt.boxf} ${kt.morphirname}`,
+                unboxfdecl: `${kt.ubf} : BKey -> ${kt.morphirname}`,
+                unboxfimpl: `${kt.ubf} k = \n    case k of\n        ${kt.boxf} v -> \n            v\n        _ -> \n            bsq${kt.typetag.toLocaleLowerCase()}_default`,
+                defaultdecl: `bsq${kt.typetag.toLocaleLowerCase()}_default : ${kt.morphirname}`,
+                defaultimpl: `bsq${kt.typetag.toLocaleLowerCase()}_default = \n    bsq${eokt.ofsmttype.toLocaleLowerCase()}_default`
+            };
+        });
 
         const oftypeinfo = this.entityDecls
-            .filter((et) => (et instanceof SMTEntityOfTypeDecl) && !et.iskeytype)
-            .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
+            .filter((et) => (et instanceof MorphirEntityOfTypeDecl) && !et.iskeytype)
+            .sort((t1, t2) => t1.morphirname.localeCompare(t2.morphirname))
             .map((kt) => {
+                const eokt = kt as MorphirEntityOfTypeDecl;
+
                 return {
-                    decl: `(define-sort ${kt.smtname} () ${(kt as SMTEntityOfTypeDecl).ofsmttype})`,
-                    boxf: `(${kt.boxf} (${kt.ubf} ${kt.smtname}))`
+                    decl: `type alias ${kt.morphirname} = ${eokt.ofsmttype}`,
+                    boxf: `${kt.boxf} ${kt.morphirname}`,
+                    unboxfdecl: `${kt.ubf} : BTerm -> ${kt.morphirname}`,
+                    unboxfimpl: `${kt.ubf} t = \n    case t of\n        ${kt.boxf} v -> \n            v\n        _ -> \n            bsq${kt.typetag.toLocaleLowerCase()}_default`,
+                    defaultdecl: `bsq${kt.typetag.toLocaleLowerCase()}_default : ${kt.morphirname}`,
+                    defaultimpl: `bsq${kt.typetag.toLocaleLowerCase()}_default = \n    bsq${eokt.ofsmttype.toLocaleLowerCase()}_default`
                 };
             });
 
         const termtypeinfo = this.entityDecls
-            .filter((et) => et instanceof SMTEntityStdDecl)
-            .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
-            .map((tt) => {
+            .filter((et) => et instanceof MorphirEntityStdDecl)
+            .sort((t1, t2) => t1.morphirname.localeCompare(t2.morphirname))
+            .map((tval) => {
+                const tt = tval as MorphirEntityStdDecl;
                 return {
-                    decl: `(${tt.smtname} 0)`,
-                    consf: `( (${(tt as SMTEntityStdDecl).consf.cname} ${(tt as SMTEntityStdDecl).consf.cargs.map((te) => `(${te.fname} ${te.ftype.smttypename})`).join(" ")}) )`,
-                    boxf: `(${tt.boxf} (${tt.ubf} ${tt.smtname}))`
+                    decl: `type alias ${tt.morphirname} = {${tt.consf.cargs.map((te) => `${te.fname}: ${te.ftype.morphirtypename})`).join(" ")}}`,
+                    consfdecl: `${tt.consf.cname} : ${tt.consf.cargs.map((te) => `${te.ftype.morphirtypename}`).join(" -> ")} -> ${tt.morphirname}`,
+                    consfimpl: `${tt.consf.cname} ${tt.consf.cargs.map((te) => `arg_${te.fname}`).join(" ")} = {${tt.consf.cargs.map((te) => `${te.fname} = arg_${te.fname})`).join(" ")}}`,
+                    boxf: `${tt.boxf} ${tt.morphirname}`,
+                    unboxfdecl: `${tt.ubf} : BTerm -> ${tt.morphirname}`,
+                    unboxfimpl: `${tt.ubf} t = \n    case t of\n        ${tt.boxf} v -> \n            v\n        _ -> \n            bsq${tt.typetag.toLocaleLowerCase()}_default`,
+                    defaultdecl: `bsq${tt.typetag.toLocaleLowerCase()}_default : ${tt.morphirname}`,
+                    defaultimpl: `bsq${tt.typetag.toLocaleLowerCase()}_default = \n    {${tt.consf.cargs.map((te) => `${te.fname} = bsq${te.ftype.typeID.toLocaleLowerCase()}_default`).join(" ")}}`
                 };
             });
 
         const ofinternaltypeinfo = this.entityDecls
-            .filter((et) => et instanceof SMTEntityInternalOfTypeDecl)
-            .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
-            .map((tt) => {
+            .filter((et) => et instanceof MorphirEntityInternalOfTypeDecl)
+            .sort((t1, t2) => t1.morphirname.localeCompare(t2.morphirname))
+            .map((kt) => {
+                const eokt = kt as MorphirEntityInternalOfTypeDecl;
+
                 return {
-                    boxf: `(${tt.boxf} (${tt.ubf} ${(tt as SMTEntityInternalOfTypeDecl).ofsmttype}))`
+                    decl: `type alias ${kt.morphirname} = ${eokt.ofsmttype}`,
+                    boxf: `${kt.boxf} ${kt.morphirname}`,
+                    unboxfdecl: `${kt.ubf} : BTerm -> ${kt.morphirname}`,
+                    unboxfimpl: `${kt.ubf} t = \n    case t of\n        ${kt.boxf} v -> \n            v\n        _ -> \n            bsq${kt.typetag.toLocaleLowerCase()}_default`,
+                    defaultdecl: `bsq${kt.typetag.toLocaleLowerCase()}_default : ${kt.morphirname}`,
+                    defaultimpl: `bsq${kt.typetag.toLocaleLowerCase()}_default = \n    bsq${eokt.ofsmttype.toLocaleLowerCase()}_default`
                 };
             });
 
         const collectiontypeinfo = this.entityDecls
-            .filter((et) => (et instanceof SMTEntityCollectionTypeDecl))
-            .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
+            .filter((et) => (et instanceof MorphirEntityCollectionTypeDecl))
+            .sort((t1, t2) => t1.morphirname.localeCompare(t2.morphirname))
             .map((tt) => {
-                const ctype = tt as SMTEntityCollectionTypeDecl;
-                return {
-                    decl: `(${tt.smtname} 0)`,
-                    consf: `( (${ctype.consf.cname} ${ctype.consf.cargs.map((te) => `(${te.fname} ${te.ftype})`).join(" ")}) )`,
-                    boxf: `(${tt.boxf} (${tt.ubf} ${tt.smtname}))`
-                };
-            });
+                const ctype = tt as MorphirEntityCollectionTypeDecl;
 
-        const collectiontypeinfoconsts = this.entityDecls
-            .filter((et) => (et instanceof SMTEntityCollectionTypeDecl))
-            .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
-            .map((tt) => {
-                const ctype = tt as SMTEntityCollectionTypeDecl;
-                return `(declare-const ${ctype.emptyconst.fname} ${ctype.emptyconst.fkind}) (assert (= ${ctype.emptyconst.fname} ${ctype.emptyconst.fexp}))`;
-            });
-
-        const collectionentrytypeinfo = this.entityDecls
-            .filter((et) => (et instanceof SMTEntityCollectionTypeDecl) && (et as SMTEntityCollectionTypeDecl).entrydecl !== undefined)
-            .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
-            .map((tt) => {
-                const einfo = (tt as SMTEntityCollectionTypeDecl).entrydecl as SMTEntityCollectionEntryTypeDecl;
+                tt.morphirname
                 return {
-                    decl: `(${einfo.smtname} 0)`,
-                    consf: `( (${einfo.consf.cname} ${einfo.consf.cargs.map((te) => `(${te.fname} ${te.ftype})`).join(" ")}) )`
+                    decl: `type alias ${tt.morphirname} = ${ctype.underlyingtype}`,
+                    boxf: `${tt.boxf} ${tt.morphirname}`,
+                    unboxfdecl: `${tt.ubf} : BTerm -> ${tt.morphirname}`,
+                    unboxfimpl: `${tt.ubf} t = \n    case t of\n        ${tt.boxf} v -> \n            v\n        _ -> \n            bsq${tt.typetag.toLocaleLowerCase()}_default`,
+                    defaultdecl: `bsq${tt.typetag.toLocaleLowerCase()}_default : ${tt.morphirname}`,
+                    defaultimpl: `bsq${tt.typetag.toLocaleLowerCase()}_default = \n    []`
                 };
             });
 
         const etypeinfo = this.ephemeralDecls
-            .sort((t1, t2) => t1.smtname.localeCompare(t2.smtname))
+            .sort((t1, t2) => t1.morphirname.localeCompare(t2.morphirname))
             .map((et) => {
                 return {
                     decl: `(${et.smtname} 0)`,
                     consf: `( (${et.consf.cname} ${et.consf.cargs.map((ke) => `(${ke.fname} ${ke.ftype.smttypename})`).join(" ")}) )`
                 };
-            });
-
-        const rtypeinfo = this.resultTypes
-            .sort((t1, t2) => (t1.hasFlag !== t2.hasFlag) ? (t1.hasFlag ? 1 : -1) : t1.rtname.localeCompare(t2.rtname))
-            .map((rt) => {
-                if (rt.hasFlag) {
-                    return {
-                        decl: `($GuardResult_${rt.ctype.smttypename} 0)`,
-                        consf: `( ($GuardResult_${rt.ctype.smttypename}@cons ($GuardResult_${rt.ctype.smttypename}@result ${rt.ctype.smttypename}) ($GuardResult_${rt.ctype.smttypename}@flag Bool)) )`
-                    };
-                }
-                else {
-                    return {
-                        decl: `($Result_${rt.ctype.smttypename} 0)`,
-                        consf: `( ($Result_${rt.ctype.smttypename}@success ($Result_${rt.ctype.smttypename}@success_value ${rt.ctype.smttypename})) ($Result_${rt.ctype.smttypename}@error ($Result_${rt.ctype.smttypename}@error_value ErrorID)) )`
-                    };
-                }
             });
 
         const maskinfo = [...this.maskSizes]
@@ -587,7 +576,7 @@ class MorphirAssembly {
 
         let foutput: string[] = [];
         let doneset: Set<string> = new Set<string>();
-        const cginfo = SMTAssembly.constructCallGraphInfo([this.entrypoint, ...this.havocfuncs], this);
+        const cginfo = MorphirAssembly.constructCallGraphInfo([this.entrypoint], this);
         const rcg = [...cginfo.topologicalOrder];
 
         for (let i = 0; i < rcg.length; ++i) {
@@ -596,17 +585,17 @@ class MorphirAssembly {
                 continue;
             }
 
-            const rf = this.functions.find((f) => f.fname === cn.invoke) as SMTFunction;
+            const rf = this.functions.find((f) => f.fname === cn.invoke) as MorphirFunction;
             const cscc = cginfo.recursive.find((scc) => scc.has(cn.invoke));
             if(cscc === undefined) {
                 doneset.add(cn.invoke);
-                foutput.push(rf.emitSMT2());
+                foutput.push(rf.emitMorphir());
             }
             else {
                 let worklist = [...cscc].sort();
                 if(worklist.length === 1) {
                     const cf = worklist.shift() as string;
-                    const crf = this.functions.find((f) => f.fname === cf) as SMTFunction;
+                    const crf = this.functions.find((f) => f.fname === cf) as MorphirFunction;
 
                     const decl = crf.emitSMT2_SingleDeclOnly();
                     const impl = crf.body.emitSMT2("  ");
@@ -622,7 +611,7 @@ class MorphirAssembly {
                     let impls: string[] = [];
                     while (worklist.length !== 0) {
                         const cf = worklist.shift() as string;
-                        const crf = this.functions.find((f) => f.fname === cf) as SMTFunction;
+                        const crf = this.functions.find((f) => f.fname === cf) as MorphirFunction;
 
                         decls.push(crf.emitSMT2_DeclOnly());
                         impls.push(crf.body.emitSMT2("  "));
@@ -638,25 +627,23 @@ class MorphirAssembly {
         }   
 
         return {
-            TYPE_TAG_DECLS: this.typeTags.sort().map((tt) => `(${tt})`),
+            TYPE_TAG_DECLS: this.typeTags.sort().map((tt) => `    | ${tt}`),
             ORDINAL_TYPE_TAG_DECLS: keytypeorder,
-            ABSTRACT_TYPE_TAG_DECLS: this.abstractTypes.sort().map((tt) => `(${tt})`),
-            INDEX_TAG_DECLS: this.indexTags.sort().map((tt) => `(${tt})`),
-            PROPERTY_TAG_DECLS: this.propertyTags.sort().map((tt) => `(${tt})`),
+            ABSTRACT_TYPE_TAG_DECLS: this.abstractTypes.sort().map((tt) => `    | ${tt}`),
+            INDEX_TAG_DECLS: this.hasIndexRelation.map((ir) => ir.idxtag).sort().map((idxtag) => `    | ${idxtag}`),
+            PROPERTY_TAG_DECLS: this.hasPropertyRelation.map((pr) => pr.pnametag).sort().map((pntag) => `    | ${pntag}`),
             SUBTYPE_DECLS: subtypeasserts,
             TUPLE_HAS_INDEX_DECLS: indexasserts,
             RECORD_HAS_PROPERTY_DECLS: propertyasserts,
-            STRING_TYPE_ALIAS: "(define-sort BString () String)",
-            OF_TYPE_DECLS: [...keytypeinfo.map((kd) => kd.decl), ...oftypeinfo.map((td) => td.decl)],
-            KEY_BOX_OPS: [...keytypeinfo.map((kd) => kd.boxf), ...oftypeinfo.map((td) => td.boxf)],
-            TUPLE_INFO: { 
-                decls: termtupleinfo.map((kti) => kti.decl), constructors: termtupleinfo.map((kti) => kti.consf), 
-                boxing: termtupleinfo.map((kti) => kti.boxf) 
-            },
-            RECORD_INFO: { 
-                decls: termrecordinfo.map((kti) => kti.decl), constructors: termrecordinfo.map((kti) => kti.consf), 
-                boxing: termrecordinfo.map((kti) => kti.boxf) 
-            },
+            OF_TYPE_DECLS: [...keyoftypeinfo.map((kti) => kti.decl), ...oftypeinfo.map((oti) => oti.decl)],
+            KEY_BOX_OPS: keyoftypeinfo.map((kb) =>  `    | ${kb.boxf}`),
+            KEY_UNBOX_OPS: keyoftypeinfo.map((kb) => kb.unboxfdecl + kb.unboxfimpl),
+            KEY_DEFAULT_OPS: keyoftypeinfo.map((kb) => kb.defaultdecl + kb.defaultimpl),
+            TUPLE_TYPE_DECLS: termtupleinfo.map((ti) => ti.decl),
+            RECORD_TYPE_DECLS: termrecordinfo.map((ri) => ri.decl),
+            TYPE_DECLS: [...ofinternaltypeinfo.map((oti) => oti.decl), ...collectiontypeinfo.map((cti) => cti.decl), ...termtypeinfo.map((ti) => ti.decl)],
+            
+
             TYPE_INFO: { 
                 decls: [
                     ...termtypeinfo.filter((tti) => tti.decl !== undefined).map((tti) => tti.decl as string),
@@ -678,27 +665,18 @@ class MorphirAssembly {
                 decls: etypeinfo.map((kti) => kti.decl), 
                 constructors: etypeinfo.map((kti) => kti.consf) 
             },
-            RESULT_INFO: { 
-                decls: rtypeinfo.map((kti) => kti.decl), 
-                constructors: rtypeinfo.map((kti) => kti.consf) 
-            },
+            
             MASK_INFO: { 
                 decls: maskinfo.map((mi) => mi.decl), 
                 constructors: maskinfo.map((mi) => mi.consf) 
             },
-            V_MIN_MAX: v_min_max,
-            GLOBAL_DECLS: [
-                ...collectiontypeinfoconsts,
-                ...gdecls
-            ],
-            UF_DECLS: [...ufdecls, ...ufopdecls],
+            GLOBAL_DECLS: gdecls,
             FUNCTION_DECLS: foutput.reverse(),
-            GLOBAL_DEFINITIONS: gdefs,
-            ACTION: action
+            GLOBAL_DEFINITIONS: gdefs
         };
     }
 
-    buildSMT2file(smtruntime: string): string {
+    buildMorphir2file(morphirruntime: string): string {
         const sfileinfo = this.generateSMT2AssemblyInfo();
     
         function joinWithIndent(data: string[], indent: string): string {
@@ -749,7 +727,7 @@ class MorphirAssembly {
 }
 
 export {
-    MorphirEntityDecl, MorphirEntityOfTypeDecl, MorphirEntityInternalOfTypeDecl, MorphirEntityCollectionTypeDecl, MorphirEntityCollectionEntryTypeDecl,
+    MorphirEntityDecl, MorphirEntityOfTypeDecl, MorphirEntityInternalOfTypeDecl, MorphirEntityCollectionTypeDecl,
     MorphirEntityStdDecl,
     MorphirTupleDecl, MorphirRecordDecl, MorphirEphemeralListDecl,
     MorphirConstantDecl,

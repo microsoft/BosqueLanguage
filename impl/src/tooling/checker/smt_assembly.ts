@@ -771,7 +771,7 @@ class SMTAssembly {
             RECORD_HAS_PROPERTY_DECLS: propertyasserts,
             STRING_TYPE_ALIAS: "(define-sort BString () String)",
             OF_TYPE_DECLS: [...keytypeinfo.map((kd) => kd.decl), ...oftypeinfo.map((td) => td.decl)],
-            KEY_BOX_OPS: [...keytypeinfo.map((kd) => kd.boxf), ...oftypeinfo.map((td) => td.boxf)],
+            KEY_BOX_OPS: keytypeinfo.map((kd) => kd.boxf),
             TUPLE_INFO: { 
                 decls: termtupleinfo.map((kti) => kti.decl), constructors: termtupleinfo.map((kti) => kti.consf), 
                 boxing: termtupleinfo.map((kti) => kti.boxf) 

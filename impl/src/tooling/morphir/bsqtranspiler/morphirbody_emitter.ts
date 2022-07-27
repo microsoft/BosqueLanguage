@@ -770,7 +770,7 @@ class MorphirBodyEmitter {
         }
     }
 
-    constructor(assembly: MIRAssembly, typegen: MorphirTypeEmitter, callsafety: Map<MIRInvokeKey, { safe: boolean, trgt: boolean }>, errorTrgtPos: { file: string, line: number, pos: number }) {
+    constructor(assembly: MIRAssembly, typegen: MorphirTypeEmitter, callsafety: Map<MIRInvokeKey, { safe: boolean, trgt: boolean }>) {
         this.assembly = assembly;
         this.typegen = typegen;
         this.callsafety = callsafety;
