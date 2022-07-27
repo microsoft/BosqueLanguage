@@ -6,6 +6,19 @@
 
 import { MIRResolvedTypeKey } from "../../../compiler/mir_ops";
 
+function cleanVarName(vn: string): string {
+    let cleanname = vn.replace(/[$]/g, "_").replace(/@/g, "_");
+    if(cleanname.startsWith("_")) {
+        cleanname = "q" + cleanname;
+    }
+
+    if(/[A-Z]/.test(cleanname[0])) {
+        cleanname = (cleanname[0].toLowerCase()) + cleanname.slice(1);
+    }
+
+    return cleanname;
+}
+
 class MorphirMaskConstruct {
     readonly maskname: string;
     readonly entries: MorphirExp[] = [];
@@ -55,7 +68,7 @@ class MorphirVar extends MorphirExp {
     }
 
     emitMorphir(indent: string | undefined): string {
-        return this.vname;
+        return cleanVarName(this.vname);
     }
 
     computeCallees(callees: Set<string>): void {
@@ -73,7 +86,7 @@ class MorphirConst extends MorphirExp {
     }
 
     emitMorphir(indent: string | undefined): string {
-        return this.cname;
+        return cleanVarName(this.cname);
     }
 
     computeCallees(callees: Set<string>): void {
@@ -235,10 +248,10 @@ class MorphirLet extends MorphirExp {
 
     emitMorphir(indent: string | undefined): string {
         if (indent === undefined) {
-            return `(let ${this.vname} = ${this.value.emitMorphir(undefined)} in ${this.inexp.emitMorphir(undefined)})`;
+            return `(let ${cleanVarName(this.vname)} = ${this.value.emitMorphir(undefined)} in ${this.inexp.emitMorphir(undefined)})`;
         }
         else {
-            return `let ${this.vname} = ${this.value.emitMorphir(undefined)} in\n${indent + "  "}${this.inexp.emitMorphir(indent + "  ")}\n${indent}`;
+            return `let ${cleanVarName(this.vname)} = ${this.value.emitMorphir(undefined)} in\n${indent + "  "}${this.inexp.emitMorphir(indent + "  ")}`;
         }
     }
 
@@ -260,13 +273,13 @@ class MorphirLetMulti extends MorphirExp {
     }
 
     emitMorphir(indent: string | undefined): string {
-        const binds = this.assigns.map((asgn) => `${asgn.vname} = ${asgn.value.emitMorphir(undefined)})`);
+        const binds = this.assigns.map((asgn) => `${cleanVarName(asgn.vname)} = ${asgn.value.emitMorphir(undefined)})`);
 
         if (indent === undefined) {
             return `(let ${binds.join(" ")} in ${this.inexp.emitMorphir(undefined)})`;
         }
         else {
-            return `let ${binds.join(" ")} in\n${indent + "  "}${this.inexp.emitMorphir(indent + "  ")}\n${indent}`;
+            return `let ${binds.join(" ")} in\n${indent + "  "}${this.inexp.emitMorphir(indent + "  ")}`;
         }
     }
 

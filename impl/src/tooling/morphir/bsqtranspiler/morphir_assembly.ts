@@ -70,7 +70,7 @@ class MorphirFunction {
 
     emitMorphir(): string {
         const declargs = this.args.map((arg) => `${arg.vtype.morphirtypename}`).join(" -> ");
-        const implargs = this.args.map((arg) => `${arg.vname} `).join(" ");
+        const implargs = this.args.map((arg) => `${arg.vname}`).join(" ");
         const body = this.body.emitMorphir("  ");
 
         if(this.maskname === undefined) {
@@ -375,7 +375,7 @@ class MorphirAssembly {
         const indexasserts = this.hasIndexRelation.map((hi) => `    | (${hi.idxtag} ${hi.atype}) -> \n        True`).sort();
         const propertyasserts = this.hasPropertyRelation.map((hp) => `    | (${hp.pnametag} ${hp.atype}) -> \n        True`).sort();
 
-        const keytypeorder: string[] = [...this.keytypeTags].sort().map((ktt, i) => `    TypeTag_OrdinalOf ${ktt} -> \n        ${i}`);
+        const keytypeorder: string[] = [...this.keytypeTags].sort().map((ktt, i) => `        TypeTag_OrdinalOf ${ktt} -> \n            ${i}`);
 
         const termtupleinfo = this.tupleDecls
             .sort((t1, t2) => t1.morphirname.localeCompare(t2.morphirname))
@@ -586,8 +586,8 @@ class MorphirAssembly {
             RECORD_HAS_PROPERTY_DECLS: propertyasserts,
             OF_TYPE_DECLS: [...keyoftypeinfo.map((kti) => kti.decl).sort(), ...oftypeinfo.map((oti) => oti.decl).sort()],
             KEY_BOX_OPS: keyoftypeinfo.map((kb) =>  `    | ${kb.boxf}`).sort(),
-            KEY_UNBOX_OPS: keyoftypeinfo.map((kb) => kb.unboxfdecl + kb.unboxfimpl).sort(),
-            KEY_DEFAULT_OPS: keyoftypeinfo.map((kb) => kb.defaultdecl + kb.defaultimpl).sort(),
+            KEY_UNBOX_OPS: keyoftypeinfo.map((kb) => kb.unboxfdecl + "\n" + kb.unboxfimpl).sort(),
+            KEY_DEFAULT_OPS: keyoftypeinfo.map((kb) => kb.defaultdecl + "\n" + kb.defaultimpl).sort(),
             TUPLE_TYPE_DECLS: termtupleinfo.map((ti) => ti.decl).sort(),
             RECORD_TYPE_DECLS: termrecordinfo.map((ri) => ri.decl).sort(),
             TYPE_DECLS: [...ofinternaltypeinfo.map((oti) => oti.decl).sort(), ...collectiontypeinfo.map((cti) => cti.decl).sort(), ...termtypeinfo.map((ti) => ti.decl).sort()],   
@@ -599,18 +599,18 @@ class MorphirAssembly {
                 ...termtypeinfo.map((ti) => ti.boxf).sort().map((ttb) => `    | ${ttb}`)
             ],
             TERM_DEFAULT: [
-                ...termtupleinfo.map((tti) => tti.defaultdecl + tti.defaultimpl).sort(),
-                ...termrecordinfo.map((tti) => tti.defaultdecl + tti.defaultimpl).sort(),
-                ...ofinternaltypeinfo.map((tti) => tti.defaultdecl + tti.defaultimpl).sort(),
-                ...collectiontypeinfo.map((tti) => tti.defaultdecl + tti.defaultimpl).sort(),
-                ...termtypeinfo.map((tti) => tti.defaultdecl + tti.defaultimpl).sort()
+                ...termtupleinfo.map((tti) => tti.defaultdecl + "\n" + tti.defaultimpl).sort(),
+                ...termrecordinfo.map((tti) => tti.defaultdecl + "\n" + tti.defaultimpl).sort(),
+                ...ofinternaltypeinfo.map((tti) => tti.defaultdecl + "\n" + tti.defaultimpl).sort(),
+                ...collectiontypeinfo.map((tti) => tti.defaultdecl + "\n" + tti.defaultimpl).sort(),
+                ...termtypeinfo.map((tti) => tti.defaultdecl + "\n" + tti.defaultimpl).sort()
             ],
             TERM_UNBOX_OPS: [
-                ...termtupleinfo.map((tti) => tti.unboxfdecl + tti.unboxfimpl).sort(),
-                ...termrecordinfo.map((tti) => tti.unboxfdecl + tti.unboxfimpl).sort(),
-                ...ofinternaltypeinfo.map((tti) => tti.unboxfdecl + tti.unboxfimpl).sort(),
-                ...collectiontypeinfo.map((tti) => tti.unboxfdecl + tti.unboxfimpl).sort(),
-                ...termtypeinfo.map((tti) => tti.unboxfdecl + tti.unboxfimpl).sort()
+                ...termtupleinfo.map((tti) => tti.unboxfdecl + "\n" + tti.unboxfimpl).sort(),
+                ...termrecordinfo.map((tti) => tti.unboxfdecl + "\n" + tti.unboxfimpl).sort(),
+                ...ofinternaltypeinfo.map((tti) => tti.unboxfdecl + "\n" + tti.unboxfimpl).sort(),
+                ...collectiontypeinfo.map((tti) => tti.unboxfdecl + "\n" + tti.unboxfimpl).sort(),
+                ...termtypeinfo.map((tti) => tti.unboxfdecl + "\n" + tti.unboxfimpl).sort()
             ],
 
             EPHEMERAL_DECLS: etypeinfo.map((eti) => eti.decl + eti.consfdecl + eti.consfimpl).sort(),

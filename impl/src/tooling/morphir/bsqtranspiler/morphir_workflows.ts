@@ -17,7 +17,7 @@ import * as chalk from "chalk";
 import { BuildApplicationMode, BuildLevel } from "../../../ast/assembly";
 
 const bosque_dir: string = Path.join(__dirname, "../../../../");
-const runtimepath: string = Path.join(bosque_dir, "/tooling/morphir/bsqtranspiler/runtime/BSQMain.elm");
+const runtimepath: string = Path.join(bosque_dir, "bin/tooling/morphir/bsqtranspiler/runtime/BSQMain.elm");
 
 function workflowLoadUserSrc(files: string[]): CodeFileInfo[] | undefined {
     try {

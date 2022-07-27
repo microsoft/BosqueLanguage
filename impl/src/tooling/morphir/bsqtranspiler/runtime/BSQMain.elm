@@ -7,45 +7,45 @@ type TypeTag =
     TypeTag_Invalid
     | TypeTag_None
     | TypeTag_Nothing
-    --TYPE_TAG_DECLS--
+--TYPE_TAG_DECLS--
 
 ordinalOf : TypeTag -> Int
 ordinalOf tt = 
     case tt of 
-        --ORDINAL_TYPE_TAG_DECLS--
+--ORDINAL_TYPE_TAG_DECLS--
         _ -> 
             -1
 
 type AbstractTypeTag = 
     AbstractTypeTag_Invalid
-    --ABSTRACT_TYPE_TAG_DECLS--
+--ABSTRACT_TYPE_TAG_DECLS--
 
 type TupleIndexTag = 
     TupleIndexTag_Invalid
-    --INDEX_TAG_DECLS--
+--INDEX_TAG_DECLS--
 
 type RecordPropertyTag = 
     RecordPropertyTag_Invalid
-    --PROPERTY_TAG_DECLS--
+--PROPERTY_TAG_DECLS--
 
 subtypeOf : TypeTag -> AbstractTypeTag -> Bool
 subtypeOf tt oftype = 
     case (tt, oftype) of 
-        --SUBTYPE_DECLS--
+--SUBTYPE_DECLS--
         _ -> 
             False
 
 hasIndex : TypeTag -> TupleIndexTag -> Bool
 hasIndex tt oftype = 
     case (tt, oftype) of 
-        --TUPLE_HAS_INDEX_DECLS--
+--TUPLE_HAS_INDEX_DECLS--
         _ -> 
             False
 
 hasProperty : TypeTag -> RecordPropertyTag -> Bool
 hasProperty tt oftype = 
     case (tt, oftype) of 
-        --RECORD_HAS_PROPERTY_DECLS--
+--RECORD_HAS_PROPERTY_DECLS--
         _ -> 
             False
 
@@ -102,7 +102,7 @@ type alias BByteBuffer =
     }
 
 bbytebuffer_cons : Int -> Int -> List Int -> BByteBuffer
-bbytebuffer_const f c d = 
+bbytebuffer_cons f c d = 
     {format = f, compress = c, data = d}
 
 type alias BDateTime = 
@@ -479,7 +479,7 @@ type BKeyObject =
     | BKeyBUUID4_box BUUID4
     | BKeyBUUID7_box BUUID7
     | BKeyBSHAContentHash_box BSHAContentHash
-    --KEY_BOX_OPS--
+--KEY_BOX_OPS--
 
 unbox_BKeyBool : BKeyObject -> Bool
 unbox_BKeyBool k =
@@ -729,18 +729,17 @@ bkey_less k1 k2 =
 --TYPE_DECLS--
 
 type BObject = 
-      BObjectBNothing_box
-      | BObjectBFloat_box BFloat
-      | BObjectBDecimal_box BDecimal
-      | BObjectBRational_box BRational
-      | BObjectBByteBuffer_box BByteBuffer
-      | BObjectBDateTime_box BDateTime
-      | BObjectBLatLongCoordinate_box BLatLongCoordinate
-      | BObjectRegex_box Regex.Regex
-      --TUPLE_TYPE_BOXING--
-      --RECORD_TYPE_BOXING--
-      --TYPE_BOXING--
-
+    BObjectBNothing_box
+    | BObjectBFloat_box BFloat
+    | BObjectBDecimal_box BDecimal
+    | BObjectBRational_box BRational
+    | BObjectBByteBuffer_box BByteBuffer
+    | BObjectBDateTime_box BDateTime
+    | BObjectBLatLongCoordinate_box BLatLongCoordinate
+    | BObjectRegex_box Regex.Regex
+--TUPLE_TYPE_BOXING--
+--RECORD_TYPE_BOXING--
+--TYPE_BOXING--
 
 unbox_BObjectBFloat : BObject -> BFloat
 unbox_BObjectBFloat k =
