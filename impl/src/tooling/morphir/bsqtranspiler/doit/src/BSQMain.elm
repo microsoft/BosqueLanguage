@@ -917,5 +917,3 @@ result_error_get_value r =
 --FUNCTION_DECLS--
 
 --GLOBAL_DEFINITIONS--
-
---ACTION--
