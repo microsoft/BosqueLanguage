@@ -6,7 +6,7 @@
 //-------------------------------------------------------------------------------------------------------
 
 import { help } from "./args_load";
-import { processBuildAction, processBuildActionMorphir } from "./process_build";
+import { processBuildAction, processBuildActionMorphirToBosque } from "./process_build";
 import { processAppTestAction, processFuzzAction, processMorphirCheckAction, processTestAction } from "./process_chk";
 import { processRunAction } from "./process_exe";
 
@@ -42,7 +42,7 @@ else if(cmdop === "apptest") {
     processAppTestAction(cmdargs);
 }
 else if(cmdop === "morphir-chk") {
-    processBuildActionMorphir(["morphir", ...cmdargs]);
+    processBuildActionMorphirToBosque(["morphir", ...cmdargs]);
     processMorphirCheckAction(cmdargs);
 }
 else if(cmdop === "fuzz") {

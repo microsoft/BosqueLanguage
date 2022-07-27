@@ -618,11 +618,11 @@ internal entity ListOps provides Some {
 #if CHK_SMALL_ONLY
             return s_blockingfailure<List<U>>();
 #else
-            return ListOps::s_into<T>(SeqListOps::s_list_map_fn<T, U>[recursive?](ll, f));
+            return ListOps::s_into<U>(SeqListOps::s_list_map_fn<T, U>[recursive?](ll, f));
 #endif
         }
         else {
-            return ListOps::s_into<T>(VectorOps::s_list_map_fn<T, U>[recursive?](s_safeAs<ListRepr<T>, ListVector<T>>(ll), f));
+            return ListOps::s_into<U>(VectorOps::s_list_map_fn<T, U>[recursive?](s_safeAs<ListRepr<T>, ListVector<T>>(ll), f));
         }
     }
 
@@ -633,11 +633,11 @@ internal entity ListOps provides Some {
 #if CHK_SMALL_ONLY
             return s_blockingfailure<List<U>>();
 #else
-            return ListOps::s_into<T>(SeqListOps::s_list_map_fn_idx<T, U>[recursive?](ll, f));
+            return ListOps::s_into<U>(SeqListOps::s_list_map_fn_idx<T, U>[recursive?](ll, f));
 #endif
         }
         else {
-            return ListOps::s_into<T>(VectorOps::s_list_map_fn_idx<T, U>[recursive?](s_safeAs<ListRepr<T>, ListVector<T>>(ll), f));
+            return ListOps::s_into<U>(VectorOps::s_list_map_fn_idx<T, U>[recursive?](s_safeAs<ListRepr<T>, ListVector<T>>(ll), f));
         }
     }
 
@@ -674,12 +674,12 @@ internal entity ListOps provides Some {
             else {
                 let sl = ListOps::s_ensure_std_repr<T>(SeqListOps::s_list_mask_select<T>(ll, mask));
                 let ml = SeqListOps::s_list_map_fn<T, U>[recursive?](sl, f);
-                return ListOps::s_into<T>(ml);
+                return ListOps::s_into<U>(ml);
             }
 #endif
         }
         else {
-            return ListOps::s_into<T>(VectorOps::s_list_filter_map_fn<T, U>[recursive?](s_safeAs<ListRepr<T>, ListVector<T>>(ll), p, f));
+            return ListOps::s_into<U>(VectorOps::s_list_filter_map_fn<T, U>[recursive?](s_safeAs<ListRepr<T>, ListVector<T>>(ll), p, f));
         }
     }
 

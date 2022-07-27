@@ -18,6 +18,7 @@
         "src/tooling/checker/*.ts",
         "src/tooling/icpp/transpiler/*.ts",
         "src/tooling/morphir/converter/*.ts",
+        "src/tooling/morphir/bsqtranspiler/*.ts",
         "src/test/runner/*.ts",
         "src/test/bsqunit/*.ts",
         "src/cmd/*.ts"

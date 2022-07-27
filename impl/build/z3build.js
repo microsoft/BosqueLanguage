@@ -22,7 +22,7 @@ else if(process.platform === "linux") {
     runconfig = "CXX=clang++ CC=clang python scripts/mk_make.py --staticlib";
 }
 else {
-    runconfig = "python scripts/mk_make.py -x --parallel=4";
+    runconfig = "python scripts/mk_make.py -x";
 }
 
 try {
