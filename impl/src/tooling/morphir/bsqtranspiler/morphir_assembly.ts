@@ -283,10 +283,10 @@ class MorphirAssembly {
     maskSizes: Set<number> = new Set<number>();
     functions: MorphirFunction[] = [];
 
-    entrypoint: string;
+    entrypoints: string[];
 
-    constructor(entrypoint: string) {
-        this.entrypoint = entrypoint;
+    constructor(entrypoints: string[]) {
+        this.entrypoints = entrypoints;
     }
 
     private static sccVisit(cn: MorphirCallGNode, scc: Set<string>, marked: Set<string>, invokes: Map<string, MorphirCallGNode>) {
@@ -528,7 +528,7 @@ class MorphirAssembly {
 
         let foutput: string[] = [];
         let doneset: Set<string> = new Set<string>();
-        const cginfo = MorphirAssembly.constructCallGraphInfo([this.entrypoint], this);
+        const cginfo = MorphirAssembly.constructCallGraphInfo(this.entrypoints, this);
         const rcg = [...cginfo.topologicalOrder];
 
         for (let i = 0; i < rcg.length; ++i) {

@@ -160,8 +160,8 @@ class MorphirEmitter {
         this.lastVInvokeIdx = this.bemitter.requiredUpdateVirtualEntity.length;
     }
 
-    private initializeMorphirAssembly(assembly: MIRAssembly, istestbuild: boolean, entrypoint: MIRInvokeKey) {
-        const cginfo = constructCallGraphInfo([entrypoint], assembly, istestbuild);
+    private initializeMorphirAssembly(assembly: MIRAssembly, istestbuild: boolean, entrypoints: MIRInvokeKey[]) {
+        const cginfo = constructCallGraphInfo(entrypoints, assembly, istestbuild);
         const rcg = [...cginfo.topologicalOrder].reverse();
 
         for (let i = 0; i < rcg.length; ++i) {
@@ -378,8 +378,8 @@ class MorphirEmitter {
         this.assembly.maskSizes = this.bemitter.maskSizes;
     }
 
-    static generateMorphirPayload(assembly: MIRAssembly, istestbuild: boolean, runtime: string, entrypoint: MIRInvokeKey): string {
-        const callsafety = markSafeCalls([entrypoint], assembly, istestbuild, undefined);
+    static generateMorphirPayload(assembly: MIRAssembly, istestbuild: boolean, runtime: string, entrypoints: MIRInvokeKey[]): string {
+        const callsafety = markSafeCalls(entrypoints, assembly, istestbuild, undefined);
 
         const temitter = new MorphirTypeEmitter(assembly);
         assembly.typeMap.forEach((tt) => {
@@ -396,10 +396,10 @@ class MorphirEmitter {
         });
 
         const bemitter = new MorphirBodyEmitter(assembly, temitter, callsafety);
-        const smtassembly = new MorphirAssembly(temitter.lookupFunctionName(entrypoint));
+        const smtassembly = new MorphirAssembly(entrypoints.map((entrypoint) => temitter.lookupFunctionName(entrypoint)));
 
         let morphiremit = new MorphirEmitter(temitter, bemitter, smtassembly, callsafety);
-        morphiremit.initializeMorphirAssembly(assembly, istestbuild, entrypoint);
+        morphiremit.initializeMorphirAssembly(assembly, istestbuild, entrypoints);
 
         ////////////
         const smtinfo = morphiremit.assembly.buildMorphir2file(runtime);
