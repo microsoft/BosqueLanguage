@@ -67,7 +67,7 @@ function generateMASM(usercode: PackageConfig, buildlevel: BuildLevel, entrypoin
     const corecode = workflowLoadCoreSrc() as CodeFileInfo[];
     const coreconfig = new PackageConfig(["EXEC_LIBS"], corecode);
 
-    const { masm, errors } = MIREmitter.generateMASM(BuildApplicationMode.Executable, [coreconfig, usercode], buildlevel, entrypoint);
+    const { masm, errors } = MIREmitter.generateMASM(BuildApplicationMode.FunctionalizedExecutable, [coreconfig, usercode], buildlevel, entrypoint);
     if (errors.length !== 0) {
         for (let i = 0; i < errors.length; ++i) {
             process.stdout.write(chalk.red(`Parse error -- ${errors[i]}\n`));

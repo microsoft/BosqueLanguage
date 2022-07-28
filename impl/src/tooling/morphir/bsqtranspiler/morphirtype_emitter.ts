@@ -37,7 +37,12 @@ class MorphirTypeEmitter {
 
     internTypeName(keyid: MIRResolvedTypeKey) {
         if (!this.mangledTypeNameMap.has(keyid)) {
-            let cleanname = keyid.replace(/:/g, "_").replace(/[<>, \[\]\{\}\(\)\\\/\#\=\|]/g, "_");
+            let cleanname = keyid.replace(/:/g, "_").replace(/[<>, \[\]\{\}\(\)\\\/\#\=\|@$.]/g, "_");
+
+            if(cleanname.startsWith("_")) {
+                cleanname = "q" + cleanname;
+            }
+
             if(this.allshortnames.has(cleanname)) {
                 cleanname = cleanname + "__" + this.namectr++;
             }
@@ -55,8 +60,12 @@ class MorphirTypeEmitter {
 
     internFunctionName(keyid: MIRInvokeKey, shortname: string) {
         if (!this.mangledFunctionNameMap.has(keyid)) {
-            let cleanname = shortname.replace(/:/g, "_").replace(/[<>, \[\]\{\}\(\)\\\/\#\=\|]/g, "_");
+            let cleanname = shortname.replace(/:/g, "_").replace(/[<>, \[\]\{\}\(\)\\\/\#\=\|@$.]/g, "_");
             
+            if(cleanname.startsWith("_")) {
+                cleanname = "q" + cleanname;
+            }
+
             if(/[A-Z]/.test(cleanname[0])) {
                 cleanname = cleanname[0].toLowerCase() + cleanname.slice(1);
             }
@@ -78,8 +87,12 @@ class MorphirTypeEmitter {
 
     internGlobalName(keyid: MIRGlobalKey, shortname: string) {
         if (!this.mangledGlobalNameMap.has(keyid)) {
-            let cleanname = shortname.replace(/:/g, "_").replace(/[<>, \[\]\{\}\(\)\\\/\#\=\|]/g, "_");
+            let cleanname = shortname.replace(/:/g, "_").replace(/[<>, \[\]\{\}\(\)\\\/\#\=\|@$.]/g, "_");
             
+            if(cleanname.startsWith("_")) {
+                cleanname = "q" + cleanname;
+            }
+
             if(/[A-Z]/.test(cleanname[0])) {
                 cleanname = cleanname[0].toLowerCase() + cleanname.slice(1);
             }
@@ -651,7 +664,9 @@ class MorphirTypeEmitter {
     }
 
     generateErrorResultAssert(rtype: MIRType, file: string, sinfo: SourceInfo): MorphirExp {
-        return this.generateResultTypeConstructorError(rtype, new MorphirConst(`"${file}::${sinfo.line}"`));
+        const finfos = file.split(/\\|\//);
+        const filename = finfos[finfos.length - 1];
+        return this.generateResultTypeConstructorError(rtype, new MorphirConst(`"${filename}${(sinfo.line !== -1 ? ("::" + sinfo.line) : "")}"`));
     }
 
     generateResultIsSuccessTest(ttype: MIRType, exp: MorphirExp): MorphirExp {
@@ -663,7 +678,7 @@ class MorphirTypeEmitter {
     }
 
     generateResultGetSuccess(ttype: MIRType, exp: MorphirExp): MorphirExp {
-        const ufcname = `${this.getMorphirTypeFor(ttype).morphirtypename}@uicons_UF`;
+        const ufcname = `bsq${this.getMorphirTypeFor(ttype).morphirtypename.toLowerCase()}_default`;
         return new MorphirCallSimple("result_success_get_value", [exp, new MorphirConst(ufcname)]);
     }
 
@@ -680,7 +695,7 @@ class MorphirTypeEmitter {
     }
 
     generateAccessWithSetGuardResultGetValue(ttype: MIRType, exp: MorphirExp): MorphirExp {
-        const ufcname = `${this.getMorphirTypeFor(ttype).morphirtypename}@uicons_UF`;
+        const ufcname = `bsq${this.getMorphirTypeFor(ttype).morphirtypename.toLowerCase()}_default`;
         return new MorphirCallSimple(`guard_result_${this.getMorphirTypeFor(ttype).morphirtypename}_result`, [exp, new MorphirConst(ufcname)]);
     }
 

@@ -5,7 +5,7 @@
 
 import { BSQRegex } from "../../../ast/bsqregex";
 import { MIRResolvedTypeKey } from "../../../compiler/mir_ops";
-import { MorphirExp, MorphirTypeInfo } from "./morphir_exp";
+import { cleanVarName, MorphirExp, MorphirTypeInfo } from "./morphir_exp";
 
 type Morphir2FileInfo = {
     TYPE_TAG_DECLS: string[],
@@ -70,7 +70,7 @@ class MorphirFunction {
 
     emitMorphir(): string {
         const declargs = this.args.map((arg) => `${arg.vtype.morphirtypename}`).join(" -> ");
-        const implargs = this.args.map((arg) => `${arg.vname}`).join(" ");
+        const implargs = this.args.map((arg) => `${cleanVarName(arg.vname)}`).join(" ");
         const body = this.body.emitMorphir("    ");
 
         if(this.maskname === undefined) {
@@ -385,10 +385,10 @@ class MorphirAssembly {
                     consfdecl: `${kt.consf.cname} : ${kt.consf.cargs.map((ke) => `${ke.ftype.morphirtypename}`).join(" -> ")} -> ${kt.morphirname}`,
                     consfimpl: `${kt.consf.cname} ${kt.consf.cargs.map((ke) => `arg_${ke.fname}`).join(" ")} = {${kt.consf.cargs.map((ke) => `${ke.fname} = arg_${ke.fname})`).join(" ")}}`,
                     boxf: `${kt.boxf} ${kt.morphirname}`,
-                    unboxfdecl: `${kt.ubf} : BTerm -> ${kt.morphirname}`,
-                    unboxfimpl: `${kt.ubf} t = \n    case t of\n        ${kt.boxf} v -> \n            v\n        _ -> \n            bsq${kt.typetag.toLowerCase()}_default`,
-                    defaultdecl: `bsq${kt.typetag.toLowerCase()}_default : ${kt.morphirname}`,
-                    defaultimpl: `bsq${kt.typetag.toLowerCase()}_default = \n    {${kt.consf.cargs.map((ke) => `${ke.fname} = bsq${ke.ftype.typeID.toLowerCase()}_default`).join(" ")}}`
+                    unboxfdecl: `${kt.ubf} : BObject -> ${kt.morphirname}`,
+                    unboxfimpl: `${kt.ubf} t = \n    case t of\n        ${kt.boxf} v -> \n            v\n        _ -> \n            bsq${kt.morphirname.toLowerCase()}_default`,
+                    defaultdecl: `bsq${kt.morphirname.toLowerCase()}_default : ${kt.morphirname}`,
+                    defaultimpl: `bsq${kt.morphirname.toLowerCase()}_default = \n    {${kt.consf.cargs.map((ke) => `${ke.fname} = bsq${ke.ftype.typeID.toLowerCase()}_default`).join(" ")}}`
                 };
             });
 
@@ -400,10 +400,10 @@ class MorphirAssembly {
                     consfdecl: `${kt.consf.cname} : ${kt.consf.cargs.map((ke) => `${ke.ftype.morphirtypename}`).join(" -> ")} -> ${kt.morphirname}`,
                     consfimpl: `${kt.consf.cname} ${kt.consf.cargs.map((ke) => `arg_${ke.fname}`).join(" ")} = {${kt.consf.cargs.map((ke) => `${ke.fname} = arg_${ke.fname})`).join(" ")}}`,
                     boxf: `${kt.boxf} ${kt.morphirname}`,
-                    unboxfdecl: `${kt.ubf} : BTerm -> ${kt.morphirname}`,
-                    unboxfimpl: `${kt.ubf} t = \n    case t of\n        ${kt.boxf} v -> \n            v\n        _ -> \n            bsq${kt.typetag.toLowerCase()}_default`,
-                    defaultdecl: `bsq${kt.typetag.toLowerCase()}_default : ${kt.morphirname}`,
-                    defaultimpl: `bsq${kt.typetag.toLowerCase()}_default = \n    {${kt.consf.cargs.map((ke) => `${ke.fname} = bsq${ke.ftype.typeID.toLowerCase()}_default`).join(" ")}}`
+                    unboxfdecl: `${kt.ubf} : BObject -> ${kt.morphirname}`,
+                    unboxfimpl: `${kt.ubf} t = \n    case t of\n        ${kt.boxf} v -> \n            v\n        _ -> \n            bsq${kt.morphirname.toLowerCase()}_default`,
+                    defaultdecl: `bsq${kt.morphirname.toLowerCase()}_default : ${kt.morphirname}`,
+                    defaultimpl: `bsq${kt.morphirname.toLowerCase()}_default = \n    {${kt.consf.cargs.map((ke) => `${ke.fname} = bsq${ke.ftype.typeID.toLowerCase()}_default`).join(" ")}}`
                 };
             });
 
@@ -417,9 +417,9 @@ class MorphirAssembly {
                 decl: `type alias ${kt.morphirname} = ${eokt.ofsmttype}`,
                 boxf: `${kt.boxf} ${kt.morphirname}`,
                 unboxfdecl: `${kt.ubf} : BKeyObject -> ${kt.morphirname}`,
-                unboxfimpl: `${kt.ubf} k = \n    case k of\n        BKey${eokt.ofsmttype}_box v -> \n            v\n        _ -> \n            bsq${kt.typetag.toLowerCase()}_default`,
-                defaultdecl: `bsq${kt.typetag.toLowerCase()}_default : ${kt.morphirname}`,
-                defaultimpl: `bsq${kt.typetag.toLowerCase()}_default = \n    bsq${eokt.ofsmttype.toLowerCase()}_default`
+                unboxfimpl: `${kt.ubf} k = \n    case k of\n        BKey${eokt.ofsmttype}_box v -> \n            v\n        _ -> \n            bsq${kt.morphirname.toLowerCase()}_default`,
+                defaultdecl: `bsq${kt.morphirname.toLowerCase()}_default : ${kt.morphirname}`,
+                defaultimpl: `bsq${kt.morphirname.toLowerCase()}_default = \n    bsq${eokt.ofsmttype.toLowerCase()}_default`
             };
         });
 
@@ -433,9 +433,9 @@ class MorphirAssembly {
                     decl: `type alias ${kt.morphirname} = ${eokt.ofsmttype}`,
                     boxf: `${kt.boxf} ${kt.morphirname}`,
                     unboxfdecl: `${kt.ubf} : BObject -> ${kt.morphirname}`,
-                    unboxfimpl: `${kt.ubf} t = \n    case t of\n        BTerm${eokt.ofsmttype}_box v -> \n            v\n        _ -> \n            bsq${kt.typetag.toLowerCase()}_default`,
-                    defaultdecl: `bsq${kt.typetag.toLowerCase()}_default : ${kt.morphirname}`,
-                    defaultimpl: `bsq${kt.typetag.toLowerCase()}_default = \n    bsq${eokt.ofsmttype.toLowerCase()}_default`
+                    unboxfimpl: `${kt.ubf} t = \n    case t of\n        BTerm${eokt.ofsmttype}_box v -> \n            v\n        _ -> \n            bsq${kt.morphirname.toLowerCase()}_default`,
+                    defaultdecl: `bsq${kt.morphirname.toLowerCase()}_default : ${kt.morphirname}`,
+                    defaultimpl: `bsq${kt.morphirname.toLowerCase()}_default = \n    bsq${eokt.ofsmttype.toLowerCase()}_default`
                 };
             });
 
@@ -449,10 +449,10 @@ class MorphirAssembly {
                     consfdecl: `${tt.consf.cname} : ${tt.consf.cargs.map((te) => `${te.ftype.morphirtypename}`).join(" -> ")} -> ${tt.morphirname}`,
                     consfimpl: `${tt.consf.cname} ${tt.consf.cargs.map((te) => `arg_${te.fname}`).join(" ")} = {${tt.consf.cargs.map((te) => `${te.fname} = arg_${te.fname})`).join(" ")}}`,
                     boxf: `${tt.boxf} ${tt.morphirname}`,
-                    unboxfdecl: `${tt.ubf} : BTerm -> ${tt.morphirname}`,
-                    unboxfimpl: `${tt.ubf} t = \n    case t of\n        ${tt.boxf} v -> \n            v\n        _ -> \n            bsq${tt.typetag.toLowerCase()}_default`,
-                    defaultdecl: `bsq${tt.typetag.toLowerCase()}_default : ${tt.morphirname}`,
-                    defaultimpl: `bsq${tt.typetag.toLowerCase()}_default = \n    {${tt.consf.cargs.map((te) => `${te.fname} = bsq${te.ftype.typeID.toLowerCase()}_default`).join(" ")}}`
+                    unboxfdecl: `${tt.ubf} : BObject -> ${tt.morphirname}`,
+                    unboxfimpl: `${tt.ubf} t = \n    case t of\n        ${tt.boxf} v -> \n            v\n        _ -> \n            bsq${tt.morphirname.toLowerCase()}_default`,
+                    defaultdecl: `bsq${tt.morphirname.toLowerCase()}_default : ${tt.morphirname}`,
+                    defaultimpl: `bsq${tt.morphirname.toLowerCase()}_default = \n    {${tt.consf.cargs.map((te) => `${te.fname} = bsq${te.ftype.typeID.toLowerCase()}_default`).join(" ")}}`
                 };
             });
 
@@ -465,10 +465,10 @@ class MorphirAssembly {
                 return {
                     decl: `type alias ${kt.morphirname} = ${eokt.ofsmttype}`,
                     boxf: `${kt.boxf} ${kt.morphirname}`,
-                    unboxfdecl: `${kt.ubf} : BTerm -> ${kt.morphirname}`,
-                    unboxfimpl: `${kt.ubf} t = \n    case t of\n        ${kt.boxf} v -> \n            v\n        _ -> \n            bsq${kt.typetag.toLowerCase()}_default`,
-                    defaultdecl: `bsq${kt.typetag.toLowerCase()}_default : ${kt.morphirname}`,
-                    defaultimpl: `bsq${kt.typetag.toLowerCase()}_default = \n    bsq${eokt.ofsmttype.toLowerCase()}_default`
+                    unboxfdecl: `${kt.ubf} : BObject -> ${kt.morphirname}`,
+                    unboxfimpl: `${kt.ubf} t = \n    case t of\n        ${kt.boxf} v -> \n            v\n        _ -> \n            bsq${kt.morphirname.toLowerCase()}_default`,
+                    defaultdecl: `bsq${kt.morphirname.toLowerCase()}_default : ${kt.morphirname}`,
+                    defaultimpl: `bsq${kt.morphirname.toLowerCase()}_default = \n    bsq${eokt.ofsmttype.toLowerCase()}_default`
                 };
             });
 
@@ -482,10 +482,10 @@ class MorphirAssembly {
                 return {
                     decl: `type alias ${tt.morphirname} = ${ctype.underlyingtype}`,
                     boxf: `${tt.boxf} ${tt.morphirname}`,
-                    unboxfdecl: `${tt.ubf} : BTerm -> ${tt.morphirname}`,
-                    unboxfimpl: `${tt.ubf} t = \n    case t of\n        ${tt.boxf} v -> \n            v\n        _ -> \n            bsq${tt.typetag.toLowerCase()}_default`,
-                    defaultdecl: `bsq${tt.typetag.toLowerCase()}_default : ${tt.morphirname}`,
-                    defaultimpl: `bsq${tt.typetag.toLowerCase()}_default = \n    []`
+                    unboxfdecl: `${tt.ubf} : BObject -> ${tt.morphirname}`,
+                    unboxfimpl: `${tt.ubf} t = \n    case t of\n        ${tt.boxf} v -> \n            v\n        _ -> \n            bsq${tt.morphirname.toLowerCase()}_default`,
+                    defaultdecl: `bsq${tt.morphirname.toLowerCase()}_default : ${tt.morphirname}`,
+                    defaultimpl: `bsq${tt.morphirname.toLowerCase()}_default = \n    []`
                 };
             });
 
