@@ -19,7 +19,7 @@
     },
     "scripts": {
         "build": "node ./build/build_all.js",
-        "test": "node ./build/build_all.js && node ./bin/test/bsqunit/unitrunner.js"
+        "test": "node ./build/build_all.js && node ./bin/test/bsqunit/unitrunner.js && node ./bin/test/bsqunit/apprunner.js"
     },
     "files": [
         "bin/*"
