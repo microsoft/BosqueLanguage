@@ -13,6 +13,7 @@ import { BSQRegex } from "./bsqregex";
 
 enum BuildApplicationMode {
     Executable,
+    FunctionalizedExecutable,
     ModelChecker,
     TypeChecker
 }

@@ -1533,7 +1533,7 @@ class MIREmitter {
             if (checker.getErrorList().length === 0) {
                 checker.processRegexInfo();
 
-                if (buildmode === BuildApplicationMode.ModelChecker) {
+                if (buildmode === BuildApplicationMode.ModelChecker || buildmode === BuildApplicationMode.FunctionalizedExecutable) {
                     functionalizeInvokes(emitter, masm);
                 }
                 

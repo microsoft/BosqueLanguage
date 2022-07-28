@@ -7,7 +7,7 @@
 import { MIRResolvedTypeKey } from "../../../compiler/mir_ops";
 
 function cleanVarName(vn: string): string {
-    let cleanname = vn.replace(/[$]/g, "_").replace(/@/g, "_");
+    let cleanname = vn.replace(/[$@.]/g, "_");
     if(cleanname.startsWith("_")) {
         cleanname = "q" + cleanname;
     }
@@ -86,7 +86,7 @@ class MorphirConst extends MorphirExp {
     }
 
     emitMorphir(indent: string | undefined): string {
-        return (indent !== undefined ? indent : "") + cleanVarName(this.cname);
+        return (indent !== undefined ? indent : "") + this.cname;
     }
 
     computeCallees(callees: Set<string>): void {
@@ -122,7 +122,7 @@ class MorphirCallSimple extends MorphirExp {
     }
 
     static makeEq(lhs: MorphirExp, rhs: MorphirExp): MorphirExp {
-        return new MorphirCallSimple("=", [lhs, rhs], true);
+        return new MorphirCallSimple("==", [lhs, rhs], true);
     }
 
     static makeNotEq(lhs: MorphirExp, rhs: MorphirExp): MorphirExp {
@@ -273,7 +273,7 @@ class MorphirLetMulti extends MorphirExp {
     }
 
     emitMorphir(indent: string | undefined): string {
-        const binds = this.assigns.map((asgn) => `${cleanVarName(asgn.vname)} = ${asgn.value.emitMorphir(undefined)})`);
+        const binds = this.assigns.map((asgn) => `${cleanVarName(asgn.vname)} = ${asgn.value.emitMorphir(undefined)}`);
 
         if (indent === undefined) {
             return `(let ${binds.join(" ")} in ${this.inexp.emitMorphir(undefined)})`;
@@ -309,7 +309,7 @@ class MorphirIf extends MorphirExp {
             return `(if ${this.cond.emitMorphir(undefined)} then ${this.tval.emitMorphir(undefined)} else ${this.fval.emitMorphir(undefined)})`;
         }
         else {
-            return indent + `if ${this.cond.emitMorphir(undefined)} then\n${this.tval.emitMorphir(indent + "    ")} else\n${this.fval.emitMorphir(indent + "    ")}`;
+            return indent + `if ${this.cond.emitMorphir(undefined)} then\n${this.tval.emitMorphir(indent + "    ")}\n${indent}else\n${this.fval.emitMorphir(indent + "    ")}`;
         }
     }
 
@@ -342,7 +342,7 @@ class MorphirCond extends MorphirExp {
         else {
             let iopts: string = this.orelse.emitMorphir(undefined);
             for(let i = this.opts.length - 1; i >= 0; --i) {
-                iopts = indent + `if ${this.opts[i].test.emitMorphir(undefined)} then\n${this.opts[i].result.emitMorphir(indent + "    ")} else\n${iopts}`
+                iopts = indent + `if ${this.opts[i].test.emitMorphir(undefined)} then\n${this.opts[i].result.emitMorphir(indent + "    ")}\n${indent}else\n${iopts}`
             }
             return iopts;
         }
@@ -358,6 +358,7 @@ class MorphirCond extends MorphirExp {
 }
 
 export {
+    cleanVarName,
     MorphirMaskConstruct,
     MorphirTypeInfo, MorphirExp, MorphirVar, MorphirConst, 
     MorphirCallSimple, MorphirCallGeneral, MorphirCallGeneralWOptMask, MorphirCallGeneralWPassThroughMask,

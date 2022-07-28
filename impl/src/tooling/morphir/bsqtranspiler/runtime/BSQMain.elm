@@ -336,12 +336,12 @@ bshacontenthashtime_less : BSHAContentHash -> BSHAContentHash -> Bool
 bshacontenthashtime_less k1 k2 = 
     k1 < k2
 
-bsqnone_default : BNone
-bsqnone_default = 
+bsqbnone_default : BNone
+bsqbnone_default = 
     0
 
-bsqnothing_default : BNothing
-bsqnothing_default = 
+bsqbnothing_default : BNothing
+bsqbnothing_default = 
     0
 
 bsqbool_default : Bool
