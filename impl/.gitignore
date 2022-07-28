@@ -4,6 +4,7 @@
 /src/test/apps/*/*.smt2
 /src/test/apps/*/bin/_build_.json
 /src/test/apps/*/bin/_build_.smt2
+/src/test/apps/*/bin/_build_.elm
 /src/tooling/morphir/examples/*/morphir-ir.json
 /src/tooling/morphir/examples/*/transpile.bsq
 /src/tooling/morphir/examples/*/bsqproj/*

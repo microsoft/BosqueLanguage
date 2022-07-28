@@ -113,7 +113,7 @@ class MorphirBodyEmitter {
 
     generateUFConstantForType(tt: MIRType): string {
         const ctype = this.typegen.getMorphirTypeFor(tt);
-        const ufcname = `${ctype.morphirtypename}__uicons_UF`;
+        const ufcname = `bsq${ctype.morphirtypename.toLowerCase()}_default`;
         
         if(this.requiredUFConsts.find((cc) => cc.morphirtypename === ctype.morphirtypename) === undefined) {
             this.requiredUFConsts.push(ctype);
@@ -2001,27 +2001,27 @@ class MorphirBodyEmitter {
             //op unary -
             case "__i__Core::-=prefix=(Int)": {
                 rtype = this.typegen.getMIRType("Int");
-                mphe = new MorphirCallSimple("-", args);
+                mphe = new MorphirCallSimple("*", [new MorphirConst("-1"), args[0]], true);
                 break;
             }
             case "__i__Core::-=prefix=(BigInt)": {
                 rtype = this.typegen.getMIRType("BigInt");
-                mphe = new MorphirCallSimple("-", args);
+                mphe = new MorphirCallSimple("*", [new MorphirConst("-1"), args[0]], true);
                 break;
             }
             case "__i__Core::-=prefix=(Rational)": {
                 rtype = this.typegen.getMIRType("Rational");
-                mphe = new MorphirCallSimple("-", args);
+                mphe = new MorphirCallSimple("*", [new MorphirConst("-1.0"), args[0]], true);
                 break;
             }
             case "__i__Core::-=prefix=(Float)": {
                 rtype = this.typegen.getMIRType("Float");
-                mphe = new MorphirCallSimple("-", args);
+                mphe = new MorphirCallSimple("*", [new MorphirConst("-1.0"), args[0]], true);
                 break;
             }
             case "__i__Core::-=prefix=(Decimal)": {
                 rtype = this.typegen.getMIRType("Decimal");
-                mphe = new MorphirCallSimple("-", args);
+                mphe = new MorphirCallSimple("*", [new MorphirConst("-1.0"), args[0]], true);
                 break;
             }
             //op infix +
@@ -2074,7 +2074,7 @@ class MorphirBodyEmitter {
             }
             case "__i__Core::-=infix=(BigInt, BigInt)": {
                 rtype = this.typegen.getMIRType("BigInt");
-                mphe = new MorphirCallSimple("-", args);
+                mphe = new MorphirCallSimple("-", args, true);
                 break;
             }
             case "__i__Core::-=infix=(BigNat, BigNat)": {
