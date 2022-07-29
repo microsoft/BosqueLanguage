@@ -4,3 +4,57 @@
 //-------------------------------------------------------------------------------------------------------
 
 namespace ListBasic;
+
+////////
+//
+chktest function checkEmptyYes(): Bool {
+    return List<Int>{}.empty();
+}
+
+chktest function checkEmptyNo(): Bool {
+    return !List<Int>{1, 2}.empty();
+}
+
+chktest function checkSize0(): Bool {
+    return List<Int>{}.size() == 0n;
+}
+
+chktest function checkSize3(): Bool {
+    return List<Int>{1, 2, 3}.size() == 3n;
+}
+
+chktest function checkSize9(): Bool {
+    return List<Int>{1, 2, 3, 4, 5, 6, 7, 8, 9}.size() == 9n;
+}
+
+chktest function checkEmptyYes_sym(x: Int): Bool {
+    return List<Int>{}.empty();
+}
+
+chktest function checkEmptyNo_sym(x: Int): Bool {
+    return !List<Int>{x}.empty();
+}
+
+chktest function checkSize0_sym(x: Int): Bool {
+    return List<Int>{}.size() == 0n;
+}
+
+chktest function checkSize3_sym(x: Int): Bool {
+    return List<Int>{1, x, 3}.size() == 3n;
+}
+
+chktest function checkSize9_sym(x: Int): Bool {
+    return List<Int>{1, 2, 3, x, 5, 6, 7, 8, 9}.size() == 9n;
+}
+
+__chktest function empty_fail(l: List<Int>): Bool {
+    return l.empty();
+}
+
+__chktest function not_empty_fail(l: List<Int>): Bool {
+    return !l.empty();
+}
+
+__chktest function checkSize3_fail(l: List<Int>): Bool {
+    return l.size() == 3n;
+}

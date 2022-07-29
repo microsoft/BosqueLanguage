@@ -49,6 +49,9 @@ class ICPPBodyEmitter {
 
     requiredUpdateEntityWithCheck: { inv: string, arglayouttype: MIRType, argflowtype: MIRType, updates: [MIRFieldKey, MIRResolvedTypeKey][], resulttype: MIRType }[] = [];
 
+    requiredEmptyConstructorsList: { inv: string, resulttype: MIRType }[] = [];
+    requiredEmptyConstructorsMap: { inv: string, resulttype: MIRType }[] = [];
+
     requiredSingletonConstructorsList: { inv: string, argc: number, resulttype: MIRType }[] = [];
     requiredSingleElementConstructorsMap: { inv: string, argtupletype: MIRTupleType, resulttype: MIRType }[] = [];
 
@@ -151,11 +154,11 @@ class ICPPBodyEmitter {
         return `$EntityUpdate_${argflowtype.typeID}.{${fnames}}->${resulttype.typeID}`;
     }
 
-    private generateEmptyConstructorList(resulttype: MIRType): string {
+    private generateEmptyConstructorsList(resulttype: MIRType): string {
         return `$ListEmptyCons->${resulttype.typeID}`;
     }
 
-    private generateEmptyConstructorMap(resulttype: MIRType): string {
+    private generateEmptyConstructorsMap(resulttype: MIRType): string {
         return `$MapEmptyCons->${resulttype.typeID}`;
     }
 
@@ -336,6 +339,20 @@ class ICPPBodyEmitter {
         ops.push(ICPPOpEmitter.genJumpOp(sinfo, 1, "exit")); //dummy final jump block
         
         return new ICPPInvokeBodyDecl(geninfo.inv, geninfo.inv, "[GENERATED]", sinfo, sinfo, false, params, paraminfo, geninfo.resulttype.typeID, this.getStackInfoForArgVar("$$return"), this.stackSize, 0, ops, 0);
+    }
+
+    generateEmptyConstructorList(geninfo: { inv: string, resulttype: MIRType }): ICPPInvokeDecl {
+        const ldecl = this.assembly.entityDecls.get(geninfo.resulttype.typeID) as MIRPrimitiveListEntityTypeDecl;
+        const etype = ldecl.getTypeT().typeID;
+        
+        return new ICPPInvokePrimitiveDecl(geninfo.inv, geninfo.inv, "[Generated]", new SourceInfo(-1, -1, -1 ,-1), new SourceInfo(-1, -1, -1 ,-1), false, [], geninfo.resulttype.typeID, geninfo.resulttype.typeID, "s_list_build_empty", new Map<string, MIRResolvedTypeKey>().set("T", etype), new Map<string, ICPPPCode>());
+    }
+
+    generateEmptyConstructorMap(geninfo: { inv: string, resulttype: MIRType }): ICPPInvokeDecl {
+        const ldecl = this.assembly.entityDecls.get(geninfo.resulttype.typeID) as MIRPrimitiveListEntityTypeDecl;
+        const etype = ldecl.getTypeT().typeID;
+        
+        return new ICPPInvokePrimitiveDecl(geninfo.inv, geninfo.inv, "[Generated]", new SourceInfo(-1, -1, -1 ,-1), new SourceInfo(-1, -1, -1 ,-1), false, [], geninfo.resulttype.typeID, geninfo.resulttype.typeID, "s_map_build_empty", new Map<string, MIRResolvedTypeKey>().set("T", etype), new Map<string, ICPPPCode>());
     }
 
     generateSingletonConstructorList(geninfo: { inv: string, argc: number, resulttype: MIRType }): ICPPInvokeDecl {
@@ -1121,13 +1138,21 @@ class ICPPBodyEmitter {
     }
 
     processConstructorPrimaryCollectionEmptyList_Helper(op: MIRConstructorPrimaryCollectionEmpty, ltype: MIRPrimitiveListEntityTypeDecl): ICPPOp {
-        const icall = this.generateEmptyConstructorList(this.typegen.getMIRType(op.tkey));
+        const icall = this.generateEmptyConstructorsList(this.typegen.getMIRType(op.tkey));
+        if(this.requiredEmptyConstructorsList.findIndex((vv) => vv.inv === icall) === -1) {
+            const geninfo = { inv: icall, resulttype: this.typegen.getMIRType(op.tkey) };
+            this.requiredEmptyConstructorsList.push(geninfo);
+        }
        
         return ICPPOpEmitter.genInvokeFixedFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.tkey), op.tkey, icall, [], -1, ICPPOpEmitter.genNoStatmentGuard());
     }
 
     processConstructorPrimaryCollectionEmptyMap_Helper(op: MIRConstructorPrimaryCollectionEmpty, ltype: MIRPrimitiveMapEntityTypeDecl): ICPPOp {
-        const icall = this.generateEmptyConstructorMap(this.typegen.getMIRType(op.tkey));
+        const icall = this.generateEmptyConstructorsMap(this.typegen.getMIRType(op.tkey));
+        if(this.requiredEmptyConstructorsMap.findIndex((vv) => vv.inv === icall) === -1) {
+            const geninfo = { inv: icall, resulttype: this.typegen.getMIRType(op.tkey) };
+            this.requiredEmptyConstructorsMap.push(geninfo);
+        }
        
         return ICPPOpEmitter.genInvokeFixedFunctionOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, op.tkey), op.tkey, icall, [], -1, ICPPOpEmitter.genNoStatmentGuard());
     }

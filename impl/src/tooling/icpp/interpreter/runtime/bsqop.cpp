@@ -69,6 +69,7 @@ std::map<std::string, BSQPrimitiveImplTag> MarshalEnvironment::g_primitiveinvoke
     {"isotimestamp_create", BSQPrimitiveImplTag::isotimestamp_create},
     {"latlongcoordinate_create", BSQPrimitiveImplTag::latlongcoordinate_create},
 
+    {"s_list_build_empty", BSQPrimitiveImplTag::s_list_build_empty},
     {"s_list_build_k", BSQPrimitiveImplTag::s_list_build_k},
     {"s_list_empty", BSQPrimitiveImplTag::s_list_empty},
     {"s_list_size", BSQPrimitiveImplTag::s_list_size},
@@ -110,6 +111,7 @@ std::map<std::string, BSQPrimitiveImplTag> MarshalEnvironment::g_primitiveinvoke
     {"s_list_map_sync", BSQPrimitiveImplTag::s_list_map_sync},
     {"s_list_filter_map_fn", BSQPrimitiveImplTag::s_list_filter_map_fn},
 
+    {"s_map_build_empty", BSQPrimitiveImplTag::s_map_build_empty},
     {"s_map_build_1", BSQPrimitiveImplTag::s_map_build_1},
     {"s_map_empty", BSQPrimitiveImplTag::s_map_empty},
     {"s_map_count", BSQPrimitiveImplTag::s_map_count},
