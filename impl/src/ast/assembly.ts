@@ -1358,11 +1358,12 @@ class Assembly {
     }
 
     private atomSubtypeOf_EntityConcept(t1: ResolvedEntityAtomType, t2: ResolvedConceptAtomType): boolean {
-        if(t1.object.attributes.includes("__nothing_type") && t2.conceptTypes.some((cpt) => cpt.concept.attributes.includes("__option_type"))) {
+        const t2type = ResolvedType.createSingle(t2);
+
+        if(t1.object.attributes.includes("__nothing_type") && this.subtypeOf(t2type, this.getSpecialIOptionConceptType())) {
             return true;
         }
         else {
-            const t2type = ResolvedType.createSingle(t2);
             return this.resolveProvides(t1.object, t1.binds).some((provide) => {
                 const tt = this.normalizeTypeOnly(provide, t1.binds);
                 return !tt.isEmptyType() && this.subtypeOf(tt, t2type);

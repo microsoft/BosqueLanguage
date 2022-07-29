@@ -544,39 +544,39 @@ class ICPPBodyEmitter {
         }
     }
 
-    generateNoneCheck(sinfo: SourceInfo, trgt: MIRRegisterArgument, arg: MIRArgument, argtype: MIRType): ICPPOp {
+    generateNoneCheck(sinfo: SourceInfo, trgt: TargetVar, arg: Argument, argtype: MIRType, sguard: ICPPStatementGuard | undefined): ICPPOp {
         if (this.typegen.isType(argtype, "None")) {
-            return ICPPOpEmitter.genDirectAssignOp(sinfo, this.trgtToICPPTargetLocation(trgt, "Bool"), "Bool", this.getSpecialLiteralValue("true"), ICPPOpEmitter.genNoStatmentGuard());
+            return ICPPOpEmitter.genDirectAssignOp(sinfo, trgt, "Bool", this.getSpecialLiteralValue("true"), sguard || ICPPOpEmitter.genNoStatmentGuard());
         }
         else if (!this.assembly.subtypeOf(this.typegen.getMIRType("None"), argtype)) {
-            return ICPPOpEmitter.genDirectAssignOp(sinfo, this.trgtToICPPTargetLocation(trgt, "Bool"), "Bool", this.getSpecialLiteralValue("false"), ICPPOpEmitter.genNoStatmentGuard());
+            return ICPPOpEmitter.genDirectAssignOp(sinfo, trgt, "Bool", this.getSpecialLiteralValue("false"), sguard || ICPPOpEmitter.genNoStatmentGuard());
         }
         else {
-            return ICPPOpEmitter.genTypeIsNoneOp(sinfo, this.trgtToICPPTargetLocation(trgt, "Bool"), this.argToICPPLocation(arg), argtype.typeID, ICPPOpEmitter.genNoStatmentGuard());
+            return ICPPOpEmitter.genTypeIsNoneOp(sinfo, trgt, arg, argtype.typeID, sguard || ICPPOpEmitter.genNoStatmentGuard());
         }
     }
 
-    generateSomeCheck(sinfo: SourceInfo, trgt: MIRRegisterArgument, arg: MIRArgument, argtype: MIRType): ICPPOp {
+    generateSomeCheck(sinfo: SourceInfo, trgt: TargetVar, arg: Argument, argtype: MIRType, sguard: ICPPStatementGuard | undefined): ICPPOp {
         if (this.typegen.isType(argtype, "None")) {
-            return ICPPOpEmitter.genDirectAssignOp(sinfo, this.trgtToICPPTargetLocation(trgt, "Bool"), "Bool", this.getSpecialLiteralValue("false"), ICPPOpEmitter.genNoStatmentGuard());
+            return ICPPOpEmitter.genDirectAssignOp(sinfo, trgt, "Bool", this.getSpecialLiteralValue("false"), sguard || ICPPOpEmitter.genNoStatmentGuard());
         }
         else if (!this.assembly.subtypeOf(this.typegen.getMIRType("None"), argtype)) {
-            return ICPPOpEmitter.genDirectAssignOp(sinfo, this.trgtToICPPTargetLocation(trgt, "Bool"), "Bool", this.getSpecialLiteralValue("true"), ICPPOpEmitter.genNoStatmentGuard());
+            return ICPPOpEmitter.genDirectAssignOp(sinfo, trgt, "Bool", this.getSpecialLiteralValue("true"), sguard || ICPPOpEmitter.genNoStatmentGuard());
         }
         else {
-            return ICPPOpEmitter.genTypeIsSomeOp(sinfo, this.trgtToICPPTargetLocation(trgt, "Bool"), this.argToICPPLocation(arg), argtype.typeID, ICPPOpEmitter.genNoStatmentGuard());
+            return ICPPOpEmitter.genTypeIsSomeOp(sinfo, trgt, arg, argtype.typeID, sguard || ICPPOpEmitter.genNoStatmentGuard());
         }
     }
     
-    generateNothingCheck(sinfo: SourceInfo, trgt: MIRRegisterArgument, arg: MIRArgument, argtype: MIRType): ICPPOp {
+    generateNothingCheck(sinfo: SourceInfo, trgt: TargetVar, arg: Argument, argtype: MIRType, sguard: ICPPStatementGuard | undefined): ICPPOp {
         if (this.typegen.isType(argtype, "Nothing")) {
-            return ICPPOpEmitter.genDirectAssignOp(sinfo, this.trgtToICPPTargetLocation(trgt, "Bool"), "Bool", this.getSpecialLiteralValue("true"), ICPPOpEmitter.genNoStatmentGuard());
+            return ICPPOpEmitter.genDirectAssignOp(sinfo, trgt, "Bool", this.getSpecialLiteralValue("true"), sguard || ICPPOpEmitter.genNoStatmentGuard());
         }
         else if (!this.assembly.subtypeOf(this.typegen.getMIRType("Nothing"), argtype)) {
-            return ICPPOpEmitter.genDirectAssignOp(sinfo, this.trgtToICPPTargetLocation(trgt, "Bool"), "Bool", this.getSpecialLiteralValue("false"), ICPPOpEmitter.genNoStatmentGuard());
+            return ICPPOpEmitter.genDirectAssignOp(sinfo, trgt, "Bool", this.getSpecialLiteralValue("false"), sguard || ICPPOpEmitter.genNoStatmentGuard());
         }
         else {
-            return ICPPOpEmitter.genTypeIsNothingOp(sinfo, this.trgtToICPPTargetLocation(trgt, "Bool"), this.argToICPPLocation(arg), argtype.typeID, ICPPOpEmitter.genNoStatmentGuard());
+            return ICPPOpEmitter.genTypeIsNothingOp(sinfo, trgt, arg, argtype.typeID, sguard || ICPPOpEmitter.genNoStatmentGuard());
         }
     }
 
@@ -1320,13 +1320,13 @@ class ICPPBodyEmitter {
             return ICPPOpEmitter.genDirectAssignOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), "Bool", this.getSpecialLiteralValue("true"), sguard);
         }
         else if(this.typegen.isType(oftype, "None")) {
-            return ICPPOpEmitter.genTypeIsNoneOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), this.argToICPPLocation(op.arg), layout.typeID, sguard);
+            return this.generateNoneCheck(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), this.argToICPPLocation(op.arg), this.typegen.getMIRType(layout.typeID), sguard);
         }
         else if (this.typegen.isType(oftype, "Some")) {
-            return ICPPOpEmitter.genTypeIsSomeOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), this.argToICPPLocation(op.arg), layout.typeID, sguard);
+            return this.generateSomeCheck(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), this.argToICPPLocation(op.arg), this.typegen.getMIRType(layout.typeID), sguard);
         }
         else if(this.typegen.isType(oftype, "Nothing")) {
-            return ICPPOpEmitter.genTypeIsNothingOp(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), this.argToICPPLocation(op.arg), layout.typeID, sguard);
+            return this.generateNothingCheck(op.sinfo, this.trgtToICPPTargetLocation(op.trgt, "Bool"), this.argToICPPLocation(op.arg), this.typegen.getMIRType(layout.typeID), sguard);
         }
         else {
             if(this.typegen.isUniqueType(oftype)) {

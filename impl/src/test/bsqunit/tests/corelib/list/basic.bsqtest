@@ -20,31 +20,11 @@ chktest function checkSize0(): Bool {
 }
 
 chktest function checkSize3(): Bool {
-    return List<Int>{1, 2, 3}.size() == 3n;
+    return List<Int>{1i, 2i, 3i}.size() == 3n;
 }
 
 chktest function checkSize9(): Bool {
-    return List<Int>{1, 2, 3, 4, 5, 6, 7, 8, 9}.size() == 9n;
-}
-
-chktest function checkEmptyYes_sym(x: Int): Bool {
-    return List<Int>{}.empty();
-}
-
-chktest function checkEmptyNo_sym(x: Int): Bool {
-    return !List<Int>{x}.empty();
-}
-
-chktest function checkSize0_sym(x: Int): Bool {
-    return List<Int>{}.size() == 0n;
-}
-
-chktest function checkSize3_sym(x: Int): Bool {
-    return List<Int>{1, x, 3}.size() == 3n;
-}
-
-chktest function checkSize9_sym(x: Int): Bool {
-    return List<Int>{1, 2, 3, x, 5, 6, 7, 8, 9}.size() == 9n;
+    return List<Int>{1i, 2i, 3i, 4i, 5i, 6i, 7i, 8i, 9i}.size() == 9n;
 }
 
 __chktest function empty_fail(l: List<Int>): Bool {
@@ -58,3 +38,41 @@ __chktest function not_empty_fail(l: List<Int>): Bool {
 __chktest function checkSize3_fail(l: List<Int>): Bool {
     return l.size() == 3n;
 }
+
+////////
+//
+chktest function checkGetAt_1_from_3(): Bool {
+    return List<Int>{1i, 2i, 3i}.get(1n) == 2i;
+}
+
+chktest function checkGetOrNoneAt_1_from_3(): Bool {
+    return List<Int>{1i, 2i, 3i}.getOrNone(1n) === 2i;
+}
+
+chktest function checkGetOrNoneAt_4_from_3(): Bool {
+    return List<Int>{1i, 2i, 3i}.getOrNone(4n) === none;
+}
+
+chktest function checkGetOptionAt_1_from_3(): Bool {
+    let rr = List<Int>{1i, 2i, 3i}.getOption(1n);
+    return rr.isSomething() && rr.data() == 2i;
+}
+
+chktest function checkGetOptionAt_4_from_3(): Bool {
+    let rr = List<Int>{1i, 2i, 3i}.getOption(4n);
+    return rr === nothing;
+}
+/*
+chktest function checkGetTryAt_1_from_3(): Bool {
+    var rr: Int = 0i;
+    let found = List<Int>{1i, 2i, 3i}.getTry(1n, out? rr);
+    return found && rr == 2i;
+}
+
+chktest function checkGetTryAt_4_from_3(): Bool {
+    var rr: Int;
+    let found = List<Int>{1i, 2i, 3i}.getTry(4n, out? rr);
+    return !found;
+}
+*/
+
