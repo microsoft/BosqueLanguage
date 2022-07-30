@@ -2249,6 +2249,10 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         SLPTR_STORE_CONTENTS_AS(BSQLatLongCoordinate, resultsl, llc);
         break;
     }
+    case BSQPrimitiveImplTag::s_list_build_empty: {
+        LIST_STORE_RESULT_EMPTY(resultsl);
+        break;
+    }
     case BSQPrimitiveImplTag::s_list_build_k: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
         auto rres = BSQListOps::list_cons(lflavor, params);
@@ -2517,6 +2521,10 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
 
         auto rr = BSQListOps::s_filter_map_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.find("f")->second, invk->pcodes.find("p")->second, params, rflavor);
         LIST_STORE_RESULT_REPR(rr, resultsl);
+        break;
+    }
+    case BSQPrimitiveImplTag::s_map_build_empty: {
+        MAP_STORE_RESULT_EMPTY(resultsl);
         break;
     }
     case BSQPrimitiveImplTag::s_map_build_1: {

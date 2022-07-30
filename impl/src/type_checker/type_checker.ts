@@ -368,19 +368,19 @@ class TypeChecker {
         }
 
         if (lhsexp instanceof LiteralNoneExpression) {
-            return rhs.options.some((opt) => opt.typeID === "None") ? "lhsnone" : "falsealways";
+            return this.m_assembly.subtypeOf(this.m_assembly.getSpecialNoneType(), rhs) ? "lhsnone" : "falsealways";
         }
 
         if (rhsexp instanceof LiteralNoneExpression) {
-            return lhs.options.some((opt) => opt.typeID === "None") ? "rhsnone" : "falsealways";
+            return this.m_assembly.subtypeOf(this.m_assembly.getSpecialNoneType(), lhs) ? "rhsnone" : "falsealways";
         }
 
         if (lhsexp instanceof LiteralNothingExpression) {
-            return rhs.options.some((opt) => opt.typeID === "None") ? "lhsnothing" : "falsealways";
+            return this.m_assembly.subtypeOf(this.m_assembly.getSpecialNothingType(), rhs) ? "lhsnothing" : "falsealways";
         }
 
         if (rhsexp instanceof LiteralNothingExpression) {
-            return lhs.options.some((opt) => opt.typeID === "None") ? "rhsnothing" : "falsealways";
+            return this.m_assembly.subtypeOf(this.m_assembly.getSpecialNothingType(), lhs) ? "rhsnothing" : "falsealways";
         }
 
         //should be a subtype on one of the sides

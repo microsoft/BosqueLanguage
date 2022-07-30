@@ -417,6 +417,7 @@ enum class BSQPrimitiveImplTag
     isotimestamp_create,
     latlongcoordinate_create,
 
+    s_list_build_empty,
     s_list_build_k,
     s_list_empty,
     s_list_size,
@@ -458,6 +459,7 @@ enum class BSQPrimitiveImplTag
     s_list_map_sync,
     s_list_filter_map_fn,
 
+    s_map_build_empty,
     s_map_build_1,
     s_map_empty,
     s_map_count,
