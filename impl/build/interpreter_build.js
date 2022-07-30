@@ -22,7 +22,8 @@ let includes = " ";
 let outfile = "";
 if(process.platform === "darwin") {
     compiler = "clang++";
-    ccflags = "-O0 -g -DBSQ_DEBUG_BUILD -Wall -std=c++20 -fsanitize=address -fsanitize=undefined";
+    ccflags = "-O0 -g -DBSQ_DEBUG_BUILD -Wall -std=c++20";
+    //Usefull flags -fsanitize=address -fsanitize=undefined
     //TODO: probably want to make -fsanitize=leak clean as well
     //TODO: not supported on macos -fsanitize=memory
     includes = includeheaders.map((ih) => `-I ${ih}`).join(" ");
@@ -30,7 +31,7 @@ if(process.platform === "darwin") {
 }
 else if(process.platform === "linux") {
     compiler = "clang++";
-    ccflags = "-O0 -g -DBSQ_DEBUG_BUILD -Wall -std=c++20";
+    ccflags = "-O0 -g -DBSQ_DEBUG_BUILD -Wall -std=c++20 -fsanitize=address -fsanitize=undefined";
     includes = includeheaders.map((ih) => `-I ${ih}`).join(" ");
     outfile = "-o " + outexec + "/icpp";
 }
