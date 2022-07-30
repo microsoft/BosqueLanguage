@@ -184,6 +184,16 @@ class ICPPEmitter {
             this.icppasm.invokenames.add(oper.ikey);
         });
 
+        this.bemitter.requiredEmptyConstructorsList.forEach((scl) => {
+            this.icppasm.invdecls.push(this.bemitter.generateEmptyConstructorList(scl));
+            this.icppasm.invokenames.add(scl.inv);
+        });
+
+        this.bemitter.requiredEmptyConstructorsMap.forEach((scl) => {
+            this.icppasm.invdecls.push(this.bemitter.generateEmptyConstructorMap(scl));
+            this.icppasm.invokenames.add(scl.inv);
+        });
+
         this.bemitter.requiredSingletonConstructorsList.forEach((scl) => {
             this.icppasm.invdecls.push(this.bemitter.generateSingletonConstructorList(scl));
             this.icppasm.invokenames.add(scl.inv);

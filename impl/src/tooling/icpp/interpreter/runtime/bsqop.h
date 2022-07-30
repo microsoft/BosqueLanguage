@@ -1025,7 +1025,7 @@ public:
     const BSQUnionType* arglayout;
     const BSQStatementGuard sguard;
     
-    TypeIsNothingOp(SourceInfo sinfo, TargetVar trgt, Argument arg, const BSQUnionType* arglayout, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::TypeIsNoneOp), trgt(trgt), arg(arg), arglayout(arglayout), sguard(sguard) {;}
+    TypeIsNothingOp(SourceInfo sinfo, TargetVar trgt, Argument arg, const BSQUnionType* arglayout, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::TypeIsNothingOp), trgt(trgt), arg(arg), arglayout(arglayout), sguard(sguard) {;}
     virtual ~TypeIsNothingOp() {;}
 
     static TypeIsNothingOp* jparse(json v);
