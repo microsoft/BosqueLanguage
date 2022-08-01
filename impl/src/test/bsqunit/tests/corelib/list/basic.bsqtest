@@ -62,11 +62,17 @@ chktest function checkGetOptionAt_4_from_3(): Bool {
     let rr = List<Int>{1i, 2i, 3i}.getOption(4n);
     return rr === nothing;
 }
-/*
+
 chktest function checkGetTryAt_1_from_3(): Bool {
-    var rr: Int = 0i;
-    let found = List<Int>{1i, 2i, 3i}.getTry(1n, out? rr);
-    return found && rr == 2i;
+    var rr: Int;
+    let ll = List<Int>{1i, 2i, 3i};
+    
+    if(ll.getTry(1n, out? rr)) {
+        return rr == 2i;
+    }
+    else {
+        return false;
+    }
 }
 
 chktest function checkGetTryAt_4_from_3(): Bool {
@@ -74,5 +80,18 @@ chktest function checkGetTryAt_4_from_3(): Bool {
     let found = List<Int>{1i, 2i, 3i}.getTry(4n, out? rr);
     return !found;
 }
-*/
+
+__chktest function getOrNone_fail(l: List<Int>): Bool {
+    return l.getOrNone(3n) !== 2i;
+}
+
+__chktest function tryGetFound_fail(l: List<Int>): Bool {
+    var rr: Int;
+    if(l.getTry(1n, out? rr)) {
+        return rr != 0i;
+    }
+    else {
+        return false;
+    }
+}
 
