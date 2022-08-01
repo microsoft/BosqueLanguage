@@ -621,10 +621,10 @@ class MIREmitter {
 
             const refbase = retinfo.elrcount != -1 ? retinfo.elrcount : 1;
             const argvs = retinfo.refargs.map((rinfo, idx) => {
-                return { pos: refbase + idx, into: rinfo[0], oftype: (retinfo.declresult.options[0] as MIREphemeralListType).entries[refbase + idx]};
+                return { pos: refbase + idx, into: rinfo[0], oftype: (retinfo.runtimeresult.options[0] as MIREphemeralListType).entries[refbase + idx]};
             });
 
-            this.emitMultiLoadFromEpehmeralList(sinfo, rr, retinfo.declresult, argvs);
+            this.emitMultiLoadFromEpehmeralList(sinfo, rr, retinfo.runtimeresult, argvs);
         }
     }
 
@@ -658,10 +658,10 @@ class MIREmitter {
 
             const refbase = retinfo.elrcount != -1 ? retinfo.elrcount : 1;
             const argvs = retinfo.refargs.map((rinfo, idx) => {
-                return {pos: refbase + idx, into: rinfo[0], oftype: (retinfo.declresult.options[0] as MIREphemeralListType).entries[refbase + idx]};
+                return {pos: refbase + idx, into: rinfo[0], oftype: (retinfo.runtimeresult.options[0] as MIREphemeralListType).entries[refbase + idx]};
             });
 
-            this.emitMultiLoadFromEpehmeralList(sinfo, rr, retinfo.declresult, argvs);
+            this.emitMultiLoadFromEpehmeralList(sinfo, rr, retinfo.runtimeresult, argvs);
         }
     }
 

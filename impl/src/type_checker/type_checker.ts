@@ -368,19 +368,19 @@ class TypeChecker {
         }
 
         if (lhsexp instanceof LiteralNoneExpression) {
-            return rhs.options.some((opt) => opt.typeID === "None") ? "lhsnone" : "falsealways";
+            return this.m_assembly.subtypeOf(this.m_assembly.getSpecialNoneType(), rhs) ? "lhsnone" : "falsealways";
         }
 
         if (rhsexp instanceof LiteralNoneExpression) {
-            return lhs.options.some((opt) => opt.typeID === "None") ? "rhsnone" : "falsealways";
+            return this.m_assembly.subtypeOf(this.m_assembly.getSpecialNoneType(), lhs) ? "rhsnone" : "falsealways";
         }
 
         if (lhsexp instanceof LiteralNothingExpression) {
-            return rhs.options.some((opt) => opt.typeID === "None") ? "lhsnothing" : "falsealways";
+            return this.m_assembly.subtypeOf(this.m_assembly.getSpecialNothingType(), rhs) ? "lhsnothing" : "falsealways";
         }
 
         if (rhsexp instanceof LiteralNothingExpression) {
-            return lhs.options.some((opt) => opt.typeID === "None") ? "rhsnothing" : "falsealways";
+            return this.m_assembly.subtypeOf(this.m_assembly.getSpecialNothingType(), lhs) ? "rhsnothing" : "falsealways";
         }
 
         //should be a subtype on one of the sides
@@ -803,8 +803,6 @@ class TypeChecker {
                         const rvname = (parg.value as AccessVariableExpression).name;
                         this.raiseErrorIf(parg.value.sinfo, env.lookupVar(rvname) === null, "Variable name is not defined");
 
-                        this.checkExpression(env, parg.value, treg, oftype as ResolvedType);
-
                         let refreg: MIRRegisterArgument | undefined = undefined;
                         if(parg.ref === "ref") {
                             this.checkExpression(env, parg.value, treg, oftype as ResolvedType);
@@ -870,8 +868,6 @@ class TypeChecker {
 
                         const rvname = (arg.value as AccessVariableExpression).name;
                         this.raiseErrorIf(arg.value.sinfo, env.lookupVar(rvname) === null, "Variable name is not defined");
-
-                        this.checkExpression(env, arg.value, treg, undefined);
 
                         let refreg: MIRRegisterArgument | undefined = undefined;
                         if(arg.ref === "ref") {
@@ -2041,9 +2037,9 @@ class TypeChecker {
         return { args: margs, types: mtypes, refs: refs, pcodes: pcodes.map((pci) => pci.code), cinfo: cinfo };
     }
 
-    private generateExpandedReturnSig(sinfo: SourceInfo, declaredType: ResolvedType, params: {name: string, refKind: "ref" | "out" | "out?" | undefined, ptype: ResolvedType}[]): MIRType {
+    private generateExpandedReturnSig(sinfo: SourceInfo, declaredType: ResolvedType, params: {pname: string, isref: boolean, defonentry: boolean, ptype: ResolvedType}[]): MIRType {
         const rtype = this.m_emitter.registerResolvedTypeReference(declaredType);
-        const rr = params.filter((fp) => fp.refKind !== undefined).map((fp) => fp.ptype);
+        const rr = params.filter((fp) => fp.isref).map((fp) => fp.ptype);
         const refinfo = rr.map((fpt) => this.m_emitter.registerResolvedTypeReference(fpt));
 
         if (refinfo.length === 0) {
@@ -6159,6 +6155,7 @@ class TypeChecker {
         for (let i = 0; i < outparaminfo.length; ++i) {
             const opi = outparaminfo[i];
             if(!opi.defonentry) {
+                env = env.addVar(opi.pname, false, opi.ptype, false, opi.ptype);
                 this.m_emitter.emitLoadUninitVariableValue(SourceInfo.createIgnoreSourceInfo(), this.m_emitter.registerResolvedTypeReference(opi.ptype), new MIRRegisterArgument(opi.pname));
             }
         }
@@ -6652,7 +6649,7 @@ class TypeChecker {
         }
     }
 
-    private processGenerateSpecialPreFunction_FailFast(invkparams: {name: string, refKind: "ref" | "out" | "out?" | undefined, ptype: ResolvedType}[], pcodes: Map<string, PCode>, pargs: [string, ResolvedType][], exps: PreConditionDecl[], binds: Map<string, ResolvedType>, srcFile: string): { ikey: string, sinfo: SourceInfo, srcFile: string }[] {
+    private processGenerateSpecialPreFunction_FailFast(invkparams: {name: string, ptype: ResolvedType}[], pcodes: Map<string, PCode>, pargs: [string, ResolvedType][], exps: PreConditionDecl[], binds: Map<string, ResolvedType>, srcFile: string): { ikey: string, sinfo: SourceInfo, srcFile: string }[] {
         try {
             const clauses = exps
             .filter((cev) => isBuildLevelEnabled(cev.level, this.m_buildLevel))
@@ -6685,7 +6682,7 @@ class TypeChecker {
         return new BodyImplementation(body.id, body.file, new BlockStatement(sinfo, [ite]));
     }
 
-    private processGenerateSpecialPostFunction(invkparams: {name: string, refKind: "ref" | "out" | "out?" | undefined, ptype: ResolvedType}[], pcodes: Map<string, PCode>, pargs: [string, ResolvedType][], exps: PostConditionDecl[], binds: Map<string, ResolvedType>, srcFile: string): { ikey: string, sinfo: SourceInfo, srcFile: string }[] {
+    private processGenerateSpecialPostFunction(invkparams: {name: string, ptype: ResolvedType}[], pcodes: Map<string, PCode>, pargs: [string, ResolvedType][], exps: PostConditionDecl[], binds: Map<string, ResolvedType>, srcFile: string): { ikey: string, sinfo: SourceInfo, srcFile: string }[] {
         try {
             const clauses = exps
             .filter((cev) => isBuildLevelEnabled(cev.level, this.m_buildLevel))
@@ -6942,7 +6939,7 @@ class TypeChecker {
             params.push(new MIRFunctionParameter(p.name, mtype.typeID));
         });
 
-        const resultType = this.generateExpandedReturnSig(sinfo, declaredResult, invkparams);
+        const resultType = this.generateExpandedReturnSig(sinfo, declaredResult, invkparams.map((ivk) => { return {pname: ivk.name, isref: false, defonentry: true, ptype: ivk.ptype} }));
         const env = TypeEnvironment.createInitialEnvForCall(ikey, bodyID, binds, new Map<string, PCode>(), cargs, declaredResult);
         
         const mirbody = this.checkBodyExpression(srcFile, env, exp, declaredResult, []);
@@ -6950,12 +6947,11 @@ class TypeChecker {
     }
 
     //e.g. things like pre and post conditions
-    private processInvokeInfo_ExpressionGeneral(bodyID: string, srcFile: string, exp: Expression, ikey: MIRInvokeKey, ishort: string, sinfo: SourceInfo, attributes: string[], invkparams: {name: string, refKind: "ref" | "out" | "out?" | undefined, ptype: ResolvedType}[], declaredResult: ResolvedType, binds: Map<string, ResolvedType>, pcodes: Map<string, PCode>, pargs: [string, ResolvedType][]): MIRInvokeDecl {
+    private processInvokeInfo_ExpressionGeneral(bodyID: string, srcFile: string, exp: Expression, ikey: MIRInvokeKey, ishort: string, sinfo: SourceInfo, attributes: string[], invkparams: {name: string, ptype: ResolvedType}[], declaredResult: ResolvedType, binds: Map<string, ResolvedType>, pcodes: Map<string, PCode>, pargs: [string, ResolvedType][]): MIRInvokeDecl {
         let cargs = new Map<string, VarInfo>();
         let params: MIRFunctionParameter[] = [];
 
         invkparams.forEach((p) => {
-            assert(p.refKind === undefined);
             const mtype = this.m_emitter.registerResolvedTypeReference(p.ptype);
 
             cargs.set(p.name, new VarInfo(p.ptype, true, false, true, p.ptype));
@@ -6969,7 +6965,7 @@ class TypeChecker {
             params.push(new MIRFunctionParameter(pargs[i][0], ctype.typeID));
         }
 
-        const resultType = this.generateExpandedReturnSig(sinfo, declaredResult, invkparams);
+        const resultType = this.generateExpandedReturnSig(sinfo, declaredResult, invkparams.map((ivk) => { return {pname: ivk.name, isref: false, defonentry: true, ptype: ivk.ptype} }));
         const env = TypeEnvironment.createInitialEnvForCall(ikey, bodyID, binds, pcodes, cargs, declaredResult);
         
         const mirbody = this.checkBodyExpression(srcFile, env, exp, declaredResult, []);
@@ -6987,8 +6983,8 @@ class TypeChecker {
         let cargs = new Map<string, VarInfo>();
         let fargs = new Map<string, PCode>();
         let refnames: string[] = [];
-        let outparaminfo: {pname: string, defonentry: boolean, ptype: ResolvedType}[] = [];
-        let entrycallparams: {name: string, refKind: "ref" | "out" | "out?" | undefined, ptype: ResolvedType}[] = [];
+        let outparaminfo: {pname: string, isref: boolean, defonentry: boolean, ptype: ResolvedType}[] = [];
+        let entrycallparams: {name: string, ptype: ResolvedType}[] = [];
         let params: MIRFunctionParameter[] = [];
 
         invoke.params.forEach((p) => {
@@ -7002,10 +6998,10 @@ class TypeChecker {
                     refnames.push(p.name);
 
                     if (p.refKind === "out" || p.refKind === "out?") {
-                        outparaminfo.push({ pname: p.name, defonentry: false, ptype: pdecltype });
+                        outparaminfo.push({ pname: p.name, isref: true, defonentry: false, ptype: pdecltype });
                     }
                     else {
-                        outparaminfo.push({ pname: p.name, defonentry: true, ptype: pdecltype });
+                        outparaminfo.push({ pname: p.name, isref: true, defonentry: true, ptype: pdecltype });
                     }
                 }
 
@@ -7013,7 +7009,7 @@ class TypeChecker {
                     const mtype = this.m_emitter.registerResolvedTypeReference(pdecltype);
 
                     cargs.set(p.name, new VarInfo(pdecltype, p.refKind === undefined, false, true, pdecltype));
-                    entrycallparams.push({name: p.name, refKind: p.refKind, ptype: pdecltype});
+                    entrycallparams.push({name: p.name, ptype: pdecltype});
                     params.push(new MIRFunctionParameter(p.name, mtype.typeID));
                 }
             }
@@ -7025,7 +7021,7 @@ class TypeChecker {
 
             const resttype = this.m_emitter.registerResolvedTypeReference(rtype);
 
-            entrycallparams.push({name: invoke.optRestName as string, refKind: undefined, ptype: rtype});
+            entrycallparams.push({name: invoke.optRestName as string, ptype: rtype});
             params.push(new MIRFunctionParameter(invoke.optRestName as string, resttype.typeID));
         }
 
@@ -7055,7 +7051,7 @@ class TypeChecker {
         });
 
         const declaredResult = this.resolveAndEnsureTypeOnly(invoke.startSourceLocation, invoke.resultType, binds);
-        const resultType = this.generateExpandedReturnSig(invoke.startSourceLocation, declaredResult, entrycallparams);
+        const resultType = this.generateExpandedReturnSig(invoke.startSourceLocation, declaredResult, outparaminfo);
 
         let rprs: { name: string, refKind: "ref" | "out" | "out?" | undefined, ptype: ResolvedType }[] = [];
         rprs.push({ name: "$return", refKind: undefined, ptype: declaredResult });
@@ -7148,7 +7144,7 @@ class TypeChecker {
 
         let cargs = new Map<string, VarInfo>();
         let refnames: string[] = [];
-        let outparaminfo: {pname: string, defonentry: boolean, ptype: ResolvedType}[] = [];
+        let outparaminfo: {pname: string, isref: boolean, defonentry: boolean, ptype: ResolvedType}[] = [];
         let entrycallparams: {name: string, refKind: "ref" | "out" | "out?" | undefined, ptype: ResolvedType}[] = [];
         let params: MIRFunctionParameter[] = [];
 
@@ -7158,10 +7154,10 @@ class TypeChecker {
                 refnames.push(p.name);
 
                 if (p.refKind === "out" || p.refKind === "out?") {
-                    outparaminfo.push({ pname: p.name, defonentry: false, ptype: pdecltype });
+                    outparaminfo.push({ pname: p.name, isref: true, defonentry: false, ptype: pdecltype });
                 }
                 else {
-                    outparaminfo.push({ pname: p.name, defonentry: true, ptype: pdecltype });
+                    outparaminfo.push({ pname: p.name, isref: true, defonentry: true, ptype: pdecltype });
                 }
             }
 
@@ -7192,7 +7188,7 @@ class TypeChecker {
         }
 
         let resolvedResult = fsig.resultType;
-        const resultType = this.generateExpandedReturnSig(pci.startSourceLocation, resolvedResult, entrycallparams);
+        const resultType = this.generateExpandedReturnSig(pci.startSourceLocation, resolvedResult, outparaminfo);
 
         const realbody = ((pci.body as BodyImplementation).body instanceof Expression) 
             ? new BlockStatement(pci.startSourceLocation, [new ReturnStatement(pci.startSourceLocation, [(pci.body as BodyImplementation).body as Expression])])

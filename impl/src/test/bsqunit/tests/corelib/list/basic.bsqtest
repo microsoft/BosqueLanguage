@@ -4,3 +4,94 @@
 //-------------------------------------------------------------------------------------------------------
 
 namespace ListBasic;
+
+////////
+//
+chktest function checkEmptyYes(): Bool {
+    return List<Int>{}.empty();
+}
+
+chktest function checkEmptyNo(): Bool {
+    return !List<Int>{1, 2}.empty();
+}
+
+chktest function checkSize0(): Bool {
+    return List<Int>{}.size() == 0n;
+}
+
+chktest function checkSize3(): Bool {
+    return List<Int>{1i, 2i, 3i}.size() == 3n;
+}
+
+chktest function checkSize9(): Bool {
+    return List<Int>{1i, 2i, 3i, 4i, 5i, 6i, 7i, 8i, 9i}.size() == 9n;
+}
+
+__chktest function empty_fail(l: List<Int>): Bool {
+    return l.empty();
+}
+
+__chktest function not_empty_fail(l: List<Int>): Bool {
+    return !l.empty();
+}
+
+__chktest function checkSize3_fail(l: List<Int>): Bool {
+    return l.size() == 3n;
+}
+
+////////
+//
+chktest function checkGetAt_1_from_3(): Bool {
+    return List<Int>{1i, 2i, 3i}.get(1n) == 2i;
+}
+
+chktest function checkGetOrNoneAt_1_from_3(): Bool {
+    return List<Int>{1i, 2i, 3i}.getOrNone(1n) === 2i;
+}
+
+chktest function checkGetOrNoneAt_4_from_3(): Bool {
+    return List<Int>{1i, 2i, 3i}.getOrNone(4n) === none;
+}
+
+chktest function checkGetOptionAt_1_from_3(): Bool {
+    let rr = List<Int>{1i, 2i, 3i}.getOption(1n);
+    return rr.isSomething() && rr.data() == 2i;
+}
+
+chktest function checkGetOptionAt_4_from_3(): Bool {
+    let rr = List<Int>{1i, 2i, 3i}.getOption(4n);
+    return rr === nothing;
+}
+
+chktest function checkGetTryAt_1_from_3(): Bool {
+    var rr: Int;
+    let ll = List<Int>{1i, 2i, 3i};
+    
+    if(ll.getTry(1n, out? rr)) {
+        return rr == 2i;
+    }
+    else {
+        return false;
+    }
+}
+
+chktest function checkGetTryAt_4_from_3(): Bool {
+    var rr: Int;
+    let found = List<Int>{1i, 2i, 3i}.getTry(4n, out? rr);
+    return !found;
+}
+
+__chktest function getOrNone_fail(l: List<Int>): Bool {
+    return l.getOrNone(3n) !== 2i;
+}
+
+__chktest function tryGetFound_fail(l: List<Int>): Bool {
+    var rr: Int;
+    if(l.getTry(1n, out? rr)) {
+        return rr != 0i;
+    }
+    else {
+        return false;
+    }
+}
+

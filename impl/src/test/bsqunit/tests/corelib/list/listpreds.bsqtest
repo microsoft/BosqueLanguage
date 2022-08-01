@@ -1,0 +1,60 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+namespace ListPreds;
+
+////////
+//
+chktest function allof_empty(): Bool {
+    return List<Int>{}.allOf(pred(x) => x >= 0i);
+}
+
+chktest function allof_yes(): Bool {
+    return List<Int>{1i, 2i, 3i}.allOf(pred(x) => x >= 0i);
+}
+
+chktest function allof_no(): Bool {
+    return !List<Int>{1i, -2i, 3i}.allOf(pred(x) => x >= 0i);
+}
+
+__chktest function allof_fail(l: List<Int>): Bool {
+    return l.allOf(pred(x) => x >= 0i);
+}
+
+////////
+//
+chktest function someof_empty(): Bool {
+    return !List<Int>{}.someOf(pred(x) => x >= 0i);
+}
+
+chktest function someof_yes(): Bool {
+    return List<Int>{-1i, -2i, 3i}.someOf(pred(x) => x >= 0i);
+}
+
+chktest function someof_no(): Bool {
+    return !List<Int>{1i, 2i, 3i}.someOf(pred(x) => x <= 0i);
+}
+
+__chktest function someof_fail(x: Int): Bool {
+    return List<Int>{1i, x, 3i}.someOf(pred(x) => x <= 0i);
+}
+
+////////
+//
+chktest function noneof_empty(): Bool {
+    return List<Int>{}.noneOf(pred(x) => x >= 0i);
+}
+
+chktest function noneof_yes(): Bool {
+    return List<Int>{1i, 2i, 3i}.noneOf(pred(x) => x <= 0i);
+}
+
+chktest function noneof_no(): Bool {
+    return !List<Int>{1i, -2i, 3i}.noneOf(pred(x) => x <= 0i);
+}
+
+__chktest function noneof_fail(l: List<Int>): Bool {
+    return l.noneOf(pred(x) => x <= 0i);
+}

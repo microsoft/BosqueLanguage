@@ -944,9 +944,15 @@ class MIRAssembly {
     }
 
     private atomSubtypeOf_EntityConcept(t1: MIREntityType, t2: MIRConceptType): boolean {
-        const t1e = this.entityDecls.get(t1.typeID) as MIREntityTypeDecl;
-        const mcc = MIRType.createSingle(t2);
-        return t1e.provides.some((provide) => this.subtypeOf(this.typeMap.get(provide) as MIRType, mcc));
+        const t2type = MIRType.createSingle(t2);
+
+        if(t1.typeID === "Nothing" && this.subtypeOf(t2type, this.typeMap.get("IOption") as MIRType)) {
+            return true;
+        }
+        else {
+            const t1e = this.entityDecls.get(t1.typeID) as MIREntityTypeDecl;
+            return t1e.provides.some((provide) => this.subtypeOf(this.typeMap.get(provide) as MIRType, t2type));
+        }
     }
 
     private atomSubtypeOf_ConceptConcept(t1: MIRConceptType, t2: MIRConceptType): boolean {
