@@ -81,7 +81,6 @@ chktest function checkGetTryAt_4_from_3(): Bool {
     return !found;
 }
 
-
 __chktest function getOrNone_fail(l: List<Int>): Bool {
     return l.getOrNone(3n) !== 2i;
 }
