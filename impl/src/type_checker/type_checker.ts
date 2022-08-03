@@ -1370,6 +1370,8 @@ class TypeChecker {
                         fidx++;
                     }
 
+                    this.raiseErrorIf(sinfo, fidx >= fieldinfo.length, `Bad arguments for constructor -- could not map positional argument ${i}`);
+
                     const field = fieldinfo[fidx];
                     const ftype = this.resolveAndEnsureTypeOnly(sinfo, field[1][1].declaredType, field[1][2]);
 
