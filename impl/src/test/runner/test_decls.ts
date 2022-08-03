@@ -7,8 +7,8 @@ import {MIRFunctionParameter, MIRType, SymbolicActionMode} from "../../compiler/
 import { VerifierOptions } from "../../tooling/checker/smt_exp";
 
 //EPIPE error on win with parallel runs
-const PARALLEL_COUNT_ICPP = process.platform !== "win32" ? 4 : 1;
-const PARALLEL_COUNT_SMT = process.platform !== "win32" ? 4 : 1;
+const PARALLEL_COUNT_ICPP = process.platform === "darwin" ? 4 : 1;
+const PARALLEL_COUNT_SMT = process.platform === "darwin" ? 4 : 1;
 
 const SMT_TIMEOUT = 10000;
 
