@@ -58,3 +58,14 @@ chktest function noneof_no(): Bool {
 __chktest function noneof_fail(l: List<Int>): Bool {
     return l.noneOf(pred(x) => x <= 0i);
 }
+
+////////
+//
+chktest function algebra_all_some_relation(l: List<Int>): Bool {
+    return l.allOf(pred(x) => x >= 0i) === !l.someOf(pred(x) => x < 0i);
+}
+
+__chktest function algebra_all_none_fail(l: List<Int>): Bool {
+    //fails on l = List<Int>{}
+    return l.allOf(pred(x) => x >= 0i) === !l.noneOf(pred(x) => x < 0i);
+}
