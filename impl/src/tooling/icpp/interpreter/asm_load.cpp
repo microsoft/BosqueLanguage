@@ -8,11 +8,11 @@
 const BSQType* jsonLoadBoxedStructType(json v)
 {
     auto tstr = v["tkey"].get<std::string>();
-    auto tid = MarshalEnvironment::g_typenameToIdMap.find(tstr)->second;
+    auto tid = MarshalEnvironment::g_typenameToIdMap.at(tstr);
 
     auto name = v["name"].get<std::string>();
 
-    auto oftypeid = MarshalEnvironment::g_typenameToIdMap.find(v["oftype"].get<std::string>())->second;
+    auto oftypeid = MarshalEnvironment::g_typenameToIdMap.at(v["oftype"].get<std::string>());
     auto oftype = dynamic_cast<const BSQStructType*>(BSQType::g_typetable[oftypeid]);
 
     return new BSQBoxedStructType(tid, oftype, name);
@@ -20,9 +20,9 @@ const BSQType* jsonLoadBoxedStructType(json v)
 
 const BSQField* jsonLoadFieldDecl(json v)
 {
-    auto fkey = MarshalEnvironment::g_fieldToIdMap.find(v["fkey"].get<std::string>())->second;
+    auto fkey = MarshalEnvironment::g_fieldToIdMap.at(v["fkey"].get<std::string>());
     auto fname = v["fname"].get<std::string>();
-    auto declaredType = MarshalEnvironment::g_typenameToIdMap.find(v["declaredType"].get<std::string>())->second;
+    auto declaredType = MarshalEnvironment::g_typenameToIdMap.at(v["declaredType"].get<std::string>());
     auto isOptional = v["isOptional"].get<bool>();
 
     return new BSQField(fkey, fname, declaredType, isOptional);
@@ -30,9 +30,9 @@ const BSQField* jsonLoadFieldDecl(json v)
 
 BSQListTypeFlavor jsonLoadListFlavor(json v)
 {
-    auto ltype = MarshalEnvironment::g_typenameToIdMap.find(v["ltype"].get<std::string>())->second;
+    auto ltype = MarshalEnvironment::g_typenameToIdMap.at(v["ltype"].get<std::string>());
 
-    const BSQType* entrytype = BSQType::g_typetable[MarshalEnvironment::g_typenameToIdMap.find(v["entrytype"].get<std::string>())->second];
+    const BSQType* entrytype = BSQType::g_typetable[MarshalEnvironment::g_typenameToIdMap.at(v["entrytype"].get<std::string>())];
     uint64_t esize = entrytype->allocinfo.inlinedatasize;
     std::string emask = std::string(entrytype->allocinfo.inlinedmask);
 
@@ -54,10 +54,10 @@ BSQListTypeFlavor jsonLoadListFlavor(json v)
 
 BSQMapTypeFlavor jsonLoadMapFlavor(json v)
 {
-    auto mtype = MarshalEnvironment::g_typenameToIdMap.find(v["ltype"].get<std::string>())->second;
+    auto mtype = MarshalEnvironment::g_typenameToIdMap.at(v["ltype"].get<std::string>());
 
-    const BSQType* keytype = BSQType::g_typetable[MarshalEnvironment::g_typenameToIdMap.find(v["keytype"].get<std::string>())->second];
-    const BSQType* valuetype = BSQType::g_typetable[MarshalEnvironment::g_typenameToIdMap.find(v["valuetype"].get<std::string>())->second];
+    const BSQType* keytype = BSQType::g_typetable[MarshalEnvironment::g_typenameToIdMap.at(v["keytype"].get<std::string>())];
+    const BSQType* valuetype = BSQType::g_typetable[MarshalEnvironment::g_typenameToIdMap.at(v["valuetype"].get<std::string>())];
 
     uint64_t allocsize = sizeof(BSQMapTreeRepr) + keytype->allocinfo.inlinedatasize + valuetype->allocinfo.inlinedatasize;
     uint32_t keyoffset = sizeof(BSQMapTreeRepr);
@@ -187,7 +187,7 @@ void initializeLiteral(size_t storageOffset, const BSQType* gtype, std::string& 
         break;
     }
     case BSQ_TYPE_ID_REGEX: {
-        auto reptr = Evaluator::g_regexs.find(lval)->second;
+        auto reptr = Evaluator::g_regexs.at(lval);
         dynamic_cast<const BSQRegisterType<void*>*>(BSQWellKnownType::g_typeRegex)->storeValueDirect(sl, (void*)reptr);
         break;
     }
@@ -345,7 +345,7 @@ void loadAssembly(json j, Evaluator& ee)
     //Load regex info
     auto jvalidators = j["validators"];
     std::for_each(jvalidators.cbegin(), jvalidators.cend(), [](json vdecl) {
-        auto vtype = MarshalEnvironment::g_typenameToIdMap.find(vdecl["vtype"].get<std::string>())->second;
+        auto vtype = vdecl["vtype"].get<std::string>();
         const BSQRegex* rr = BSQRegex::jparse(vdecl["regex"]);
         Evaluator::g_validators.emplace(vtype, rr);
     });

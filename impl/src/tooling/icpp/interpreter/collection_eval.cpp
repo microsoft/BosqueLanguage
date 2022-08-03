@@ -74,7 +74,7 @@ void* s_push_back_list_ne_rec(const BSQListTypeFlavor& lflavor, BSQListSpineIter
         if(vsize < 8)
         {
             auto pvsize = BSQPartialVectorType::getPVCount(iter.lcurr);
-            auto pvalloc = pvsize <= 4 ? lflavor.pv4type : lflavor.pv8type;
+            auto pvalloc = pvsize < 4 ? lflavor.pv4type : lflavor.pv8type;
         
             res = Allocator::GlobalAllocator.allocateDynamic(pvalloc);
             BSQPartialVectorType::pushBackPVData(res, iter.lcurr, v, pvalloc->entrysize);
@@ -124,7 +124,7 @@ void* s_push_front_list_ne_rec(const BSQListTypeFlavor& lflavor, BSQListSpineIte
         if(vsize < 8)
         {
             auto pvsize = BSQPartialVectorType::getPVCount(iter.lcurr);
-            auto pvalloc = pvsize <= 4 ? lflavor.pv4type : lflavor.pv8type;
+            auto pvalloc = pvsize < 4 ? lflavor.pv4type : lflavor.pv8type;
         
             res = Allocator::GlobalAllocator.allocateDynamic(pvalloc);
             BSQPartialVectorType::pushFrontPVData(res, iter.lcurr, v, pvalloc->entrysize);

@@ -1,0 +1,77 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+namespace ListModify;
+
+
+////////
+//
+chktest function checkSetAt_1_from_3(): Bool {
+    let ll = List<Int>{1i, 2i, 3i}.set(1n, 0i);
+    return /\(ll.size() == 3n, ll.get(0n) == 1i, ll.back() == 3i, ll.get(1n) == 0i);
+}
+
+chktest function checkSetAt_5_from_9(): Bool {
+    let ll = List<Int>{1i, 2i, 3i, 4i, 5i, 6i, 7i, 8i, 9i}.set(5n, 0i);
+    return /\(ll.size() == 9n, ll.get(0n) == 1i, ll.back() == 9i, ll.get(5n) == 0i);
+}
+
+chktest function algebra_get_set(l: List<Int>, n: Nat): Bool
+    requires n < l.size();
+{
+    let ll = l.set(n, 5i);
+    return ll.get(n) == 5i;
+}
+
+__chktest function algebra_front_set_fail(l: List<Int>, n: Nat): Bool
+    requires n < l.size();
+{
+    let ll = l.set(n, 5i);
+    return ll.front() != 5i;
+}
+
+////////
+//
+chktest function checkPushBack_from_empty(): Bool {
+    let ll = List<Int>{}.pushBack(0i);
+    return /\(ll.size() == 1n, ll.back() == 0i);
+}
+
+chktest function checkPushBack_from_3(): Bool {
+    let ll = List<Int>{1i, 2i, 3i}.pushBack(0i);
+    return /\(ll.size() == 4n, ll.front() == 1i, ll.get(1n) == 2i, ll.back() == 0i);
+}
+
+chktest function checkPushBack_from_4(): Bool {
+    let ll = List<Int>{1i, 2i, 3i, 4i}.pushBack(0i);
+    return /\(ll.size() == 5n, ll.front() == 1i, ll.get(1n) == 2i, ll.back() == 0i);
+}
+
+chktest function checkPushBack_from_9(): Bool {
+    let ll = List<Int>{1i, 2i, 3i, 4i, 5i, 6i, 7i, 8i, 9i}.pushBack(0i);
+    return /\(ll.size() == 10n, ll.front() == 1i, ll.get(1n) == 2i, ll.back() == 0i);
+}
+
+////////
+//
+chktest function checkPushFront_from_empty(): Bool {
+    let ll = List<Int>{}.pushFront(0i);
+    return /\(ll.size() == 1n, ll.front() == 0i);
+}
+
+chktest function checkPushFront_from_3(): Bool {
+    let ll = List<Int>{1i, 2i, 3i}.pushFront(0i);
+    return /\(ll.size() == 4n, ll.back() == 3i, ll.get(1n) == 1i, ll.front() == 0i);
+}
+
+chktest function checkPushFront_from_4(): Bool {
+    let ll = List<Int>{1i, 2i, 3i, 4i}.pushFront(0i);
+    return /\(ll.size() == 5n, ll.back() == 4i, ll.get(1n) == 1i, ll.front() == 0i);
+}
+
+chktest function checkPushFront_from_9(): Bool {
+    let ll = List<Int>{1i, 2i, 3i, 4i, 5i, 6i, 7i, 8i, 9i}.pushFront(0i);
+    return /\(ll.size() == 10n, ll.back() == 9i, ll.get(1n) == 1i, ll.front() == 0i);
+}
