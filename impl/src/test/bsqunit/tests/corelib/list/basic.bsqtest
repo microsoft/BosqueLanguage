@@ -45,6 +45,10 @@ chktest function checkGetAt_1_from_3(): Bool {
     return List<Int>{1i, 2i, 3i}.get(1n) == 2i;
 }
 
+chktest function checkGetAt_5_from_9(): Bool {
+    return List<Int>{1i, 2i, 3i, 4i, 5i, 6i, 7i, 8i, 9i}.get(5n) == 6i;
+}
+
 chktest function checkGetOrNoneAt_1_from_3(): Bool {
     return List<Int>{1i, 2i, 3i}.getOrNone(1n) === 2i;
 }
@@ -95,3 +99,149 @@ __chktest function tryGetFound_fail(l: List<Int>): Bool {
     }
 }
 
+////////
+//
+chktest function checkFront_from_3(): Bool {
+    return List<Int>{1i, 2i, 3i}.front() == 1i;
+}
+
+chktest function checkFront_from_9(): Bool {
+    return List<Int>{1i, 2i, 3i, 4i, 5i, 6i, 7i, 8i, 9i}.front() == 1i;
+}
+
+chktest function checkFrontOrNone_from_2(): Bool {
+    return List<Int>{1i, 2i}.frontOrNone() === 1i;
+}
+
+chktest function checkFrontOrNone_from_empty(): Bool {
+    return List<Int>{}.frontOrNone() === none;
+}
+
+chktest function checkFrontOption_from_3(): Bool {
+    let rr = List<Int>{1i, 2i, 3i}.frontOption();
+    return rr.isSomething() && rr.data() == 1i;
+}
+
+chktest function checkFrontOption_from_empty(): Bool {
+    let rr = List<Int>{}.frontOption();
+    return rr === nothing;
+}
+
+chktest function checkFrontTry_from_3(): Bool {
+    var rr: Int;
+    let ll = List<Int>{1i, 2i, 3i};
+    
+    if(ll.frontTry(out? rr)) {
+        return rr == 1i;
+    }
+    else {
+        return false;
+    }
+}
+
+chktest function checkFrontTry_from_empty(): Bool {
+    var rr: Int;
+    let found = List<Int>{}.frontTry(out? rr);
+    return !found;
+}
+
+__chktest function frontOrNone_fail(l: List<Int>): Bool {
+    return l.frontOrNone() !== 2i;
+}
+
+__chktest function tryFrontFound_fail(l: List<Int>): Bool {
+    var rr: Int;
+    if(l.frontTry(out? rr)) {
+        return rr != 0i;
+    }
+    else {
+        return false;
+    }
+}
+
+////////
+//
+chktest function checkBack_from_3(): Bool {
+    return List<Int>{1i, 2i, 3i}.back() == 3i;
+}
+
+chktest function checkBack_from_9(): Bool {
+    return List<Int>{1i, 2i, 3i, 4i, 5i, 6i, 7i, 8i, 9i}.back() == 9i;
+}
+
+chktest function checkBackOrNone_from_2(): Bool {
+    return List<Int>{1i, 2i}.backOrNone() === 2i;
+}
+
+chktest function checkBackOrNone_from_empty(): Bool {
+    return List<Int>{}.backOrNone() === none;
+}
+
+chktest function checkBackOption_from_3(): Bool {
+    let rr = List<Int>{1i, 2i, 3i}.backOption();
+    return rr.isSomething() && rr.data() == 3i;
+}
+
+chktest function checkBackOption_from_empty(): Bool {
+    let rr = List<Int>{}.frontOption();
+    return rr === nothing;
+}
+
+chktest function checkBackTry_from_3(): Bool {
+    var rr: Int;
+    let ll = List<Int>{1i, 2i, 3i};
+    
+    if(ll.backTry(out? rr)) {
+        return rr == 3i;
+    }
+    else {
+        return false;
+    }
+}
+
+chktest function checkBackTry_from_empty(): Bool {
+    var rr: Int;
+    let found = List<Int>{}.backTry(out? rr);
+    return !found;
+}
+
+__chktest function backOrNone_fail(l: List<Int>): Bool {
+    return l.backOrNone() !== 2i;
+}
+
+__chktest function tryBackFound_fail(l: List<Int>): Bool {
+    var rr: Int;
+    if(l.backTry(out? rr)) {
+        return rr != 0i;
+    }
+    else {
+        return false;
+    }
+}
+
+////////
+//
+
+chktest function single_algebra_front_back(l: List<Int>): Bool
+    requires l.size() == 1n;
+{
+    return l.front() == l.back();
+}
+
+chktest function single_algebra_front_get(l: List<Int>): Bool
+    requires !l.empty();
+{
+    return l.front() == l.get(0n);
+}
+
+chktest function single_algebra_back_get(l: List<Int>): Bool
+    requires !l.empty();
+{
+    return l.back() == l.get(l.size() - 1n);
+}
+
+__chktest function algebra_front_back_fail(l: List<Int>): Bool
+    requires !l.empty();
+{
+    return l.front() == l.back();
+}
