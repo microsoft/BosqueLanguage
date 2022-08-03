@@ -17,16 +17,16 @@ internal entity ListOps provides Some {
 
     internal function s_vector_to_seqlist<T>(l: ListVector<T>): SeqList<T> {
         if(l.is<Vector1<T>>()) {
-            return SeqListOps::s_list_cons_1<T>(l.v0);
+            return SeqListOps::s_list_cons_1<T>(s_safeAs<ListVector<T>, Vector1<T>>(l));
         }
         elif(l.is<Vector2<T>>()) {
-            return SeqListOps::s_list_cons_2<T>(l.v0, l.v1);
+            return SeqListOps::s_list_cons_2<T>(s_safeAs<ListVector<T>, Vector2<T>>(l));
         }
         elif(l.is<Vector3<T>>()) {
-            return SeqListOps::s_list_cons_3<T>(l.v0, l.v1, l.v2);
+            return SeqListOps::s_list_cons_3<T>(s_safeAs<ListVector<T>, Vector3<T>>(l));
         }
         else {
-            return SeqListOps::s_list_cons_4<T>(l.v0, l.v1, l.v2, l.v3);
+            return SeqListOps::s_list_cons_4<T>(s_safeAs<ListVector<T>, Vector4<T>>(l));
         }
     }
 

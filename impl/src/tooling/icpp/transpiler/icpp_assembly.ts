@@ -843,7 +843,7 @@ class ICPPAssembly
             cmask: this.cmask,
             cbuffsize: this.cbuffsize,
             
-            typenames: this.typenames.sort(),
+            typenames: [...this.typenames.sort(), ...boxedtypes.map((bt) => bt.tkey)],
             propertynames: this.propertynames.sort(),
             fieldnames: this.fields.map((ff) => ff.fkey).sort(),
 

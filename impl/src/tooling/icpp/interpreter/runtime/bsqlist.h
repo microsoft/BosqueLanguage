@@ -113,25 +113,25 @@ public:
     inline static void pushFrontPVData(void* pvinto, void* pvfrom, StorageLocationPtr val, uint64_t entrysize)
     {
         auto newloc = ((uint8_t*)pvinto) + sizeof(uint64_t);
-        auto intoloc = ((uint8_t*)pvinto) + (sizeof(uint64_t) + entrysize);
+        auto intoloc = ((uint8_t*)pvinto) + sizeof(uint64_t) + entrysize;
         auto fromloc = ((uint8_t*)pvfrom) + sizeof(uint64_t);
         auto bytecount = (*((uint64_t*)pvfrom) * entrysize);
 
         GC_MEM_COPY(newloc, val, entrysize);
         GC_MEM_COPY(intoloc, fromloc, bytecount);
-        *((uint64_t*)pvinto) += *((uint64_t*)pvfrom) + 1;
+        *((uint64_t*)pvinto) = *((uint64_t*)pvfrom) + 1;
     }
 
     inline static void pushBackPVData(void* pvinto, void* pvfrom, StorageLocationPtr val, uint64_t entrysize)
     {
         auto intoloc = ((uint8_t*)pvinto) + sizeof(uint64_t);
-        auto newloc = ((uint8_t*)pvinto) + (*((uint64_t*)pvfrom) * entrysize);
+        auto newloc = ((uint8_t*)pvinto) + sizeof(uint64_t) + (*((uint64_t*)pvfrom) * entrysize);
         auto fromloc = ((uint8_t*)pvfrom) + sizeof(uint64_t);
         auto bytecount = (*((uint64_t*)pvfrom) * entrysize);
 
         GC_MEM_COPY(intoloc, fromloc, bytecount);
         GC_MEM_COPY(newloc, val, entrysize);
-        *((uint64_t*)pvinto) += *((uint64_t*)pvfrom) + 1;
+        *((uint64_t*)pvinto) = *((uint64_t*)pvfrom) + 1;
     }
 
     inline static void slicePVData(void* pvinto, void* pvfrom, int16_t start, int16_t end, uint64_t entrysize)
