@@ -301,6 +301,8 @@ function outputResultsAndExit(verbose: Verbosity, totaltime: number, totalicpp: 
         process.stdout.write(chalk.green(chalk.bold("All executable tests pass!\n\n")));
     }
     else {
+        process.stdout.write(`${totalicpp - (failedicpp.length + erroricpp.length)} executable tests pass` + "\n");
+
         if(failedicpp.length !== 0) {
             process.stdout.write(chalk.bold(`Suite had ${failedicpp.length}`) + " " + chalk.red("executable test failures") + "\n");
 
@@ -327,6 +329,8 @@ function outputResultsAndExit(verbose: Verbosity, totaltime: number, totalicpp: 
         }
     }
     else {
+        process.stdout.write(`${totalsmt - (failedsmt.length + errorsmt.length + passlimitsmt)} symbolic tests pass\n`);
+
         if(failedsmt.length !== 0) {
             process.stdout.write(chalk.bold(`Suite had ${failedsmt.length}`) + " " + chalk.red("symbolic test failures") + "\n");
 
