@@ -7,3 +7,32 @@ namespace ListReduce;
 
 ////////
 //
+chktest function reduce_empty(): Bool {
+    let ll = List<Int>{}.reduce<Bool>(true, fn(acc, x) => false);
+    return ll;
+}
+
+chktest function reduce_3(): Bool {
+    let ll = List<Int>{1i, 2i, -3i}.reduce<Bool>(true, fn(acc, x) => acc && x >= 0i);
+    return !ll;
+}
+
+chktest function reduce_9(): Bool {
+    let ll = List<Int>{1i, 2i, 3i, 4i, 5i, 6i, 7i, 8i, -9i}.reduce<Bool>(true, fn(acc, x) => acc && x >= 0i);
+    return !ll;
+}
+
+chktest function reduce_empty_idx(): Bool {
+    let ll = List<Int>{}.reduce<Bool>(true, fn(acc, x, i) => false);
+    return ll;
+}
+
+chktest function reduce_4_idx(): Bool {
+    let ll = List<Int>{1i, 2i, 3i, 4i}.reduce<Bool>(true, fn(acc, x, i) => acc && i >= 0n);
+    return ll;
+}
+
+chktest function reduce_9_idx(): Bool {
+    let ll = List<Int>{1i, 2i, 3i, 4i, 5i, 6i, 7i, 8i, -9i}.reduce<Bool>(true, fn(acc, x, i) => acc && i >= 0n);
+    return ll;
+}
