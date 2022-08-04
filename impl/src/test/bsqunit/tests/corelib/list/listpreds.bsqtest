@@ -19,8 +19,40 @@ chktest function allof_no(): Bool {
     return !List<Int>{1i, -2i, 3i}.allOf(pred(x) => x >= 0i);
 }
 
+chktest function allof_yes_7(): Bool {
+    return List<Int>{1i, 2i, 3i, 4i, 5i, 6i, 7i}.allOf(pred(x) => x >= 0i);
+}
+
+chktest function allof_no_7(): Bool {
+    return !List<Int>{1i, -2i, 3i, 4i, 5i, 6i, 7i}.allOf(pred(x) => x >= 0i);
+}
+
 __chktest function allof_fail(l: List<Int>): Bool {
     return l.allOf(pred(x) => x >= 0i);
+}
+
+chktest function allof_empty_idx(): Bool {
+    return List<Int>{}.allOf(pred(x, i) => i != 100n);
+}
+
+chktest function allof_yes_idx(): Bool {
+    return List<Int>{1i, 2i, 3i}.allOf(pred(x, i) => x != 1i || i == 0n);
+}
+
+chktest function allof_no_idx(): Bool {
+    return !List<Int>{1i, -2i, -3i}.allOf(pred(x, i) => x >= 0i || i == 1n);
+}
+
+chktest function allof_yes_7_idx(): Bool {
+    return List<Int>{1i, 2i, 3i, 4i, 5i, 6i, 7i}.allOf(pred(x, i) => x != 1i || i == 0n);
+}
+
+chktest function allof_no_7_idx(): Bool {
+    return !List<Int>{1i, -2i, 3i, 4i, 5i, -6i, 7i}.allOf(pred(x, i) => x >= 0i || i == 1n);
+}
+
+__chktest function allof_fail_idx(l: List<Int>): Bool {
+    return l.allOf(pred(x, i) => x >= 0i);
 }
 
 ////////
@@ -37,8 +69,40 @@ chktest function someof_no(): Bool {
     return !List<Int>{1i, 2i, 3i}.someOf(pred(x) => x <= 0i);
 }
 
+chktest function someof_yes_7(): Bool {
+    return List<Int>{-1i, -2i, -3i, -4i, 5i, 6i, 7i}.someOf(pred(x) => x >= 0i);
+}
+
+chktest function someof_no_9(): Bool {
+    return !List<Int>{1i, 2i, 3i, 4i, 5i, 6i, 7i, 8i, 9i}.someOf(pred(x) => x <= 0i);
+}
+
 __chktest function someof_fail(x: Int): Bool {
     return List<Int>{1i, x, 3i}.someOf(pred(x) => x <= 0i);
+}
+
+chktest function someof_empty_idx(): Bool {
+    return !List<Int>{}.someOf(pred(x, i) => false);
+}
+
+chktest function someof_yes_idx(): Bool {
+    return List<Int>{1i}.someOf(pred(x, i) => x >= 0i && i == 0n);
+}
+
+chktest function someof_no_idx(): Bool {
+    return !List<Int>{1i, -2i, 3i, 4i}.someOf(pred(x, i) => x <= 0i && i > 3n);
+}
+
+chktest function someof_yes_7_idx(): Bool {
+    return List<Int>{-1i, -2i, -3i, -4i, 5i, 6i, 7i}.someOf(pred(x, i) => x >= 0i && i > 5n);
+}
+
+chktest function someof_no_9_idx(): Bool {
+    return !List<Int>{1i, 2i, 3i, 4i, 5i, 6i, 7i, -8i, 9i}.someOf(pred(x, i) => x <= 0i && i < 3n);
+}
+
+__chktest function someof_fail_idx(x: Int): Bool {
+    return List<Int>{1i, x, 3i}.someOf(pred(x, i) => x == 0i && i == 1n);
 }
 
 ////////
@@ -55,8 +119,40 @@ chktest function noneof_no(): Bool {
     return !List<Int>{1i, -2i, 3i}.noneOf(pred(x) => x <= 0i);
 }
 
+chktest function noneof_yes_9(): Bool {
+    return List<Int>{1i, 2i, 3i, 4i, 5i, 6i, 7i, 8i, 9i}.noneOf(pred(x) => x <= 0i);
+}
+
+chktest function noneof_no_10(): Bool {
+    return !List<Int>{1i, 2i, 3i, 4i, 5i, 6i, 7i, 8i, -9i, 10i}.noneOf(pred(x) => x <= 0i);
+}
+
 __chktest function noneof_fail(l: List<Int>): Bool {
     return l.noneOf(pred(x) => x <= 0i);
+}
+
+chktest function noneof_empty_idx(): Bool {
+    return List<Int>{}.noneOf(pred(x, i) => true);
+}
+
+chktest function noneof_yes_idx(): Bool {
+    return List<Int>{1i, 2i, 3i}.noneOf(pred(x, i) => x <= 0i);
+}
+
+chktest function noneof_no_idx(): Bool {
+    return !List<Int>{1i, 2i, 3i}.noneOf(pred(x, i) => x <= 0i || i == 1n);
+}
+
+chktest function noneof_yes_9_idx(): Bool {
+    return List<Int>{1i, 2i, 3i, 4i, 5i, 6i, 7i, -8i, 9i}.noneOf(pred(x, i) => x <= 0i && i < 5n);
+}
+
+chktest function noneof_no_10_idx(): Bool {
+    return !List<Int>{1i, 2i, 3i, 4i, 5i, 6i, 7i, 8i, -9i, 10i}.noneOf(pred(x, i) => x <= 0i);
+}
+
+__chktest function noneof_fail_idx(l: List<Int>): Bool {
+    return l.noneOf(pred(x, i) => x <= 0i && i < 2n);
 }
 
 ////////
