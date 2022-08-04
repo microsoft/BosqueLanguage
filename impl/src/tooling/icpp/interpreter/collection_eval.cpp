@@ -752,6 +752,8 @@ void* BSQListOps::s_map_idx_ne(const BSQListTypeFlavor& lflavor, LambdaEvalThunk
             {
                 lflavor.entrytype->storeValue(esl, reprtype->get(tmpl[1], i));
                 ee.invoke(icall, lparams, resflavor.pv8type->get(pv8l, i));
+
+                idxarg++;
             }
             lflavor.entrytype->clearValue(esl);
 
@@ -1042,6 +1044,8 @@ void BSQListOps::s_transduce_idx_ne(const BSQListTypeFlavor& lflavor, LambdaEval
 
                 envtype->storeValue(envsl, pcrtype->indexStorageLocationOffset(outsl, pcrtype->idxoffsets[0]));
                 uflavor.entrytype->storeValue(uflavor.pv8type->get(pv8l, i), pcrtype->indexStorageLocationOffset(outsl, pcrtype->idxoffsets[1]));
+
+                idxarg++;
             }
             lflavor.entrytype->clearValue(esl);
             pcrtype->clearValue(outsl);
