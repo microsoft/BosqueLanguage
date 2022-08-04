@@ -2932,8 +2932,9 @@ class SMTBodyEmitter {
 
                 const implicitlambdas = [pcfn];
 
-                const maparray = new SMTCallSimple("seq.map", [
+                const maparray = new SMTCallSimple("seq.mapi", [
                     new SMTConst(`(lambda ((@@idx Int) (@@x ${argtype.smttypename})) (${pcfn} @@x @@idx${captured.length !== 0 ? (" " + captured.join(" ")) : ""}))`),
+                    new SMTConst("0"),
                     sval
                 ]);
 

@@ -2428,7 +2428,7 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         break;
     }
     case BSQPrimitiveImplTag::s_list_has_pred_idx: {
-        auto pos = BSQListOps::s_find_pred_ne(eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.at("p"), params);
+        auto pos = BSQListOps::s_find_pred_idx_ne(eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.at("p"), params);
         SLPTR_STORE_CONTENTS_AS(BSQBool, resultsl, pos != -1);
         break;
     }
