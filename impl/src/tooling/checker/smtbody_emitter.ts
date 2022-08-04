@@ -2933,7 +2933,7 @@ class SMTBodyEmitter {
                 const implicitlambdas = [pcfn];
 
                 const maparray = new SMTCallSimple("seq.map", [
-                    new SMTConst(`(lambda ((@@x ${argtype.smttypename}) (@@idx Int)) (${pcfn} @@x @@idx${captured.length !== 0 ? (" " + captured.join(" ")) : ""}))`),
+                    new SMTConst(`(lambda ((@@idx Int) (@@x ${argtype.smttypename})) (${pcfn} @@x @@idx${captured.length !== 0 ? (" " + captured.join(" ")) : ""}))`),
                     sval
                 ]);
 
@@ -2946,9 +2946,8 @@ class SMTBodyEmitter {
                     const othererr = this.typegen.generateResultTypeConstructorError(this.typegen.getMIRType("Bool"), new SMTConst("ErrorID_AssumeCheck"));
                     const otherresulterr = this.typegen.generateResultTypeConstructorError(mirrestype, new SMTConst("ErrorID_AssumeCheck"));
 
-                    const values = new SMTCallSimple("seq.mapi", [
+                    const values = new SMTCallSimple("seq.map", [
                         new SMTConst(`(lambda ((@@r ${this.typegen.generateResultType(this.typegen.getMIRType("Bool")).smttypename})) ${this.typegen.generateResultGetSuccess(this.typegen.getMIRType("Bool"), new SMTVar("@@r")).emitSMT2(undefined)})`),
-                        new SMTConst("0"),
                         new SMTVar("@maparray")
                     ]);
 
@@ -3052,7 +3051,7 @@ class SMTBodyEmitter {
                 const implicitlambdas = [pcfn];
 
                 const maparray = new SMTCallSimple("seq.mapi", [
-                    new SMTConst(`(lambda ((@@x ${argtype.smttypename}) (@@idx Int)) (${pcfn} @@x @@idx${captured.length !== 0 ? (" " + captured.join(" ")) : ""}))`),
+                    new SMTConst(`(lambda ((@@idx Int) (@@x ${argtype.smttypename})) (${pcfn} @@x @@idx${captured.length !== 0 ? (" " + captured.join(" ")) : ""}))`),
                     new SMTConst("0"),
                     sval
                 ]);
@@ -3117,7 +3116,7 @@ class SMTBodyEmitter {
                 const implicitlambdas = [pcfn];
 
                 const maparray = new SMTCallSimple("seq.mapi", [
-                    new SMTConst(`(lambda ((@@x ${argtype.smttypename}) (@@idx Int)) (${pcfn} @@x (seq.nth ${usval} @@idx)${captured.length !== 0 ? (" " + captured.join(" ")) : ""}))`),
+                    new SMTConst(`(lambda ((@@idx Int) (@@x ${argtype.smttypename})) (${pcfn} @@x (seq.nth ${usval} @@idx)${captured.length !== 0 ? (" " + captured.join(" ")) : ""}))`),
                     new SMTConst("0"),
                     lsval
                 ]);
@@ -3663,7 +3662,7 @@ class SMTBodyEmitter {
 
                 if (this.isSafeInvoke(pc.code)) {
                     const entries = new SMTCallSimple("seq.mapi", [
-                        new SMTConst(`(lambda ((@@v ${this.typegen.getSMTTypeFor(this.typegen.getMIRType(pcdcl.resultType)).smttypename}) (@@ii Int)) ${this.typegen.generateSeqMapEntryTypeConstructor(mt, new SMTCallSimple("seq.nth", [mval, new SMTVar("@@ii")]), new SMTVar("@@v")).emitSMT2(undefined)})`),
+                        new SMTConst(`(lambda ((@@ii Int) (@@v ${this.typegen.getSMTTypeFor(this.typegen.getMIRType(pcdcl.resultType)).smttypename})) ${this.typegen.generateSeqMapEntryTypeConstructor(mt, new SMTCallSimple("seq.nth", [mval, new SMTVar("@@ii")]), new SMTVar("@@v")).emitSMT2(undefined)})`),
                         new SMTConst("0"),
                         new SMTVar("@maparray")
                     ]);
@@ -3679,7 +3678,7 @@ class SMTBodyEmitter {
                     const otherresulterr = this.typegen.generateResultTypeConstructorError(mirrestype, new SMTConst("ErrorID_AssumeCheck"));
 
                     const values = new SMTCallSimple("seq.mapi", [
-                        new SMTConst(`(lambda ((@@v ${this.typegen.getSMTTypeFor(this.typegen.getMIRType(pcdcl.resultType)).smttypename}) (@@ii Int)) ${this.typegen.generateSeqMapEntryTypeConstructor(mt, new SMTCallSimple("seq.nth", [mval, new SMTVar("@@ii")]), this.typegen.generateResultGetSuccess(mirresult_V, new SMTVar("@@vv"))).emitSMT2(undefined)})`),
+                        new SMTConst(`(lambda ((@@ii Int) (@@v ${this.typegen.getSMTTypeFor(this.typegen.getMIRType(pcdcl.resultType)).smttypename})) ${this.typegen.generateSeqMapEntryTypeConstructor(mt, new SMTCallSimple("seq.nth", [mval, new SMTVar("@@ii")]), this.typegen.generateResultGetSuccess(mirresult_V, new SMTVar("@@vv"))).emitSMT2(undefined)})`),
                         new SMTConst("0"),
                         new SMTVar("@maparray")
                     ]);

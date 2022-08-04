@@ -31,9 +31,9 @@ chktest function map_4_idx(): Bool {
     let ll = List<Int>{1i, 2i, 3i, 4i}.map(fn(x, i) => i);
     return /\(ll.size() == 4n, ll.front() == 0n, ll.back() == 3n);
 }
-/*
+
 chktest function map_9_idx(): Bool {
     let ll = List<Int>{1i, 2i, 3i, 4i, 5i, 6i, 7i, 8i, -9i}.map(fn(x, i) => x < 0i ? 100n : i);
     return /\(ll.size() == 9n, ll.front() == 0n, ll.back() == 100n);
 }
-*/
+
