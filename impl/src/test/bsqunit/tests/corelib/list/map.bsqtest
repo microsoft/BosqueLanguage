@@ -1,0 +1,39 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+namespace ListMap;
+
+////////
+//
+chktest function map_empty(): Bool {
+    let ll = List<Int>{}.map(fn(x) => x + 1i);
+    return ll.empty();
+}
+
+chktest function map_3(): Bool {
+    let ll = List<Int>{1i, 2i, -3i}.map(fn(x) => x >= 0i);
+    return /\(ll.size() == 3n, ll.front(), !ll.back());
+}
+
+chktest function map_9(): Bool {
+    let ll = List<Int>{1i, 2i, 3i, 4i, 5i, 6i, 7i, 8i, -9i}.map(fn(x) => x >= 0i);
+    return /\(ll.size() == 9n, ll.front(), !ll.back());
+}
+
+chktest function map_empty_idx(): Bool {
+    let ll = List<Int>{}.map(fn(x, i) => i);
+    return ll.empty();
+}
+
+chktest function map_4_idx(): Bool {
+    let ll = List<Int>{1i, 2i, 3i, 4i}.map(fn(x, i) => i);
+    return /\(ll.size() == 4n, ll.front() == 0n, ll.back() == 3n);
+}
+/*
+chktest function map_9_idx(): Bool {
+    let ll = List<Int>{1i, 2i, 3i, 4i, 5i, 6i, 7i, 8i, -9i}.map(fn(x, i) => x < 0i ? 100n : i);
+    return /\(ll.size() == 9n, ll.front() == 0n, ll.back() == 100n);
+}
+*/
