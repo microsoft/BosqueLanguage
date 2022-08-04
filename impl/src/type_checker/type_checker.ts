@@ -561,7 +561,7 @@ class TypeChecker {
             }
         });
 
-        const pikey = MIRKeyGenerator.generatePCodeKey(exp.invoke.isPCodeFn, exp.invoke.bodyID);
+        const pikey = MIRKeyGenerator.generatePCodeKey(exp.invoke.isPCodeFn, exp.invoke.bodyID, capturedpcode);
         const pcenv = TypeEnvironment.createInitialEnvForCall(pikey, exp.invoke.bodyID, bodybinds, capturedpcode, cargs, undefined);
 
         if ((exp.invoke.body as BodyImplementation).body instanceof Expression) {
@@ -664,7 +664,7 @@ class TypeChecker {
             cvars.forEach((cv) => implicitCapturedMap.set(cv, (env.lookupVar(cv) as VarInfo).flowType));
         }
 
-        const ikey = MIRKeyGenerator.generatePCodeKey(exp.invoke.isPCodeFn, exp.invoke.bodyID);
+        const ikey = MIRKeyGenerator.generatePCodeKey(exp.invoke.isPCodeFn, exp.invoke.bodyID, capturedpcode);
         const cinfo = [
             ...[...capturedMap].sort((a, b) => a[0].localeCompare(b[0])),
             ...[...implicitCapturedMap].sort((a, b) => a[0].localeCompare(b[0]))
