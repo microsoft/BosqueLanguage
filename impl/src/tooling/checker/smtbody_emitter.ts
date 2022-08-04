@@ -3351,7 +3351,7 @@ class SMTBodyEmitter {
 
                 const pc = idecl.pcodes.get("f") as MIRPCode;
                 const pcdcl = this.typegen.assembly.invokeDecls.get(pc.code) as MIRInvokeDecl;
-                const argtype = this.typegen.getSMTTypeFor(this.typegen.getMIRType(pcdcl.params[0].type));
+                const argtype = this.typegen.getSMTTypeFor(this.typegen.getMIRType(pcdcl.params[1].type));
                 const pcfn = this.typegen.lookupFunctionName(pc.code);
                 const captured = pc.cargs.map((carg) => carg.cname);
 
@@ -3383,7 +3383,7 @@ class SMTBodyEmitter {
 
                 const pc = idecl.pcodes.get("f") as MIRPCode;
                 const pcdcl = this.typegen.assembly.invokeDecls.get(pc.code) as MIRInvokeDecl;
-                const argtype = this.typegen.getSMTTypeFor(this.typegen.getMIRType(pcdcl.params[0].type));
+                const argtype = this.typegen.getSMTTypeFor(this.typegen.getMIRType(pcdcl.params[1].type));
                 const pcfn = this.typegen.lookupFunctionName(pc.code);
                 const captured = pc.cargs.map((carg) => carg.cname);
 
