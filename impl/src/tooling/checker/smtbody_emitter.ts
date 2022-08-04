@@ -480,6 +480,10 @@ class SMTBodyEmitter {
             const v3type = this.assembly.typeMap.get(`Vector3<${etype.typeID}>`) as MIRType;
             bbody = this.typegen.coerceContainerAtomIntoTermRepresentation(new SMTCallSimple(this.typegen.getSMTConstructorName(v3type).cons, [new SMTVar("arg0"), new SMTVar("arg1"), new SMTVar("arg2")]), v3type);
         }
+        else if(geninfo.argc === 4) {
+            const v3type = this.assembly.typeMap.get(`Vector4<${etype.typeID}>`) as MIRType;
+            bbody = this.typegen.coerceContainerAtomIntoTermRepresentation(new SMTCallSimple(this.typegen.getSMTConstructorName(v3type).cons, [new SMTVar("arg0"), new SMTVar("arg1"), new SMTVar("arg2"), new SMTVar("arg3")]), v3type);
+        }
         else {
             const lltype = this.assembly.typeMap.get(`SeqList<${etype.typeID}>`) as MIRType;
 
