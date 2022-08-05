@@ -37,3 +37,6 @@ chktest function map_9_idx(): Bool {
     return /\(ll.size() == 9n, ll.front() == 0n, ll.back() == 100n);
 }
 
+//
+//TODO: probably want a fails test here too once z3 is fixed
+//
