@@ -60,7 +60,7 @@ function validateRequest(request: BuyRequest): List<Violations> {
             Market     => List<Violations>{}
             | Limit{p} => if(p < 0_Price) 
                                 List<Violations>{ InvalidPrice{p} }
-                            else 
+                          else 
                                 List<Violations>{}
     |};
        
