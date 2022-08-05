@@ -105,15 +105,17 @@ class MIRKeyGenerator {
         return {keyid: iname, shortname: shortvname};
     }
 
-    static generatePCodeKey(isPCodeFn: boolean, bodyID: string, capturedPCode: Map<string, PCode>): MIRInvokeKey {
+    static generatePCodeKey(isPCodeFn: boolean, bodyID: string, binds: Map<string, ResolvedType>, capturedPCode: Map<string, PCode>): MIRInvokeKey {
         const ikey = `${isPCodeFn ? "fn" : "pred"}--${bodyID}`;
 
+        const binfo = MIRKeyGenerator.computeBindsKeyInfo(binds);
+
         if(capturedPCode.size === 0) {
-            return ikey;
+            return ikey + binfo;
         }
         else {
             const ccinfo = [...capturedPCode].sort((a, b) => a[0].localeCompare(b[0])).map((cpc) => `${cpc[0]}=${cpc[1].code.bodyID}`).join(",");
-            return ikey + `(${ccinfo})`;
+            return ikey + `${binfo}(${ccinfo})`;
         }
     }
 
