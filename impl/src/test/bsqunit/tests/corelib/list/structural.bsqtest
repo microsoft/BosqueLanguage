@@ -1,0 +1,70 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+namespace ListMap;
+
+////////
+//
+chktest function append_empty_empty(): Bool {
+    let ll = List<Int>{}.append(List<Int>{});
+    return ll.empty();
+}
+
+chktest function append_3_empty(): Bool {
+    let ll = List<Int>{1i, 2i, 3i}.append(List<Int>{});
+    return /\(ll.size() == 3n, ll.front() == 1i, ll.back() == 3i);
+}
+
+chktest function append_empty_3(): Bool {
+    let ll = List<Int>{}.append(List<Int>{1i, 2i, 3i});
+    return /\(ll.size() == 3n, ll.front() == 1i, ll.back() == 3i);
+}
+
+chktest function append_1_2(): Bool {
+    let ll = List<Int>{1i}.append(List<Int>{2i, 3i});
+    return /\(ll.size() == 3n, ll.front() == 1i, ll.back() == 3i);
+}
+
+chktest function append_2_6(): Bool {
+    let ll = List<Int>{1i, 2i}.append(List<Int>{3i, 4i, 5i, 6i, 7i, 8i});
+    return /\(ll.size() == 8n, ll.front() == 1i, ll.back() == 8i, ll.get(5n) == 6i);
+}
+
+chktest function append_5_4(): Bool {
+    let ll = List<Int>{1i, 2i, 3i, 4i}.append(List<Int>{5i, 6i, 7i, 8i, 9i});
+    return /\(ll.size() == 9n, ll.front() == 1i, ll.back() == 9i, ll.get(5n) == 6i);
+}
+
+chktest function append_9_5(): Bool {
+    let ll = List<Int>{1i, 2i, 3i, 4i, 5i, 6i, 7i, 8i, 9i}.append(List<Int>{10i, 11i, 12i, 13i, 14i});
+    return /\(ll.size() == 14n, ll.front() == 1i, ll.back() == 14i, ll.get(5n) == 6i, ll.get(10n) == 11i);
+}
+
+__chktest function append_identity(l: List<Int>): Bool {
+    let ll = List<Int>{1i, 2i, 3i}.append(l);
+    return /\(ll.size() == 3n, ll.front() == 1i, ll.back() == 3i);
+}
+
+__chktest function append_1_x_3(l1: List<Int>, l2: List<Int>, x: Int): Bool {
+    let ll = l1.append(l2);
+    return /\(ll.size() == 3n, ll.front() == 1i, ll.back() == 3i, ll.get(1n) == x);
+}
+
+////////
+//
+chktest function prepend_empty_empty(): Bool {
+    let ll = List<Int>{}.prepend(List<Int>{});
+    return ll.empty();
+}
+
+chktest function prepend_empty_3(): Bool {
+    let ll = List<Int>{}.prepend(List<Int>{1i, 2i, 3i});
+    return /\(ll.size() == 3n, ll.front() == 1i, ll.back() == 3i);
+}
+
+chktest function prepend_1_2(): Bool {
+    let ll = List<Int>{1i}.prepend(List<Int>{2i, 3i});
+    return /\(ll.size() == 3n, ll.front() == 2i, ll.back() == 1i);
+}
