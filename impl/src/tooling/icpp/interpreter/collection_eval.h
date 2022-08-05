@@ -98,12 +98,16 @@ public:
                 if(count <= 4)
                 {
                     res = Allocator::GlobalAllocator.allocateDynamic(lflavor.pv4type);
+                    BSQPartialVectorType::setPVCount(res, 0);
+
                     BSQPartialVectorType::appendPVData(res, stck[0], lflavor.entrytype->allocinfo.inlinedatasize);
                     BSQPartialVectorType::appendPVData(res, stck[1], lflavor.entrytype->allocinfo.inlinedatasize);
                 } 
                 else if(count <= 8)
                 {
                     res = Allocator::GlobalAllocator.allocateDynamic(lflavor.pv8type);
+                    BSQPartialVectorType::setPVCount(res, 0);
+                    
                     BSQPartialVectorType::appendPVData(res, stck[0], lflavor.entrytype->allocinfo.inlinedatasize);
                     BSQPartialVectorType::appendPVData(res, stck[1], lflavor.entrytype->allocinfo.inlinedatasize);
                 }

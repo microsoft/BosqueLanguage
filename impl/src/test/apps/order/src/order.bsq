@@ -6,13 +6,13 @@ algebraic orderable typedecl Quantity = Nat;
 
 algebraic orderable typedecl Price = Decimal;
 
-typedecl OrderPrice provides APIType 
+datatype OrderPrice provides APIType 
 of
     Market
     | Limit { price: Price }
 ;
 
-typedecl Request provides APIType using {
+datatype Request provides APIType using {
     id: ID, 
     requestPrice: OrderPrice
 } of
@@ -20,7 +20,7 @@ typedecl Request provides APIType using {
     | SellRequest { dealId: String }
 ; 
 
-typedecl Violations provides APIType 
+datatype Violations provides APIType 
 of
     InvalidPrice { price: Price }
     | InvalidQuantity { quantity: Quantity }
@@ -31,7 +31,7 @@ enum RejectReason {
     disagreeablePrice
 }
 
-typedecl BuyResponse provides APIType using {
+datatype BuyResponse provides APIType using {
     id: ID
 } of
     BuyAccepted { product: ID, price: Price, quantity: Quantity }
@@ -39,7 +39,7 @@ typedecl BuyResponse provides APIType using {
     | BuyRejected { reasons: List<RejectReason> }
 ;
 
-typedecl SellResponse provides APIType using {
+datatype SellResponse provides APIType using {
     id: ID
 } of
     SellAccepted { price: Price }
