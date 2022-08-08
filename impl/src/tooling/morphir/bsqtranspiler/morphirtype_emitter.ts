@@ -712,6 +712,10 @@ class MorphirTypeEmitter {
         return new MorphirCallSimple("-", [len, new MorphirConst("1")], true);
     }
 
+    generateListTypeSafeHeadName(ttype: MIRType): string {
+        return `bsq${this.getMorphirTypeFor(ttype).morphirtypename.toLowerCase()}_safehead`;
+    }
+
     generateMapTypeGetLength(ttype: MIRType, mm: MorphirExp): MorphirExp {
         return new MorphirCallSimple("length", [mm]);
     }

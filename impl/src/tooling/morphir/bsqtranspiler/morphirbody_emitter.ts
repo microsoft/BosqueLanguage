@@ -2660,7 +2660,7 @@ class MorphirBodyEmitter {
 
                 if (this.isSafeInvoke(pc.code)) {
                     const foldcall = new MorphirCallSimple("foldl", [
-                        new MorphirConst(`\\acc x -> (${pcfn} acc x${captured.length !== 0 ? (" " + captured.join(" ")) : ""})`),
+                        new MorphirConst(`\\acc__ x__ -> (${pcfn} acc__ x__${captured.length !== 0 ? (" " + captured.join(" ")) : ""})`),
                         new MorphirVar(args[1].vname),
                         new MorphirVar(args[0].vname)
                     ]);
@@ -2669,7 +2669,7 @@ class MorphirBodyEmitter {
                 }
                 else {
                     const foldcall = new MorphirCallSimple("foldl", [
-                        new MorphirConst(`\\acc x -> if ${this.typegen.generateResultIsErrorTest(mirrestype, new MorphirVar("acc"))} then acc else (${pcfn} ${this.typegen.generateResultGetSuccess(mirrestype, new MorphirVar("acc")).emitMorphir(undefined)} x${captured.length !== 0 ? (" " + captured.join(" ")) : ""})`),
+                        new MorphirConst(`\\acc__ x__ -> if ${this.typegen.generateResultIsErrorTest(mirrestype, new MorphirVar("acc__")).emitMorphir(undefined)} then acc__ else (${pcfn} ${this.typegen.generateResultGetSuccess(mirrestype, new MorphirVar("acc__")).emitMorphir(undefined)} x${captured.length !== 0 ? (" " + captured.join(" ")) : ""})`),
                         this.typegen.generateResultTypeConstructorSuccess(mirrestype, new MorphirVar(args[1].vname)),
                         new MorphirVar(args[0].vname)
                     ]);
@@ -2720,19 +2720,16 @@ class MorphirBodyEmitter {
             }
             case "s_list_get": {
                 const lhead = new MorphirCallSimple("drop", [new MorphirVar(args[1].vname), new MorphirVar(args[0].vname)]);
-                xxxx;
-                const vv = new MorphirCallSimple("head", [lhead]);
+                const vv = new MorphirCallSimple(this.typegen.generateListTypeSafeHeadName(this.typegen.getMIRType(idecl.params[0].type)), [lhead]);
                 return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, vv);
             }
             case "s_list_back": {
                 const lcount = new MorphirCallSimple("-", [new MorphirCallSimple("length", [new MorphirVar(args[0].vname)]), new MorphirConst("1")], true);
-                xxxx;
-                const dd = new MorphirCallSimple("head", [new MorphirCallSimple("drop", [new MorphirVar(args[0].vname), lcount])]);
+                const dd = new MorphirCallSimple(this.typegen.generateListTypeSafeHeadName(this.typegen.getMIRType(idecl.params[0].type)), [new MorphirCallSimple("drop", [new MorphirVar(args[0].vname), lcount])]);
                 return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);
             }
             case "s_list_front": {
-                xxxx;
-                const dd = new MorphirCallSimple("head", [new MorphirVar(args[0].vname)]);
+                const dd = new MorphirCallSimple(this.typegen.generateListTypeSafeHeadName(this.typegen.getMIRType(idecl.params[0].type)), [new MorphirVar(args[0].vname)]);
                 return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);
             }
             case "s_list_has_pred": {
@@ -2745,7 +2742,7 @@ class MorphirBodyEmitter {
 
                 if (this.isSafeInvoke(pc.code)) {
                     const bmap = new MorphirCallSimple("any", [
-                        new MorphirConst(`\\x -> (${pcfn} x${captured.length !== 0 ? (" " + captured.join(" ")) : ""})`),
+                        new MorphirConst(`\\x__ -> (${pcfn} x__${captured.length !== 0 ? (" " + captured.join(" ")) : ""})`),
                         new MorphirVar(args[0].vname)
                     ]);
 
@@ -2753,27 +2750,24 @@ class MorphirBodyEmitter {
                 }
                 else {
                     const bmap = new MorphirCallSimple("map", [
-                        new MorphirConst(`\\x -> (${pcfn} x${captured.length !== 0 ? (" " + captured.join(" ")) : ""})`),
+                        new MorphirConst(`\\x__ -> (${pcfn} x__${captured.length !== 0 ? (" " + captured.join(" ")) : ""})`),
                         new MorphirVar(args[0].vname)
                     ]);
 
-                    const err = new MorphirCallSimple("filter", [
-                        new MorphirConst(`\\v -> ${this.typegen.generateResultIsErrorTest(this.typegen.getMIRType(pcdcl.resultType), new MorphirVar("vv"))}`),
+                    const err = new MorphirCallSimple("foldr", [
+                        new MorphirConst(`\\acc__ vv__ -> if ${this.typegen.generateResultIsErrorTest(this.typegen.getMIRType(pcdcl.resultType), new MorphirVar("vv__")).emitMorphir(undefined)} then vv__ else acc__`),
+                        new MorphirConst("Nothing"),
                         new MorphirVar("vmap")
                     ]);
 
                     const find = new MorphirCallSimple("any", [
-                        new MorphirConst(`\\v -> ${this.typegen.generateResultGetSuccess(this.typegen.getMIRType(pcdcl.resultType), new MorphirVar("vv"))}`),
+                        new MorphirConst(`\\vv__ -> ${this.typegen.generateResultGetSuccess(this.typegen.getMIRType(pcdcl.resultType), new MorphirVar("vv__")).emitMorphir(undefined)}`),
                         new MorphirVar("vmap")
                     ]);
 
                     const bbody = new MorphirLet("vmap", bmap, 
-                        new MorphirLet("efilter", err,
-                            new MorphirIf(
-                                new MorphirCallSimple("isEmpty", [new MorphirVar("efilter")]),
-                                this.typegen.generateResultTypeConstructorError(this.typegen.getMIRType("Bool"), new MorphirCallSimple("head" xxxx, [new MorphirVar("efilter")])),
-                                this.typegen.generateResultTypeConstructorSuccess(this.typegen.getMIRType("Bool"), find)
-                            )
+                        new MorphirLet("erropt", err,
+                            new MorphirCallSimple("errtop_chk_bool", [new MorphirVar("erropt"), this.typegen.generateResultTypeConstructorSuccess(this.typegen.getMIRType("Bool"), find)])
                         )
                     );
 
@@ -2785,7 +2779,48 @@ class MorphirBodyEmitter {
                 return undefined;
             }
             case "s_list_find_pred": {
-                xxxx;
+                const pc = idecl.pcodes.get("p") as MIRPCode;
+                const pcdcl = this.typegen.assembly.invokeDecls.get(pc.code) as MIRInvokeDecl;
+                const pcfn = this.typegen.lookupFunctionName(pc.code);
+                const captured = pc.cargs.map((carg) => carg.cname);
+
+                const implicitlambdas = [pcfn];
+
+                const bmap = new MorphirCallSimple("map", [
+                    new MorphirConst(`\\x__ -> (${pcfn} x__${captured.length !== 0 ? (" " + captured.join(" ")) : ""})`),
+                    new MorphirVar(args[0].vname)
+                ]);
+
+                if (this.isSafeInvoke(pc.code)) {
+                    const foldidx = new MorphirCallSimple("index_of_true", [bmap]);                    
+
+                    return MorphirFunction.createWithImplicitLambdas(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, foldidx, implicitlambdas);
+                }
+                else {
+                    const bmap = new MorphirCallSimple("map", [
+                        new MorphirConst(`\\x__ -> (${pcfn} x__${captured.length !== 0 ? (" " + captured.join(" ")) : ""})`),
+                        new MorphirVar(args[0].vname)
+                    ]);
+
+                    const err = new MorphirCallSimple("foldr", [
+                        new MorphirConst(`\\acc__ vv__ -> if ${this.typegen.generateResultIsErrorTest(this.typegen.getMIRType(pcdcl.resultType), new MorphirVar("vv__")).emitMorphir(undefined)} then vv__ else acc__`),
+                        new MorphirConst("Nothing"),
+                        new MorphirVar("vmap")
+                    ]);
+
+                    const findidxmask = new MorphirCallSimple("map", [
+                        new MorphirConst(`\\vv__ -> ${this.typegen.generateResultGetSuccess(this.typegen.getMIRType(pcdcl.resultType), new MorphirVar("vv__")).emitMorphir(undefined)}`),
+                        new MorphirVar("vmap")
+                    ]);
+
+                    const bbody = new MorphirLet("vmap", bmap, 
+                        new MorphirLet("erropt", err,
+                            new MorphirCallSimple("errtop_chk_int", [new MorphirVar("erropt"), this.typegen.generateResultTypeConstructorSuccess(this.typegen.getMIRType("Bool"), find)])
+                        )
+                    );
+
+                    return MorphirFunction.createWithImplicitLambdas(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, bbody, implicitlambdas);
+                }
             }
             case "s_list_find_pred_idx": {
                 assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);

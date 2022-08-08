@@ -905,6 +905,31 @@ result_error_get_value r =
         _ -> 
             "[NO ERROR INFO]"
 
+result_reduce : b -> (b -> a -> b) -> List (Result String a) -> (Result String b)
+result_reduce acc f l = 
+    case l of 
+        [] ->
+            Ok acc
+        h :: t ->
+            case h of 
+                Err _ ->
+                    h
+                Ok bv ->
+                    result_reduce_bool (f acc bv) f t
+
+result_reduce_bool : Bool -> (Bool -> Bool -> Bool) -> List (Result String a) -> (Result String Bool)
+result_reduce_bool acc f l = 
+    case l of 
+        [] ->
+            Ok acc
+        h :: t ->
+            case h of 
+                Err _ ->
+                    h
+                Ok bv ->
+                    result_reduce_bool (f acc bv) f t
+
+
 --EPHEMERAL_DECLS--
 
 --MASK_INFO--
