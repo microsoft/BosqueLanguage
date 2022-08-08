@@ -905,13 +905,13 @@ result_error_get_value r =
         _ -> 
             "[NO ERROR INFO]"
 
-list_head_w_result : (List a) -> (Result String a)
-list_head_w_result l =  
+list_head_w_default : (List a) -> a -> a
+list_head_w_default l d =  
     case l of 
         [] ->
-            (Err "Empty List Head")
+            d
         h :: _ ->
-            (Ok h)
+            h
 
 type alias ReduceIdxInfo a =
     {
@@ -923,9 +923,13 @@ result_reduce : b -> (b -> a -> b) -> (List (Result String a)) -> (Result String
 result_reduce acc f l = 
     case l of 
         [] ->
-            (Ok acc)
+            Ok acc
         h :: t ->
-            result_reduce (map (f acc) h) f t
+            case h of 
+                Err e -> 
+                    Err e
+                Ok v -> 
+                    result_reduce (f acc v) f t
 
 result_map_map : (List (Result String a)) -> (Result String (List a))
 result_map_map l = 
@@ -942,7 +946,7 @@ result_map_map l =
                         Err tlmsg -> 
                             Err tlmsg 
                         Ok tll ->
-                            v :: tll
+                            Ok (v :: tll)
             
 --EPHEMERAL_DECLS--
 

@@ -651,6 +651,26 @@ class MorphirTypeEmitter {
         return `${this.lookupTypeName(tt.typeID).toLowerCase()}_${idx}`;
     }
 
+    generateTupleIndexGet(tt: MIRTupleType, idx: number, exp: MorphirExp): MorphirConst {
+        this.internTypeName(tt.typeID);
+        return new MorphirConst(`${exp.emitMorphir(undefined)}.${this.lookupTypeName(tt.typeID).toLowerCase()}_${idx}`);
+    } 
+
+    generateRecordPropertyGet(tt: MIRRecordType, pname: string, exp: MorphirExp): MorphirConst {
+        this.internTypeName(tt.typeID);
+        return new MorphirConst(`${exp.emitMorphir(undefined)}.${this.lookupTypeName(tt.typeID).toLowerCase()}_${pname}`);
+    }
+
+    generateEntityFieldGet(tt: MIREntityTypeDecl, field: MIRFieldDecl, exp: MorphirExp): MorphirConst {
+        this.internTypeName(tt.tkey);
+        return new MorphirConst(`${exp.emitMorphir(undefined)}.${this.lookupTypeName(tt.tkey).toLowerCase()}_${field.fname}`);
+    }
+
+    generateEphemeralListGet(tt: MIREphemeralListType, idx: number, exp: MorphirExp): MorphirConst {
+        this.internTypeName(tt.typeID);
+        return new MorphirConst(`${exp.emitMorphir(undefined)}.${this.lookupTypeName(tt.typeID).toLowerCase()}_${idx}`);
+    }
+
     generateResultType(ttype: MIRType): MorphirTypeInfo {
         return new MorphirTypeInfo(`Result String ${this.getMorphirTypeFor(ttype).morphirtypename}`, "[INTERNAL RESULT]", "[INTERNAL RESULT]");
     }

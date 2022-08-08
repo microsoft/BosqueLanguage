@@ -70,7 +70,7 @@ class MorphirFunction {
     emitMorphir(): string {
         if(this.maskname === undefined && this.args.length === 0) {
             const body = this.body.emitMorphir("    ");
-            
+
             const decl = `${this.fname} : ${this.result.morphirtypename}\n`;
             const impl = `${this.fname} = \n${body}\n`;
             return decl + impl;
@@ -390,8 +390,8 @@ class MorphirAssembly {
             .map((kt) => {
                 return {
                     decl: `type alias ${kt.morphirname} = {${kt.consf.cargs.map((ke) => `${ke.fname}: ${ke.ftype.morphirtypename})`).join(" ")}}`,
-                    consfdecl: `${kt.consf.cname} : ${kt.consf.cargs.map((ke) => `${ke.ftype.morphirtypename}`).join(" -> ")} -> ${kt.morphirname}`,
-                    consfimpl: `${kt.consf.cname} ${kt.consf.cargs.map((ke) => `arg_${ke.fname}`).join(" ")} = {${kt.consf.cargs.map((ke) => `${ke.fname} = arg_${ke.fname}`).join(", ")}}`,
+                    consfdecl: kt.consf.cargs.length !== 0 ? `${kt.consf.cname} : ${kt.consf.cargs.map((ke) => `${ke.ftype.morphirtypename}`).join(" -> ")} -> ${kt.morphirname}` : `${kt.consf.cname} : ${kt.morphirname}`,
+                    consfimpl: kt.consf.cargs.length !== 0 ? `${kt.consf.cname} ${kt.consf.cargs.map((ke) => `arg_${ke.fname}`).join(" ")} = {${kt.consf.cargs.map((ke) => `${ke.fname} = arg_${ke.fname}`).join(", ")}}` : `${kt.consf.cname} = {}`,
                     boxf: `${kt.boxf} ${kt.morphirname}`,
                     unboxfdecl: `${kt.ubf} : BObject -> ${kt.morphirname}`,
                     unboxfimpl: `${kt.ubf} t = \n    case t of\n        ${kt.boxf} v -> \n            v\n        _ -> \n            bsq${kt.morphirname.toLowerCase()}_default`,
@@ -405,8 +405,8 @@ class MorphirAssembly {
             .map((kt) => {
                 return {
                     decl: `type alias ${kt.morphirname} = {${kt.consf.cargs.map((ke) => `${ke.fname}: ${ke.ftype.morphirtypename})`).join(" ")}}`,
-                    consfdecl: `${kt.consf.cname} : ${kt.consf.cargs.map((ke) => `${ke.ftype.morphirtypename}`).join(" -> ")} -> ${kt.morphirname}`,
-                    consfimpl: `${kt.consf.cname} ${kt.consf.cargs.map((ke) => `arg_${ke.fname}`).join(" ")} = {${kt.consf.cargs.map((ke) => `${ke.fname} = arg_${ke.fname}`).join(", ")}}`,
+                    consfdecl: kt.consf.cargs.length !== 0 ? `${kt.consf.cname} : ${kt.consf.cargs.map((ke) => `${ke.ftype.morphirtypename}`).join(" -> ")} -> ${kt.morphirname}` : `${kt.consf.cname} : ${kt.morphirname}`,
+                    consfimpl: kt.consf.cargs.length !== 0 ? `${kt.consf.cname} ${kt.consf.cargs.map((ke) => `arg_${ke.fname}`).join(" ")} = {${kt.consf.cargs.map((ke) => `${ke.fname} = arg_${ke.fname}`).join(", ")}}` : `${kt.consf.cname} = {}`,
                     boxf: `${kt.boxf} ${kt.morphirname}`,
                     unboxfdecl: `${kt.ubf} : BObject -> ${kt.morphirname}`,
                     unboxfimpl: `${kt.ubf} t = \n    case t of\n        ${kt.boxf} v -> \n            v\n        _ -> \n            bsq${kt.morphirname.toLowerCase()}_default`,
@@ -454,8 +454,8 @@ class MorphirAssembly {
                 const tt = tval as MorphirEntityStdDecl;
                 return {
                     decl: `type alias ${tt.morphirname} = {${tt.consf.cargs.map((te) => `${te.fname}: ${te.ftype.morphirtypename}`).join(", ")}}`,
-                    consfdecl: `${tt.consf.cname} : ${tt.consf.cargs.map((te) => `${te.ftype.morphirtypename}`).join(" -> ")} -> ${tt.morphirname}`,
-                    consfimpl: `${tt.consf.cname} ${tt.consf.cargs.map((te) => `arg_${te.fname}`).join(" ")} = {${tt.consf.cargs.map((te) => `${te.fname} = arg_${te.fname}`).join(", ")}}`,
+                    consfdecl: tt.consf.cargs.length !== 0 ? `${tt.consf.cname} : ${tt.consf.cargs.map((te) => `${te.ftype.morphirtypename}`).join(" -> ")} -> ${tt.morphirname}` : `${tt.consf.cname} : ${tt.morphirname}`,
+                    consfimpl: tt.consf.cargs.length !== 0 ? `${tt.consf.cname} ${tt.consf.cargs.map((te) => `arg_${te.fname}`).join(" ")} = {${tt.consf.cargs.map((te) => `${te.fname} = arg_${te.fname}`).join(", ")}}` : `${tt.consf.cname} = {}`,
                     boxf: `${tt.boxf} ${tt.morphirname}`,
                     unboxfdecl: `${tt.ubf} : BObject -> ${tt.morphirname}`,
                     unboxfimpl: `${tt.ubf} t = \n    case t of\n        ${tt.boxf} v -> \n            v\n        _ -> \n            bsq${tt.morphirname.toLowerCase()}_default`,
@@ -590,9 +590,9 @@ class MorphirAssembly {
             KEY_BOX_OPS: keyoftypeinfo.map((kb) =>  `    | ${kb.boxf}`).sort(),
             KEY_UNBOX_OPS: keyoftypeinfo.map((kb) => kb.unboxfdecl + "\n" + kb.unboxfimpl).sort(),
             KEY_DEFAULT_OPS: keyoftypeinfo.map((kb) => kb.defaultdecl + "\n" + kb.defaultimpl).sort(),
-            TUPLE_TYPE_DECLS: termtupleinfo.map((ti) => ti.decl).sort(),
-            RECORD_TYPE_DECLS: termrecordinfo.map((ri) => ri.decl).sort(),
-            TYPE_DECLS: [...ofinternaltypeinfo.map((oti) => oti.decl).sort(), ...collectiontypeinfo.map((cti) => cti.decl).sort(), ...termtypeinfo.map((ti) => ti.decl).sort()],   
+            TUPLE_TYPE_DECLS: termtupleinfo.map((ti) => ti.decl + "\n" + ti.consfdecl + "\n" + ti.consfimpl).sort(),
+            RECORD_TYPE_DECLS: termrecordinfo.map((ri) => ri.decl + "\n" + ri.consfdecl + "\n" + ri.consfimpl).sort(),
+            TYPE_DECLS: [...ofinternaltypeinfo.map((oti) => oti.decl).sort(), ...collectiontypeinfo.map((cti) => cti.decl).sort(), ...termtypeinfo.map((ti) => ti.decl + "\n" + ti.consfdecl + "\n" + ti.consfimpl).sort()],   
             TUPLE_TYPE_BOXING: termtupleinfo.map((ti) => ti.boxf).sort().map((ttb) => `    | ${ttb}`),
             RECORD_TYPE_BOXING: termrecordinfo.map((ri) => ri.boxf).sort().map((trb) => `    | ${trb}`),
             TYPE_BOXING: [
@@ -601,6 +601,7 @@ class MorphirAssembly {
                 ...termtypeinfo.map((ti) => ti.boxf).sort().map((ttb) => `    | ${ttb}`)
             ],
             TERM_DEFAULT: [
+                ...oftypeinfo.map((tti) => tti.defaultdecl + "\n" + tti.defaultimpl).sort(),
                 ...termtupleinfo.map((tti) => tti.defaultdecl + "\n" + tti.defaultimpl).sort(),
                 ...termrecordinfo.map((tti) => tti.defaultdecl + "\n" + tti.defaultimpl).sort(),
                 ...ofinternaltypeinfo.map((tti) => tti.defaultdecl + "\n" + tti.defaultimpl).sort(),
