@@ -1948,7 +1948,7 @@ class MorphirBodyEmitter {
     }
 
     processGenerateResultUnderflowCheck(sinfo: SourceInfo, arg0: MorphirExp, arg1: MorphirExp , oftype: MIRType, val: MorphirExp): MorphirExp {
-        return new MorphirIf(new MorphirCallSimple("<", [arg1, arg0]), this.typegen.generateErrorResultAssert(oftype, this.currentFile, sinfo), val);
+        return new MorphirIf(new MorphirCallSimple("<", [arg1, arg0], true), this.typegen.generateErrorResultAssert(oftype, this.currentFile, sinfo), this.typegen.generateResultTypeConstructorSuccess(oftype, val));
     }
 
     processGenerateResultWithZeroArgCheck(sinfo: SourceInfo, zero: MorphirConst, not0arg: MorphirExp, oftype: MIRType, val: MorphirExp): MorphirExp {
@@ -2660,7 +2660,7 @@ class MorphirBodyEmitter {
 
                 if (this.isSafeInvoke(pc.code)) {
                     const foldcall = new MorphirCallSimple("foldl", [
-                        new MorphirConst(`\\acc__ x__ -> (${pcfn} acc__ x__${captured.length !== 0 ? (" " + captured.join(" ")) : ""})`),
+                        new MorphirConst(`(\\acc__ x__ -> (${pcfn} acc__ x__${captured.length !== 0 ? (" " + captured.join(" ")) : ""}))`),
                         new MorphirVar(args[1].vname),
                         new MorphirVar(args[0].vname)
                     ]);
@@ -2669,7 +2669,7 @@ class MorphirBodyEmitter {
                 }
                 else {
                     const foldcall = new MorphirCallSimple("foldl", [
-                        new MorphirConst(`\\acc__ x__ -> if ${this.typegen.generateResultIsErrorTest(mirrestype, new MorphirVar("acc__")).emitMorphir(undefined)} then acc__ else (${pcfn} ${this.typegen.generateResultGetSuccess(mirrestype, new MorphirVar("acc__")).emitMorphir(undefined)} x${captured.length !== 0 ? (" " + captured.join(" ")) : ""})`),
+                        new MorphirConst(`(\\acc__ x__ -> if ${this.typegen.generateResultIsErrorTest(mirrestype, new MorphirVar("acc__")).emitMorphir(undefined)} then acc__ else (${pcfn} ${this.typegen.generateResultGetSuccess(mirrestype, new MorphirVar("acc__")).emitMorphir(undefined)} x${captured.length !== 0 ? (" " + captured.join(" ")) : ""}))`),
                         this.typegen.generateResultTypeConstructorSuccess(mirrestype, new MorphirVar(args[1].vname)),
                         new MorphirVar(args[0].vname)
                     ]);
@@ -2741,7 +2741,7 @@ class MorphirBodyEmitter {
 
                 if (this.isSafeInvoke(pc.code)) {
                     const bmap = new MorphirCallSimple("any", [
-                        new MorphirConst(`\\x__ -> `),
+                        new MorphirConst(`(\\x__ -> (${pcfn} x__${captured.length !== 0 ? (" " + captured.join(" ")) : ""}))`),
                         new MorphirVar(args[0].vname)
                     ]);
 
@@ -2749,12 +2749,12 @@ class MorphirBodyEmitter {
                 }
                 else {
                     const bmap = new MorphirCallSimple("map", [
-                        new MorphirConst(`\\x__ -> (${pcfn} x__${captured.length !== 0 ? (" " + captured.join(" ")) : ""})`),
+                        new MorphirConst(`(\\x__ -> (${pcfn} x__${captured.length !== 0 ? (" " + captured.join(" ")) : ""}))`),
                         new MorphirVar(args[0].vname)
                     ]);
 
                     const vres = new MorphirCallSimple("result_reduce", [
-                        new MorphirConst(`\\acc__ vv__ -> (acc__ && v__)`),
+                        new MorphirConst(`(\\acc__ vv__ -> (acc__ && v__))`),
                         new MorphirConst("false"),
                         new MorphirVar("vmap")
                     ]);
@@ -2775,13 +2775,13 @@ class MorphirBodyEmitter {
                 const implicitlambdas = [pcfn];
 
                 const bmap = new MorphirCallSimple("map", [
-                    new MorphirConst(`\\x__ -> (${pcfn} x__${captured.length !== 0 ? (" " + captured.join(" ")) : ""})`),
+                    new MorphirConst(`(\\x__ -> (${pcfn} x__${captured.length !== 0 ? (" " + captured.join(" ")) : ""}))`),
                     new MorphirVar(args[0].vname)
                 ]);
 
                 if (this.isSafeInvoke(pc.code)) {
                     const vres = new MorphirCallSimple("reducel", [
-                        new MorphirConst(`\\acc__ vv__ -> (if acc__.vv == -1 then && {index = -1, vv = vv__}) else {index = acc__.index + 1, vv = -1}`),
+                        new MorphirConst(`(\\acc__ vv__ -> (if acc__.vv == -1 then && {index = -1, vv = vv__}) else {index = acc__.index + 1, vv = -1})`),
                         new MorphirConst("{index = 0, vv = -1}"),
                         new MorphirVar("vmap")
                     ]);
@@ -2791,7 +2791,7 @@ class MorphirBodyEmitter {
                 }
                 else {
                     const vres = new MorphirCallSimple("result_reduce", [
-                        new MorphirConst(`\\acc__ vv__ -> (if acc__.vv == -1 then && {index = -1, vv = vv__}) else {index = acc__.index + 1, vv = -1}`),
+                        new MorphirConst(`(\\acc__ vv__ -> (if acc__.vv == -1 then && {index = -1, vv = vv__}) else {index = acc__.index + 1, vv = -1})`),
                         new MorphirConst("{index = 0, vv = -1}"),
                         new MorphirVar("vmap")
                     ]);
@@ -2837,14 +2837,14 @@ class MorphirBodyEmitter {
                 return undefined;
             }
             case "s_list_map": {
-                const pc = idecl.pcodes.get("p") as MIRPCode;
+                const pc = idecl.pcodes.get("f") as MIRPCode;
                 const pcfn = this.typegen.lookupFunctionName(pc.code);
                 const captured = pc.cargs.map((carg) => carg.cname);
 
                 const implicitlambdas = [pcfn];
 
                 const bmap = new MorphirCallSimple("map", [
-                    new MorphirConst(`\\x__ -> (${pcfn} x__${captured.length !== 0 ? (" " + captured.join(" ")) : ""})`),
+                    new MorphirConst(`(\\x__ -> (${pcfn} x__${captured.length !== 0 ? (" " + captured.join(" ")) : ""}))`),
                     new MorphirVar(args[0].vname)
                 ]);
 

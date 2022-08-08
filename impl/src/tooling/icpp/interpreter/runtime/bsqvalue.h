@@ -474,7 +474,8 @@ public:
 
     virtual const BSQType* getVType(StorageLocationPtr trgt) const = 0;
 
-    virtual StorageLocationPtr getVData_NoAlloc(StorageLocationPtr trgt) const = 0;
+    virtual StorageLocationPtr getVData_StorageLocation(StorageLocationPtr trgt) const = 0;
+    virtual void* getVData_Direct(StorageLocationPtr trgt) const = 0;
 };
 
 class BSQUnionRefType : public BSQUnionType
@@ -531,9 +532,14 @@ public:
         return SLPTR_LOAD_HEAP_TYPE(trgt);
     }
 
-    virtual StorageLocationPtr getVData_NoAlloc(StorageLocationPtr trgt) const override final
+    virtual StorageLocationPtr getVData_StorageLocation(StorageLocationPtr trgt) const override final
     {
         return trgt;
+    }
+
+    virtual void* getVData_Direct(StorageLocationPtr trgt) const override final
+    {
+        return SLPTR_LOAD_HEAP_DATAPTR(trgt);
     }
 };
 
@@ -613,9 +619,24 @@ public:
         return SLPTR_LOAD_UNION_INLINE_TYPE(trgt);
     }
 
-    virtual StorageLocationPtr getVData_NoAlloc(StorageLocationPtr trgt) const override final
+    virtual StorageLocationPtr getVData_StorageLocation(StorageLocationPtr trgt) const override final
     {
         return SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt);
+    }
+
+    virtual void* getVData_Direct(StorageLocationPtr trgt) const override final
+    {
+        auto oftype = SLPTR_LOAD_UNION_INLINE_TYPE(trgt);
+        auto sl = SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt);
+
+        if(oftype->tkind == BSQTypeLayoutKind::Struct)
+        {
+            return (void*)sl;
+        }
+        else
+        {
+            return SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(sl);
+        }
     }
 };
 
@@ -752,7 +773,7 @@ public:
         }
     }
 
-    virtual StorageLocationPtr getVData_NoAlloc(StorageLocationPtr trgt) const override final
+    virtual StorageLocationPtr getVData_StorageLocation(StorageLocationPtr trgt) const override final
     {
         auto btype = SLPTR_LOAD_UNION_INLINE_TYPE(trgt);
         if(btype->tkind != BSQTypeLayoutKind::BoxedStruct)
@@ -763,6 +784,21 @@ public:
         {
             auto udata = SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt);
             return SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(udata);
+        }
+    }
+
+    virtual void* getVData_Direct(StorageLocationPtr trgt) const override final
+    {
+        auto oftype = SLPTR_LOAD_UNION_INLINE_TYPE(trgt);
+        auto sl = SLPTR_LOAD_UNION_INLINE_DATAPTR(trgt);
+
+        if(oftype->tkind == BSQTypeLayoutKind::Struct)
+        {
+            return (void*)sl;
+        }
+        else
+        {
+            return (void*)SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(sl);
         }
     }
 };

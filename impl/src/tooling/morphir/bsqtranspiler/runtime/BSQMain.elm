@@ -906,7 +906,7 @@ result_error_get_value r =
             "[NO ERROR INFO]"
 
 list_head_w_result : (List a) -> (Result String a)
-list_head_w_result = l 
+list_head_w_result l =  
     case l of 
         [] ->
             (Err "Empty List Head")
@@ -951,5 +951,3 @@ result_map_map l =
 --GLOBAL_DECLS--
 
 --FUNCTION_DECLS--
-
---GLOBAL_DEFINITIONS--

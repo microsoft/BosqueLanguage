@@ -112,7 +112,12 @@ class MorphirCallSimple extends MorphirExp {
             return (indent !== undefined ? indent : "") + `(${this.args[0].emitMorphir(undefined)} ${this.fname} ${this.args[1].emitMorphir(undefined)})`;
         }
         else {
-            return (indent !== undefined ? indent : "") + `(${this.fname} ${this.args.map((arg) => arg.emitMorphir(undefined)).join(" ")})`;
+            if(this.args.length === 0) {
+                return (indent !== undefined ? indent : "") + `${this.fname}`;
+            }
+            else {
+                return (indent !== undefined ? indent : "") + `(${this.fname} ${this.args.map((arg) => arg.emitMorphir(undefined)).join(" ")})`;
+            }
         }
     }
 

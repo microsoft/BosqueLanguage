@@ -439,7 +439,7 @@ bool dbg_processTupleAccess(Evaluator* vv, const BSQType*& btype, StorageLocatio
         auto utype = dynamic_cast<const BSQUnionType*>(btype);
 
         btype = utype->getVType(cpos);
-        cpos = utype->getVData_NoAlloc(cpos);
+        cpos = utype->getVData_StorageLocation(cpos);
     }
     
     const BSQTupleInfo* tinfo = dynamic_cast<const BSQTupleInfo*>(btype);
@@ -461,7 +461,7 @@ bool dbg_processNameAccess(Evaluator* vv, const BSQType*& btype, StorageLocation
         auto utype = dynamic_cast<const BSQUnionType*>(btype);
 
         btype = utype->getVType(cpos);
-        cpos = utype->getVData_NoAlloc(cpos);
+        cpos = utype->getVData_StorageLocation(cpos);
     }
 
     const BSQRecordInfo* rinfo = dynamic_cast<const BSQRecordInfo*>(btype);
@@ -516,7 +516,7 @@ bool dbg_processNumberKey(Evaluator* vv, const BSQType*& btype, StorageLocationP
         auto utype = dynamic_cast<const BSQUnionType*>(btype);
 
         btype = utype->getVType(cpos);
-        cpos = utype->getVData_NoAlloc(cpos);
+        cpos = utype->getVData_StorageLocation(cpos);
     }
 
     const BSQListType* ltype = dynamic_cast<const BSQListType*>(btype);
