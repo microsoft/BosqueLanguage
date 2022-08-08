@@ -905,31 +905,45 @@ result_error_get_value r =
         _ -> 
             "[NO ERROR INFO]"
 
-result_reduce : b -> (b -> a -> b) -> List (Result String a) -> (Result String b)
+list_head_w_result : (List a) -> (Result String a)
+list_head_w_result = l 
+    case l of 
+        [] ->
+            (Err "Empty List Head")
+        h :: _ ->
+            (Ok h)
+
+type alias ReduceIdxInfo a =
+    {
+        index: Int,
+        vv: a
+    }
+
+result_reduce : b -> (b -> a -> b) -> (List (Result String a)) -> (Result String b)
 result_reduce acc f l = 
     case l of 
         [] ->
-            Ok acc
+            (Ok acc)
         h :: t ->
-            case h of 
-                Err _ ->
-                    h
-                Ok bv ->
-                    result_reduce_bool (f acc bv) f t
+            result_reduce (map (f acc) h) f t
 
-result_reduce_bool : Bool -> (Bool -> Bool -> Bool) -> List (Result String a) -> (Result String Bool)
-result_reduce_bool acc f l = 
+result_map_map : (List (Result String a)) -> (Result String (List a))
+result_map_map l = 
     case l of 
         [] ->
-            Ok acc
+            Ok []
         h :: t ->
             case h of 
-                Err _ ->
-                    h
-                Ok bv ->
-                    result_reduce_bool (f acc bv) f t
-
-
+                Err msg -> 
+                    Err msg
+                Ok v -> 
+                    let tl = result_map_map t in
+                    case tl of 
+                        Err tlmsg -> 
+                            Err tlmsg 
+                        Ok tll ->
+                            v :: tll
+            
 --EPHEMERAL_DECLS--
 
 --MASK_INFO--
