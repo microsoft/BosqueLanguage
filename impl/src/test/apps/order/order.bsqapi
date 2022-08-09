@@ -15,3 +15,13 @@ entrypoint function main(request: Request, marketPrice: Price, startOfDayPositio
     }
 }
 
+entrypoint function elm_main(): Bool {
+    let request = BuyRequest{id="rq1", requestPrice=Market{}, quantity=5_Quantity, product="apples"};
+    let marketPrice = 10.0_Price;
+    let availableInventory = 100_Quantity;
+
+    let res = processBuy(request, marketPrice, availableInventory);
+    
+    return res.is<BuyAccepted>() && res.quantity == 5_Quantity;
+}
+

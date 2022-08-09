@@ -31,8 +31,7 @@ type Morphir2FileInfo = {
     EPHEMERAL_DECLS: string[],
     MASK_INFO: string[],
     GLOBAL_DECLS: string[],
-    FUNCTION_DECLS: string[],
-    GLOBAL_DEFINITIONS: string[]
+    FUNCTION_DECLS: string[]
 };
 
 class MorphirFunction {
@@ -69,19 +68,28 @@ class MorphirFunction {
     }
 
     emitMorphir(): string {
-        const declargs = this.args.map((arg) => `${arg.vtype.morphirtypename}`).join(" -> ");
-        const implargs = this.args.map((arg) => `${cleanVarName(arg.vname)}`).join(" ");
-        const body = this.body.emitMorphir("    ");
+        if(this.maskname === undefined && this.args.length === 0) {
+            const body = this.body.emitMorphir("    ");
 
-        if(this.maskname === undefined) {
-            const decl = `${this.fname} : ${declargs} -> ${this.result.morphirtypename}\n`;
-            const impl = `${this.fname} ${implargs} = \n${body}\n`;
+            const decl = `${this.fname} : ${this.result.morphirtypename}\n`;
+            const impl = `${this.fname} = \n${body}\n`;
             return decl + impl;
         }
         else {
-            const decl = `${this.fname} : ${declargs} -> mask_${this.masksize} -> ${this.result.morphirtypename}\n`;
-            const impl = `${this.fname} ${implargs} ${this.maskname} = \n${body}\n`;
-            return decl + impl;
+            const declargs = this.args.map((arg) => `${arg.vtype.morphirtypename}`).join(" -> ");
+            const implargs = this.args.map((arg) => `${cleanVarName(arg.vname)}`).join(" ");
+            const body = this.body.emitMorphir("    ");
+
+            if (this.maskname === undefined) {
+                const decl = `${this.fname} : ${declargs} -> ${this.result.morphirtypename}\n`;
+                const impl = `${this.fname} ${implargs} = \n${body}\n`;
+                return decl + impl;
+            }
+            else {
+                const decl = `${this.fname} : ${declargs} -> mask_${this.masksize} -> ${this.result.morphirtypename}\n`;
+                const impl = `${this.fname} ${implargs} ${this.maskname} = \n${body}\n`;
+                return decl + impl;
+            }
         }
     }
 }
@@ -382,13 +390,13 @@ class MorphirAssembly {
             .map((kt) => {
                 return {
                     decl: `type alias ${kt.morphirname} = {${kt.consf.cargs.map((ke) => `${ke.fname}: ${ke.ftype.morphirtypename})`).join(" ")}}`,
-                    consfdecl: `${kt.consf.cname} : ${kt.consf.cargs.map((ke) => `${ke.ftype.morphirtypename}`).join(" -> ")} -> ${kt.morphirname}`,
-                    consfimpl: `${kt.consf.cname} ${kt.consf.cargs.map((ke) => `arg_${ke.fname}`).join(" ")} = {${kt.consf.cargs.map((ke) => `${ke.fname} = arg_${ke.fname})`).join(" ")}}`,
+                    consfdecl: kt.consf.cargs.length !== 0 ? `${kt.consf.cname} : ${kt.consf.cargs.map((ke) => `${ke.ftype.morphirtypename}`).join(" -> ")} -> ${kt.morphirname}` : `${kt.consf.cname} : ${kt.morphirname}`,
+                    consfimpl: kt.consf.cargs.length !== 0 ? `${kt.consf.cname} ${kt.consf.cargs.map((ke) => `arg_${ke.fname}`).join(" ")} = {${kt.consf.cargs.map((ke) => `${ke.fname} = arg_${ke.fname}`).join(", ")}}` : `${kt.consf.cname} = {}`,
                     boxf: `${kt.boxf} ${kt.morphirname}`,
                     unboxfdecl: `${kt.ubf} : BObject -> ${kt.morphirname}`,
                     unboxfimpl: `${kt.ubf} t = \n    case t of\n        ${kt.boxf} v -> \n            v\n        _ -> \n            bsq${kt.morphirname.toLowerCase()}_default`,
                     defaultdecl: `bsq${kt.morphirname.toLowerCase()}_default : ${kt.morphirname}`,
-                    defaultimpl: `bsq${kt.morphirname.toLowerCase()}_default = \n    {${kt.consf.cargs.map((ke) => `${ke.fname} = bsq${ke.ftype.typeID.toLowerCase()}_default`).join(" ")}}`
+                    defaultimpl: `bsq${kt.morphirname.toLowerCase()}_default = \n    {${kt.consf.cargs.map((ke) => `${ke.fname} = bsq${ke.ftype.morphirtypename.toLowerCase()}_default`).join(", ")}}`
                 };
             });
 
@@ -397,13 +405,13 @@ class MorphirAssembly {
             .map((kt) => {
                 return {
                     decl: `type alias ${kt.morphirname} = {${kt.consf.cargs.map((ke) => `${ke.fname}: ${ke.ftype.morphirtypename})`).join(" ")}}`,
-                    consfdecl: `${kt.consf.cname} : ${kt.consf.cargs.map((ke) => `${ke.ftype.morphirtypename}`).join(" -> ")} -> ${kt.morphirname}`,
-                    consfimpl: `${kt.consf.cname} ${kt.consf.cargs.map((ke) => `arg_${ke.fname}`).join(" ")} = {${kt.consf.cargs.map((ke) => `${ke.fname} = arg_${ke.fname})`).join(" ")}}`,
+                    consfdecl: kt.consf.cargs.length !== 0 ? `${kt.consf.cname} : ${kt.consf.cargs.map((ke) => `${ke.ftype.morphirtypename}`).join(" -> ")} -> ${kt.morphirname}` : `${kt.consf.cname} : ${kt.morphirname}`,
+                    consfimpl: kt.consf.cargs.length !== 0 ? `${kt.consf.cname} ${kt.consf.cargs.map((ke) => `arg_${ke.fname}`).join(" ")} = {${kt.consf.cargs.map((ke) => `${ke.fname} = arg_${ke.fname}`).join(", ")}}` : `${kt.consf.cname} = {}`,
                     boxf: `${kt.boxf} ${kt.morphirname}`,
                     unboxfdecl: `${kt.ubf} : BObject -> ${kt.morphirname}`,
                     unboxfimpl: `${kt.ubf} t = \n    case t of\n        ${kt.boxf} v -> \n            v\n        _ -> \n            bsq${kt.morphirname.toLowerCase()}_default`,
                     defaultdecl: `bsq${kt.morphirname.toLowerCase()}_default : ${kt.morphirname}`,
-                    defaultimpl: `bsq${kt.morphirname.toLowerCase()}_default = \n    {${kt.consf.cargs.map((ke) => `${ke.fname} = bsq${ke.ftype.typeID.toLowerCase()}_default`).join(" ")}}`
+                    defaultimpl: `bsq${kt.morphirname.toLowerCase()}_default = \n    {${kt.consf.cargs.map((ke) => `${ke.fname} = bsq${ke.ftype.morphirtypename.toLowerCase()}_default`).join(", ")}}`
                 };
             });
 
@@ -445,14 +453,14 @@ class MorphirAssembly {
             .map((tval) => {
                 const tt = tval as MorphirEntityStdDecl;
                 return {
-                    decl: `type alias ${tt.morphirname} = {${tt.consf.cargs.map((te) => `${te.fname}: ${te.ftype.morphirtypename})`).join(" ")}}`,
-                    consfdecl: `${tt.consf.cname} : ${tt.consf.cargs.map((te) => `${te.ftype.morphirtypename}`).join(" -> ")} -> ${tt.morphirname}`,
-                    consfimpl: `${tt.consf.cname} ${tt.consf.cargs.map((te) => `arg_${te.fname}`).join(" ")} = {${tt.consf.cargs.map((te) => `${te.fname} = arg_${te.fname})`).join(" ")}}`,
+                    decl: `type alias ${tt.morphirname} = {${tt.consf.cargs.map((te) => `${te.fname}: ${te.ftype.morphirtypename}`).join(", ")}}`,
+                    consfdecl: tt.consf.cargs.length !== 0 ? `${tt.consf.cname} : ${tt.consf.cargs.map((te) => `${te.ftype.morphirtypename}`).join(" -> ")} -> ${tt.morphirname}` : `${tt.consf.cname} : ${tt.morphirname}`,
+                    consfimpl: tt.consf.cargs.length !== 0 ? `${tt.consf.cname} ${tt.consf.cargs.map((te) => `arg_${te.fname}`).join(" ")} = {${tt.consf.cargs.map((te) => `${te.fname} = arg_${te.fname}`).join(", ")}}` : `${tt.consf.cname} = {}`,
                     boxf: `${tt.boxf} ${tt.morphirname}`,
                     unboxfdecl: `${tt.ubf} : BObject -> ${tt.morphirname}`,
                     unboxfimpl: `${tt.ubf} t = \n    case t of\n        ${tt.boxf} v -> \n            v\n        _ -> \n            bsq${tt.morphirname.toLowerCase()}_default`,
                     defaultdecl: `bsq${tt.morphirname.toLowerCase()}_default : ${tt.morphirname}`,
-                    defaultimpl: `bsq${tt.morphirname.toLowerCase()}_default = \n    {${tt.consf.cargs.map((te) => `${te.fname} = bsq${te.ftype.typeID.toLowerCase()}_default`).join(" ")}}`
+                    defaultimpl: `bsq${tt.morphirname.toLowerCase()}_default = \n    {${tt.consf.cargs.map((te) => `${te.fname} = bsq${te.ftype.morphirtypename.toLowerCase()}_default`).join(", ")}}`
                 };
             });
 
@@ -493,9 +501,9 @@ class MorphirAssembly {
             .sort((t1, t2) => t1.morphirname.localeCompare(t2.morphirname))
             .map((et) => {
                 return {
-                    decl: `type alias ${et.morphirname} = {${et.consf.cargs.map((te) => `${te.fname}: ${te.ftype.morphirtypename})`).join(" ")}}`,
+                    decl: `type alias ${et.morphirname} = {${et.consf.cargs.map((te) => `${te.fname}: ${te.ftype.morphirtypename}`).join(", ")}}`,
                     consfdecl: `${et.consf.cname} : ${et.consf.cargs.map((te) => `${te.ftype.morphirtypename}`).join(" -> ")} -> ${et.morphirname}`,
-                    consfimpl: `${et.consf.cname} ${et.consf.cargs.map((te) => `arg_${te.fname}`).join(" ")} = {${et.consf.cargs.map((te) => `${te.fname} = arg_${te.fname})`).join(" ")}}`
+                    consfimpl: `${et.consf.cname} ${et.consf.cargs.map((te) => `arg_${te.fname}`).join(" ")} = {${et.consf.cargs.map((te) => `${te.fname} = arg_${te.fname}`).join(", ")}}`
                 };
             });
 
@@ -518,13 +526,7 @@ class MorphirAssembly {
 
         const gdecls = this.constantDecls
             .sort((c1, c2) => c1.gkey.localeCompare(c2.gkey))
-            .map((c) => `${c.gkey} ${c.ctype.morphirtypename}`);
-
-        const gdefs = this.constantDecls
-            .sort((c1, c2) => c1.gkey.localeCompare(c2.gkey))
-            .map((c) => {
-                    return `${c.gkey} = \n    ${c.consfexp.emitMorphir(undefined)}`;
-            });
+            .map((c) => `${c.gkey} : ${c.ctype.morphirtypename}` + "\n" + `${c.gkey} = \n    ${c.consfexp.emitMorphir(undefined)}`);
 
         let foutput: string[] = [];
         let doneset: Set<string> = new Set<string>();
@@ -588,9 +590,9 @@ class MorphirAssembly {
             KEY_BOX_OPS: keyoftypeinfo.map((kb) =>  `    | ${kb.boxf}`).sort(),
             KEY_UNBOX_OPS: keyoftypeinfo.map((kb) => kb.unboxfdecl + "\n" + kb.unboxfimpl).sort(),
             KEY_DEFAULT_OPS: keyoftypeinfo.map((kb) => kb.defaultdecl + "\n" + kb.defaultimpl).sort(),
-            TUPLE_TYPE_DECLS: termtupleinfo.map((ti) => ti.decl).sort(),
-            RECORD_TYPE_DECLS: termrecordinfo.map((ri) => ri.decl).sort(),
-            TYPE_DECLS: [...ofinternaltypeinfo.map((oti) => oti.decl).sort(), ...collectiontypeinfo.map((cti) => cti.decl).sort(), ...termtypeinfo.map((ti) => ti.decl).sort()],   
+            TUPLE_TYPE_DECLS: termtupleinfo.map((ti) => ti.decl + "\n" + ti.consfdecl + "\n" + ti.consfimpl).sort(),
+            RECORD_TYPE_DECLS: termrecordinfo.map((ri) => ri.decl + "\n" + ri.consfdecl + "\n" + ri.consfimpl).sort(),
+            TYPE_DECLS: [...ofinternaltypeinfo.map((oti) => oti.decl).sort(), ...collectiontypeinfo.map((cti) => cti.decl).sort(), ...termtypeinfo.map((ti) => ti.decl + "\n" + ti.consfdecl + "\n" + ti.consfimpl).sort()],   
             TUPLE_TYPE_BOXING: termtupleinfo.map((ti) => ti.boxf).sort().map((ttb) => `    | ${ttb}`),
             RECORD_TYPE_BOXING: termrecordinfo.map((ri) => ri.boxf).sort().map((trb) => `    | ${trb}`),
             TYPE_BOXING: [
@@ -599,6 +601,7 @@ class MorphirAssembly {
                 ...termtypeinfo.map((ti) => ti.boxf).sort().map((ttb) => `    | ${ttb}`)
             ],
             TERM_DEFAULT: [
+                ...oftypeinfo.map((tti) => tti.defaultdecl + "\n" + tti.defaultimpl).sort(),
                 ...termtupleinfo.map((tti) => tti.defaultdecl + "\n" + tti.defaultimpl).sort(),
                 ...termrecordinfo.map((tti) => tti.defaultdecl + "\n" + tti.defaultimpl).sort(),
                 ...ofinternaltypeinfo.map((tti) => tti.defaultdecl + "\n" + tti.defaultimpl).sort(),
@@ -613,12 +616,11 @@ class MorphirAssembly {
                 ...termtypeinfo.map((tti) => tti.unboxfdecl + "\n" + tti.unboxfimpl).sort()
             ],
 
-            EPHEMERAL_DECLS: etypeinfo.map((eti) => eti.decl + eti.consfdecl + eti.consfimpl).sort(),
-            MASK_INFO: maskinfo.map((mti) => mti.decl + mti.consfdecl + mti.consfimpl).sort(),
+            EPHEMERAL_DECLS: etypeinfo.map((eti) => eti.decl + "\n" + eti.consfdecl + "\n" + eti.consfimpl).sort(),
+            MASK_INFO: maskinfo.map((mti) => mti.decl + "\n" + mti.consfdecl + "\n" + mti.consfimpl).sort(),
 
             GLOBAL_DECLS: gdecls,
-            FUNCTION_DECLS: foutput.reverse(),
-            GLOBAL_DEFINITIONS: gdefs
+            FUNCTION_DECLS: foutput.reverse()
         };
     }
 
@@ -658,8 +660,7 @@ class MorphirAssembly {
             .replace("--EPHEMERAL_DECLS--", joinWithIndent(sfileinfo.EPHEMERAL_DECLS, ""))
             .replace("--MASK_INFO--", joinWithIndent(sfileinfo.MASK_INFO, ""))
             .replace("--GLOBAL_DECLS--", joinWithIndent(sfileinfo.GLOBAL_DECLS, ""))
-            .replace("--FUNCTION_DECLS--", joinWithIndent(sfileinfo.FUNCTION_DECLS, ""))
-            .replace("--GLOBAL_DEFINITIONS--", joinWithIndent(sfileinfo.GLOBAL_DEFINITIONS, ""));
+            .replace("--FUNCTION_DECLS--", joinWithIndent(sfileinfo.FUNCTION_DECLS, ""));
     
         return contents;
     }

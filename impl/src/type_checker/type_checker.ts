@@ -5466,7 +5466,7 @@ class TypeChecker {
                 }
 
                 elatom = ResolvedEphemeralListType.create(eltypes);
-                this.m_emitter.emitEntityProjectToEphemeral(sinfo, arg, this.m_emitter.registerResolvedTypeReference(arglayouttype), this.m_emitter.registerResolvedTypeReference(argoftype), pnames, !argoftype.isUniqueRecordTargetType(), elatom, elreg);
+                this.m_emitter.emitEntityProjectToEphemeral(sinfo, arg, this.m_emitter.registerResolvedTypeReference(arglayouttype), this.m_emitter.registerResolvedTypeReference(argoftype), pnames, !argoftype.isUniqueCallTargetType(), elatom, elreg);
                 this.m_emitter.emitMultiLoadFromEpehmeralList(sinfo, elreg, this.m_emitter.registerResolvedTypeReference(ResolvedType.createSingle(elatom)), trgts);
 
                 return env.multiVarUpdate(declaredvars, []);
