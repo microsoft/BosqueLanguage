@@ -34,7 +34,7 @@ const s_application_list = [
     //{dir: "tic_tac_toe", mode: TestMode.AppTest, exepass: 1, exefail: 0, sympass: 36, symfail: 1},
 
     {dir: "order", mode: TestMode.Test, exepass: 3, exefail: 0, sympass: 1, symfail: 1},
-    {dir: "order", mode: TestMode.AppTest, exepass: 0, exefail: 0, sympass: 1, symfail: 0}
+    {dir: "order", mode: TestMode.AppTest, exepass: 1, exefail: 0, sympass: 1, symfail: 0}
 ];
 
 function runTest(t: ApplicationTest): boolean {
