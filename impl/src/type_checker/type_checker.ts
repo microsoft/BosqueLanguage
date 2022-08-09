@@ -561,7 +561,7 @@ class TypeChecker {
             }
         });
 
-        const pikey = MIRKeyGenerator.generatePCodeKey(exp.invoke.isPCodeFn, exp.invoke.bodyID);
+        const pikey = MIRKeyGenerator.generatePCodeKey(exp.invoke.isPCodeFn, exp.invoke.bodyID, bodybinds, capturedpcode);
         const pcenv = TypeEnvironment.createInitialEnvForCall(pikey, exp.invoke.bodyID, bodybinds, capturedpcode, cargs, undefined);
 
         if ((exp.invoke.body as BodyImplementation).body instanceof Expression) {
@@ -664,7 +664,7 @@ class TypeChecker {
             cvars.forEach((cv) => implicitCapturedMap.set(cv, (env.lookupVar(cv) as VarInfo).flowType));
         }
 
-        const ikey = MIRKeyGenerator.generatePCodeKey(exp.invoke.isPCodeFn, exp.invoke.bodyID);
+        const ikey = MIRKeyGenerator.generatePCodeKey(exp.invoke.isPCodeFn, exp.invoke.bodyID, bodybinds, capturedpcode);
         const cinfo = [
             ...[...capturedMap].sort((a, b) => a[0].localeCompare(b[0])),
             ...[...implicitCapturedMap].sort((a, b) => a[0].localeCompare(b[0]))
@@ -1369,6 +1369,8 @@ class TypeChecker {
                     while (fidx < fieldinfo.length && fillednames.has(fieldinfo[i][0])) {
                         fidx++;
                     }
+
+                    this.raiseErrorIf(sinfo, fidx >= fieldinfo.length, `Bad arguments for constructor -- could not map positional argument ${i}`);
 
                     const field = fieldinfo[fidx];
                     const ftype = this.resolveAndEnsureTypeOnly(sinfo, field[1][1].declaredType, field[1][2]);

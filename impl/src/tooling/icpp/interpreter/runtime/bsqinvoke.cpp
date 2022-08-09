@@ -560,10 +560,10 @@ BSQInvokePrimitiveDecl* BSQInvokePrimitiveDecl::jsonLoad(json v)
     });
     auto rtype = BSQType::g_typetable[MarshalEnvironment::g_typenameToIdMap.at(v["resultType"].get<std::string>())];
 
-    const BSQType* enclosingtype = nullptr;
+    std::string enclosingtype = "*";
     if(v.contains("enclosingtype") && v["enclosingtype"].is_string())
     {
-       enclosingtype = BSQType::g_typetable[MarshalEnvironment::g_typenameToIdMap.at(v["enclosingtype"].get<std::string>())];
+       enclosingtype = v["enclosingtype"].get<std::string>();
     }
 
     std::string implkeyname = v["implkeyname"].get<std::string>();

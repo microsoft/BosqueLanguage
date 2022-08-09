@@ -107,8 +107,8 @@ internal entity ListOps provides Some {
 #if CHK_SMALL_ONLY
             return s_blockingfailure<ListRepr<T>>();
 #else
-            let ll = ListOps::s_ensure_seq_repr<T>(l);
-            let rr = ListOps::s_ensure_seq_repr<T>(r);
+            let ll = ListOps::s_ensure_seq_repr<T>(s_safeAs<ListRepr<T>, ListVector<T> | SeqList<T>>(l));
+            let rr = ListOps::s_ensure_seq_repr<T>(s_safeAs<ListRepr<T>, ListVector<T> | SeqList<T>>(r));
             return SeqListOps::s_list_append<T>(ll, rr);
 #endif
         }

@@ -1,0 +1,74 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+namespace ListReduce;
+
+////////
+//
+chktest function reduce_empty(): Bool {
+    let ll = List<Int>{}.reduce<Bool>(true, fn(acc, x) => false);
+    return ll;
+}
+
+chktest function reduce_3(): Bool {
+    let ll = List<Int>{1i, 2i, -3i}.reduce<Bool>(true, fn(acc, x) => acc && x >= 0i);
+    return !ll;
+}
+
+chktest function reduce_9(): Bool {
+    let ll = List<Int>{1i, 2i, 3i, 4i, 5i, 6i, 7i, 8i, -9i}.reduce<Bool>(true, fn(acc, x) => acc && x >= 0i);
+    return !ll;
+}
+
+chktest function reduce_empty_idx(): Bool {
+    let ll = List<Int>{}.reduce<Bool>(true, fn(acc, x, i) => false);
+    return ll;
+}
+
+chktest function reduce_4_idx(): Bool {
+    let ll = List<Int>{1i, 2i, 3i, 4i}.reduce<Bool>(true, fn(acc, x, i) => acc && i >= 0n);
+    return ll;
+}
+
+chktest function reduce_9_idx(): Bool {
+    let ll = List<Int>{1i, 2i, 3i, 4i, 5i, 6i, 7i, 8i, -9i}.reduce<Bool>(true, fn(acc, x, i) => acc && i >= 0n);
+    return ll;
+}
+
+//
+//TODO: probably want a fails test here too once z3 is fixed
+//
+
+////////
+//
+chktest function sum_empty(): Bool {
+    return List<Int>{}.sum() == 0i;
+}
+
+chktest function sum_1_int(): Bool {
+    return List<Int>{2i}.sum() == 2i;
+}
+
+chktest function sum_3_int(): Bool {
+    return List<Int>{1i, 5i, -3i}.sum() == 3i;
+}
+
+chktest function sum_9_int(): Bool {
+    return List<Int>{1i, 2i, 3i, 4i, 5i, 6i, 7i, 8i, -9i}.sum() == 27i;
+}
+
+chktest function sum_1_float(): Bool {
+    return List<Float>{2.0f}.sum() == 2.0f;
+}
+
+chktest function sum_3_float(): Bool {
+    let ff = List<Float>{1.0f, 5.0f, -3.0f}.sum();
+    return /\(2.0f < ff, ff < 4.0f);
+}
+
+chktest function sum_9_float(): Bool {
+    let ff = List<Float>{1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, -9.0f}.sum();
+    return /\(26.0f < ff, ff < 28.0f);
+}

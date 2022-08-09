@@ -714,7 +714,7 @@ abstract class MIROp {
     }
 
     protected jbemit(): object {
-        return { tag: this.tag, sinfo: jemitsinfo(this.sinfo) };
+        return { tag: this.tag, dbgfmt: this.stringify(), sinfo: jemitsinfo(this.sinfo) };
     }
 
     abstract jemit(): object;

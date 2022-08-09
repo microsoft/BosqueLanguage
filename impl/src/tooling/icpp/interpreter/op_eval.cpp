@@ -72,7 +72,7 @@ jmp_buf Evaluator::g_entrybuff;
 EvaluatorFrame Evaluator::g_callstack[BSQ_MAX_STACK];
 uint8_t* Evaluator::g_constantbuffer = nullptr;
 
-std::map<BSQTypeID, const BSQRegex*> Evaluator::g_validators;
+std::map<std::string, const BSQRegex*> Evaluator::g_validators;
 std::map<std::string, const BSQRegex*> Evaluator::g_regexs;
 
 void Evaluator::evalDeadFlowOp()
@@ -627,11 +627,8 @@ void Evaluator::evalInvokeVirtualFunctionOp(const InvokeVirtualFunctionOp* op)
     const BSQType* etype = op->rcvrlayouttype->getVType(sl);
     StorageLocationPtr rcvrloc = op->rcvrlayouttype->getVData_NoAlloc(sl);
 
-    auto viter = etype->vtable.find(op->invokeId);
-    BSQ_INTERNAL_ASSERT(viter != etype->vtable.cend());
-
     StorageLocationPtr resl = this->evalTargetVar(op->trgt);
-    this->vinvoke(dynamic_cast<const BSQInvokeBodyDecl*>(BSQInvokeDecl::g_invokes[viter->second]), rcvrloc, op->args, resl, op->optmaskoffset != -1 ? this->cframe->masksbase + op->optmaskoffset : nullptr);
+    this->vinvoke(dynamic_cast<const BSQInvokeBodyDecl*>(BSQInvokeDecl::g_invokes[etype->vtable.at(op->invokeId)]), rcvrloc, op->args, resl, op->optmaskoffset != -1 ? this->cframe->masksbase + op->optmaskoffset : nullptr);
 }
 
 void Evaluator::evalInvokeVirtualOperatorOp(const InvokeVirtualOperatorOp* op)
@@ -1990,7 +1987,7 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         BSQString str = SLPTR_LOAD_CONTENTS_AS(BSQString, params[0]);
         BSQStringForwardIterator iter(&str, 0);
 
-        const BSQRegex* re = Evaluator::g_validators.find(invk->enclosingtype->tid)->second;
+        const BSQRegex* re = Evaluator::g_validators.at(invk->enclosingtype);
         SLPTR_STORE_CONTENTS_AS(BSQBool, resultsl, re->nfare->test(iter));
         break;
     }
@@ -2254,7 +2251,7 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         break;
     }
     case BSQPrimitiveImplTag::s_list_build_k: {
-        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
+        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.at(invk->binds.at("T")->tid);
         auto rres = BSQListOps::list_cons(lflavor, params);
         
         LIST_STORE_RESULT_REPR(rres, resultsl);
@@ -2272,7 +2269,7 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         break;
     }
     case BSQPrimitiveImplTag::s_list_set: {
-        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
+        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.at(invk->binds.at("T")->tid);
         auto ii = SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]);
         
         auto rr = BSQListOps::s_set_ne(lflavor, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), ii, params[2]);
@@ -2280,21 +2277,21 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         break;
     }
     case BSQPrimitiveImplTag::s_list_push_back: {
-        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
+        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.at(invk->binds.at("T")->tid);
         
         auto rr = BSQListOps::s_push_back_ne(lflavor, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), params[1]);
         LIST_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
     case BSQPrimitiveImplTag::s_list_push_front: {
-        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
+        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.at(invk->binds.at("T")->tid);
         
         auto rr = BSQListOps::s_push_front_ne(lflavor, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), params[1]);
         LIST_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
     case BSQPrimitiveImplTag::s_list_insert: {
-        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
+        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.at(invk->binds.at("T")->tid);
         auto ii = SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]);
         
         auto rr = BSQListOps::s_insert_ne(lflavor, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), ii, params[2]);
@@ -2302,7 +2299,7 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         break;
     }
     case BSQPrimitiveImplTag::s_list_remove: {
-        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
+        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.at(invk->binds.at("T")->tid);
         auto ii = SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]);
         
         auto rr = BSQListOps::s_remove_ne(lflavor, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), ii);
@@ -2310,7 +2307,7 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         break;
     }
     case BSQPrimitiveImplTag::s_list_pop_back: {
-        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
+        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.at(invk->binds.at("T")->tid);
         auto ii = LIST_LOAD_REPR_TYPE(params[0])->getCount(LIST_LOAD_DATA(params[0])) - 1;
         
         auto rr = BSQListOps::s_remove_ne(lflavor, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), ii);
@@ -2318,7 +2315,7 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         break;
     }
     case BSQPrimitiveImplTag::s_list_pop_front: {
-        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
+        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.at(invk->binds.at("T")->tid);
         BSQNat ii = 0;
         
         auto rr = BSQListOps::s_remove_ne(lflavor, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), ii);
@@ -2326,59 +2323,59 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         break;
     }
     case BSQPrimitiveImplTag::s_list_reduce: {
-        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
+        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.at(invk->binds.at("T")->tid);
 
-        invk->binds.find("T")->second->storeValue(resultsl, params[1]); //store the initial acc in the result
-        BSQListOps::s_reduce_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.find("f")->second, params, resultsl);
+        invk->binds.at("T")->storeValue(resultsl, params[1]); //store the initial acc in the result
+        BSQListOps::s_reduce_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.at("f"), params, resultsl);
         break;
     }
     case BSQPrimitiveImplTag::s_list_reduce_idx: {
-        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
+        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.at(invk->binds.at("T")->tid);
 
-        invk->binds.find("T")->second->storeValue(resultsl, params[1]); //store the initial acc in the result
-        BSQListOps::s_reduce_idx_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.find("f")->second, params, resultsl);
+        invk->binds.at("T")->storeValue(resultsl, params[1]); //store the initial acc in the result
+        BSQListOps::s_reduce_idx_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.at("f"), params, resultsl);
         break;
     }
     case BSQPrimitiveImplTag::s_list_transduce: {
-        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
-        const BSQListTypeFlavor& uflavor = BSQListOps::g_flavormap.find(invk->binds.find("U")->second->tid)->second;
-        const BSQType* envtype = invk->binds.find("E")->second;
+        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.at(invk->binds.at("T")->tid);
+        const BSQListTypeFlavor& uflavor = BSQListOps::g_flavormap.at(invk->binds.at("U")->tid);
+        const BSQType* envtype = invk->binds.at("E");
 
-        BSQListOps::s_transduce_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), uflavor, envtype, invk->pcodes.find("op")->second, params, dynamic_cast<const BSQEphemeralListType*>(invk->resultType), resultsl);
+        BSQListOps::s_transduce_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), uflavor, envtype, invk->pcodes.at("op"), params, dynamic_cast<const BSQEphemeralListType*>(invk->resultType), resultsl);
         break;
     }
     case BSQPrimitiveImplTag::s_list_transduce_idx: {
-        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
-        const BSQListTypeFlavor& uflavor = BSQListOps::g_flavormap.find(invk->binds.find("U")->second->tid)->second;
-        const BSQType* envtype = invk->binds.find("E")->second;
+        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.at(invk->binds.at("T")->tid);
+        const BSQListTypeFlavor& uflavor = BSQListOps::g_flavormap.at(invk->binds.at("U")->tid);
+        const BSQType* envtype = invk->binds.at("E");
 
-        BSQListOps::s_transduce_idx_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), uflavor, envtype, invk->pcodes.find("op")->second, params, dynamic_cast<const BSQEphemeralListType*>(invk->resultType), resultsl);
+        BSQListOps::s_transduce_idx_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), uflavor, envtype, invk->pcodes.at("op"), params, dynamic_cast<const BSQEphemeralListType*>(invk->resultType), resultsl);
         break;
     }
     case BSQPrimitiveImplTag::s_list_range: {
-        BSQListOps::s_range_ne(invk->binds.find("T")->second, params[0], params[1], params[3], resultsl);
+        BSQListOps::s_range_ne(invk->binds.at("T"), params[0], params[1], params[3], resultsl);
         break;
     }
     case BSQPrimitiveImplTag::s_list_fill: {
-        BSQListOps::s_fill_ne(invk->binds.find("T")->second, params[1], params[0], resultsl);
+        BSQListOps::s_fill_ne(invk->binds.at("T"), params[1], params[0], resultsl);
         break;
     }
     case BSQPrimitiveImplTag::s_list_reverse: {
-        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
+        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.at(invk->binds.at("T")->tid);
 
         auto rr = BSQListOps::s_reverse_ne(lflavor, LIST_LOAD_DATA(params[0]));
         LIST_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
     case BSQPrimitiveImplTag::s_list_append: {
-        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
+        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.at(invk->binds.at("T")->tid);
 
         auto rr = BSQListOps::list_append(lflavor, LIST_LOAD_DATA(params[0]), LIST_LOAD_DATA(params[1]));
         LIST_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
     case BSQPrimitiveImplTag::s_list_slice_start: {
-        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
+        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.at(invk->binds.at("T")->tid);
 
         BSQListSpineIterator liter(LIST_LOAD_REPR_TYPE(params[0]), LIST_LOAD_DATA(params[0]));
         Allocator::GlobalAllocator.insertCollectionIter(&liter);
@@ -2389,7 +2386,7 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         break;
     }
     case BSQPrimitiveImplTag::s_list_slice_end: {
-        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
+        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.at(invk->binds.at("T")->tid);
 
         BSQListSpineIterator liter(LIST_LOAD_REPR_TYPE(params[0]), LIST_LOAD_DATA(params[0]));
         Allocator::GlobalAllocator.insertCollectionIter(&liter);
@@ -2400,7 +2397,7 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         break;
     }
     case BSQPrimitiveImplTag::s_list_slice: {
-        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
+        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.at(invk->binds.at("T")->tid);
 
         BSQListSpineIterator siter(LIST_LOAD_REPR_TYPE(params[0]), LIST_LOAD_DATA(params[0]));
         Allocator::GlobalAllocator.insertCollectionIter(&siter);
@@ -2412,46 +2409,46 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         break;
     }
     case BSQPrimitiveImplTag::s_list_get: {
-        BSQListOps::s_safe_get(LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]), invk->binds.find("T")->second, resultsl);
+        BSQListOps::s_safe_get(LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]), invk->binds.at("T"), resultsl);
         break;
     }
     case BSQPrimitiveImplTag::s_list_back: {
         auto ii = LIST_LOAD_REPR_TYPE(params[0])->getCount(LIST_LOAD_DATA(params[0])) - 1;
-        BSQListOps::s_safe_get(LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), ii, invk->binds.find("T")->second, resultsl);
+        BSQListOps::s_safe_get(LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), ii, invk->binds.at("T"), resultsl);
         break;
     }
     case BSQPrimitiveImplTag::s_list_front: {
         BSQNat ii = 0;
-        BSQListOps::s_safe_get(LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), ii, invk->binds.find("T")->second, resultsl);
+        BSQListOps::s_safe_get(LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), ii, invk->binds.at("T"), resultsl);
         break;
     }
     case BSQPrimitiveImplTag::s_list_has_pred: {
-        auto pos = BSQListOps::s_find_pred_ne(eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.find("p")->second, params);
+        auto pos = BSQListOps::s_find_pred_ne(eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.at("p"), params);
         SLPTR_STORE_CONTENTS_AS(BSQBool, resultsl, pos != -1);
         break;
     }
     case BSQPrimitiveImplTag::s_list_has_pred_idx: {
-        auto pos = BSQListOps::s_find_pred_ne(eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.find("p")->second, params);
+        auto pos = BSQListOps::s_find_pred_idx_ne(eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.at("p"), params);
         SLPTR_STORE_CONTENTS_AS(BSQBool, resultsl, pos != -1);
         break;
     }
     case BSQPrimitiveImplTag::s_list_find_pred: {
-        auto pos = BSQListOps::s_find_pred_ne(eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.find("p")->second, params);
+        auto pos = BSQListOps::s_find_pred_ne(eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.at("p"), params);
         SLPTR_STORE_CONTENTS_AS(BSQInt, resultsl, pos);
         break;
     }
     case BSQPrimitiveImplTag::s_list_find_pred_idx: {
-        auto pos = BSQListOps::s_find_pred_idx_ne(eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.find("p")->second, params);
+        auto pos = BSQListOps::s_find_pred_idx_ne(eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.at("p"), params);
         SLPTR_STORE_CONTENTS_AS(BSQInt, resultsl, pos);
         break;
     }
     case BSQPrimitiveImplTag::s_list_find_pred_last: {
-        auto pos = BSQListOps::s_find_pred_last_ne(eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.find("p")->second, params);
+        auto pos = BSQListOps::s_find_pred_last_ne(eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.at("p"), params);
         SLPTR_STORE_CONTENTS_AS(BSQInt, resultsl, pos);
         break;
     }
     case BSQPrimitiveImplTag::s_list_find_pred_last_idx: {
-        auto pos = BSQListOps::s_find_pred_last_idx_ne(eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.find("p")->second, params);
+        auto pos = BSQListOps::s_find_pred_last_idx_ne(eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.at("p"), params);
         SLPTR_STORE_CONTENTS_AS(BSQInt, resultsl, pos);
         break;
     }
@@ -2477,49 +2474,49 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         break;
     }
     case BSQPrimitiveImplTag::s_list_filter_pred: {
-        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
+        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.at(invk->binds.at("T")->tid);
 
-        auto rr = BSQListOps::s_filter_pred_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.find("p")->second, params);
+        auto rr = BSQListOps::s_filter_pred_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.at("p"), params);
         LIST_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
     case BSQPrimitiveImplTag::s_list_filter_pred_idx: {
-        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
+        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.at(invk->binds.at("T")->tid);
 
-        auto rr = BSQListOps::s_filter_pred_idx_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.find("p")->second, params);
+        auto rr = BSQListOps::s_filter_pred_idx_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.at("p"), params);
         LIST_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
     case BSQPrimitiveImplTag::s_list_map: {
-        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
-        const BSQListTypeFlavor& rflavor = BSQListOps::g_flavormap.find(invk->binds.find("U")->second->tid)->second;
+        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.at(invk->binds.at("T")->tid);
+        const BSQListTypeFlavor& rflavor = BSQListOps::g_flavormap.at(invk->binds.at("U")->tid);
 
-        auto rr = BSQListOps::s_map_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.find("f")->second, params, rflavor);
+        auto rr = BSQListOps::s_map_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.at("f"), params, rflavor);
         LIST_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
     case BSQPrimitiveImplTag::s_list_map_idx: {
-        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
-        const BSQListTypeFlavor& rflavor = BSQListOps::g_flavormap.find(invk->binds.find("U")->second->tid)->second;
+        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.at(invk->binds.at("T")->tid);
+        const BSQListTypeFlavor& rflavor = BSQListOps::g_flavormap.at(invk->binds.at("U")->tid);
 
-        auto rr = BSQListOps::s_map_idx_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.find("f")->second, params, rflavor);
+        auto rr = BSQListOps::s_map_idx_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.at("f"), params, rflavor);
         LIST_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
     case BSQPrimitiveImplTag::s_list_map_sync: {
-        const BSQListTypeFlavor& lflavor1 = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
-        const BSQListTypeFlavor& lflavor2 = BSQListOps::g_flavormap.find(invk->binds.find("U")->second->tid)->second;
-        const BSQListTypeFlavor& rflavor = BSQListOps::g_flavormap.find(invk->binds.find("V")->second->tid)->second;
+        const BSQListTypeFlavor& lflavor1 = BSQListOps::g_flavormap.at(invk->binds.at("T")->tid);
+        const BSQListTypeFlavor& lflavor2 = BSQListOps::g_flavormap.at(invk->binds.at("U")->tid);
+        const BSQListTypeFlavor& rflavor = BSQListOps::g_flavormap.at(invk->binds.at("V")->tid);
 
-        auto rr = BSQListOps::s_map_sync_ne(lflavor1, lflavor2, eethunk, SLPTR_LOAD_CONTENTS_AS(BSQNat, params[3]), LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), LIST_LOAD_DATA(params[1]), LIST_LOAD_REPR_TYPE(params[1]), invk->pcodes.find("f")->second, params, rflavor);
+        auto rr = BSQListOps::s_map_sync_ne(lflavor1, lflavor2, eethunk, SLPTR_LOAD_CONTENTS_AS(BSQNat, params[3]), LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), LIST_LOAD_DATA(params[1]), LIST_LOAD_REPR_TYPE(params[1]), invk->pcodes.at("f"), params, rflavor);
         LIST_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
     case BSQPrimitiveImplTag::s_list_filter_map_fn: {
-        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->binds.find("T")->second->tid)->second;
-        const BSQListTypeFlavor& rflavor = BSQListOps::g_flavormap.find(invk->binds.find("U")->second->tid)->second;
+        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.at(invk->binds.at("T")->tid);
+        const BSQListTypeFlavor& rflavor = BSQListOps::g_flavormap.at(invk->binds.at("U")->tid);
 
-        auto rr = BSQListOps::s_filter_map_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.find("f")->second, invk->pcodes.find("p")->second, params, rflavor);
+        auto rr = BSQListOps::s_filter_map_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.at("f"), invk->pcodes.at("p"), params, rflavor);
         LIST_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
@@ -2528,7 +2525,7 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         break;
     }
     case BSQPrimitiveImplTag::s_map_build_1: {
-        const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.find(std::make_pair(invk->binds.find("K")->second->tid, invk->binds.find("V")->second->tid))->second;
+        const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.at(std::make_pair(invk->binds.at("K")->tid, invk->binds.at("V")->tid));
         
         auto rr = BSQMapOps::map_cons_one_element(mflavor, invk->params[0].ptype, params);
         MAP_STORE_RESULT_REPR(rr, resultsl);
@@ -2543,8 +2540,8 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         break;
     }
     case BSQPrimitiveImplTag::s_map_entries: {
-        const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.find(std::make_pair(invk->binds.find("K")->second->tid, invk->binds.find("V")->second->tid))->second;
-        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(invk->resultType->tid)->second;
+        const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.at(std::make_pair(invk->binds.at("K")->tid, invk->binds.at("V")->tid));
+        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.at(invk->resultType->tid);
 
         auto rr = BSQMapOps::s_entries_ne(mflavor, MAP_LOAD_DATA(params[0]), MAP_LOAD_REPR_TYPE(params[0]), lflavor);
         MAP_STORE_RESULT_REPR(rr, resultsl);
@@ -2563,23 +2560,23 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         break;
     }
     case BSQPrimitiveImplTag::s_map_has: {
-        auto rr = BSQMapOps::s_lookup_ne(MAP_LOAD_DATA(params[0]), MAP_LOAD_REPR_TYPE(params[0]), params[1], invk->binds.find("K")->second);
+        auto rr = BSQMapOps::s_lookup_ne(MAP_LOAD_DATA(params[0]), MAP_LOAD_REPR_TYPE(params[0]), params[1], invk->binds.at("K"));
         SLPTR_STORE_CONTENTS_AS(BSQBool, resultsl, (BSQBool)(rr != nullptr));
         break;
     }
     case BSQPrimitiveImplTag::s_map_get: {
         auto ttype = MAP_LOAD_REPR_TYPE(params[0]);
-        auto rr = BSQMapOps::s_lookup_ne(MAP_LOAD_DATA(params[0]), ttype, params[1], invk->binds.find("K")->second);
+        auto rr = BSQMapOps::s_lookup_ne(MAP_LOAD_DATA(params[0]), ttype, params[1], invk->binds.at("K"));
         BSQ_INTERNAL_ASSERT(rr != nullptr);
 
-        invk->binds.find("V")->second->storeValue(resultsl, ttype->getValueLocation(rr));
+        invk->binds.at("V")->storeValue(resultsl, ttype->getValueLocation(rr));
         break;
     }
     case BSQPrimitiveImplTag::s_map_find: {
-        const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.find(std::make_pair(invk->binds.find("K")->second->tid, invk->binds.find("V")->second->tid))->second;
+        const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.at(std::make_pair(invk->binds.at("K")->tid, invk->binds.at("V")->tid));
 
         auto ttype = MAP_LOAD_REPR_TYPE(params[0]);
-        auto rr = BSQMapOps::s_lookup_ne(MAP_LOAD_DATA(params[0]), ttype, params[1], invk->binds.find("K")->second);
+        auto rr = BSQMapOps::s_lookup_ne(MAP_LOAD_DATA(params[0]), ttype, params[1], invk->binds.at("K"));
 
         void* value = (void*)resultsl;
         BSQBool* flag = (BSQBool*)((uint8_t*)resultsl + mflavor.valuetype->allocinfo.inlinedatasize);
@@ -2595,7 +2592,7 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         break;
     }
     case BSQPrimitiveImplTag::s_map_union_fast: {
-        const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.find(std::make_pair(invk->binds.find("K")->second->tid, invk->binds.find("V")->second->tid))->second;
+        const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.at(std::make_pair(invk->binds.at("K")->tid, invk->binds.at("V")->tid));
 
         //TODO: we don't have a fast now 
         auto rr = BSQMapOps::s_fast_union_ne(mflavor, MAP_LOAD_DATA(params[0]), MAP_LOAD_REPR_TYPE(params[0]), MAP_LOAD_DATA(params[1]), MAP_LOAD_REPR_TYPE(params[1]));
@@ -2603,36 +2600,36 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         break;
     }
     case BSQPrimitiveImplTag::s_map_submap: {
-        const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.find(std::make_pair(invk->binds.find("K")->second->tid, invk->binds.find("V")->second->tid))->second;
+        const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.at(std::make_pair(invk->binds.at("K")->tid, invk->binds.at("V")->tid));
 
-        auto rr = BSQMapOps::s_submap_ne(mflavor, eethunk, MAP_LOAD_DATA(params[0]), MAP_LOAD_REPR_TYPE(params[0]), invk->pcodes.find("p")->second, params);
+        auto rr = BSQMapOps::s_submap_ne(mflavor, eethunk, MAP_LOAD_DATA(params[0]), MAP_LOAD_REPR_TYPE(params[0]), invk->pcodes.at("p"), params);
         MAP_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
     case BSQPrimitiveImplTag::s_map_remap: {
-        const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.find(std::make_pair(invk->binds.find("K")->second->tid, invk->binds.find("V")->second->tid))->second;
-        const BSQMapTypeFlavor& rflavor = BSQMapOps::g_flavormap.find(std::make_pair(invk->binds.find("K")->second->tid, invk->binds.find("U")->second->tid))->second;
+        const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.at(std::make_pair(invk->binds.at("K")->tid, invk->binds.at("V")->tid));
+        const BSQMapTypeFlavor& rflavor = BSQMapOps::g_flavormap.at(std::make_pair(invk->binds.at("K")->tid, invk->binds.at("U")->tid));
 
-        auto rr = BSQMapOps::s_remap_ne(mflavor, eethunk, MAP_LOAD_DATA(params[0]), MAP_LOAD_REPR_TYPE(params[0]), invk->pcodes.find("f")->second, params, rflavor);
+        auto rr = BSQMapOps::s_remap_ne(mflavor, eethunk, MAP_LOAD_DATA(params[0]), MAP_LOAD_REPR_TYPE(params[0]), invk->pcodes.at("f"), params, rflavor);
         MAP_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
     case BSQPrimitiveImplTag::s_map_add: {
-        const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.find(std::make_pair(invk->binds.find("K")->second->tid, invk->binds.find("V")->second->tid))->second;
+        const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.at(std::make_pair(invk->binds.at("K")->tid, invk->binds.at("V")->tid));
 
         auto rr = BSQMapOps::s_add_ne(mflavor, MAP_LOAD_DATA(params[0]), MAP_LOAD_REPR_TYPE(params[0]), params[1], params[2]);
         MAP_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
     case BSQPrimitiveImplTag::s_map_set: {
-        const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.find(std::make_pair(invk->binds.find("K")->second->tid, invk->binds.find("V")->second->tid))->second;
+        const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.at(std::make_pair(invk->binds.at("K")->tid, invk->binds.at("V")->tid));
 
         auto rr = BSQMapOps::s_set_ne(mflavor, MAP_LOAD_DATA(params[0]), MAP_LOAD_REPR_TYPE(params[0]), params[1], params[2]);
         MAP_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
     case BSQPrimitiveImplTag::s_map_remove: {
-        const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.find(std::make_pair(invk->binds.find("K")->second->tid, invk->binds.find("V")->second->tid))->second;
+        const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.at(std::make_pair(invk->binds.at("K")->tid, invk->binds.at("V")->tid));
 
         auto rr = BSQMapOps::s_remove_ne(mflavor, MAP_LOAD_DATA(params[0]), MAP_LOAD_REPR_TYPE(params[0]), params[1]);
         MAP_STORE_RESULT_REPR(rr, resultsl);
@@ -2758,7 +2755,7 @@ void LambdaEvalThunk::invoke(const BSQInvokeBodyDecl* call, const std::vector<St
 
 bool ICPPParseJSON::checkInvokeOk(const std::string& checkinvoke, StorageLocationPtr value, Evaluator& ctx)
 {
-    auto invkid = MarshalEnvironment::g_invokeToIdMap.find(checkinvoke)->second;
+    auto invkid = MarshalEnvironment::g_invokeToIdMap.at(checkinvoke);
     auto invk = dynamic_cast<const BSQInvokeBodyDecl*>(BSQInvokeDecl::g_invokes[invkid]);
 
     std::vector<StorageLocationPtr> args = {value};
@@ -3075,7 +3072,7 @@ bool ICPPParseJSON::parseLatLongCoordinateImpl(const APIModule* apimodule, const
 
 void ICPPParseJSON::prepareParseTuple(const APIModule* apimodule, const IType* itype, Evaluator& ctx)
 {
-    BSQTypeID tupid = MarshalEnvironment::g_typenameToIdMap.find(itype->name)->second;
+    BSQTypeID tupid = MarshalEnvironment::g_typenameToIdMap.at(itype->name);
     const BSQType* tuptype = BSQType::g_typetable[tupid];
 
     void* tupmem = nullptr;
@@ -3128,7 +3125,7 @@ void ICPPParseJSON::completeParseTuple(const APIModule* apimodule, const IType* 
 
 void ICPPParseJSON::prepareParseRecord(const APIModule* apimodule, const IType* itype, Evaluator& ctx)
 {
-    BSQTypeID recid = MarshalEnvironment::g_typenameToIdMap.find(itype->name)->second;
+    BSQTypeID recid = MarshalEnvironment::g_typenameToIdMap.at(itype->name);
     const BSQType* rectype = BSQType::g_typetable[recid];
 
     void* recmem = nullptr;
@@ -3149,7 +3146,7 @@ StorageLocationPtr ICPPParseJSON::getValueForRecordProperty(const APIModule* api
     void* recmem = this->recordstack.back().first;
     const BSQType* rectype = this->recordstack.back().second;
 
-    BSQRecordPropertyID pid = MarshalEnvironment::g_propertyToIdMap.find(pname)->second;
+    BSQRecordPropertyID pid = MarshalEnvironment::g_propertyToIdMap.at(pname);
     return SLPTR_INDEX_DATAPTR(recmem, dynamic_cast<const BSQRecordInfo*>(rectype)->propertyoffsets[pid]);
 }
 
@@ -3181,7 +3178,7 @@ void ICPPParseJSON::completeParseRecord(const APIModule* apimodule, const IType*
 
 void ICPPParseJSON::prepareParseContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t count, Evaluator& ctx)
 {
-    BSQTypeID containertypeid = MarshalEnvironment::g_typenameToIdMap.find(itype->name)->second;
+    BSQTypeID containertypeid = MarshalEnvironment::g_typenameToIdMap.at(itype->name);
     const BSQType* collectiontype = BSQType::g_typetable[containertypeid];
 
     //TODO: right now we just assume we can stack alloc this space -- later we want to add special heap allocated frame support (like for global the object)
@@ -3227,7 +3224,7 @@ StorageLocationPtr ICPPParseJSON::getValueForContainerElementParse_T(const APIMo
     if(ctype->category == ContainerCategory::List)
     {
         const BSQListType* listtype = dynamic_cast<const BSQListType*>(this->containerstack.back().first);
-        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(listtype->etype)->second;
+        const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.at(listtype->etype);
 
         return (StorageLocationPtr)(this->containerstack.back().second.first + (i * lflavor.entrytype->allocinfo.inlinedatasize));
     }
@@ -3251,7 +3248,7 @@ StorageLocationPtr ICPPParseJSON::getValueForContainerElementParse_T(const APIMo
 std::pair<StorageLocationPtr, StorageLocationPtr> ICPPParseJSON::getValueForContainerElementParse_KV(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t i, Evaluator& ctx)
 {
     const BSQMapType* maptype = dynamic_cast<const BSQMapType*>(this->containerstack.back().first);
-    const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.find(std::make_pair(maptype->ktype, maptype->vtype))->second;
+    const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.at(std::make_pair(maptype->ktype, maptype->vtype));
 
     size_t ecount = (i * (mflavor.keytype->allocinfo.inlinedatasize + mflavor.valuetype->allocinfo.inlinedatasize));
     auto kloc = (StorageLocationPtr)(this->containerstack.back().second.first + ecount);
@@ -3269,7 +3266,7 @@ void ICPPParseJSON::completeParseContainer(const APIModule* apimodule, const ITy
         if(ctype->category == ContainerCategory::List)
         {
             const BSQListType* listtype = dynamic_cast<const BSQListType*>(this->containerstack.back().first);
-            const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(listtype->etype)->second;
+            const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.at(listtype->etype);
 
             if(this->containerstack.back().second.second == 0)
             {
@@ -3315,7 +3312,7 @@ void ICPPParseJSON::completeParseContainer(const APIModule* apimodule, const ITy
     else
     {
         const BSQMapType* maptype = dynamic_cast<const BSQMapType*>(this->containerstack.back().first);
-        const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.find(std::make_pair(maptype->ktype, maptype->vtype))->second;
+        const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.at(std::make_pair(maptype->ktype, maptype->vtype));
 
         if(this->containerstack.back().second.second == 0)
         {
@@ -3341,7 +3338,7 @@ void ICPPParseJSON::completeParseContainer(const APIModule* apimodule, const ITy
 
 void ICPPParseJSON::prepareParseEntity(const APIModule* apimodule, const IType* itype, Evaluator& ctx)
 {
-    BSQTypeID ooid = MarshalEnvironment::g_typenameToIdMap.find(itype->name)->second;
+    BSQTypeID ooid = MarshalEnvironment::g_typenameToIdMap.at(itype->name);
     const BSQType* ootype = BSQType::g_typetable[ooid];
 
     void* oomem = nullptr;
@@ -3359,7 +3356,7 @@ void ICPPParseJSON::prepareParseEntity(const APIModule* apimodule, const IType* 
 
 void ICPPParseJSON::prepareParseEntityMask(const APIModule* apimodule, const IType* itype, Evaluator& ctx)
 {
-    BSQTypeID ooid = MarshalEnvironment::g_typenameToIdMap.find(itype->name)->second;
+    BSQTypeID ooid = MarshalEnvironment::g_typenameToIdMap.at(itype->name);
     const BSQEntityInfo* ootype = dynamic_cast<const BSQEntityInfo*>(BSQType::g_typetable[ooid]);
 
     auto mcount = std::count_if(ootype->fields.cbegin(), ootype->fields.cend(), [](BSQFieldID fid) {
@@ -3376,7 +3373,7 @@ StorageLocationPtr ICPPParseJSON::getValueForEntityField(const APIModule* apimod
     void* oomem = this->entitystack.back().first;
     const BSQType* ootype = this->entitystack.back().second;
 
-    BSQFieldID fid = MarshalEnvironment::g_fieldToIdMap.find(fnamefkey.second)->second;
+    BSQFieldID fid = MarshalEnvironment::g_fieldToIdMap.at(fnamefkey.second);
     return SLPTR_INDEX_DATAPTR(oomem, dynamic_cast<const BSQEntityInfo*>(ootype)->fieldoffsets[fid]);
 }
 
@@ -3389,7 +3386,7 @@ void ICPPParseJSON::completeParseEntity(const APIModule* apimodule, const IType*
 
     std::vector<StorageLocationPtr> cargs;
     std::transform(etype->consfields.cbegin(), etype->consfields.cend(), std::back_inserter(cargs), [&](const std::pair<std::string, std::string>& fnamefkey) {
-        BSQFieldID fid = MarshalEnvironment::g_fieldToIdMap.find(fnamefkey.second)->second;
+        BSQFieldID fid = MarshalEnvironment::g_fieldToIdMap.at(fnamefkey.second);
         return SLPTR_INDEX_DATAPTR(oomem, dynamic_cast<const BSQEntityInfo*>(ootype)->fieldoffsets[fid]);
     });
 
@@ -3397,7 +3394,7 @@ void ICPPParseJSON::completeParseEntity(const APIModule* apimodule, const IType*
 
     if(etype->validatefunc.has_value())
     {
-        auto chkid = MarshalEnvironment::g_invokeToIdMap.find(etype->validatefunc.value())->second;
+        auto chkid = MarshalEnvironment::g_invokeToIdMap.at(etype->validatefunc.value());
         auto chkcall = dynamic_cast<const BSQInvokeBodyDecl*>(BSQInvokeDecl::g_invokes[chkid]);
 
         std::string pfile = "[INPUT PARSE]";
@@ -3417,7 +3414,7 @@ void ICPPParseJSON::completeParseEntity(const APIModule* apimodule, const IType*
 
     if(etype->consfunc.has_value())
     {
-        auto consid = MarshalEnvironment::g_invokeToIdMap.find(etype->consfunc.value())->second;
+        auto consid = MarshalEnvironment::g_invokeToIdMap.at(etype->consfunc.value());
         auto conscall = dynamic_cast<const BSQInvokeBodyDecl*>(BSQInvokeDecl::g_invokes[consid]);
 
         std::string pfile = "[INPUT PARSE]";
@@ -3455,7 +3452,7 @@ void ICPPParseJSON::setMaskFlag(const APIModule* apimodule, StorageLocationPtr f
 
 StorageLocationPtr ICPPParseJSON::parseUnionChoice(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t pick, const IType* picktype, Evaluator& ctx)
 {
-    auto bsqutypeid = MarshalEnvironment::g_typenameToIdMap.find(itype->name)->second;
+    auto bsqutypeid = MarshalEnvironment::g_typenameToIdMap.at(itype->name);
     auto bsqutype = dynamic_cast<const BSQUnionType*>(BSQType::g_typetable[bsqutypeid]);
     if(bsqutype->tkind == BSQTypeLayoutKind::UnionRef)
     {
@@ -3463,7 +3460,7 @@ StorageLocationPtr ICPPParseJSON::parseUnionChoice(const APIModule* apimodule, c
     }
     else
     {
-        auto ttypeid = MarshalEnvironment::g_typenameToIdMap.find(picktype->name)->second;
+        auto ttypeid = MarshalEnvironment::g_typenameToIdMap.at(picktype->name);
         auto ttype = BSQType::g_typetable[ttypeid];
 
         SLPTR_STORE_UNION_INLINE_TYPE(ttype, value);
@@ -3675,7 +3672,7 @@ std::optional<std::pair<float, float>> ICPPParseJSON::extractLatLongCoordinateIm
 
 StorageLocationPtr ICPPParseJSON::extractValueForTupleIndex(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t i, Evaluator& ctx)
 {
-    BSQTypeID tupid = MarshalEnvironment::g_typenameToIdMap.find(itype->name)->second;
+    BSQTypeID tupid = MarshalEnvironment::g_typenameToIdMap.at(itype->name);
     const BSQType* tuptype = BSQType::g_typetable[tupid];
 
     return tuptype->indexStorageLocationOffset(value, dynamic_cast<const BSQTupleInfo*>(tuptype)->idxoffsets[i]);
@@ -3683,11 +3680,11 @@ StorageLocationPtr ICPPParseJSON::extractValueForTupleIndex(const APIModule* api
 
 StorageLocationPtr ICPPParseJSON::extractValueForRecordProperty(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, std::string pname, Evaluator& ctx)
 {
-    BSQTypeID recid = MarshalEnvironment::g_typenameToIdMap.find(itype->name)->second;
+    BSQTypeID recid = MarshalEnvironment::g_typenameToIdMap.at(itype->name);
     const BSQType* rectype = BSQType::g_typetable[recid];
     auto recinfo = dynamic_cast<const BSQRecordInfo*>(rectype);
 
-    BSQRecordPropertyID pid = MarshalEnvironment::g_propertyToIdMap.find(itype->name)->second;
+    BSQRecordPropertyID pid = MarshalEnvironment::g_propertyToIdMap.at(itype->name);
     auto piter = std::find(recinfo->properties.cbegin(), recinfo->properties.cend(), pid);
     auto pidx = std::distance(recinfo->properties.cbegin(), piter);
 
@@ -3696,11 +3693,11 @@ StorageLocationPtr ICPPParseJSON::extractValueForRecordProperty(const APIModule*
 
 StorageLocationPtr ICPPParseJSON::extractValueForEntityField(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, std::pair<std::string, std::string> fnamefkey, Evaluator& ctx)
 {
-    BSQTypeID ooid = MarshalEnvironment::g_typenameToIdMap.find(itype->name)->second;
+    BSQTypeID ooid = MarshalEnvironment::g_typenameToIdMap.at(itype->name);
     const BSQType* ootype = BSQType::g_typetable[ooid];
     auto ooinfo = dynamic_cast<const BSQEntityInfo*>(ootype);
 
-    BSQFieldID fid = MarshalEnvironment::g_fieldToIdMap.find(fnamefkey.second)->second;
+    BSQFieldID fid = MarshalEnvironment::g_fieldToIdMap.at(fnamefkey.second);
     auto fiter = std::find(ooinfo->fields.cbegin(), ooinfo->fields.cend(), fid);
     auto fidx = std::distance(ooinfo->fields.cbegin(), fiter);
 
@@ -3709,7 +3706,7 @@ StorageLocationPtr ICPPParseJSON::extractValueForEntityField(const APIModule* ap
 
 void ICPPParseJSON::prepareExtractContainer(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
 {
-    BSQTypeID containertypeid = MarshalEnvironment::g_typenameToIdMap.find(itype->name)->second;
+    BSQTypeID containertypeid = MarshalEnvironment::g_typenameToIdMap.at(itype->name);
     const BSQType* collectiontype = BSQType::g_typetable[containertypeid];
 
     this->parsecontainerstack.push_back({});
@@ -3722,7 +3719,7 @@ void ICPPParseJSON::prepareExtractContainer(const APIModule* apimodule, const IT
             if(LIST_LOAD_DATA(value) != nullptr)
             {
                 const BSQListType* listtype = dynamic_cast<const BSQListType*>(collectiontype);
-                const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.find(listtype->etype)->second;
+                const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.at(listtype->etype);
 
                 BSQListOps::s_enumerate_for_extract(lflavor, LIST_LOAD_DATA(value), this->parsecontainerstack.back());
             }
@@ -3745,7 +3742,7 @@ void ICPPParseJSON::prepareExtractContainer(const APIModule* apimodule, const IT
         if(MAP_LOAD_DATA(value) != nullptr)
         {
             const BSQMapType* maptype = dynamic_cast<const BSQMapType*>(this->containerstack.back().first);
-            const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.find(std::make_pair(maptype->ktype, maptype->vtype))->second;
+            const BSQMapTypeFlavor& mflavor = BSQMapOps::g_flavormap.at(std::make_pair(maptype->ktype, maptype->vtype));
 
             BSQMapOps::s_enumerate_for_extract(mflavor, MAP_LOAD_DATA(value), this->parsecontainerstack.back());
         }
@@ -3828,7 +3825,7 @@ void ICPPParseJSON::completeExtractContainer(const APIModule* apimodule, const I
 
 std::optional<size_t> ICPPParseJSON::extractUnionChoice(const APIModule* apimodule, const IType* itype, const std::vector<const IType*>& opttypes, StorageLocationPtr value, Evaluator& ctx)
 {
-    auto bsqutypeid = MarshalEnvironment::g_typenameToIdMap.find(itype->name)->second;
+    auto bsqutypeid = MarshalEnvironment::g_typenameToIdMap.at(itype->name);
     auto bsqutype = dynamic_cast<const BSQUnionType*>(BSQType::g_typetable[bsqutypeid]);
 
     BSQTypeID uid;
@@ -3842,7 +3839,7 @@ std::optional<size_t> ICPPParseJSON::extractUnionChoice(const APIModule* apimodu
     }
 
     auto ppos = std::find_if(opttypes.cbegin(), opttypes.cend(), [uid](const IType* ttopt) {
-        auto bsqoptid = MarshalEnvironment::g_typenameToIdMap.find(ttopt->name)->second;
+        auto bsqoptid = MarshalEnvironment::g_typenameToIdMap.at(ttopt->name);
         return bsqoptid == uid;
     });
 
@@ -3852,7 +3849,7 @@ std::optional<size_t> ICPPParseJSON::extractUnionChoice(const APIModule* apimodu
 
 StorageLocationPtr ICPPParseJSON::extractUnionValue(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
 {
-    auto bsqutypeid = MarshalEnvironment::g_typenameToIdMap.find(itype->name)->second;
+    auto bsqutypeid = MarshalEnvironment::g_typenameToIdMap.at(itype->name);
     auto bsqutype = dynamic_cast<const BSQUnionType*>(BSQType::g_typetable[bsqutypeid]);
 
     if(bsqutype->tkind == BSQTypeLayoutKind::UnionRef)

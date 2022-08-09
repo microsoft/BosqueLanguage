@@ -375,4 +375,3 @@ __chktest function abs_ensures_fail(arg: BigInt): Bool {
     let res = abs_impl(arg);
     return res == 5I && res != arg;
 }
-

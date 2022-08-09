@@ -105,13 +105,13 @@ public:
 class BSQInvokePrimitiveDecl : public BSQInvokeDecl 
 {
 public:
-    const BSQType* enclosingtype;
+    const std::string enclosingtype;
     const BSQPrimitiveImplTag implkey; 
     const std::string implkeyname;
     const std::map<std::string, const BSQType*> binds;
     const std::map<std::string, BSQPCode*> pcodes;
 
-    BSQInvokePrimitiveDecl(std::string name, BSQInvokeID ikey, std::string srcFile, SourceInfo sinfoStart, SourceInfo sinfoEnd, bool recursive, std::vector<BSQFunctionParameter> params, const BSQType* resultType, size_t stackBytes, uint32_t maskSlots, const BSQType* enclosingtype, BSQPrimitiveImplTag implkey, std::string implkeyname, std::map<std::string, const BSQType*> binds, std::map<std::string, BSQPCode*> pcodes)
+    BSQInvokePrimitiveDecl(std::string name, BSQInvokeID ikey, std::string srcFile, SourceInfo sinfoStart, SourceInfo sinfoEnd, bool recursive, std::vector<BSQFunctionParameter> params, const BSQType* resultType, size_t stackBytes, uint32_t maskSlots, std::string enclosingtype, BSQPrimitiveImplTag implkey, std::string implkeyname, std::map<std::string, const BSQType*> binds, std::map<std::string, BSQPCode*> pcodes)
     : BSQInvokeDecl(name, ikey, srcFile, sinfoStart, sinfoEnd, recursive, params, resultType), enclosingtype(enclosingtype), implkey(implkey), implkeyname(implkeyname), binds(binds), pcodes(pcodes)
     {;}
 

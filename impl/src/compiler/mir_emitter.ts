@@ -105,8 +105,18 @@ class MIRKeyGenerator {
         return {keyid: iname, shortname: shortvname};
     }
 
-    static generatePCodeKey(isPCodeFn: boolean, bodyID: string): MIRInvokeKey {
-        return `${isPCodeFn ? "fn" : "pred"}--${bodyID}`;
+    static generatePCodeKey(isPCodeFn: boolean, bodyID: string, binds: Map<string, ResolvedType>, capturedPCode: Map<string, PCode>): MIRInvokeKey {
+        const ikey = `${isPCodeFn ? "fn" : "pred"}--${bodyID}`;
+
+        const binfo = MIRKeyGenerator.computeBindsKeyInfo(binds);
+
+        if(capturedPCode.size === 0) {
+            return ikey + binfo;
+        }
+        else {
+            const ccinfo = [...capturedPCode].sort((a, b) => a[0].localeCompare(b[0])).map((cpc) => `${cpc[0]}=${cpc[1].code.bodyID}`).join(",");
+            return ikey + `${binfo}(${ccinfo})`;
+        }
     }
 
     static generateOperatorSignatureKey(ikey: MIRInvokeKey, shortname: string, isprefix: boolean, isinfix: boolean, sigkeys: string[]): GeneratedKeyName<MIRInvokeKey> {
