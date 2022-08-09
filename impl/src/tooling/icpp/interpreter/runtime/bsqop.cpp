@@ -402,7 +402,7 @@ ProjectRecordOp* ProjectRecordOp::jparse(json v)
 {
     std::vector<std::tuple<BSQRecordPropertyID, uint32_t, const BSQType*>> props;
     auto propl = v["props"];
-    for(size_t i = 0; i < props.size(); ++i)
+    for(size_t i = 0; i < propl.size(); ++i)
     {
         auto vv = propl[i];
         props.push_back(std::make_tuple(jsonParse_BSQRecordPropertyID(vv[0]), vv[1].get<uint32_t>(), jsonParse_BSQType(vv[2])));
@@ -415,7 +415,7 @@ ProjectEntityOp* ProjectEntityOp::jparse(json v)
 {
     std::vector<std::tuple<BSQFieldID, uint32_t, const BSQType*>> fields;
     auto fieldl = v["fields"];
-    for(size_t i = 0; i < fields.size(); ++i)
+    for(size_t i = 0; i < fieldl.size(); ++i)
     {
         auto vv = fieldl[i];
         fields.push_back(std::make_tuple(jsonParse_BSQFieldID(vv[0]), vv[1].get<uint32_t>(), jsonParse_BSQType(vv[2])));

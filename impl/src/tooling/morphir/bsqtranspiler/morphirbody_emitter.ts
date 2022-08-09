@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { MIRAssembly, MIRConceptType, MIRConstructableEntityTypeDecl, MIREntityType, MIREntityTypeDecl, MIREphemeralListType, MIRFieldDecl, MIRInvokeBodyDecl, MIRInvokeDecl, MIRInvokePrimitiveDecl, MIRObjectEntityTypeDecl, MIRPrimitiveCollectionEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRRecordType, MIRTupleType, MIRType } from "../../../compiler/mir_assembly";
+import { MIRAssembly, MIRConceptType, MIRConstructableEntityTypeDecl, MIREntityType, MIREntityTypeDecl, MIREphemeralListType, MIRFieldDecl, MIRInvokeBodyDecl, MIRInvokeDecl, MIRInvokePrimitiveDecl, MIRObjectEntityTypeDecl, MIRPCode, MIRPrimitiveCollectionEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRRecordType, MIRTupleType, MIRType } from "../../../compiler/mir_assembly";
 import { MorphirTypeEmitter } from "./morphirtype_emitter";
 import { MIRAbort, MIRArgGuard, MIRArgument, MIRAssertCheck, MIRBasicBlock, MIRBinKeyEq, MIRBinKeyLess, MIRConstantArgument, MIRConstantBigInt, MIRConstantBigNat, MIRConstantDataString, MIRConstantDecimal, MIRConstantFalse, MIRConstantFloat, MIRConstantInt, MIRConstantNat, MIRConstantNone, MIRConstantNothing, MIRConstantRational, MIRConstantRegex, MIRConstantString, MIRConstantStringOf, MIRConstantTrue, MIRConstantTypedNumber, MIRConstructorEntityDirect, MIRConstructorEphemeralList, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionOneElement, MIRConstructorPrimaryCollectionSingletons, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConvertValue, MIRDeclareGuardFlagLocation, MIREntityProjectToEphemeral, MIREntityUpdate, MIREphemeralListExtend, MIRExtract, MIRFieldKey, MIRGlobalVariable, MIRGuard, MIRGuardedOptionInject, MIRInject, MIRInvokeFixedFunction, MIRInvokeKey, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRIsTypeOf, MIRJump, MIRJumpCond, MIRJumpNone, MIRLoadConst, MIRLoadField, MIRLoadFromEpehmeralList, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadUnintVariableValue, MIRLogicAction, MIRMaskGuard, MIRMultiLoadFromEpehmeralList, MIROp, MIROpTag, MIRPhi, MIRPrefixNotOp, MIRRecordHasProperty, MIRRecordProjectToEphemeral, MIRRecordUpdate, MIRRegisterArgument, MIRRegisterAssign, MIRResolvedTypeKey, MIRReturnAssign, MIRReturnAssignOfCons, MIRSetConstantGuardFlag, MIRSliceEpehmeralList, MIRStatmentGuard, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRTupleHasIndex, MIRTupleProjectToEphemeral, MIRTupleUpdate, MIRVirtualMethodKey } from "../../../compiler/mir_ops";
 import { MorphirCallSimple, MorphirCallGeneral, MorphirCallGeneralWOptMask, MorphirCond, MorphirConst, MorphirExp, MorphirIf, MorphirLet, MorphirLetMulti, MorphirMaskConstruct, MorphirVar, MorphirCallGeneralWPassThroughMask, MorphirTypeInfo } from "./morphir_exp";
@@ -285,7 +285,7 @@ class MorphirBodyEmitter {
                 const test = new MorphirCallSimple(this.registerRequiredTypeCheck(geninfo.argflowtype, mtt), [new MorphirVar("arg")]);
 
                 const argpp = this.typegen.coerce(new MorphirVar("arg"), geninfo.argflowtype, mtt);
-                const idxr = new MorphirCallSimple(this.typegen.generateTupleIndexGetFunction(tt, geninfo.idx), [argpp]);
+                const idxr = this.typegen.generateTupleIndexGet(tt, geninfo.idx, argpp);
                 const crt = this.typegen.coerce(idxr, (geninfo.argflowtype.options[0] as MIRTupleType).entries[geninfo.idx], geninfo.resulttype);
                 const action = geninfo.guard !== undefined ? this.typegen.generateAccessWithSetGuardResultTypeConstructorLoad(geninfo.resulttype, crt, true) : crt;
 
@@ -318,7 +318,7 @@ class MorphirBodyEmitter {
                 const test = new MorphirCallSimple(this.registerRequiredTypeCheck(geninfo.argflowtype, mtt), [new MorphirVar("arg")]);
 
                 const argpp = this.typegen.coerce(new MorphirVar("arg"), geninfo.argflowtype, mtt);
-                const idxr = new MorphirCallSimple(this.typegen.generateRecordPropertyGetFunction(tt, geninfo.pname), [argpp]);
+                const idxr = this.typegen.generateRecordPropertyGet(tt, geninfo.pname, argpp);
                 const crt = this.typegen.coerce(idxr, ((geninfo.argflowtype.options[0] as MIRRecordType).entries.find((vv) => vv.pname === geninfo.pname) as {pname: string, ptype: MIRType}).ptype, geninfo.resulttype);
                 const action = geninfo.guard !== undefined ? this.typegen.generateAccessWithSetGuardResultTypeConstructorLoad(geninfo.resulttype, crt, true) : crt;
 
@@ -345,7 +345,7 @@ class MorphirBodyEmitter {
             const test = new MorphirCallSimple(this.registerRequiredTypeCheck(geninfo.argflowtype, mtt), [new MorphirVar("arg")]);
 
             const argpp = this.typegen.coerce(new MorphirVar("arg"), geninfo.argflowtype, mtt);
-            const action = new MorphirCallSimple(this.typegen.generateEntityFieldGetFunction(tt, geninfo.field), [argpp]);
+            const action = this.typegen.generateEntityFieldGet(tt, geninfo.field, argpp);
 
             return { test: test, result: action };
         });
@@ -371,7 +371,7 @@ class MorphirBodyEmitter {
 
             const argpp = this.typegen.coerce(new MorphirVar("arg"), geninfo.argflowtype, mtt);
             const pargs = geninfo.indecies.map((idx, i) => {
-                const idxr = new MorphirCallSimple(this.typegen.generateTupleIndexGetFunction(geninfo.argflowtype.options[0] as MIRTupleType, idx), [argpp]);
+                const idxr = this.typegen.generateTupleIndexGet(geninfo.argflowtype.options[0] as MIRTupleType, idx, argpp);
                 return this.typegen.coerce(idxr, (geninfo.argflowtype.options[0] as MIRTupleType).entries[idx], (geninfo.resulttype.options[0] as MIREphemeralListType).entries[i]);
             });
             const action = new MorphirCallSimple(this.typegen.getMorphirConstructorName(geninfo.resulttype).cons, pargs);
@@ -400,7 +400,7 @@ class MorphirBodyEmitter {
 
             const argpp = this.typegen.coerce(new MorphirVar("arg"), geninfo.argflowtype, mtt);
             const pargs = geninfo.properties.map((pname, i) => {
-                const idxr = new MorphirCallSimple(this.typegen.generateRecordPropertyGetFunction(geninfo.argflowtype.options[0] as MIRRecordType, pname), [argpp]);
+                const idxr = this.typegen.generateRecordPropertyGet(geninfo.argflowtype.options[0] as MIRRecordType, pname, argpp);
                 return this.typegen.coerce(idxr, ((geninfo.argflowtype.options[0] as MIRRecordType).entries.find((vv) => vv.pname === pname) as {pname: string, ptype: MIRType}).ptype, (geninfo.resulttype.options[0] as MIREphemeralListType).entries[i]);
             });
             const action = new MorphirCallSimple(this.typegen.getMorphirConstructorName(geninfo.resulttype).cons, pargs);
@@ -429,7 +429,7 @@ class MorphirBodyEmitter {
 
             const argpp = this.typegen.coerce(new MorphirVar("arg"), geninfo.argflowtype, mtt);
             const pargs = geninfo.fields.map((field, i) => {
-                const idxr = new MorphirCallSimple(this.typegen.generateEntityFieldGetFunction(tt, field), [argpp]);
+                const idxr = this.typegen.generateEntityFieldGet(tt, field, argpp);
                 return this.typegen.coerce(idxr, this.typegen.getMIRType(field.declaredType), (geninfo.resulttype.options[0] as MIREphemeralListType).entries[i]);
             });
             const action = new MorphirCallSimple(this.typegen.getMorphirConstructorName(geninfo.resulttype).cons, pargs);
@@ -468,8 +468,8 @@ class MorphirBodyEmitter {
         }
         
         if(geninfo.argc === 1) {
-            const vkey = new MorphirCallSimple(this.typegen.generateTupleIndexGetFunction(geninfo.argtupletype, 0), [new MorphirVar("arg0")]);
-            const vval = new MorphirCallSimple(this.typegen.generateTupleIndexGetFunction(geninfo.argtupletype, 1), [new MorphirVar("arg0")]);
+            const vkey = this.typegen.generateTupleIndexGet(geninfo.argtupletype, 0, new MorphirVar("arg0"));
+            const vval = this.typegen.generateTupleIndexGet(geninfo.argtupletype, 1, new MorphirVar("arg0"));
             const consexp = new MorphirConst(`[MapEntry ${vkey.emitMorphir(undefined)} ${vval.emitMorphir(undefined)}]`);
             
             return MorphirFunction.create(this.typegen.lookupFunctionName(geninfo.inv), args, this.typegen.getMorphirTypeFor(geninfo.resulttype), consexp);
@@ -498,7 +498,7 @@ class MorphirBodyEmitter {
             for (let i = 0; i < tt.entries.length; ++i) {
                 const upd = geninfo.updates.findIndex((vv) => vv[0] === i);
                 if(upd === undefined) {
-                    cargs.push(new MorphirCallSimple(this.typegen.generateTupleIndexGetFunction(tt, i), [argpp]));
+                    cargs.push(this.typegen.generateTupleIndexGet(tt, i, argpp));
                 }
                 else {
                     cargs.push(new MorphirVar(`arg_${i}`));
@@ -540,7 +540,7 @@ class MorphirBodyEmitter {
             for (let i = 0; i < tt.entries.length; ++i) {
                 const upd = geninfo.updates.find((vv) => vv[0] === tt.entries[i].pname);
                 if(upd === undefined) {
-                    cargs.push(new MorphirCallSimple(this.typegen.generateRecordPropertyGetFunction(tt, tt.entries[i].pname), [argpp]));
+                    cargs.push(this.typegen.generateRecordPropertyGet(tt, tt.entries[i].pname, argpp));
                 }
                 else {
                     cargs.push(new MorphirVar(`arg_${i}`));
@@ -584,7 +584,7 @@ class MorphirBodyEmitter {
             for (let i = 0; i < consfields.length; ++i) {
                 const upd = geninfo.updates.find((vv) => vv[0] === consfields[i].fname);
                 if(upd === undefined) {
-                    cargs.push(new MorphirCallSimple(this.typegen.generateEntityFieldGetFunction(tt, consfields[i]), [argpp]));
+                    cargs.push(this.typegen.generateEntityFieldGet(tt, consfields[i], argpp));
                 }
                 else {
                     cargs.push(new MorphirVar(`arg_${i}`));
@@ -1062,7 +1062,7 @@ class MorphirBodyEmitter {
         }
         else {
             const argpp = this.typegen.coerce(this.argToMorphir(op.arg), arglayouttype, argflowtype);
-            const idxr = new MorphirCallSimple(this.typegen.generateTupleIndexGetFunction(argflowtype.options[0] as MIRTupleType, op.idx), [argpp]);
+            const idxr = this.typegen.generateTupleIndexGet(argflowtype.options[0] as MIRTupleType, op.idx, argpp);
             return new MorphirLet(this.varToMorphirName(op.trgt).vname, idxr, continuation);
         }
     }
@@ -1102,7 +1102,7 @@ class MorphirBodyEmitter {
         }
         else {
             const argpp = this.typegen.coerce(this.argToMorphir(op.arg), arglayouttype, argflowtype);
-            const idxr = new MorphirCallSimple(this.typegen.generateTupleIndexGetFunction(argflowtype.options[0] as MIRTupleType, op.idx), [argpp]);
+            const idxr = this.typegen.generateTupleIndexGet(argflowtype.options[0] as MIRTupleType, op.idx, argpp);
 
             if(op.guard instanceof MIRMaskGuard) {
                 const pm = this.pendingMask.find((mm) => mm.maskname === (op.guard as MIRMaskGuard).gmask) as MorphirMaskConstruct;
@@ -1135,7 +1135,7 @@ class MorphirBodyEmitter {
         }
         else {
             const argpp = this.typegen.coerce(this.argToMorphir(op.arg), arglayouttype, argflowtype);
-            const idxr = new MorphirCallSimple(this.typegen.generateRecordPropertyGetFunction(argflowtype.options[0] as MIRRecordType, op.pname), [argpp]);
+            const idxr = this.typegen.generateRecordPropertyGet(argflowtype.options[0] as MIRRecordType, op.pname, argpp);
             return new MorphirLet(this.varToMorphirName(op.trgt).vname, idxr, continuation);
         }
     }
@@ -1175,7 +1175,7 @@ class MorphirBodyEmitter {
         }
         else {
             const argpp = this.typegen.coerce(this.argToMorphir(op.arg), arglayouttype, argflowtype);
-            const idxr = new MorphirCallSimple(this.typegen.generateRecordPropertyGetFunction(argflowtype.options[0] as MIRRecordType, op.pname), [argpp]);
+            const idxr = this.typegen.generateRecordPropertyGet(argflowtype.options[0] as MIRRecordType, op.pname, argpp);
             
             if(op.guard instanceof MIRMaskGuard) {
                 const pm = this.pendingMask.find((mm) => mm.maskname === (op.guard as MIRMaskGuard).gmask) as MorphirMaskConstruct;
@@ -1209,7 +1209,7 @@ class MorphirBodyEmitter {
         else {
             const argpp = this.typegen.coerce(this.argToMorphir(op.arg), arglayouttype, argflowtype);
             const fdecl = this.assembly.fieldDecls.get(op.field) as MIRFieldDecl;
-            const idxr = new MorphirCallSimple(this.typegen.generateEntityFieldGetFunction(this.assembly.entityDecls.get(argflowtype.typeID) as MIREntityTypeDecl, fdecl), [argpp]);
+            const idxr = this.typegen.generateEntityFieldGet(this.assembly.entityDecls.get(argflowtype.typeID) as MIREntityTypeDecl, fdecl, argpp);
             return new MorphirLet(this.varToMorphirName(op.trgt).vname, idxr, continuation);
         }
     }
@@ -1232,7 +1232,7 @@ class MorphirBodyEmitter {
         else {
             const argpp = this.typegen.coerce(this.argToMorphir(op.arg), arglayouttype, argflowtype);
             const pargs = op.indecies.map((idx, i) => {
-                const idxr = new MorphirCallSimple(this.typegen.generateTupleIndexGetFunction(argflowtype.options[0] as MIRTupleType, idx), [argpp]);
+                const idxr = this.typegen.generateTupleIndexGet(argflowtype.options[0] as MIRTupleType, idx, argpp);
                 return this.typegen.coerce(idxr, (argflowtype.options[0] as MIRTupleType).entries[idx], (resulttype.options[0] as MIREphemeralListType).entries[i]);
             });
 
@@ -1258,7 +1258,7 @@ class MorphirBodyEmitter {
         else {
             const argpp = this.typegen.coerce(this.argToMorphir(op.arg), arglayouttype, argflowtype);
             const pargs = op.properties.map((pname, i) => {
-                const idxr = new MorphirCallSimple(this.typegen.generateRecordPropertyGetFunction(argflowtype.options[0] as MIRRecordType, pname), [argpp]);
+                const idxr = this.typegen.generateRecordPropertyGet(argflowtype.options[0] as MIRRecordType, pname, argpp);
                 return this.typegen.coerce(idxr, ((argflowtype.options[0] as MIRRecordType).entries.find((vv) => vv.pname === pname) as {pname: string, ptype: MIRType}).ptype, (resulttype.options[0] as MIREphemeralListType).entries[i]);
             });
 
@@ -1285,7 +1285,7 @@ class MorphirBodyEmitter {
             const argpp = this.typegen.coerce(this.argToMorphir(op.arg), arglayouttype, argflowtype);
             const pargs = op.fields.map((fkey, i) => {
                 const fdecl = this.assembly.fieldDecls.get(fkey) as MIRFieldDecl;
-                const idxr = new MorphirCallSimple(this.typegen.generateEntityFieldGetFunction(this.assembly.entityDecls.get(argflowtype.typeID) as MIREntityTypeDecl, fdecl), [argpp]);
+                const idxr = this.typegen.generateEntityFieldGet(this.assembly.entityDecls.get(argflowtype.typeID) as MIREntityTypeDecl, fdecl, argpp);
                 return this.typegen.coerce(idxr, this.typegen.getMIRType((this.assembly.fieldDecls.get(fkey) as MIRFieldDecl).declaredType), (resulttype.options[0] as MIREphemeralListType).entries[i]);
             });
 
@@ -1316,7 +1316,7 @@ class MorphirBodyEmitter {
             for (let i = 0; i < ttype.entries.length; ++i) {
                 const upd = op.updates.find((vv) => vv[0] === i);
                 if(upd === undefined) {
-                    cargs.push(new MorphirCallSimple(this.typegen.generateTupleIndexGetFunction(ttype, i), [argpp]));
+                    cargs.push(this.typegen.generateTupleIndexGet(ttype, i, argpp));
                 }
                 else {
                     cargs.push(this.argToMorphir(upd[1]));
@@ -1350,7 +1350,7 @@ class MorphirBodyEmitter {
             for (let i = 0; i < ttype.entries.length; ++i) {
                 const upd = op.updates.find((vv) => vv[0] === ttype.entries[i].pname);
                 if(upd === undefined) {
-                    cargs.push(new MorphirCallSimple(this.typegen.generateRecordPropertyGetFunction(ttype, ttype.entries[i].pname), [argpp]));
+                    cargs.push(this.typegen.generateRecordPropertyGet(ttype, ttype.entries[i].pname, argpp));
                 }
                 else {
                     cargs.push(this.argToMorphir(upd[1]));
@@ -1394,7 +1394,7 @@ class MorphirBodyEmitter {
             for (let i = 0; i < consfields.length; ++i) {
                 const upd = op.updates.find((vv) => vv[0] === consfields[i].fkey);
                 if (upd === undefined) {
-                    cargs.push(new MorphirCallSimple(this.typegen.generateEntityFieldGetFunction(ttdecl, consfields[i]), [argpp]));
+                    cargs.push(this.typegen.generateEntityFieldGet(ttdecl, consfields[i], argpp));
                 }
                 else {
                     cargs.push(this.argToMorphir(upd[1]));
@@ -1415,7 +1415,7 @@ class MorphirBodyEmitter {
     processLoadFromEpehmeralList(op: MIRLoadFromEpehmeralList, continuation: MorphirExp): MorphirExp {
         const argtype = this.typegen.getMIRType(op.argtype);
 
-        const idxr = new MorphirCallSimple(this.typegen.generateEphemeralListGetFunction(argtype.options[0] as MIREphemeralListType, op.idx), [this.argToMorphir(op.arg)]);
+        const idxr = this.typegen.generateEphemeralListGet(argtype.options[0] as MIREphemeralListType, op.idx, this.argToMorphir(op.arg));
         return new MorphirLet(this.varToMorphirName(op.trgt).vname, idxr, continuation);
     }
 
@@ -1423,7 +1423,7 @@ class MorphirBodyEmitter {
         const eltype = this.typegen.getMIRType(op.argtype).options[0] as MIREphemeralListType;
 
         const assigns = op.trgts.map((asgn) => {
-            const idxr = new MorphirCallSimple(this.typegen.generateEphemeralListGetFunction(eltype, asgn.pos), [this.argToMorphir(op.arg)]);
+            const idxr = this.typegen.generateEphemeralListGet(eltype, asgn.pos, this.argToMorphir(op.arg));
             return { vname: this.varToMorphirName(asgn.into).vname, value: idxr };
         });
 
@@ -1434,7 +1434,7 @@ class MorphirBodyEmitter {
         const eltype = this.typegen.getMIRType(op.argtype).options[0] as MIREphemeralListType;
         const sltype = this.typegen.getMIRType(op.sltype).options[0] as MIREphemeralListType;
 
-        const pargs = sltype.entries.map((sle, i) => new MorphirCallSimple(this.typegen.generateEphemeralListGetFunction(eltype, i), [this.argToMorphir(op.arg)]));
+        const pargs = sltype.entries.map((sle, i) => this.typegen.generateEphemeralListGet(eltype, i, this.argToMorphir(op.arg)));
         return new MorphirLet(this.varToMorphirName(op.trgt).vname, new MorphirCallSimple(this.typegen.getMorphirConstructorName(this.typegen.getMIRType(op.sltype)).cons, pargs), continuation);
     }
 
@@ -1518,7 +1518,7 @@ class MorphirBodyEmitter {
 
     processConstructorTupleFromEphemeralList(op: MIRConstructorTupleFromEphemeralList, continuation: MorphirExp): MorphirExp {
         const elt = this.typegen.getMIRType(op.elistType).options[0] as MIREphemeralListType;
-        const args = elt.entries.map((tt, i) => new MorphirCallSimple(this.typegen.generateEphemeralListGetFunction(elt, i), [this.argToMorphir(op.arg)]));
+        const args = elt.entries.map((tt, i) => this.typegen.generateEphemeralListGet(elt, i, this.argToMorphir(op.arg)));
 
         return new MorphirLet(this.varToMorphirName(op.trgt).vname, new MorphirCallSimple(this.typegen.getMorphirConstructorName(this.typegen.getMIRType(op.resultTupleType)).cons, args), continuation);
     }
@@ -1531,7 +1531,7 @@ class MorphirBodyEmitter {
 
     processConstructorRecordFromEphemeralList(op: MIRConstructorRecordFromEphemeralList, continuation: MorphirExp): MorphirExp {
         const elt = this.typegen.getMIRType(op.elistType).options[0] as MIREphemeralListType;
-        const eargs = elt.entries.map((tt, i) => new MorphirCallSimple(this.typegen.generateEphemeralListGetFunction(elt, i), [this.argToMorphir(op.arg)]));
+        const eargs = elt.entries.map((tt, i) => this.typegen.generateEphemeralListGet(elt, i, this.argToMorphir(op.arg)));
 
         const rtype = this.typegen.getMIRType(op.resultRecordType).options[0] as MIRRecordType;
         const args = rtype.entries.map((rentry) => {
@@ -1549,7 +1549,7 @@ class MorphirBodyEmitter {
             const argi = this.argToMorphir(op.args[i]);
 
             for (let j = 0; j < tt.entries.length; ++j) {
-                args.push(new MorphirCallSimple(this.typegen.generateTupleIndexGetFunction(tt, j), [argi]));
+                args.push(this.typegen.generateTupleIndexGet(tt, j, argi));
             }
         }
 
@@ -1566,7 +1566,7 @@ class MorphirBodyEmitter {
 
             for (let j = 0; j < tt.entries.length; ++j) {
                 const ppidx = rtype.entries.findIndex((ee) => ee.pname === tt.entries[j].pname);
-                args[ppidx] = new MorphirCallSimple(this.typegen.generateRecordPropertyGetFunction(tt, tt.entries[j].pname), [argi]);
+                args[ppidx] = this.typegen.generateRecordPropertyGet(tt, tt.entries[j].pname, argi);
             }
         }
 
@@ -1587,7 +1587,7 @@ class MorphirBodyEmitter {
 
     processEphemeralListExtend(op: MIREphemeralListExtend, continuation: MorphirExp): MorphirExp {
         const ietype = this.typegen.getMIRType(op.argtype).options[0] as MIREphemeralListType;
-        const iargs = ietype.entries.map((ee, i) => new MorphirCallSimple(this.typegen.generateEphemeralListGetFunction(ietype, i), [this.argToMorphir(op.arg)]));
+        const iargs = ietype.entries.map((ee, i) => this.typegen.generateEphemeralListGet(ietype, i, this.argToMorphir(op.arg)));
 
         const eargs = op.ext.map((arg) => this.argToMorphir(arg));
 
@@ -1620,8 +1620,8 @@ class MorphirBodyEmitter {
             const mapentity = constype as MIRPrimitiveMapEntityTypeDecl;
             const entrytup = this.typegen.assembly.tupleDecls.get(`[${mapentity.getTypeK().typeID}, ${mapentity.getTypeV().typeID}]`) as MIRTupleType;
 
-            const kexp = new MorphirCallSimple(this.typegen.generateTupleIndexGetFunction(entrytup, 0), [arg]);
-            const vexp = new MorphirCallSimple(this.typegen.generateTupleIndexGetFunction(entrytup, 1), [arg]);
+            const kexp = this.typegen.generateTupleIndexGet(entrytup, 0, arg);
+            const vexp = this.typegen.generateTupleIndexGet(entrytup, 1, arg);
             return new MorphirLet(this.varToMorphirName(op.trgt).vname, new MorphirConst(`[MapEntry ${kexp.emitMorphir(undefined)} ${vexp.emitMorphir(undefined)}]`), continuation);
         }
     }
@@ -1948,7 +1948,7 @@ class MorphirBodyEmitter {
     }
 
     processGenerateResultUnderflowCheck(sinfo: SourceInfo, arg0: MorphirExp, arg1: MorphirExp , oftype: MIRType, val: MorphirExp): MorphirExp {
-        return new MorphirIf(new MorphirCallSimple("<", [arg1, arg0]), this.typegen.generateErrorResultAssert(oftype, this.currentFile, sinfo), val);
+        return new MorphirIf(new MorphirCallSimple("<", [arg1, arg0], true), this.typegen.generateErrorResultAssert(oftype, this.currentFile, sinfo), this.typegen.generateResultTypeConstructorSuccess(oftype, val));
     }
 
     processGenerateResultWithZeroArgCheck(sinfo: SourceInfo, zero: MorphirConst, not0arg: MorphirExp, oftype: MIRType, val: MorphirExp): MorphirExp {
@@ -2573,7 +2573,7 @@ class MorphirBodyEmitter {
                 return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, rr);
             }
             case "string_empty": {
-                return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new MorphirCallSimple("isEmpty", [new MorphirVar(args[0].vname)]));
+                return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new MorphirCallSimple("List.isEmpty", [new MorphirVar(args[0].vname)]));
             }
             case "string_append": {
                 return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new MorphirCallSimple("append", [new MorphirVar(args[0].vname), new MorphirVar(args[1].vname)]));
@@ -2608,6 +2608,295 @@ class MorphirBodyEmitter {
                 const dd = new MorphirCallSimple("blatlongcoordinate_cons", args.map((arg) => new MorphirVar(arg.vname)));
                 return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);
             }
+            case "s_list_empty": {
+                const dd = new MorphirCallSimple("List.isEmpty", [new MorphirVar(args[0].vname)]);
+                return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);
+            }
+            case "s_list_size": {
+                const dd = new MorphirCallSimple("List.length", [new MorphirVar(args[0].vname)]);
+                return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);
+            }
+            case "s_list_set": {
+                const lhead = new MorphirCallSimple("List.take", [new MorphirVar(args[1].vname), new MorphirVar(args[0].vname)]);
+                const ltail = new MorphirCallSimple("List.drop", [new MorphirCallSimple("+", [new MorphirVar(args[1].vname), new MorphirConst("1")], true), new MorphirVar(args[0].vname)]);
+                const dd = new MorphirCallSimple("List.append", [lhead, new MorphirCallSimple("List.append", [new MorphirConst(`[${args[2].vname}]`), ltail])]);
+                return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);
+            }
+            case "s_list_push_back": {
+                const dd = new MorphirCallSimple("List.append", [new MorphirVar(args[0].vname), new MorphirConst(`[${args[1].vname}]`)]);
+                return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);
+            }
+            case "s_list_push_front": {
+                const dd = new MorphirCallSimple("List.append", [new MorphirConst(`[${args[1].vname}]`), new MorphirVar(args[0].vname)]);
+                return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);
+            }
+            case "s_list_insert": {
+                const lhead = new MorphirCallSimple("List.take", [new MorphirVar(args[1].vname), new MorphirVar(args[0].vname)]);
+                const ltail = new MorphirCallSimple("List.drop", [new MorphirVar(args[1].vname), new MorphirVar(args[0].vname)]);
+                const dd = new MorphirCallSimple("List.append", [lhead, new MorphirCallSimple("List.append", [new MorphirConst(`[${args[2].vname}]`), ltail])]);
+                return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);
+            }
+            case "s_list_remove": {
+                const lhead = new MorphirCallSimple("List.take", [new MorphirVar(args[1].vname), new MorphirVar(args[0].vname)]);
+                const ltail = new MorphirCallSimple("List.drop", [new MorphirCallSimple("+", [new MorphirVar(args[1].vname), new MorphirConst("1")], true), new MorphirVar(args[0].vname)]);
+                const dd = new MorphirCallSimple("List.append", [lhead, ltail]);
+                return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);
+            }
+            case "s_list_pop_back": {
+                const lcount = new MorphirCallSimple("-", [new MorphirCallSimple("List.length", [new MorphirVar(args[0].vname)]), new MorphirConst("1")], true);
+                const dd = new MorphirCallSimple("List.take", [new MorphirVar(args[0].vname), lcount]);
+                return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);
+            }
+            case "s_list_pop_front": {
+                const dd = new MorphirCallSimple("List.drop", [new MorphirConst("1"), new MorphirVar(args[0].vname)]);
+                return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);
+            }
+            case "s_list_reduce": {
+                const pc = idecl.pcodes.get("f") as MIRPCode;
+                const pcfn = this.typegen.lookupFunctionName(pc.code);
+                const captured = pc.cargs.map((carg) => carg.cname);
+
+                const implicitlambdas = [pcfn];
+
+                if (this.isSafeInvoke(pc.code)) {
+                    const foldcall = new MorphirCallSimple("List.foldl", [
+                        new MorphirConst(`(\\acc__ x__ -> (${pcfn} acc__ x__${captured.length !== 0 ? (" " + captured.join(" ")) : ""}))`),
+                        new MorphirVar(args[1].vname),
+                        new MorphirVar(args[0].vname)
+                    ]);
+
+                    return MorphirFunction.createWithImplicitLambdas(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, foldcall, implicitlambdas);
+                }
+                else {
+                    const foldcall = new MorphirCallSimple("List.foldl", [
+                        new MorphirConst(`(\\acc__ x__ -> if ${this.typegen.generateResultIsErrorTest(mirrestype, new MorphirVar("acc__")).emitMorphir(undefined)} then acc__ else (${pcfn} ${this.typegen.generateResultGetSuccess(mirrestype, new MorphirVar("acc__")).emitMorphir(undefined)} x${captured.length !== 0 ? (" " + captured.join(" ")) : ""}))`),
+                        this.typegen.generateResultTypeConstructorSuccess(mirrestype, new MorphirVar(args[1].vname)),
+                        new MorphirVar(args[0].vname)
+                    ]);
+
+                    return MorphirFunction.createWithImplicitLambdas(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, foldcall, implicitlambdas);
+                }
+            }
+            case "s_list_reduce_idx": {
+                assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
+                return undefined;
+            }
+            case "s_list_transduce": {
+                assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
+                return undefined;
+            }
+            case "s_list_transduce_idx": {
+                assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
+                return undefined;
+            }
+            case "s_list_range": {
+                const dd = new MorphirCallSimple("List.range", [new MorphirVar(args[0].vname), new MorphirVar(args[1].vname)]);
+                return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);
+            }
+            case "s_list_fill": {
+                const dd = new MorphirCallSimple("List.repeat", [new MorphirVar(args[0].vname), new MorphirVar(args[1].vname)]);
+                return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);
+            }
+            case "s_list_reverse": {
+                const dd = new MorphirCallSimple("List.reverse", [new MorphirVar(args[0].vname)]);
+                return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);
+            }
+            case "s_list_append": {
+                const dd = new MorphirCallSimple("List.append", [new MorphirVar(args[0].vname), new MorphirVar(args[1].vname)]);
+                return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);
+            }
+            case "s_list_slice_start": {
+                const dd = new MorphirCallSimple("List.drop", [new MorphirVar(args[1].vname), new MorphirVar(args[0].vname)]);
+                return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);
+            }
+            case "s_list_slice_end": {
+                const dd = new MorphirCallSimple("List.take", [new MorphirVar(args[1].vname), new MorphirVar(args[0].vname)]);
+                return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);
+            }
+            case "s_list_slice": {
+                const dd = new MorphirCallSimple("List.drop", [new MorphirVar(args[2].vname), new MorphirVar(args[0].vname)]);
+                const rr = new MorphirCallSimple("List.take", [new MorphirVar(args[1].vname), dd]);
+                return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, rr);
+            }
+            case "s_list_get": {
+                const lhead = new MorphirCallSimple("List.drop", [new MorphirVar(args[1].vname), new MorphirVar(args[0].vname)]);
+                const ldefault = `bsq${this.typegen.getMorphirTypeFor(this.typegen.getMIRType(idecl.resultType)).morphirtypename.toLowerCase()}_default`;
+                const vv = new MorphirCallSimple("list_head_w_default", [lhead, new MorphirConst(ldefault)]);
+                return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, vv);
+            }
+            case "s_list_back": {
+                const lcount = new MorphirCallSimple("-", [new MorphirCallSimple("List.length", [new MorphirVar(args[0].vname)]), new MorphirConst("1")], true);
+                const ldefault = `bsq${this.typegen.getMorphirTypeFor(this.typegen.getMIRType(idecl.resultType)).morphirtypename.toLowerCase()}_default`;
+                const dd = new MorphirCallSimple("list_head_w_default", [new MorphirCallSimple("List.drop", [new MorphirVar(args[0].vname), lcount]), new MorphirConst(ldefault)]);
+                return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);
+            }
+            case "s_list_front": {
+                const ldefault = `bsq${this.typegen.getMorphirTypeFor(this.typegen.getMIRType(idecl.resultType)).morphirtypename.toLowerCase()}_default`;
+                const dd = new MorphirCallSimple("list_head_w_default", [new MorphirVar(args[0].vname), new MorphirConst(ldefault)]);
+                return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);
+            }
+            case "s_list_has_pred": {
+                const pc = idecl.pcodes.get("p") as MIRPCode;
+                const pcfn = this.typegen.lookupFunctionName(pc.code);
+                const captured = pc.cargs.map((carg) => carg.cname);
+
+                const implicitlambdas = [pcfn];
+
+                if (this.isSafeInvoke(pc.code)) {
+                    const bmap = new MorphirCallSimple("List.any", [
+                        new MorphirConst(`(\\x__ -> (${pcfn} x__${captured.length !== 0 ? (" " + captured.join(" ")) : ""}))`),
+                        new MorphirVar(args[0].vname)
+                    ]);
+
+                    return MorphirFunction.createWithImplicitLambdas(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, bmap, implicitlambdas);
+                }
+                else {
+                    const bmap = new MorphirCallSimple("List.map", [
+                        new MorphirConst(`(\\x__ -> (${pcfn} x__${captured.length !== 0 ? (" " + captured.join(" ")) : ""}))`),
+                        new MorphirVar(args[0].vname)
+                    ]);
+
+                    const vres = new MorphirCallSimple("result_reduce", [
+                        new MorphirConst(`(\\acc__ vv__ -> (acc__ && v__))`),
+                        new MorphirConst("false"),
+                        new MorphirVar("vmap")
+                    ]);
+
+                    const bbody = new MorphirLet("vmap", bmap, vres);
+                    return MorphirFunction.createWithImplicitLambdas(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, bbody, implicitlambdas);
+                }
+            }
+            case "s_list_has_pred_idx": {
+                assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
+                return undefined;
+            }
+            case "s_list_find_pred": {
+                const pc = idecl.pcodes.get("p") as MIRPCode;
+                const pcfn = this.typegen.lookupFunctionName(pc.code);
+                const captured = pc.cargs.map((carg) => carg.cname);
+
+                const implicitlambdas = [pcfn];
+
+                const bmap = new MorphirCallSimple("List.map", [
+                    new MorphirConst(`(\\x__ -> (${pcfn} x__${captured.length !== 0 ? (" " + captured.join(" ")) : ""}))`),
+                    new MorphirVar(args[0].vname)
+                ]);
+
+                if (this.isSafeInvoke(pc.code)) {
+                    const vres = new MorphirCallSimple("List.foldl", [
+                        new MorphirConst(`(\\acc__ vv__ -> (if acc__.vv == -1 then && {index = -1, vv = vv__}) else {index = acc__.index + 1, vv = -1})`),
+                        new MorphirConst("{index = 0, vv = -1}"),
+                        new MorphirVar("vmap")
+                    ]);
+
+                    const bbody = new MorphirLet("vmap", bmap, vres);
+                    return MorphirFunction.createWithImplicitLambdas(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, bbody, implicitlambdas);
+                }
+                else {
+                    const vres = new MorphirCallSimple("result_reduce", [
+                        new MorphirConst(`(\\acc__ vv__ -> (if acc__.vv == -1 then && {index = -1, vv = vv__}) else {index = acc__.index + 1, vv = -1})`),
+                        new MorphirConst("{index = 0, vv = -1}"),
+                        new MorphirVar("vmap")
+                    ]);
+
+                    const bbody = new MorphirLet("vmap", bmap, vres);
+                    return MorphirFunction.createWithImplicitLambdas(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, bbody, implicitlambdas);
+                }
+            }
+            case "s_list_find_pred_idx": {
+                assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
+                return undefined;
+            }
+            case "s_list_find_pred_last": {
+                assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
+                return undefined;
+            }
+            case "s_list_find_pred_last_idx": {
+                assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
+                return undefined;
+            }
+            case "s_list_single_index_of": {
+                assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
+                return undefined;
+            }
+            case "s_list_has": {
+                assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
+                return undefined;
+            }
+            case "s_list_indexof": {
+                assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
+                return undefined;
+            }
+            case "s_list_last_indexof": {
+                assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
+                return undefined;
+            }
+            case "s_list_filter_pred": {
+                assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
+                return undefined;
+            }
+            case "s_list_filter_pred_idx": {
+                assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
+                return undefined;
+            }
+            case "s_list_map": {
+                const pc = idecl.pcodes.get("f") as MIRPCode;
+                const pcfn = this.typegen.lookupFunctionName(pc.code);
+                const captured = pc.cargs.map((carg) => carg.cname);
+
+                const implicitlambdas = [pcfn];
+
+                const bmap = new MorphirCallSimple("List.map", [
+                    new MorphirConst(`(\\x__ -> (${pcfn} x__${captured.length !== 0 ? (" " + captured.join(" ")) : ""}))`),
+                    new MorphirVar(args[0].vname)
+                ]);
+
+                if (this.isSafeInvoke(pc.code)) {
+                    return MorphirFunction.createWithImplicitLambdas(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, bmap, implicitlambdas);
+                }
+                else {
+                    const vres = new MorphirCallSimple("result_map_map", [
+                        new MorphirVar("vmap")
+                    ]);
+
+                    const bbody = new MorphirLet("vmap", bmap, vres);
+                    return MorphirFunction.createWithImplicitLambdas(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, bbody, implicitlambdas);
+                }
+            }
+            case "s_list_map_idx": {
+                assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
+                return undefined;
+            }
+            case "s_list_map_sync": {
+                assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
+                return undefined;
+            }
+            case "s_list_filter_map_fn": {
+                assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
+                return undefined;
+            }
+            case "s_map_empty":{
+                const dd = new MorphirCallSimple("List.isEmpty", [new MorphirVar(args[0].vname)]);
+                return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);
+            }
+            case "s_map_count": {
+                const dd = new MorphirCallSimple("List.length", [new MorphirVar(args[0].vname)]);
+                return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);
+            }
+            /*
+    s_map_entries,
+    s_map_min_key,
+    s_map_max_key,
+    s_map_has,
+    s_map_get,
+    s_map_find,
+    s_map_union_fast,
+    s_map_submap,
+    s_map_remap,
+    s_map_add,
+    s_map_set,
+    s_map_remove
+            */
             default: {
                 assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
                 return undefined;
