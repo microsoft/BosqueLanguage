@@ -10,7 +10,7 @@
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-//I want thi for valloc but seems like I need to do windows.h (#include "memoryapi.h")
+//I want this for valloc but seems like I need to do windows.h (#include "memoryapi.h")
 #else
 #include <sys/mman.h>
 #include <unistd.h>
@@ -27,7 +27,7 @@
 #define OCCUPANCY_MID_HIGH_BREAK 0.85f
 
 #define FREE_PAGE_MIN 256
-#define FREE_PAGE_RATIO 0.1f
+#define FREE_PAGE_RATIO 0.2f
 
 ////
 //Alloc page grouping
@@ -73,6 +73,7 @@ public:
     DisplayFP fpDisplay;
     const std::string name;
 
+    size_t tableEntrySize;
     size_t tableEntryCount;
 
     AllocPages allocatedPages;
@@ -84,7 +85,13 @@ public:
     {
         static_assert(sizeof(PageInfo) % 8 == 0);
 
-        this->tableEntryCount = (size_t)((float)(8192 - sizeof(PageInfo)) / (float)(sizeof(GC_META_DATA_WORD) + allocinfo.heapsize));
+        this->tableEntrySize = allocinfo.heapsize;
+
+#ifdef ALLOC_DEBUG_CANARY
+        this->tableEntrySize += ALLOC_DEBUG_CANARY_SIZE;
+#endif
+
+        this->tableEntryCount = (size_t)((float)(8192 - sizeof(PageInfo)) / (float)(sizeof(GC_META_DATA_WORD) + this->tableEntrySize));
     }
 
     virtual ~BSQType() {;}
@@ -163,6 +170,8 @@ public:
         assert((GCStack::stackp - GCStack::sdata) < BSQ_MAX_STACK);
         
         uint8_t* frame = GCStack::stackp;
+
+        //Not required but useful for preventing false pointers -- When we compile might want to only include this prolog on non-leaf or allocating functions (or something similar)
         GC_MEM_ZERO(frame, bytes);
 
         GCStack::stackp += bytes;
@@ -370,19 +379,80 @@ public:
         }
     }
 
+#ifdef ALLOC_FIXED_MEM_ADDR
+    uint8_t* dbg_known_mem_range = nullptr;
+    void dbg_try_reserve_page_range()
+    {
+            uintptr_t known_addr = 68719476736ul; //2^36
+            size_t asize = 134217728ul; //2^27
+
+#ifdef _WIN32
+            //https://docs.microsoft.com/en-us/windows/win32/memory/reserving-and-committing-memory
+            this->dbg_known_mem_range = (uint8_t*)VirtualAlloc(reinterpret_cast<void*>(known_addr), asize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+            assert(this->dbg_known_mem_range != nullptr);
+#else
+            this->dbg_known_mem_range = (uint8_t*)mmap(reinterpret_cast<void*>(known_addr), asize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+            assert(this->dbg_known_mem_range != MAP_FAILED);
+#endif
+
+            if(this->dbg_known_mem_range != reinterpret_cast<void*>(known_addr))
+            {
+                this->dbg_known_mem_range = nullptr;
+                assert(false); //lets flag this and see if/when it triggers
+            }
+    }
+#endif
+
+#ifdef ALLOC_DEBUG_CANARY
+    static void checkCanary(void* addr)
+    {
+        if(((uintptr_t)addr & PAGE_ADDR_MASK) != (uintptr_t)addr)
+        {
+            size_t* curr = (size_t*)(((uint8_t*)addr) - ALLOC_DEBUG_CANARY_SIZE);
+            while(curr < addr)
+            {
+                assert(*curr == ALLOC_DEBUG_MEM_INITIALIZE_VALUE);
+                curr++;
+            }
+        }
+    }
+
+    static void checkAllCanariesOnPage(PageInfo* page)
+    {
+        for(size_t i = 0; i < page->alloc_entry_count; ++i)
+        {
+            if(GC_IS_ALLOCATED(page->slots[i]))
+            {
+                checkCanary(GC_GET_OBJ_AT_INDEX(page, i));
+            }
+        }
+    }
+
+    void checkAllCanaries()
+    {
+        for(auto iter = this->page_set.cbegin(); iter != this->page_set.cend(); ++iter)
+        {
+            checkAllCanariesOnPage(*iter);
+        }
+    }
+#endif
+
     void initializePageFreelist(PageInfo* p)
     {
         p->freelist = nullptr;
-        p->freelist_count = p->entry_count;
+        p->freelist_count = p->alloc_entry_count;
 
-        GC_MEM_ZERO(p->slots, p->entry_count * sizeof(GC_META_DATA_WORD));
+        GC_MEM_ZERO(p->slots, p->alloc_entry_count * sizeof(GC_META_DATA_WORD));
 
-#ifndef DEBUG_ALLOC_BLOCKS
+#ifdef ALLOC_DEBUG_MEM_INITIALIZE
+        GC_MEM_FILL(p->data, p->alloc_entry_count * p->alloc_entry_size, ALLOC_DEBUG_MEM_INITIALIZE_VALUE);
+#endif
+
         void** curr = &p->freelist;
         GC_META_DATA_WORD* metacurr = p->slots;
         uint8_t* datacurr = (uint8_t*)(p->data);
 
-        for(uint64_t i = 0; i < p->entry_count; ++i)
+        for(uint64_t i = 0; i < p->alloc_entry_count; ++i)
         {
             *((void**)datacurr) = *curr;
             *((void**)datacurr + 1) = metacurr;
@@ -390,28 +460,14 @@ public:
             *curr = (void*)datacurr;
 
             metacurr++;
-            datacurr += p->entry_size;
+            datacurr += p->alloc_entry_size;
         }
-#else
-        void** curr = &p->freelist;
-        GC_META_DATA_WORD* metacurr = p->slots;
-
-        for(uint64_t i = 0; i < p->entry_count; ++i)
-        {
-            **((void***)p->data + i) = *curr;
-            *(*((void***)p->data + i) + 1) = metacurr;
-
-            *curr = *((void**)p->data + i);
-
-            metacurr++;
-        }
-#endif
     }
 
     void initializeFreshPageForType(PageInfo* p, BSQType* btype)
     {
-        p->entry_size = btype->allocinfo.heapsize;
-        p->entry_count = btype->tableEntryCount;
+        p->alloc_entry_size = btype->tableEntrySize;
+        p->alloc_entry_count = btype->tableEntryCount;
         
         p->btype = btype;
 
@@ -420,38 +476,32 @@ public:
 
     void unlinkPageFromType(PageInfo* p)
     {
-#ifdef DEBUG_ALLOC_BLOCKS
-        for(size_t i = 0; i < p->btype->tableEntryCount; ++i)
-        {
-            GC_DBG_PAGE_FREE(*((void**)(p->data) + i));
-        }
-#endif
-
-        p->entry_count = 0;
-        p->entry_size = 0;
+        p->alloc_entry_size = 0;
+        p->alloc_entry_count = 0;
         
         p->btype = nullptr;
 
         p->allocinfo = 0x0;
     }
 
-    PageInfo* allocateFreePage(BSQType* btype)
+    PageInfo* allocateFreePageMemOp()
     {
-        PageInfo* pp = nullptr;
-        if(!this->free_pages.empty())
+#ifdef ALLOC_FIXED_MEM_ADDR
+        if(this->dbg_known_mem_range != nullptr)
         {
-            auto minpageiter = this->free_pages.begin();
+            auto pp = (PageInfo*)this->dbg_known_mem_range;
+            this->dbg_known_mem_range += BSQ_BLOCK_ALLOCATION_SIZE;
 
-            pp = *minpageiter;
-            this->free_pages.erase(minpageiter);
+            return pp;
         }
-        else
-        {
-#ifndef DEBUG_ALLOC_BLOCKS
+#endif
+
 #ifdef _WIN32
             //https://docs.microsoft.com/en-us/windows/win32/memory/reserving-and-committing-memory
-            pp = (PageInfo*)VirtualAlloc(nullptr, BSQ_BLOCK_ALLOCATION_SIZE, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+            auto pp = (PageInfo*)VirtualAlloc(nullptr, BSQ_BLOCK_ALLOCATION_SIZE, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
             assert(pp != nullptr);
+
+            return pp;
 #else
             void* ppstart = (PageInfo*)mmap(nullptr, 2 * BSQ_BLOCK_ALLOCATION_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
             assert(ppstart != MAP_FAILED);
@@ -477,30 +527,33 @@ public:
                 assert(rr != -1);
             }
 
-            pp = (PageInfo*)pplcurr;
-#endif
+            auto pp = (PageInfo*)pplcurr;
+
+            return pp;
+#endif   
+    }
+
+    PageInfo* allocateFreePage(BSQType* btype)
+    {
+        PageInfo* pp = nullptr;
+        if(!this->free_pages.empty())
+        {
+            auto minpageiter = this->free_pages.begin();
+
+            pp = *minpageiter;
+            this->free_pages.erase(minpageiter);
+        }
+        else
+        {
+            pp = this->allocateFreePageMemOp();
             pp->slots = (GC_META_DATA_WORD*)((uint8_t*)pp + sizeof(PageInfo));
             pp->data = (GC_META_DATA_WORD*)((uint8_t*)pp + sizeof(PageInfo) + btype->tableEntryCount * sizeof(GC_META_DATA_WORD));
-#else
-            pp = (PageInfo*)zxalloc(sizeof(PageInfo));
-            pp->slots = (GC_META_DATA_WORD*)zxalloc(btype->tableEntryCount * sizeof(GC_META_DATA_WORD));
-            pp->data = (void*)zxalloc(btype->tableEntryCount * sizeof(void*));
-#endif
+
             this->page_set.insert(pp);
 
             assert(MIN_ALLOCATED_ADDRESS < ((uintptr_t)pp));
             assert(((uintptr_t)pp) < MAX_ALLOCATED_ADDRESS);
         }
-
-#ifdef DEBUG_ALLOC_BLOCKS
-        for(size_t i = 0; i < btype->tableEntryCount; ++i)
-        {
-            assert(btype->allocinfo.heapsize >= sizeof(void*) * 2);
-            void* obj = (void*)GC_DBG_PAGE_ALLOC(btype->allocinfo.heapsize);
-            PAGE_MASK_SET_ID(obj, pp);
-            *((void**)(pp->data) + i) = obj;
-        }
-#endif
 
         this->initializeFreshPageForType(pp, btype);
         this->initializePageFreelist(pp);
@@ -510,14 +563,17 @@ public:
 
     void releasePage(PageInfo* pp)
     {
-#ifndef DEBUG_ALLOC_BLOCKS
+#ifdef ALLOC_FIXED_MEM_ADDR
+        if(this->dbg_known_mem_range != nullptr)
+        {
+            return;
+        }
+#endif
+
 #ifdef _WIN32
         VirtualFree(pp, 0, MEM_RELEASE);
 #else
         munmap(pp, BSQ_BLOCK_ALLOCATION_SIZE);
-#endif
-#else
-        delete pp;
 #endif
     }
 
@@ -1359,10 +1415,10 @@ private:
         MEM_STATS_OP(this->gccount++);
         MEM_STATS_OP(this->heap_stats.push_back(this->compute_mem_stats()));
 
-        if(this->blockalloc.free_pages.size() )
+        if(this->blockalloc.free_pages.size() > FREE_PAGE_MIN)
         {
             auto freeratio = (float)this->blockalloc.free_pages.size() / (float)this->blockalloc.page_set.size();
-            if(this->blockalloc.free_pages.size() > FREE_PAGE_MIN || freeratio > FREE_PAGE_RATIO)
+            if(freeratio > FREE_PAGE_RATIO)
             {
                 auto ratiocount = (size_t)(this->blockalloc.free_pages.size() * FREE_PAGE_RATIO);
                 auto trgtfreecount = (FREE_PAGE_MIN < ratiocount) ? FREE_PAGE_MIN : ratiocount;
