@@ -905,6 +905,49 @@ result_error_get_value r =
         _ -> 
             "[NO ERROR INFO]"
 
+list_head_w_default : (List a) -> a -> a
+list_head_w_default l d =  
+    case l of 
+        [] ->
+            d
+        h :: _ ->
+            h
+
+type alias ReduceIdxInfo a =
+    {
+        index: Int,
+        vv: a
+    }
+
+result_reduce : b -> (b -> a -> b) -> (List (Result String a)) -> (Result String b)
+result_reduce acc f l = 
+    case l of 
+        [] ->
+            Ok acc
+        h :: t ->
+            case h of 
+                Err e -> 
+                    Err e
+                Ok v -> 
+                    result_reduce (f acc v) f t
+
+result_map_map : (List (Result String a)) -> (Result String (List a))
+result_map_map l = 
+    case l of 
+        [] ->
+            Ok []
+        h :: t ->
+            case h of 
+                Err msg -> 
+                    Err msg
+                Ok v -> 
+                    let tl = result_map_map t in
+                    case tl of 
+                        Err tlmsg -> 
+                            Err tlmsg 
+                        Ok tll ->
+                            Ok (v :: tll)
+            
 --EPHEMERAL_DECLS--
 
 --MASK_INFO--
@@ -912,5 +955,3 @@ result_error_get_value r =
 --GLOBAL_DECLS--
 
 --FUNCTION_DECLS--
-
---GLOBAL_DEFINITIONS--

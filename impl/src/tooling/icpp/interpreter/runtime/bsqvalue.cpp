@@ -153,7 +153,7 @@ std::string globalObjectDisplay_impl(const BSQType* btype, StorageLocationPtr da
 std::string unionDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
     auto rtype = dynamic_cast<const BSQUnionType*>(btype)->getVType(data);
-    return rtype->fpDisplay(rtype, dynamic_cast<const BSQUnionType*>(btype)->getVData_NoAlloc(data), mode);
+    return rtype->fpDisplay(rtype, dynamic_cast<const BSQUnionType*>(btype)->getVData_StorageLocation(data), mode);
 }
 
 int unionInlineKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2)

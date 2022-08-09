@@ -8,63 +8,63 @@ namespace Core;
 
 #if EXEC_LIBS
 internal entity ListOps provides Some {
-    internal function s_list_index_int(start: Int, end: Int, len: Int): List<Int> = s_list_range;
-    internal function s_list_index_nat(start: Nat, end: Nat, len: Nat): List<Nat> = s_list_range;
+    __safe internal function s_list_index_int(start: Int, end: Int, len: Int): List<Int> = s_list_range;
+    __safe internal function s_list_index_nat(start: Nat, end: Nat, len: Nat): List<Nat> = s_list_range;
 
-    internal function s_list_empty<T>(l: List<T>): Bool = s_list_empty; 
-    internal function s_list_size<T>(l: List<T>): Nat = s_list_size; 
+    __safe internal function s_list_empty<T>(l: List<T>): Bool = s_list_empty; 
+    __safe internal function s_list_size<T>(l: List<T>): Nat = s_list_size; 
 
-    internal function s_list_fill<T>(count: Nat, v: T): List<T> = s_list_fill;
+    __safe internal function s_list_fill<T>(count: Nat, v: T): List<T> = s_list_fill;
 
-    internal function s_list_append<T>(ll: List<T>, rr: List<T>): List<T> = s_list_append;
+    __safe internal function s_list_append<T>(ll: List<T>, rr: List<T>): List<T> = s_list_append;
 
-    internal function s_list_get<T>(l: List<T>, i: Nat): T = s_list_get;
-    internal function s_list_back<T>(l: List<T>): T = s_list_back;
-    internal function s_list_front<T>(l: List<T>): T = s_list_front;
+    __assume_safe internal function s_list_get<T>(l: List<T>, i: Nat): T = s_list_get;
+    __assume_safe internal function s_list_back<T>(l: List<T>): T = s_list_back;
+    __assume_safe internal function s_list_front<T>(l: List<T>): T = s_list_front;
 
-    internal function s_list_set<T>(l: List<T>, i: Nat, v: T): List<T> = s_list_set;
-    internal function s_list_remove<T>(l: List<T>, i: Nat): List<T> = s_list_remove;
-    internal function s_list_insert<T>(l: List<T>, idx: Nat, v: T): List<T> = s_list_insert;
+    __assume_safe internal function s_list_set<T>(l: List<T>, i: Nat, v: T): List<T> = s_list_set;
+    __assume_safe internal function s_list_remove<T>(l: List<T>, i: Nat): List<T> = s_list_remove;
+    __assume_safe internal function s_list_insert<T>(l: List<T>, idx: Nat, v: T): List<T> = s_list_insert;
 
-    internal function s_list_pop_back<T>(l: List<T>): List<T> = s_list_pop_back;
-    internal function s_list_pop_front<T>(l: List<T>): List<T> = s_list_pop_front;
+    __assume_safe internal function s_list_pop_back<T>(l: List<T>): List<T> = s_list_pop_back;
+    __assume_safe internal function s_list_pop_front<T>(l: List<T>): List<T> = s_list_pop_front;
 
-    internal function s_list_push_back<T>(l: List<T>, v: T): List<T> = s_list_push_back;
-    internal function s_list_push_front<T>(l: List<T>, v: T): List<T> = s_list_push_front;
+    __safe internal function s_list_push_back<T>(l: List<T>, v: T): List<T> = s_list_push_back;
+    __safe internal function s_list_push_front<T>(l: List<T>, v: T): List<T> = s_list_push_front;
 
-    internal recursive? function s_list_has_pred<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): Bool = s_list_has_pred;
-    internal recursive? function s_list_has_pred_idx<T>(l: List<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Bool = s_list_has_pred_idx;
+    __conditional_safe internal recursive? function s_list_has_pred<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): Bool = s_list_has_pred;
+    __conditional_safe internal recursive? function s_list_has_pred_idx<T>(l: List<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Bool = s_list_has_pred_idx;
 
-    internal recursive? function s_list_find_pred<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): Int = s_list_find_pred;
-    internal recursive? function s_list_find_pred_idx<T>(l: List<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Int = s_list_find_pred_idx;
-    internal recursive? function s_list_find_pred_last<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): Int = s_list_find_pred_last;
-    internal recursive? function s_list_find_pred_last_idx<T>(l: List<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Int = s_list_find_pred_last_idx;
+    __conditional_safe internal recursive? function s_list_find_pred<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): Int = s_list_find_pred;
+    __conditional_safe internal recursive? function s_list_find_pred_idx<T>(l: List<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Int = s_list_find_pred_idx;
+    __conditional_safe internal recursive? function s_list_find_pred_last<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): Int = s_list_find_pred_last;
+    __conditional_safe internal recursive? function s_list_find_pred_last_idx<T>(l: List<T>, p: recursive? pred(_: T, _: Nat) -> Bool): Int = s_list_find_pred_last_idx;
 
-    internal recursive? function s_list_single_index_of<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): Int = s_list_single_index_of;
+    __conditional_safe internal recursive? function s_list_single_index_of<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): Int = s_list_single_index_of;
 
-    internal function s_list_has<T grounded KeyType>(l: List<T>, v: T): Bool = s_list_has; 
-    internal function s_list_indexof<T grounded KeyType>(l: List<T>, v: T): Int = s_list_indexof; 
-    internal function s_list_last_indexof<T grounded KeyType>(l: List<T>, v: T): Int = s_list_last_indexof; 
+    __safe internal function s_list_has<T grounded KeyType>(l: List<T>, v: T): Bool = s_list_has; 
+    __safe internal function s_list_indexof<T grounded KeyType>(l: List<T>, v: T): Int = s_list_indexof; 
+    __safe internal function s_list_last_indexof<T grounded KeyType>(l: List<T>, v: T): Int = s_list_last_indexof; 
 
-    internal recursive? function s_list_filter_pred<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): List<T> = s_list_filter_pred;
-    internal recursive? function s_list_filter_pred_idx<T>(l: List<T>, p: recursive? pred(_: T, _: Nat) -> Bool): List<T> = s_list_filter_pred_idx;
+    __conditional_safe internal recursive? function s_list_filter_pred<T>(l: List<T>, p: recursive? pred(_: T) -> Bool): List<T> = s_list_filter_pred;
+    __conditional_safe internal recursive? function s_list_filter_pred_idx<T>(l: List<T>, p: recursive? pred(_: T, _: Nat) -> Bool): List<T> = s_list_filter_pred_idx;
 
-    internal recursive? function s_list_map_fn<T, U>(l: List<T>, f: recursive? fn(_: T) -> U): List<U> = s_list_map;
-    internal recursive? function s_list_map_fn_idx<T, U>(l: List<T>, f: recursive? fn(_: T, _: Nat) -> U): List<U> = s_list_map_idx;
-    internal recursive? function s_list_map_fn_sync<T, U, V>(l1: List<T>, l2: List<U>, f: recursive? fn(_: T, _: U) -> V): List<V> = s_list_map_sync;
+    __conditional_safe internal recursive? function s_list_map_fn<T, U>(l: List<T>, f: recursive? fn(_: T) -> U): List<U> = s_list_map;
+    __conditional_safe internal recursive? function s_list_map_fn_idx<T, U>(l: List<T>, f: recursive? fn(_: T, _: Nat) -> U): List<U> = s_list_map_idx;
+    __conditional_safe internal recursive? function s_list_map_fn_sync<T, U, V>(l1: List<T>, l2: List<U>, f: recursive? fn(_: T, _: U) -> V): List<V> = s_list_map_sync;
 
-    internal recursive? function s_list_filter_map_fn<T, U>(l: SeqList<T>, p: recursive? pred(_: T) -> Bool, f: recursive? fn(_: T) -> U): SeqList<U> = s_list_filter_map_fn;
+    __conditional_safe internal recursive? function s_list_filter_map_fn<T, U>(l: SeqList<T>, p: recursive? pred(_: T) -> Bool, f: recursive? fn(_: T) -> U): SeqList<U> = s_list_filter_map_fn;
 
-    internal function s_list_slice_front<T>(l: List<T>, start: Nat): List<T> = s_list_slice_start;
-    internal function s_list_slice_end<T>(l: List<T>, end: Nat): List<T> = s_list_slice_end;
-    internal function s_list_slice<T>(l: List<T>, start: Nat, length: Nat): List<T> = s_list_slice;
+    __assume_safe internal function s_list_slice_front<T>(l: List<T>, start: Nat): List<T> = s_list_slice_start;
+    __assume_safe internal function s_list_slice_end<T>(l: List<T>, end: Nat): List<T> = s_list_slice_end;
+    __assume_safe internal function s_list_slice<T>(l: List<T>, start: Nat, length: Nat): List<T> = s_list_slice;
 
-    internal function s_list_reverse<T>(ll: List<T>): List<T> = s_list_reverse;
+    __safe internal function s_list_reverse<T>(ll: List<T>): List<T> = s_list_reverse;
 
-    internal recursive? function s_list_reduce<T, U>(l: List<T>, iv: U, f: recursive? fn(_: U, _: T) -> U): U = s_list_reduce;
-    internal recursive? function s_list_reduce_idx<T, U>(l: List<T>, iv: U, f: recursive? fn(_: U, _: T, _: Nat) -> U): U = s_list_reduce_idx;
+    __conditional_safe internal recursive? function s_list_reduce<T, U>(l: List<T>, iv: U, f: recursive? fn(_: U, _: T) -> U): U = s_list_reduce;
+    __conditional_safe internal recursive? function s_list_reduce_idx<T, U>(l: List<T>, iv: U, f: recursive? fn(_: U, _: T, _: Nat) -> U): U = s_list_reduce_idx;
 
-    internal recursive? function s_list_transduce<T, E, U>(l: List<T>, env: E, op: recursive? fn(_: E, _: T) -> (|E, U|)): (|E, List<U>|) = s_list_transduce;
-    internal recursive? function s_list_transduce_idx<T, E, U>(l: List<T>, env: E, op: recursive? fn(_: E, _: T, _: Nat) -> (|E, U|)): (|E, List<U>|) = s_list_transduce_idx;
+    __conditional_safe internal recursive? function s_list_transduce<T, E, U>(l: List<T>, env: E, op: recursive? fn(_: E, _: T) -> (|E, U|)): (|E, List<U>|) = s_list_transduce;
+    __conditional_safe internal recursive? function s_list_transduce_idx<T, E, U>(l: List<T>, env: E, op: recursive? fn(_: E, _: T, _: Nat) -> (|E, U|)): (|E, List<U>|) = s_list_transduce_idx;
 }
 #endif

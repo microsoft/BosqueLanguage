@@ -40,7 +40,7 @@ class MorphirTypeEmitter {
             let cleanname = keyid.replace(/:/g, "_").replace(/[<>, \[\]\{\}\(\)\\\/\#\=\|@$.]/g, "_");
 
             if(cleanname.startsWith("_")) {
-                cleanname = "q" + cleanname;
+                cleanname = "Q" + cleanname;
             }
 
             if(this.allshortnames.has(cleanname)) {
@@ -60,7 +60,7 @@ class MorphirTypeEmitter {
 
     internFunctionName(keyid: MIRInvokeKey, shortname: string) {
         if (!this.mangledFunctionNameMap.has(keyid)) {
-            let cleanname = shortname.replace(/:/g, "_").replace(/[<>, \[\]\{\}\(\)\\\/\#\=\|@$.]/g, "_");
+            let cleanname = shortname.replace(/:/g, "_").replace(/[<>, \[\]\{\}\(\)\\\/\#\=\|@$.]/g, "_").replace(/[+*-]/g, "_");
             
             if(cleanname.startsWith("_")) {
                 cleanname = "q" + cleanname;
@@ -291,17 +291,17 @@ class MorphirTypeEmitter {
         const kfix = this.assembly.subtypeOf(tt, this.getMIRType("KeyType")) ? "BKey" : "BObject"
 
         if (this.isUniqueTupleType(tt)) {
-            return { cons: `${mname}`, box: `${mname}_box`, unbox: `unbox_${kfix}${mname}`, default: `bsq${mname.toLowerCase()}_default`};
+            return { cons: `cc${mname}`, box: `${mname}_box`, unbox: `unbox_${kfix}${mname}`, default: `bsq${mname.toLowerCase()}_default`};
         }
         else if (this.isUniqueRecordType(tt)) {
-            return { cons: `${this.lookupTypeName(tt.typeID)}`, box: `${this.lookupTypeName(tt.typeID)}_box`, unbox: `unbox_${kfix}${mname}`, default: `bsq${mname.toLowerCase()}_default` };
+            return { cons: `cc${this.lookupTypeName(tt.typeID)}`, box: `${this.lookupTypeName(tt.typeID)}_box`, unbox: `unbox_${kfix}${mname}`, default: `bsq${mname.toLowerCase()}_default` };
         }
         else if (this.isUniqueEntityType(tt)) {
-            return { cons: `${this.lookupTypeName(tt.typeID)}`, box: `${this.lookupTypeName(tt.typeID)}_box`, unbox: `unbox_${kfix}${mname}`, default: `bsq${mname.toLowerCase()}_default` };
+            return { cons: `cc${this.lookupTypeName(tt.typeID)}`, box: `${this.lookupTypeName(tt.typeID)}_box`, unbox: `unbox_${kfix}${mname}`, default: `bsq${mname.toLowerCase()}_default` };
         }
         else {
             assert(this.isUniqueEphemeralType(tt), "should not be other options")
-            return { cons: `${this.lookupTypeName(tt.typeID)}_cons`, box: "[UNDEF_EPHEMERAL_BOX]", unbox: "[UNDEF_EPHEMERAL_BOX]", default: "[UNDEF_EPHEMERAL_DEFAULT]" };
+            return { cons: `cc${this.lookupTypeName(tt.typeID)}`, box: "[UNDEF_EPHEMERAL_BOX]", unbox: "[UNDEF_EPHEMERAL_BOX]", default: "[UNDEF_EPHEMERAL_DEFAULT]" };
         }
     }
 
@@ -633,22 +633,42 @@ class MorphirTypeEmitter {
 
     generateTupleIndexGetFunction(tt: MIRTupleType, idx: number): string {
         this.internTypeName(tt.typeID);
-        return `${this.lookupTypeName(tt.typeID)}_${idx}`;
+        return `${this.lookupTypeName(tt.typeID).toLowerCase()}_${idx}`;
     } 
 
     generateRecordPropertyGetFunction(tt: MIRRecordType, pname: string): string {
         this.internTypeName(tt.typeID);
-        return `${this.lookupTypeName(tt.typeID)}_${pname}`;
+        return `${this.lookupTypeName(tt.typeID).toLowerCase()}_${pname}`;
     }
 
     generateEntityFieldGetFunction(tt: MIREntityTypeDecl, field: MIRFieldDecl): string {
         this.internTypeName(tt.tkey);
-        return `${this.lookupTypeName(tt.tkey)}_${field.fname}`;
+        return `${this.lookupTypeName(tt.tkey).toLowerCase()}_${field.fname}`;
     }
 
     generateEphemeralListGetFunction(tt: MIREphemeralListType, idx: number): string {
         this.internTypeName(tt.typeID);
-        return `${this.lookupTypeName(tt.typeID)}_${idx}`;
+        return `${this.lookupTypeName(tt.typeID).toLowerCase()}_${idx}`;
+    }
+
+    generateTupleIndexGet(tt: MIRTupleType, idx: number, exp: MorphirExp): MorphirConst {
+        this.internTypeName(tt.typeID);
+        return new MorphirConst(`${exp.emitMorphir(undefined)}.${this.lookupTypeName(tt.typeID).toLowerCase()}_${idx}`);
+    } 
+
+    generateRecordPropertyGet(tt: MIRRecordType, pname: string, exp: MorphirExp): MorphirConst {
+        this.internTypeName(tt.typeID);
+        return new MorphirConst(`${exp.emitMorphir(undefined)}.${this.lookupTypeName(tt.typeID).toLowerCase()}_${pname}`);
+    }
+
+    generateEntityFieldGet(tt: MIREntityTypeDecl, field: MIRFieldDecl, exp: MorphirExp): MorphirConst {
+        this.internTypeName(tt.tkey);
+        return new MorphirConst(`${exp.emitMorphir(undefined)}.${this.lookupTypeName(tt.tkey).toLowerCase()}_${field.fname}`);
+    }
+
+    generateEphemeralListGet(tt: MIREphemeralListType, idx: number, exp: MorphirExp): MorphirConst {
+        this.internTypeName(tt.typeID);
+        return new MorphirConst(`${exp.emitMorphir(undefined)}.${this.lookupTypeName(tt.typeID).toLowerCase()}_${idx}`);
     }
 
     generateResultType(ttype: MIRType): MorphirTypeInfo {
