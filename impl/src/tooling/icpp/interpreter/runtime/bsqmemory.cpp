@@ -5,7 +5,8 @@
 
 #include "bsqmemory.h"
 
-const BSQType** BSQType::g_typetable = nullptr;
+size_t BSQType::g_typeTableSize = 0;
+BSQType** BSQType::g_typetable = nullptr;
 
 uint8_t GCStack::sdata[BSQ_MAX_STACK];
 uint8_t* GCStack::stackp = GCStack::sdata;
