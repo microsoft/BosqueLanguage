@@ -49,8 +49,6 @@ std::map<BSQRecordPropertyID, std::string> BSQRecordInfo::g_propertynamemap;
 
 std::string tupleDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
-    PROCESS_DISPLAY_MODE(btype, mode, data);
-
     const BSQTupleInfo* ttype = dynamic_cast<const BSQTupleInfo*>(btype);
     std::string res = "[";
     for(size_t i = 0; i < ttype->idxoffsets.size(); ++i)
@@ -72,8 +70,6 @@ std::string tupleDisplay_impl(const BSQType* btype, StorageLocationPtr data, Dis
 
 std::string recordDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
-    PROCESS_DISPLAY_MODE(btype, mode, data);
-
     const BSQRecordInfo* ttype = dynamic_cast<const BSQRecordInfo*>(btype);
     std::string res = "{";
     for(size_t i = 0; i < ttype->properties.size(); ++i)
@@ -96,8 +92,6 @@ std::string recordDisplay_impl(const BSQType* btype, StorageLocationPtr data, Di
 
 std::string entityDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
 {
-    PROCESS_DISPLAY_MODE(btype, mode, data);
-
     const BSQEntityInfo* ttype = dynamic_cast<const BSQEntityInfo*>(btype);
     std::string res = btype->name + "{";
     for(size_t i = 0; i < ttype->fields.size(); ++i)

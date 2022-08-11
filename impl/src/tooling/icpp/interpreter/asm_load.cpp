@@ -103,11 +103,7 @@ void initialize(size_t cbuffsize, const RefMask cmask)
 
     Allocator::GlobalAllocator.setGlobalsMemory(globaltype);
 
-#ifndef DEBUG_ALLOC_BLOCKS
     Evaluator::g_constantbuffer = (uint8_t*)GCStack::global_memory->data;
-#else
-    Evaluator::g_constantbuffer = (uint8_t*)*((void**)GCStack::global_memory->data);
-#endif
 }
 
 void initializeLiteral(size_t storageOffset, const BSQType* gtype, std::string& lval)
@@ -273,7 +269,9 @@ void loadAssembly(json j, Evaluator& ee)
 
     ////
     //Load Types
+    BSQType::g_typeTableSize = MarshalEnvironment::g_typenameToIdMap.size();
     BSQType::g_typetable = (const BSQType**)zxalloc(MarshalEnvironment::g_typenameToIdMap.size() * sizeof(const BSQType*));
+
     BSQType::g_typetable[BSQ_TYPE_ID_NONE] = BSQWellKnownType::g_typeNone;
     BSQType::g_typetable[BSQ_TYPE_ID_NOTHING] = BSQWellKnownType::g_typeNothing;
     BSQType::g_typetable[BSQ_TYPE_ID_BOOL] = BSQWellKnownType::g_typeBool;

@@ -24,7 +24,22 @@
 
 #include "../../api_parse/decls.h"
 
-//#define DEBUG_ALLOC_BLOCKS
+////////////////////////////////
+//Enable various GC debugging
+
+#define BSQ_GC_CHECK_ENABLED
+
+#ifdef BSQ_GC_CHECK_ENABLED
+#define ALLOC_DEBUG_STW_GC
+#define ALLOC_DEBUG_MEM_INITIALIZE
+#define ALLOC_DEBUG_CANARY
+#endif
+
+//Can also use other values like 0xFFFFFFFFFFFFFFFFul
+#define ALLOC_DEBUG_MEM_INITIALIZE_VALUE 0x0ul
+
+//Must be multiple of 8
+#define ALLOC_DEBUG_CANARY_SIZE 16
 
 ////////////////////////////////
 //Forward decls for bosque types
@@ -61,7 +76,7 @@ class BSQType;
 ////////////////////////////////
 //Memory allocator
 
-#if defined(MEM_STATS)
+#ifdef MEM_STATS
 #define ENABLE_MEM_STATS
 #define MEM_STATS_OP(X) X
 #define MEM_STATS_ARG(X) X
@@ -82,9 +97,6 @@ class BSQType;
 //         -- or change alloc check to look at base-bound ranges and we never do vlookups on interior references (so no page info access)
 //      This way we will always be safe with the type (and base page) lookups even for very large (like 65k) values
 #define BSQ_ALLOC_MAX_OBJ_SIZE 496ul
-
-//TODO: Types with a small number of allocated objects (e.g. singleton classes) are going to be a bit expensive
-//      Do we have any clever tricks or maybe someone has published something on this?
 
 //List/Map nodes can contain multiple objects so largest allocation is a multiple (4, 8, 16)  of this + a count
 #define BSQ_ALLOC_MAX_BLOCK_SIZE ((BSQ_ALLOC_MAX_OBJ_SIZE * 16ul) + 16ul)
@@ -126,9 +138,6 @@ typedef uint16_t AllocPageInfo;
 #define AllocPageInfo_Alloc 0x1
 #define AllocPageInfo_Ev 0x2
 
-#define AllocPageInfo_Pending 0x4
-#define AllocPageInfo_EvCandidate 0x8
-
 struct PageInfo
 {
     void* freelist; //allocate from here until nullptr
@@ -137,31 +146,19 @@ struct PageInfo
     void* data; //pointer to the data segment in this page
     BSQType* btype;
 
-    uint16_t entry_size; //size of the entries in this page
-    uint16_t entry_count; //max number of objects that can be allocated from this Page
+    uint16_t alloc_entry_size; //size of the alloc entries in this page (may be larger than actual value size)
+    uint16_t alloc_entry_count; //max number of objects that can be allocated from this Page
 
     uint16_t freelist_count;
 
     AllocPageInfo allocinfo;
 };
-#ifndef DEBUG_ALLOC_BLOCKS
 #define PAGE_MASK_EXTRACT_ID(M) (((uintptr_t)M) & PAGE_ADDR_MASK)
 #define PAGE_MASK_EXTRACT_ADDR(M) ((PageInfo*)PAGE_MASK_EXTRACT_ID(M))
-#define PAGE_INDEX_EXTRACT(M, PI) ((((uintptr_t)M) - ((uintptr_t)(PI)->data)) / (PI)->entry_size)
+#define PAGE_INDEX_EXTRACT(M, PI) ((((uintptr_t)M) - ((uintptr_t)(PI)->data)) / (PI)->alloc_entry_size)
 
 #define GC_PAGE_INDEX_FOR_ADDR(M, PAGE) PAGE_INDEX_EXTRACT(M, PAGE)
-#define GC_GET_OBJ_AT_INDEX(PAGE, IDX) ((void*)((uint8_t*)(PAGE)->data + (IDX * (PAGE)->entry_size)))
-#else
-#define GC_DBG_PAGE_ALLOC(SIZE) (void*)((void**)zxalloc(SIZE + sizeof(void*)) + 1)
-#define GC_DBG_PAGE_FREE(M) xfree((void*)((void**)M - 1))
-#define PAGE_MASK_SET_ID(M, PAGE) *((void**)(((uint8_t*)M) - sizeof(void*))) = PAGE
-
-#define PAGE_MASK_EXTRACT_ID(M) (((uint8_t*)M) - sizeof(void*))
-#define PAGE_MASK_EXTRACT_ADDR(M) (*((PageInfo**)PAGE_MASK_EXTRACT_ID(M)))
-
-#define GC_PAGE_INDEX_FOR_ADDR(M, PAGE) (std::distance((void**)((PAGE)->data), std::find((void**)((PAGE)->data), ((void**)((PAGE)->data)) + (PAGE)->entry_count, M)))
-#define GC_GET_OBJ_AT_INDEX(PAGE, IDX) (((void**)((PAGE)->data))[IDX])
-#endif
+#define GC_GET_OBJ_AT_INDEX(PAGE, IDX) ((void*)((uint8_t*)(PAGE)->data + (IDX * (PAGE)->alloc_entry_size)))
 
 #define GC_GET_META_DATA_ADDR(M) (PAGE_MASK_EXTRACT_ADDR(M)->slots + GC_PAGE_INDEX_FOR_ADDR(M, PAGE_MASK_EXTRACT_ADDR(M)))
 #define GC_GET_META_DATA_ADDR_AND_PAGE(M, PAGE) ((PAGE)->slots + GC_PAGE_INDEX_FOR_ADDR(M, PAGE))
@@ -212,6 +209,7 @@ struct PageInfo
 //Misc operations
 #define GC_MEM_COPY(DST, SRC, BYTES) std::copy((uint8_t*)SRC, ((uint8_t*)SRC) + (BYTES), (uint8_t*)DST)
 #define GC_MEM_ZERO(DST, BYTES) std::fill((uint8_t*)DST, ((uint8_t*)DST) + (BYTES), (uint8_t)0)
+#define GC_MEM_FILL(DST, BYTES, V) std::fill((size_t*)DST, (size_t*)((uint8_t*)DST + (BYTES)), (size_t)V)
 
 ////////////////////////////////
 //Storage location ops
@@ -278,30 +276,14 @@ typedef const char* RefMask;
 
 typedef void (*GCProcessOperatorVisitFP)(const BSQType*, void**, void*);
 typedef void (*GCProcessOperatorDecFP)(const BSQType*, void**);
-typedef void (*GCProcessOperatorUpdateEvacuateMoveFP)(const BSQType*, void**, void*);
+typedef void (*GCProcessOperatorUpdateEvacuateUpdateParentFP)(const BSQType*, void**, void*);
+typedef void (*GCProcessOperatorUpdateEvacuateUpdateChildrenFP)(const BSQType*, void**, void*, void*);
 
 enum DisplayMode
 {
     Standard = 0x0,
-    CmdDebug = 0x1,
-    CmdDebugLeaf = 0x2 
+    CmdDebug = 0x1
 };
-
-////////////////
-#define PROCESS_DISPLAY_MODE(BTYPE, MODE, OBJ) {\
-    if(MODE & DisplayMode::CmdDebugLeaf)\
-    {\
-        if(BTYPE->tkind == BSQTypeLayoutKind::Ref)\
-        {\
-            return Allocator::registerDbgObjID(BTYPE, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(OBJ));\
-        }\
-    }\
-    if(MODE & DisplayMode::CmdDebug)\
-    {\
-        MODE = (DisplayMode)(MODE | DisplayMode::CmdDebugLeaf);\
-    }\
-}
-////////////////
 
 typedef std::string (*DisplayFP)(const BSQType*, StorageLocationPtr, DisplayMode);
 
@@ -324,7 +306,8 @@ struct GCFunctorSet
 {
     GCProcessOperatorVisitFP fpProcessObjVisit;
     GCProcessOperatorDecFP fpDecObj;
-    GCProcessOperatorUpdateEvacuateMoveFP fpProcessMoveObj;
+    GCProcessOperatorUpdateEvacuateUpdateParentFP fpProcessEvacuateUpdateParent;
+    GCProcessOperatorUpdateEvacuateUpdateChildrenFP fpProcessEvacuateUpdateChildren;
 };
 
 typedef int (*KeyCmpFP)(const BSQType* btype, StorageLocationPtr, StorageLocationPtr);

@@ -10,7 +10,7 @@
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-//I want thi for valloc but seems like I need to do windows.h (#include "memoryapi.h")
+//I want this for valloc but seems like I need to do windows.h (#include "memoryapi.h")
 #else
 #include <sys/mman.h>
 #include <unistd.h>
@@ -27,7 +27,7 @@
 #define OCCUPANCY_MID_HIGH_BREAK 0.85f
 
 #define FREE_PAGE_MIN 256
-#define FREE_PAGE_RATIO 0.1f
+#define FREE_PAGE_RATIO 0.2f
 
 ////
 //Alloc page grouping
@@ -56,6 +56,7 @@ public:
 class BSQType
 {
 public:
+    static size_t g_typeTableSize;
     static const BSQType** g_typetable;
 
     PageInfo* allocpage;
@@ -73,18 +74,25 @@ public:
     DisplayFP fpDisplay;
     const std::string name;
 
+    size_t tableEntrySize;
     size_t tableEntryCount;
 
+    std::set<PageInfo*> filledpages; //pages that have been filled by the allocator and are pending collection
     AllocPages allocatedPages;
-    std::set<PageInfo*> filledPages; //pages that have been filled by the allocator and are pending collection -- this overlaps with the one in the block allocator but we have it here to so we can process pages of this type when needed
 
     //Constructor that everyone delegates to
     BSQType(BSQTypeID tid, BSQTypeLayoutKind tkind, BSQTypeSizeInfo allocinfo, GCFunctorSet gcops, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyCmpFP fpkeycmp, DisplayFP fpDisplay, std::string name): 
-        allocpage(&AllocPages::g_sential_page), evacuatepage(&AllocPages::g_sential_page), tid(tid), tkind(tkind), allocinfo(allocinfo), gcops(gcops), fpkeycmp(fpkeycmp), vtable(vtable), fpDisplay(fpDisplay), name(name)
+        allocpage(&AllocPages::g_sential_page), evacuatepage(&AllocPages::g_sential_page), tid(tid), tkind(tkind), filledpages(), allocinfo(allocinfo), gcops(gcops), fpkeycmp(fpkeycmp), vtable(vtable), fpDisplay(fpDisplay), name(name)
     {
         static_assert(sizeof(PageInfo) % 8 == 0);
 
-        this->tableEntryCount = (size_t)((float)(8192 - sizeof(PageInfo)) / (float)(sizeof(GC_META_DATA_WORD) + allocinfo.heapsize));
+        this->tableEntrySize = allocinfo.heapsize;
+
+#ifdef ALLOC_DEBUG_CANARY
+        this->tableEntrySize += ALLOC_DEBUG_CANARY_SIZE;
+#endif
+
+        this->tableEntryCount = (size_t)((float)(8192 - sizeof(PageInfo)) / (float)(sizeof(GC_META_DATA_WORD) + this->tableEntrySize));
     }
 
     virtual ~BSQType() {;}
@@ -162,9 +170,12 @@ public:
     {
         assert((GCStack::stackp - GCStack::sdata) < BSQ_MAX_STACK);
         
-        uint8_t* frame = GCStack::stackp;
-        GC_MEM_ZERO(frame, bytes);
+#ifdef ALLOC_DEBUG_CANARY
+        *((size_t*)GCStack::stackp) = 17;
+        GCStack::stackp += sizeof(size_t);
+#endif
 
+        uint8_t* frame = GCStack::stackp;
         GCStack::stackp += bytes;
 
         return frame;
@@ -173,6 +184,14 @@ public:
     inline static void popFrame(size_t bytes)
     {
         GCStack::stackp -= bytes;
+
+#ifdef ALLOC_DEBUG_CANARY
+        GCStack::stackp -= sizeof(size_t);
+        assert(*((size_t*)GCStack::stackp) == 17);
+#endif
+
+        //Not required but useful for preventing false pointers -- When we compile might want to only include this prolog on non-leaf or allocating functions (or something similar)
+        GC_MEM_ZERO(GCStack::stackp, bytes);
     }
 };
 
@@ -347,9 +366,9 @@ class BlockAllocator
 public:
     //set of all pages that are currently allocated -- TODO: probably want some bitvector and/or semi-hierarchical structure here instead
     std::set<PageInfo*> page_set;
-    std::set<PageInfo*> free_pages; //pages that are completely empty
 
-    std::set<PageInfo*> filled_pages; //pages that have been filled by the allocator and are pending collection
+    std::set<PageInfo*> free_pages; //pages that are completely empty
+    std::set<BSQType*> allocated_types; //the set of types that have a alloc page (and maybe filled pages) that are pending processing
 
     inline bool isAddrAllocated(void* addr, void*& realobj) const
     {
@@ -370,19 +389,56 @@ public:
         }
     }
 
+#ifdef ALLOC_DEBUG_CANARY
+    static void checkCanary(void* addr)
+    {
+        if(((uintptr_t)addr & PAGE_ADDR_MASK) != (uintptr_t)addr)
+        {
+            size_t* curr = (size_t*)(((uint8_t*)addr) - ALLOC_DEBUG_CANARY_SIZE);
+            while(curr < addr)
+            {
+                assert(*curr == ALLOC_DEBUG_MEM_INITIALIZE_VALUE);
+                curr++;
+            }
+        }
+    }
+
+    static void checkAllCanariesOnPage(PageInfo* page)
+    {
+        for(size_t i = 0; i < page->alloc_entry_count; ++i)
+        {
+            if(GC_IS_ALLOCATED(page->slots[i]))
+            {
+                checkCanary(GC_GET_OBJ_AT_INDEX(page, i));
+            }
+        }
+    }
+
+    void checkAllCanaries()
+    {
+        for(auto iter = this->page_set.cbegin(); iter != this->page_set.cend(); ++iter)
+        {
+            checkAllCanariesOnPage(*iter);
+        }
+    }
+#endif
+
     void initializePageFreelist(PageInfo* p)
     {
         p->freelist = nullptr;
-        p->freelist_count = p->entry_count;
+        p->freelist_count = p->alloc_entry_count;
 
-        GC_MEM_ZERO(p->slots, p->entry_count * sizeof(GC_META_DATA_WORD));
+        GC_MEM_ZERO(p->slots, p->alloc_entry_count * sizeof(GC_META_DATA_WORD));
 
-#ifndef DEBUG_ALLOC_BLOCKS
+#ifdef ALLOC_DEBUG_MEM_INITIALIZE
+        GC_MEM_FILL(p->data, p->alloc_entry_count * p->alloc_entry_size, ALLOC_DEBUG_MEM_INITIALIZE_VALUE);
+#endif
+
         void** curr = &p->freelist;
         GC_META_DATA_WORD* metacurr = p->slots;
         uint8_t* datacurr = (uint8_t*)(p->data);
 
-        for(uint64_t i = 0; i < p->entry_count; ++i)
+        for(uint64_t i = 0; i < p->alloc_entry_count; ++i)
         {
             *((void**)datacurr) = *curr;
             *((void**)datacurr + 1) = metacurr;
@@ -390,28 +446,14 @@ public:
             *curr = (void*)datacurr;
 
             metacurr++;
-            datacurr += p->entry_size;
+            datacurr += p->alloc_entry_size;
         }
-#else
-        void** curr = &p->freelist;
-        GC_META_DATA_WORD* metacurr = p->slots;
-
-        for(uint64_t i = 0; i < p->entry_count; ++i)
-        {
-            **((void***)p->data + i) = *curr;
-            *(*((void***)p->data + i) + 1) = metacurr;
-
-            *curr = *((void**)p->data + i);
-
-            metacurr++;
-        }
-#endif
     }
 
     void initializeFreshPageForType(PageInfo* p, BSQType* btype)
     {
-        p->entry_size = btype->allocinfo.heapsize;
-        p->entry_count = btype->tableEntryCount;
+        p->alloc_entry_size = btype->tableEntrySize;
+        p->alloc_entry_count = btype->tableEntryCount;
         
         p->btype = btype;
 
@@ -420,38 +462,22 @@ public:
 
     void unlinkPageFromType(PageInfo* p)
     {
-#ifdef DEBUG_ALLOC_BLOCKS
-        for(size_t i = 0; i < p->btype->tableEntryCount; ++i)
-        {
-            GC_DBG_PAGE_FREE(*((void**)(p->data) + i));
-        }
-#endif
-
-        p->entry_count = 0;
-        p->entry_size = 0;
+        p->alloc_entry_size = 0;
+        p->alloc_entry_count = 0;
         
         p->btype = nullptr;
 
         p->allocinfo = 0x0;
     }
 
-    PageInfo* allocateFreePage(BSQType* btype)
+    PageInfo* allocateFreePageMemOp()
     {
-        PageInfo* pp = nullptr;
-        if(!this->free_pages.empty())
-        {
-            auto minpageiter = this->free_pages.begin();
-
-            pp = *minpageiter;
-            this->free_pages.erase(minpageiter);
-        }
-        else
-        {
-#ifndef DEBUG_ALLOC_BLOCKS
 #ifdef _WIN32
             //https://docs.microsoft.com/en-us/windows/win32/memory/reserving-and-committing-memory
-            pp = (PageInfo*)VirtualAlloc(nullptr, BSQ_BLOCK_ALLOCATION_SIZE, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+            auto pp = (PageInfo*)VirtualAlloc(nullptr, BSQ_BLOCK_ALLOCATION_SIZE, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
             assert(pp != nullptr);
+
+            return pp;
 #else
             void* ppstart = (PageInfo*)mmap(nullptr, 2 * BSQ_BLOCK_ALLOCATION_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
             assert(ppstart != MAP_FAILED);
@@ -477,30 +503,33 @@ public:
                 assert(rr != -1);
             }
 
-            pp = (PageInfo*)pplcurr;
-#endif
+            auto pp = (PageInfo*)pplcurr;
+
+            return pp;
+#endif   
+    }
+
+    PageInfo* allocateFreePage(BSQType* btype)
+    {
+        PageInfo* pp = nullptr;
+        if(!this->free_pages.empty())
+        {
+            auto minpageiter = this->free_pages.begin();
+
+            pp = *minpageiter;
+            this->free_pages.erase(minpageiter);
+        }
+        else
+        {
+            pp = this->allocateFreePageMemOp();
             pp->slots = (GC_META_DATA_WORD*)((uint8_t*)pp + sizeof(PageInfo));
             pp->data = (GC_META_DATA_WORD*)((uint8_t*)pp + sizeof(PageInfo) + btype->tableEntryCount * sizeof(GC_META_DATA_WORD));
-#else
-            pp = (PageInfo*)zxalloc(sizeof(PageInfo));
-            pp->slots = (GC_META_DATA_WORD*)zxalloc(btype->tableEntryCount * sizeof(GC_META_DATA_WORD));
-            pp->data = (void*)zxalloc(btype->tableEntryCount * sizeof(void*));
-#endif
+
             this->page_set.insert(pp);
 
             assert(MIN_ALLOCATED_ADDRESS < ((uintptr_t)pp));
             assert(((uintptr_t)pp) < MAX_ALLOCATED_ADDRESS);
         }
-
-#ifdef DEBUG_ALLOC_BLOCKS
-        for(size_t i = 0; i < btype->tableEntryCount; ++i)
-        {
-            assert(btype->allocinfo.heapsize >= sizeof(void*) * 2);
-            void* obj = (void*)GC_DBG_PAGE_ALLOC(btype->allocinfo.heapsize);
-            PAGE_MASK_SET_ID(obj, pp);
-            *((void**)(pp->data) + i) = obj;
-        }
-#endif
 
         this->initializeFreshPageForType(pp, btype);
         this->initializePageFreelist(pp);
@@ -510,14 +539,10 @@ public:
 
     void releasePage(PageInfo* pp)
     {
-#ifndef DEBUG_ALLOC_BLOCKS
 #ifdef _WIN32
         VirtualFree(pp, 0, MEM_RELEASE);
 #else
         munmap(pp, BSQ_BLOCK_ALLOCATION_SIZE);
-#endif
-#else
-        delete pp;
 #endif
     }
 
@@ -529,6 +554,7 @@ public:
         }
         else
         {
+            btype->evacuatepage->allocinfo = 0x0;
             btype->allocatedPages.high_utilization.insert(btype->evacuatepage);
             
             if(!btype->allocatedPages.mid_utilization.empty())
@@ -556,12 +582,11 @@ public:
         if(btype->allocpage == &AllocPages::g_sential_page)
         {
             btype->allocpage = this->allocateFreePage(btype);
-            btype->allocpage->allocinfo = AllocPageInfo_Alloc;
         }
         else
         {
-            btype->allocpage->allocinfo = btype->allocpage->allocinfo & AllocPageInfo_EvCandidate;
-            this->filled_pages.insert(btype->allocpage);
+            btype->allocpage->allocinfo = 0x0;
+            btype->filledpages.insert(btype->allocpage);
 
             if(!btype->allocatedPages.low_utilization.empty())
             {
@@ -577,9 +602,10 @@ public:
             {
                 btype->allocpage = this->allocateFreePage(btype);
             }
-
-            btype->allocpage->allocinfo = btype->allocpage->allocinfo | AllocPageInfo_Alloc;
         }
+        btype->allocpage->allocinfo = AllocPageInfo_Alloc;
+
+        this->allocated_types.insert(btype);
 
         return btype->allocpage;
     }
@@ -590,28 +616,6 @@ class Allocator
 public:
     static Allocator GlobalAllocator;
 
-#ifdef BSQ_DEBUG_BUILD
-    static std::map<size_t, std::pair<const BSQType*, void*>> dbg_idToObjMap;
-
-    static void resetDbgObjIDMap(void* obj)
-    {
-        Allocator::dbg_idToObjMap.clear();
-    }
-
-    static std::string registerDbgObjID(const BSQType* btype, void* obj)
-    {
-        auto id = Allocator::dbg_idToObjMap.size();
-        Allocator::dbg_idToObjMap[id] = std::make_pair(btype, obj);
-
-        return std::string("*") + std::to_string(id);
-    }
-#endif
-
-    void reset()
-    {
-        Allocator::dbg_idToObjMap.clear();
-    }
-
 private:
     BlockAllocator blockalloc;
     GCRefList worklist;
@@ -619,8 +623,6 @@ private:
 
     std::set<void*> oldroots;
     GCRefList roots;
-    GCRefList evacobjs;
-    std::list<PageInfo*> activeallocprocessing; //pages that need to be processed in the STW phase since we are actively allocating from them
 
     std::set<BSQCollectionIterator*> activeiters;
 
@@ -651,7 +653,7 @@ public:
             }
             else
             {
-                GC_STORE_META_DATA_WORD(addr, (GC_ALLOCATED_BIT | GC_RC_KIND_MASK | GC_RC_TWO) | meta);
+                GC_STORE_META_DATA_WORD(addr, GC_ALLOCATED_BIT | (GC_RC_KIND_MASK | GC_RC_TWO) | (meta & GC_MARK_BIT));
             }
         }
     }
@@ -692,18 +694,6 @@ public:
         if(GC_IS_UNREACHABLE(GC_LOAD_META_DATA_WORD(addr)))
         {
             this->processDecHeapRC_Slow(obj);
-        }
-    }
-
-    inline void processDecHeapEvacuate(void* obj, void** slot)
-    {
-        if(obj == *slot)
-        {
-            GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR(obj);
-            auto ometa = PAGE_MASK_EXTRACT_ADDR(*slot)->btype;
-
-            *slot = Allocator::GlobalAllocator.evacuateObject(*slot, ometa, obj);
-            GC_STORE_META_DATA_WORD(addr, GC_RC_SET_PARENT(*addr, nullptr));
         }
     }
 
@@ -760,6 +750,30 @@ public:
         return nobj;
     }
 
+    inline void processHeapEvacuateChildViaUnique(void** slot, void* oobj, void* nobj)
+    {
+        GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR(*slot);
+
+        if(GC_RC_IS_PARENT(*addr) & GC_RC_GET_PARENT(*addr) == oobj)
+        {
+            GC_STORE_META_DATA_WORD(addr, GC_RC_SET_PARENT(*addr, nobj));
+        }
+    }
+
+    inline void processHeapEvacuateParentViaUnique(void** slot, void* obj)
+    {
+        if(obj == *slot)
+        {
+            GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR(obj);
+            auto ometa = PAGE_MASK_EXTRACT_ADDR(*slot)->btype;
+
+            void* nobj = Allocator::GlobalAllocator.evacuateObject(*slot, ometa, obj);
+            ometa->gcops.fpProcessEvacuateUpdateChildren(ometa, (void**)nobj, *slot, obj);
+
+            *slot = nobj;
+        }
+    }
+
     inline static void gcProcessSlotHeap(void** slot, void* fromObj)
     {
         GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR(slot);
@@ -786,13 +800,6 @@ public:
 
                 *slot = Allocator::GlobalAllocator.evacuateObject(*slot, ometa, fromObj);
                 GC_STORE_META_DATA_WORD(addr, GC_SET_FWD_PTR(*slot));
-
-                //if it is an active alloc page but not yet pending then special enqueue it
-                if((pp->allocinfo & (AllocPageInfo_Alloc | AllocPageInfo_Pending)) == AllocPageInfo_Alloc)
-                {
-                    pp->allocinfo = pp->allocinfo | AllocPageInfo_Pending;
-                    Allocator::GlobalAllocator.activeallocprocessing.push_back(pp);
-                }
 
                 if (!ometa->isLeaf())
                 {
@@ -928,37 +935,69 @@ public:
         }
     }
 
-    inline static void gcEvacuateString(void** slot, void* obj)
+    ////////
+    //Operations GC evacuate parent and child using unique RCs
+    inline static void gcEvacuateParentString(void** slot, void* obj)
     {
         if (!IS_INLINE_STRING(*slot))
         {
-            Allocator::GlobalAllocator.processDecHeapEvacuate(obj, slot);
+            Allocator::GlobalAllocator.processHeapEvacuateParentViaUnique(slot, obj);
         }
     }
 
-    inline static void gcEvacuateBigNum(void** slot, void* obj)
+    inline static void gcEvacuateChildString(void** slot, void* oobj, void* nobj)
+    {
+        if (!IS_INLINE_STRING(*slot))
+        {
+            Allocator::GlobalAllocator.processHeapEvacuateChildViaUnique(slot, oobj, nobj);
+        }
+    }
+
+    inline static void gcEvacuateParentBigNum(void** slot, void* obj)
     {
         if (!IS_INLINE_BIGNUM(*slot))
         {
-            Allocator::GlobalAllocator.processDecHeapEvacuate(obj, slot);
+            Allocator::GlobalAllocator.processHeapEvacuateParentViaUnique(slot, obj);
         }
     }
 
-    inline static void gcEvacuateCollection(void** slot, void* obj)
+    inline static void gcEvacuateChildBigNum(void** slot, void* oobj, void* nobj)
+    {
+        if (!IS_INLINE_BIGNUM(*slot))
+        {
+            Allocator::GlobalAllocator.processHeapEvacuateChildViaUnique(slot, oobj, nobj);
+        }
+    }
+
+    inline static void gcEvacuateParentCollection(void** slot, void* obj)
     {
         if (!IS_EMPTY_COLLECTION(*slot))
         {
-            Allocator::GlobalAllocator.processDecHeapEvacuate(obj, slot);
+            Allocator::GlobalAllocator.processHeapEvacuateParentViaUnique(slot, obj);
         }
     }
 
-    inline static void gcEvacuateWithUnion(void** slots, void* obj)
+    inline static void gcEvacuateChildCollection(void** slot, void* oobj, void* nobj)
     {
-        const BSQType* umeta = ((const BSQType*)(*slots));
-        return umeta->gcops.fpProcessMoveObj(umeta, slots + 1, obj);
+        if (!IS_EMPTY_COLLECTION(*slot))
+        {
+            Allocator::GlobalAllocator.processHeapEvacuateChildViaUnique(slot, oobj, nobj);
+        }
     }
 
-    inline static void gcEvacuateWithMask(void** slots, void* obj, RefMask mask)
+    inline static void gcEvacuateParentWithUnion(void** slots, void* obj)
+    {
+        const BSQType* umeta = ((const BSQType*)(*slots));
+        return umeta->gcops.fpProcessEvacuateUpdateParent(umeta, slots + 1, obj);
+    }
+
+    inline static void gcEvacuateChildWithUnion(void** slots, void* oobj, void* nobj)
+    {
+        const BSQType* umeta = ((const BSQType*)(*slots));
+        return umeta->gcops.fpProcessEvacuateUpdateChildren(umeta, slots + 1, oobj, nobj);
+    }
+
+    inline static void gcEvacuateParentWithMask(void** slots, void* obj, RefMask mask)
     {
         void** cslot = slots;
 
@@ -971,40 +1010,72 @@ public:
                 case PTR_FIELD_MASK_NOP:
                     break;
                 case PTR_FIELD_MASK_PTR:
-                    Allocator::GlobalAllocator.processDecHeapEvacuate(obj, cslot);
+                    Allocator::GlobalAllocator.processHeapEvacuateParentViaUnique(cslot, obj);
                     break;
                 case PTR_FIELD_MASK_STRING:
-                    Allocator::gcEvacuateString(cslot, obj);
+                    Allocator::gcEvacuateParentString(cslot, obj);
                     break;
                 case PTR_FIELD_MASK_BIGNUM:
-                    Allocator::gcEvacuateBigNum(cslot, obj);
+                    Allocator::gcEvacuateParentBigNum(cslot, obj);
                     break;
                 case PTR_FIELD_MASK_COLLECTION:
-                    Allocator::gcEvacuateCollection(cslot, obj);
+                    Allocator::gcEvacuateParentCollection(cslot, obj);
                     break;
                 default:
-                    Allocator::gcEvacuateWithUnion(cslot, obj);
+                    Allocator::gcEvacuateParentWithUnion(cslot, obj);
                     break;
             }
             cslot++;
         }
     }
 
-    void postsweep_processing(PageInfo* pp, bool allrcsimple)
+    inline static void gcEvacuateChildWithMask(void** slots, void* oobj, void* nobj, RefMask mask)
     {
-        if(pp->freelist_count == pp->entry_count)
+        void** cslot = slots;
+
+        RefMask cmaskop = mask;
+        while (*cmaskop)
         {
-            //don't put on free list if we are allocating from it
-            if((pp->allocinfo & (AllocPageInfo_Alloc | AllocPageInfo_Ev)) != 0x0)
+            char op = *cmaskop++;
+            switch(op)
             {
-                return;
+                case PTR_FIELD_MASK_NOP:
+                    break;
+                case PTR_FIELD_MASK_PTR:
+                    Allocator::GlobalAllocator.processHeapEvacuateChildViaUnique(cslot, oobj, nobj);
+                    break;
+                case PTR_FIELD_MASK_STRING:
+                    Allocator::gcEvacuateChildString(cslot, oobj, nobj);
+                    break;
+                case PTR_FIELD_MASK_BIGNUM:
+                    Allocator::gcEvacuateChildBigNum(cslot, oobj, nobj);
+                    break;
+                case PTR_FIELD_MASK_COLLECTION:
+                    Allocator::gcEvacuateChildCollection(cslot, oobj, nobj);
+                    break;
+                default:
+                    Allocator::gcEvacuateChildWithUnion(cslot, oobj, nobj);
+                    break;
             }
-                        
+            cslot++;
+        }
+    }
+
+    void postsweep_processing(PageInfo* pp)
+    {
+        //don't put on free list if we are allocating from it
+        if((pp->allocinfo & (AllocPageInfo_Alloc | AllocPageInfo_Ev)) != 0x0)
+        {
+            return;
+        }
+
+        if(pp->freelist_count == pp->alloc_entry_count)
+        {            
             this->blockalloc.unlinkPageFromType(pp);
             this->blockalloc.free_pages.insert(pp);
         }
         
-        auto utilization = (1.0f - (float)pp->freelist_count) / (float)pp->entry_count;
+        auto utilization = (1.0f - (float)pp->freelist_count) / (float)pp->alloc_entry_count;
         pp->allocinfo = 0x0;
 
         if(utilization > OCCUPANCY_MID_HIGH_BREAK)
@@ -1021,90 +1092,50 @@ public:
         }
         else
         {
-            if(allrcsimple)
-            {
-                pp->allocinfo = AllocPageInfo_EvCandidate;
-            }
             pp->btype->allocatedPages.low_utilization.insert(pp);
         }
     }
 
-    template <bool evacrc>
     void processFilledPage(const BSQType* btype, PageInfo* pp)
     {
         GC_META_DATA_WORD* metacurr = pp->slots;
-
-#ifndef DEBUG_ALLOC_BLOCKS
         uint8_t* datacurr = (uint8_t*)(pp->data);
-#endif
 
-        bool allrcsimple = !evacrc;
-        for(uint64_t i = 0; i < pp->entry_count; ++i)
+        for(uint64_t i = 0; i < pp->alloc_entry_count; ++i)
         {
             GC_META_DATA_WORD w = *metacurr;
             if(GC_IS_FWD_PTR(w) | GC_IS_UNREACHABLE(w))
             {
-#ifndef DEBUG_ALLOC_BLOCKS
                 *((void**)datacurr) = pp->freelist;
                 *((void**)datacurr + 1) = metacurr;
 
                 pp->freelist = (void*)datacurr;
-#else
-                auto sweepobj = GC_GET_OBJ_AT_INDEX(pp, i);
-
-                GC_DBG_PAGE_FREE(sweepobj);
-                sweepobj = (void*)GC_DBG_PAGE_ALLOC(pp->btype->allocinfo.heapsize);
-                PAGE_MASK_SET_ID(sweepobj, pp);
-
-                *((void**)(pp->data) + i) = sweepobj;
-
-                **((void***)pp->data + i) = pp->freelist;
-                *(*((void***)pp->data + i) + 1) = metacurr;
-
-                pp->freelist = *((void**)pp->data + i);
-#endif
 
                 pp->freelist_count++;
                 *metacurr = 0x0;
             }
             
-            if constexpr (evacrc)
+            if(GC_IS_LIVE(w) & !GC_IS_MARKED(w) & GC_RC_IS_PARENT(w))
             {
-                if(GC_IS_LIVE(w) & GC_RC_IS_PARENT(w))
-                {
-                    void* parent = GC_RC_GET_PARENT(w);
-                    BSQType* ptype = PAGE_MASK_EXTRACT_ADDR(parent)->btype;
+                void* parent = GC_RC_GET_PARENT(w);
+                BSQType* ptype = PAGE_MASK_EXTRACT_ADDR(parent)->btype;
 
-#ifndef DEBUG_ALLOC_BLOCKS
-                    ptype->gcops.fpProcessMoveObj(ptype, (void**)parent, (void*)datacurr);
-#else
-                    auto evacobj = GC_GET_OBJ_AT_INDEX(pp, i);
-                    ptype->gcops.fpProcessMoveObj(ptype, (void**)parent, evacobj);
-#endif
+                ptype->gcops.fpProcessEvacuateUpdateParent(ptype, (void**)parent, (void*)datacurr);
                 
-                    if(!GC_IS_MARKED(w))
-                    {
-#ifndef DEBUG_ALLOC_BLOCKS
-                        this->evacobjs.enque((void*)datacurr);
-#else
-                        this->evacobjs.enque(evacobj);
-#endif
-                    }
-                }
-            }
-            else
-            {
-                allrcsimple = allrcsimple & GC_HAS_RC_DATA(w) & GC_RC_IS_PARENT(w);
-            }
+                *((void**)datacurr) = pp->freelist;
+                *((void**)datacurr + 1) = metacurr;
 
+                pp->freelist = (void*)datacurr;
+
+                pp->freelist_count++;
+                *metacurr = 0x0;
+            }
+            
             metacurr++;
-
-#ifndef DEBUG_ALLOC_BLOCKS
-            datacurr += pp->entry_size;
-#endif
+            datacurr += pp->alloc_entry_size;
         }
 
-        this->postsweep_processing(pp, allrcsimple);
+        this->postsweep_processing(pp);
     }
 
 private:
@@ -1127,11 +1158,8 @@ private:
             }
         }
 
-#ifndef DEBUG_ALLOC_BLOCKS
         void* groot = GCStack::global_memory->data;
-#else
-        void* groot = *((void**)GCStack::global_memory->data);
-#endif
+
         if(GCStack::global_init_complete)
         {
             //treat it like a single root to the globals object
@@ -1175,48 +1203,26 @@ private:
             }
         }
         this->oldroots.clear();
-
-        GCRefListIterator iter;
-        this->evacobjs.iterBegin(iter);
-        while(this->evacobjs.iterHasMore(iter))
-        {
-            auto obj = iter.get();
-            GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR(obj);
-            GC_META_DATA_WORD w = GC_LOAD_META_DATA_WORD(addr);
-
-            if (!GC_IS_UNREACHABLE(w))
-            {
-                GC_STORE_META_DATA_WORD(addr, GC_SET_DEC_LIST(this->pendingdecs));
-                this->pendingdecs = obj;
-            }
-        }
-        this->evacobjs.reset();
     }
 
     inline static bool dropped_out_of_high_util(PageInfo* pp)
     {
-        float prevoccupancy = 1.0f - ((float)pp->entry_count - (float)(pp->freelist_count - 1)) / (float)pp->entry_count;
-        float occupancy = 1.0f - ((float)pp->entry_count - (float)pp->freelist_count) / (float)pp->entry_count;
+        float prevoccupancy = 1.0f - ((float)pp->alloc_entry_count - (float)(pp->freelist_count - 1)) / (float)pp->alloc_entry_count;
+        float occupancy = 1.0f - ((float)pp->alloc_entry_count - (float)pp->freelist_count) / (float)pp->alloc_entry_count;
 
         return (prevoccupancy > OCCUPANCY_MID_HIGH_BREAK) & (occupancy <= OCCUPANCY_MID_HIGH_BREAK);
     }
 
     void postdec_processing(PageInfo* pp)
     {
-        if(pp->freelist_count == pp->entry_count)
+        //don't put on free list if we are allocating from it
+        if((pp->allocinfo & (AllocPageInfo_Alloc | AllocPageInfo_Ev)) != 0x0)
         {
-            //don't put on free list if we are allocating from it
-            if((pp->allocinfo & (AllocPageInfo_Alloc | AllocPageInfo_Ev)) != 0x0)
-            {
-                return;
-            }
+            return;
+        }
 
-            //it is a filled page so just let it get taken care of when we sweep it
-            if(pp->btype->filledPages.find(pp) != pp->btype->filledPages.cend())
-            {
-                return;
-            }
-
+        if(pp->freelist_count == pp->alloc_entry_count)
+        {
             auto luiter = pp->btype->allocatedPages.low_utilization.find(pp);
             auto huiter = pp->btype->allocatedPages.high_utilization.find(pp);
 
@@ -1240,22 +1246,25 @@ private:
         
         if(Allocator::dropped_out_of_high_util(pp))
         {
-            assert(pp->btype->allocatedPages.low_utilization.find(pp) == pp->btype->allocatedPages.low_utilization.cend());
+            //it is a filled page so just let it get taken care of when we sweep it
+            if(pp->btype->allocatedPages.high_utilization.find(pp) != pp->btype->allocatedPages.high_utilization.cend())
+            {
+                assert(pp->btype->allocatedPages.low_utilization.find(pp) == pp->btype->allocatedPages.low_utilization.cend());
 
-            pp->btype->allocatedPages.high_utilization.erase(pp);
-            pp->btype->allocatedPages.mid_utilization.push_back(pp);
+                pp->btype->allocatedPages.high_utilization.erase(pp);
+                pp->btype->allocatedPages.mid_utilization.push_back(pp);
+            }
         }
     }
 
     GeneralMemoryStats compute_mem_stats()
     {
-//#ifdef GC_SANITY_CHECK
         for(auto piter = this->blockalloc.page_set.cbegin(); piter != this->blockalloc.page_set.cend(); piter++)
         {
             GC_META_DATA_WORD* metacurr = (*piter)->slots;
 
             uint64_t freecount = 0;
-            for(uint64_t i = 0; i < (*piter)->entry_count; ++i)
+            for(uint64_t i = 0; i < (*piter)->alloc_entry_count; ++i)
             {
                 if(*metacurr == 0x0)
                 {
@@ -1280,22 +1289,26 @@ private:
                 assert((*piter)->freelist != nullptr);
             }
         }
-//#endif
 
         uint64_t live_bytes = std::accumulate(this->blockalloc.page_set.cbegin(), this->blockalloc.page_set.cend(), (uint64_t)0, [](uint64_t acc, PageInfo* p) {
-            return acc + (uint64_t)(p->entry_size - p->freelist_count);
+            return acc + (uint64_t)(p->alloc_entry_size - p->freelist_count);
         });
 
         return GeneralMemoryStats{this->blockalloc.page_set.size(), this->blockalloc.free_pages.size(), live_bytes};
     }
 
-    void processPendingDecs(uint32_t& credits, uint32_t maxcredits)
+    void processPendingDecs(uint32_t credits)
     {
-        for(uint32_t i = 0; i < maxcredits && credits > 0 && this->pendingdecs != nullptr; ++i)
+        for(uint32_t i = 0; i < credits && this->pendingdecs != nullptr; ++i)
         {
-            for(size_t i = 0; i < this->dec_ops_count && this->pendingdecs != nullptr; ++i)
+            for(size_t j = 0; j < this->dec_ops_count && this->pendingdecs != nullptr; ++i)
             {
                 void* decobj = this->pendingdecs;
+
+#ifdef ALLOC_DEBUG_CANARY
+                BlockAllocator::checkCanary(decobj);
+#endif
+
                 PageInfo* pp = PAGE_MASK_EXTRACT_ADDR(decobj);
                 GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR_AND_PAGE(decobj, pp);
 
@@ -1304,54 +1317,32 @@ private:
 
                 GC_STORE_META_DATA_WORD(addr, 0x0);
 
-#ifdef DEBUG_ALLOC_BLOCKS
-                auto idx = GC_PAGE_INDEX_FOR_ADDR(decobj, pp);
-
-                GC_DBG_PAGE_FREE(decobj);
-                decobj = (void*)GC_DBG_PAGE_ALLOC(pp->btype->allocinfo.heapsize);
-                PAGE_MASK_SET_ID(decobj, pp);
-                *((void**)(pp->data) + idx) = decobj;
-#endif
-
                 *((void**)decobj) = pp->freelist;
                 *((void**)decobj + 1) = addr;
                 pp->freelist = decobj;
                 pp->freelist_count++;
                 this->postdec_processing(pp);
             }
-
-            credits--;
         }
     }
 
-    void processBlocks(uint32_t credits, BSQType* mdata)
+    void processBlocks(BSQType* mdata)
     {
-        while(credits > 0 && !this->blockalloc.filled_pages.empty())
+        if(mdata->allocpage != &AllocPages::g_sential_page)
         {
-            PageInfo* pp = nullptr;
-            if(mdata != nullptr && !mdata->filledPages.empty())
-            {
-                pp = *(mdata->filledPages.begin());
-            }
-            else
-            {
-                pp = *(this->blockalloc.filled_pages.begin());
-            }
-
-            if((pp->allocinfo & AllocPageInfo_EvCandidate) != 0x0)
-            { 
-                this->processFilledPage<true>(pp->btype, pp);
-            }
-            else
-            {
-                this->processFilledPage<false>(pp->btype, pp);
-            }
-
-            pp->btype->filledPages.erase(pp);
-            this->blockalloc.filled_pages.erase(pp);
-
-            credits--;
+            this->processFilledPage(mdata, mdata->allocpage);
         }
+
+        if(mdata->evacuatepage != &AllocPages::g_sential_page)
+        {
+            this->processFilledPage(mdata, mdata->evacuatepage);
+        }
+
+        for(auto iter = mdata->filledpages.begin(); iter != mdata->filledpages.end(); ++iter)
+        {
+            this->processFilledPage(mdata, *iter);
+        }
+        mdata->filledpages.clear();
     }
 
     void collect()
@@ -1359,10 +1350,10 @@ private:
         MEM_STATS_OP(this->gccount++);
         MEM_STATS_OP(this->heap_stats.push_back(this->compute_mem_stats()));
 
-        if(this->blockalloc.free_pages.size() )
+        if(this->blockalloc.free_pages.size() > FREE_PAGE_MIN)
         {
             auto freeratio = (float)this->blockalloc.free_pages.size() / (float)this->blockalloc.page_set.size();
-            if(this->blockalloc.free_pages.size() > FREE_PAGE_MIN || freeratio > FREE_PAGE_RATIO)
+            if(freeratio > FREE_PAGE_RATIO)
             {
                 auto ratiocount = (size_t)(this->blockalloc.free_pages.size() * FREE_PAGE_RATIO);
                 auto trgtfreecount = (FREE_PAGE_MIN < ratiocount) ? FREE_PAGE_MIN : ratiocount;
@@ -1405,7 +1396,17 @@ private:
 
         //We will take credits proportional to the newly allocated memory -- so in general most work is done in the STW phase
         uint32_t credits = this->post_release_dec_ops_count;
-        this->processPendingDecs(credits, credits);
+        this->processPendingDecs(credits);
+
+#ifdef ALLOC_DEBUG_STW_GC
+        this->processPendingDecs(COLLECT_ALL_PAGE_COST);
+#endif
+
+        for(auto iter = this->blockalloc.allocated_types.begin(); iter != this->blockalloc.allocated_types.end(); ++iter)
+        {
+            this->processBlocks(*iter);
+        }
+        this->blockalloc.allocated_types.clear();
     }
 
     PageInfo* allocate_slow(BSQType* mdata)
@@ -1413,12 +1414,13 @@ private:
         uint32_t credits = this->page_cost;
         bool docollect = false;
 
+        this->current_allocated_bytes += BSQ_BLOCK_ALLOCATION_SIZE;
         if(this->current_allocated_bytes > BSQ_COLLECT_THRESHOLD)
         {
             credits = COLLECT_ALL_PAGE_COST;
             docollect = true;
 
-            if(this->pendingdecs != nullptr || !this->blockalloc.filled_pages.empty())
+            if(this->pendingdecs != nullptr)
             {
                 this->page_cost = (this->page_cost < MAX_PAGE_COST) ? (2 * this->page_cost) : MAX_PAGE_COST;
                 this->post_release_dec_ops_count = 4 * DEFAULT_POST_COLLECT_RUN_DECS_COST;
@@ -1432,21 +1434,21 @@ private:
 
         if(!docollect)
         {
-            this->processPendingDecs(credits, credits / 2);
+            this->processPendingDecs(credits);
         }
 
-        this->processBlocks(credits, mdata);
+        mdata->allocpage = this->blockalloc.processAndGetNewPageForAllocation(mdata);
 
         if(docollect)
         {
             this->collect();
         }
 
-        return this->blockalloc.processAndGetNewPageForAllocation(mdata);
+        return mdata->allocpage;
     }
 
 public:
-    Allocator() : blockalloc(), worklist(), pendingdecs(nullptr), oldroots(), roots(), evacobjs(), activeallocprocessing(), activeiters(), page_cost(DEFAULT_PAGE_COST), dec_ops_count(DEFAULT_DEC_OPS_COUNT), post_release_dec_ops_count(DEFAULT_POST_COLLECT_RUN_DECS_COST)
+    Allocator() : blockalloc(), worklist(), pendingdecs(nullptr), oldroots(), roots(), activeiters(), page_cost(DEFAULT_PAGE_COST), dec_ops_count(DEFAULT_DEC_OPS_COUNT), post_release_dec_ops_count(DEFAULT_POST_COLLECT_RUN_DECS_COST)
     {
         MEM_STATS_OP(this->gccount = 0);
         MEM_STATS_OP(this->maxheap = 0);
@@ -1495,7 +1497,6 @@ public:
     {
         GCStack::global_init_complete = true;
 
-        //Maybe we want to force a collect here or even a very aggressive compact
         //this->collect();
     }
 };
@@ -1514,15 +1515,22 @@ void gcDecOperator_stringImpl(const BSQType* btype, void** data);
 void gcDecOperator_bignumImpl(const BSQType* btype, void** data);
 void gcDecOperator_collectionImpl(const BSQType* btype, void** data);
 
-void gcEvacuateOperator_nopImpl(const BSQType* btype, void** data, void* obj);
-void gcEvacuateOperator_inlineImpl(const BSQType* btype, void** data, void* obj);
-void gcEvacuateOperator_refImpl(const BSQType* btype, void** data, void* obj);
-void gcEvacuateOperator_stringImpl(const BSQType* btype, void** data, void* obj);
-void gcEvacuateOperator_bignumImpl(const BSQType* btype, void** data, void* obj);
-void gcEvacuateOperator_collectionImpl(const BSQType* btype, void** data, void* obj);
+void gcEvacuateParentOperator_nopImpl(const BSQType* btype, void** data, void* obj);
+void gcEvacuateParentOperator_inlineImpl(const BSQType* btype, void** data, void* obj);
+void gcEvacuateParentOperator_refImpl(const BSQType* btype, void** data, void* obj);
+void gcEvacuateParentOperator_stringImpl(const BSQType* btype, void** data, void* obj);
+void gcEvacuateParentOperator_bignumImpl(const BSQType* btype, void** data, void* obj);
+void gcEvacuateParentOperator_collectionImpl(const BSQType* btype, void** data, void* obj);
 
-constexpr GCFunctorSet REF_GC_FUNCTOR_SET{ gcProcessHeapOperator_refImpl, gcDecOperator_refImpl, gcEvacuateOperator_refImpl };
-constexpr GCFunctorSet STRUCT_LEAF_GC_FUNCTOR_SET{ gcProcessHeapOperator_nopImpl, gcDecOperator_nopImpl, gcEvacuateOperator_nopImpl };
-constexpr GCFunctorSet STRUCT_STD_GC_FUNCTOR_SET{ gcProcessHeapOperator_inlineImpl, gcDecOperator_inlineImpl, gcEvacuateOperator_inlineImpl };
-constexpr GCFunctorSet REGISTER_GC_FUNCTOR_SET{ gcProcessHeapOperator_nopImpl, gcDecOperator_nopImpl, gcEvacuateOperator_nopImpl };
+void gcEvacuateChildOperator_nopImpl(const BSQType* btype, void** data, void* oobj, void* nobj);
+void gcEvacuateChildOperator_inlineImpl(const BSQType* btype, void** data, void* oobj, void* nobj);
+void gcEvacuateChildOperator_refImpl(const BSQType* btype, void** data, void* oobj, void* nobj);
+void gcEvacuateChildOperator_stringImpl(const BSQType* btype, void** data, void* oobj, void* nobj);
+void gcEvacuateChildOperator_bignumImpl(const BSQType* btype, void** data, void* oobj, void* nobj);
+void gcEvacuateChildOperator_collectionImpl(const BSQType* btype, void** data, void* oobj, void* nobj);
+
+constexpr GCFunctorSet REF_GC_FUNCTOR_SET{ gcProcessHeapOperator_refImpl, gcDecOperator_refImpl, gcEvacuateParentOperator_refImpl, gcEvacuateChildOperator_refImpl};
+constexpr GCFunctorSet STRUCT_LEAF_GC_FUNCTOR_SET{ gcProcessHeapOperator_nopImpl, gcDecOperator_nopImpl, gcEvacuateParentOperator_nopImpl, gcEvacuateChildOperator_nopImpl };
+constexpr GCFunctorSet STRUCT_STD_GC_FUNCTOR_SET{ gcProcessHeapOperator_inlineImpl, gcDecOperator_inlineImpl, gcEvacuateParentOperator_inlineImpl, gcEvacuateChildOperator_inlineImpl };
+constexpr GCFunctorSet REGISTER_GC_FUNCTOR_SET{ gcProcessHeapOperator_nopImpl, gcDecOperator_nopImpl, gcEvacuateParentOperator_nopImpl, gcEvacuateChildOperator_nopImpl };
 
