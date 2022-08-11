@@ -699,12 +699,12 @@ public:
 
     inline void gcCopyRoots(uintptr_t v)
     {
-        if((((uintptr_t)GCStack::sdata) <= v) | (v <= ((uintptr_t)GCStack::stackp)))
+        if((((uintptr_t)GCStack::sdata) <= v) & (v <= ((uintptr_t)GCStack::stackp)))
         {
             return; //it is a pointer to something on the stack -- which gets rooted when that frame is scanned
         }
 
-        if((MIN_ALLOCATED_ADDRESS < v) | (v < MAX_ALLOCATED_ADDRESS))
+        if((v < MIN_ALLOCATED_ADDRESS) | (MAX_ALLOCATED_ADDRESS < v))
         {
             return; //it is obviously not a pointer
         }
@@ -716,9 +716,18 @@ public:
             GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR(resolvedobj);
             GC_META_DATA_WORD w = GC_LOAD_META_DATA_WORD(addr);
             
-            GC_STORE_META_DATA_WORD(addr, GC_SET_MARK_BIT(w));
+            if(!GC_IS_MARKED(w))
+            {
+                GC_STORE_META_DATA_WORD(addr, GC_SET_MARK_BIT(w));
 
-            this->roots.enque(resolvedobj);
+                this->roots.enque(resolvedobj);
+
+                auto ometa = GET_TYPE_META_DATA(resolvedobj);
+                if(!ometa->isLeaf())
+                {
+                    this->worklist.enque(resolvedobj);
+                }
+            }
         }
     }
 
@@ -745,7 +754,7 @@ public:
         GC_MEM_COPY(nobj, obj, ometa->allocinfo.heapsize);
         
         GC_META_DATA_WORD* naddr = GC_GET_META_DATA_ADDR(nobj);
-        GC_STORE_META_DATA_WORD(naddr, GC_RC_SET_PARENT(GC_ALLOCATED_BIT, fromObj));
+        GC_STORE_META_DATA_WORD(naddr, GC_RC_SET_PARENT(*naddr, fromObj));
 
         return nobj;
     }
@@ -846,7 +855,7 @@ public:
         RefMask cmaskop = mask;
         while (*cmaskop)
         {
-            char op = *cmaskop++;
+            char op = *cmaskop;
             switch(op)
             {
                 case PTR_FIELD_MASK_NOP:
@@ -867,6 +876,7 @@ public:
                     Allocator::gcProcessSlotsWithUnion(cslot, fromObj);
                     break;
             }
+            cmaskop++;
             cslot++;
         }
     }
@@ -910,7 +920,7 @@ public:
         RefMask cmaskop = mask;
         while (*cmaskop)
         {
-            char op = *cmaskop++;
+            char op = *cmaskop;
             switch(op)
             {
                 case PTR_FIELD_MASK_NOP:
@@ -931,6 +941,7 @@ public:
                     Allocator::gcDecrementSlotsWithUnion(cslot);
                     break;
             }
+            cmaskop++;
             cslot++;
         }
     }
@@ -1004,7 +1015,7 @@ public:
         RefMask cmaskop = mask;
         while (*cmaskop)
         {
-            char op = *cmaskop++;
+            char op = *cmaskop;
             switch(op)
             {
                 case PTR_FIELD_MASK_NOP:
@@ -1025,6 +1036,7 @@ public:
                     Allocator::gcEvacuateParentWithUnion(cslot, obj);
                     break;
             }
+            cmaskop++;
             cslot++;
         }
     }
@@ -1036,7 +1048,7 @@ public:
         RefMask cmaskop = mask;
         while (*cmaskop)
         {
-            char op = *cmaskop++;
+            char op = *cmaskop;
             switch(op)
             {
                 case PTR_FIELD_MASK_NOP:
@@ -1057,6 +1069,7 @@ public:
                     Allocator::gcEvacuateChildWithUnion(cslot, oobj, nobj);
                     break;
             }
+            cmaskop++;
             cslot++;
         }
     }
@@ -1163,7 +1176,7 @@ private:
         if(GCStack::global_init_complete)
         {
             //treat it like a single root to the globals object
-            this->gcCopyRoots(*((uintptr_t*)groot));
+            this->gcCopyRoots((uintptr_t)groot);
         }
         else
         {
@@ -1381,7 +1394,7 @@ private:
             GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR(robj);
             GC_STORE_META_DATA_WORD(addr, (*addr) & ~GC_MARK_BIT);
 
-            oldroots.insert(robj);
+            this->oldroots.insert(robj);
 
             this->roots.iterAdvance(oriter);
         }
@@ -1468,7 +1481,7 @@ public:
         }
         
         uint8_t* alloc = (uint8_t*)pp->freelist;
-        *((GC_META_DATA_WORD*)(*((void**)pp->freelist + 1))) = GC_ALLOCATED_BIT;
+        GC_INIT_YOUNG_ALLOC((GC_META_DATA_WORD*)(*((void**)pp->freelist + 1)));
 
         pp->freelist = *((void**)pp->freelist);
         pp->freelist_count--;
@@ -1495,9 +1508,10 @@ public:
 
     void completeGlobalInitialization()
     {
+        GC_INIT_YOUNG_ALLOC(GCStack::global_memory->slots);
         GCStack::global_init_complete = true;
 
-        //this->collect();
+        this->collect();
     }
 };
 
