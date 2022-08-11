@@ -307,6 +307,7 @@ struct GCFunctorSet
 {
     GCProcessOperatorVisitFP fpProcessObjVisit;
     GCProcessOperatorDecFP fpDecObj;
+    GCProcessOperatorUpdateEvacuateUpdateParentFP fpProcessEvacuateUpdateParent;
     GCProcessOperatorUpdateEvacuateUpdateChildrenFP fpProcessEvacuateUpdateChildren;
 };
 

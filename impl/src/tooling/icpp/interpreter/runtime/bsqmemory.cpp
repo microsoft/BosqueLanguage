@@ -79,32 +79,62 @@ void gcDecOperator_collectionImpl(const BSQType* btype, void** data)
     Allocator::gcDecrementCollection(data);
 }
 
-void gcEvacuateOperator_nopImpl(const BSQType* btype, void** data, void* obj)
+void gcEvacuateParentOperator_nopImpl(const BSQType* btype, void** data, void* obj)
 {
     return;
 }
 
-void gcEvacuateOperator_inlineImpl(const BSQType* btype, void** data, void* obj)
+void gcEvacuateParentOperator_inlineImpl(const BSQType* btype, void** data, void* obj)
 {
-    Allocator::gcEvacuateWithMask(data, obj, btype->allocinfo.inlinedmask);
+    Allocator::gcEvacuateParentWithMask(data, obj, btype->allocinfo.inlinedmask);
 }
 
-void gcEvacuateOperator_refImpl(const BSQType* btype, void** data, void* obj)
+void gcEvacuateParentOperator_refImpl(const BSQType* btype, void** data, void* obj)
 {
-    Allocator::GlobalAllocator.processHeapEvacuate(obj, data);
+    Allocator::GlobalAllocator.processHeapEvacuateParentViaUnique(data, obj);
 }
 
-void gcEvacuateOperator_stringImpl(const BSQType* btype, void** data, void* obj)
+void gcEvacuateParentOperator_stringImpl(const BSQType* btype, void** data, void* obj)
 {
-    Allocator::gcEvacuateString(data, obj);
+    Allocator::gcEvacuateParentString(data, obj);
 }
 
-void gcEvacuateOperator_bignumImpl(const BSQType* btype, void** data, void* obj)
+void gcEvacuateParentOperator_bignumImpl(const BSQType* btype, void** data, void* obj)
 {
-    Allocator::gcEvacuateBigNum(data, obj);
+    Allocator::gcEvacuateParentBigNum(data, obj);
 }
 
-void gcEvacuateOperator_collectionImpl(const BSQType* btype, void** data, void* obj)
+void gcEvacuateParentOperator_collectionImpl(const BSQType* btype, void** data, void* obj)
 {
-    Allocator::gcEvacuateCollection(data, obj);
+    Allocator::gcEvacuateParentCollection(data, obj);
+}
+
+void gcEvacuateChildOperator_nopImpl(const BSQType* btype, void** data, void* oobj, void* nobj)
+{
+    return;
+}
+
+void gcEvacuateChildOperator_inlineImpl(const BSQType* btype, void** data, void* oobj, void* nobj)
+{
+    Allocator::gcEvacuateChildWithMask(data, oobj, nobj, btype->allocinfo.inlinedmask);
+}
+
+void gcEvacuateChildOperator_refImpl(const BSQType* btype, void** data, void* oobj, void* nobj)
+{
+    Allocator::GlobalAllocator.processHeapEvacuateChildViaUnique(data, oobj, nobj);
+}
+
+void gcEvacuateChildOperator_stringImpl(const BSQType* btype, void** data, void* oobj, void* nobj)
+{
+    Allocator::gcEvacuateChildString(data, oobj, nobj);
+}
+
+void gcEvacuateChildOperator_bignumImpl(const BSQType* btype, void** data, void* oobj, void* nobj)
+{
+    Allocator::gcEvacuateChildBigNum(data, oobj, nobj);
+}
+
+void gcEvacuateChildOperator_collectionImpl(const BSQType* btype, void** data, void* oobj, void* nobj)
+{
+    Allocator::gcEvacuateChildCollection(data, oobj, nobj);
 }

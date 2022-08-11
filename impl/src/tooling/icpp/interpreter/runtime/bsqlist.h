@@ -491,7 +491,7 @@ public:
     const BSQTypeID etype; //type of entries in the list
 
     BSQListType(BSQTypeID tid, DisplayFP fpDisplay, std::string name, BSQTypeID etype): 
-        BSQType(tid, BSQTypeLayoutKind::Collection, {8, 8, 8, nullptr, "5"}, {gcProcessHeapOperator_collectionImpl, gcDecOperator_collectionImpl, gcEvacuateOperator_collectionImpl}, {}, EMPTY_KEY_CMP, fpDisplay, name),
+        BSQType(tid, BSQTypeLayoutKind::Collection, {8, 8, 8, nullptr, "5"}, {gcProcessHeapOperator_collectionImpl, gcDecOperator_collectionImpl, gcEvacuateParentOperator_collectionImpl, gcEvacuateChildOperator_collectionImpl}, {}, EMPTY_KEY_CMP, fpDisplay, name),
         etype(etype)
     {;}
 

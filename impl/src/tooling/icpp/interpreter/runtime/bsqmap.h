@@ -170,7 +170,7 @@ public:
     const BSQTypeID vtype; //type of V in the map
 
     BSQMapType(BSQTypeID tid, DisplayFP fpDisplay, std::string name, BSQTypeID ktype, BSQTypeID vtype): 
-        BSQType(tid, BSQTypeLayoutKind::Collection, {8, 8, 8, nullptr, "5"}, {gcProcessHeapOperator_collectionImpl, gcDecOperator_collectionImpl, gcEvacuateOperator_collectionImpl}, {}, EMPTY_KEY_CMP, fpDisplay, name),
+        BSQType(tid, BSQTypeLayoutKind::Collection, {8, 8, 8, nullptr, "5"}, {gcProcessHeapOperator_collectionImpl, gcDecOperator_collectionImpl, gcEvacuateParentOperator_collectionImpl, gcEvacuateChildOperator_collectionImpl}, {}, EMPTY_KEY_CMP, fpDisplay, name),
         ktype(ktype), vtype(vtype) 
     {;}
 

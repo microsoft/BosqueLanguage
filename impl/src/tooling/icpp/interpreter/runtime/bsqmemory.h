@@ -1000,21 +1000,35 @@ public:
         }
     }
 
-    inline static void gcEvacuateCollection(void** slot, void* obj)
+    inline static void gcEvacuateParentCollection(void** slot, void* obj)
     {
         if (!IS_EMPTY_COLLECTION(*slot))
         {
-            Allocator::GlobalAllocator.processDecHeapEvacuate(obj, slot);
+            Allocator::GlobalAllocator.processHeapEvacuateParentViaUnique(slot, obj);
         }
     }
 
-    inline static void gcEvacuateWithUnion(void** slots, void* obj)
+    inline static void gcEvacuateChildCollection(void** slot, void* oobj, void* nobj)
     {
-        const BSQType* umeta = ((const BSQType*)(*slots));
-        return umeta->gcops.fpProcessMoveObj(umeta, slots + 1, obj);
+        if (!IS_EMPTY_COLLECTION(*slot))
+        {
+            Allocator::GlobalAllocator.processHeapEvacuateChildViaUnique(slot, oobj, nobj);
+        }
     }
 
-    inline static void gcEvacuateWithMask(void** slots, void* obj, RefMask mask)
+    inline static void gcEvacuateParentWithUnion(void** slots, void* obj)
+    {
+        const BSQType* umeta = ((const BSQType*)(*slots));
+        return umeta->gcops.fpProcessEvacuateUpdateParent(umeta, slots + 1, obj);
+    }
+
+    inline static void gcEvacuateChildWithUnion(void** slots, void* oobj, void* nobj)
+    {
+        const BSQType* umeta = ((const BSQType*)(*slots));
+        return umeta->gcops.fpProcessEvacuateUpdateChildren(umeta, slots + 1, oobj, nobj);
+    }
+
+    inline static void gcEvacuateParentWithMask(void** slots, void* obj, RefMask mask)
     {
         void** cslot = slots;
 
@@ -1027,19 +1041,51 @@ public:
                 case PTR_FIELD_MASK_NOP:
                     break;
                 case PTR_FIELD_MASK_PTR:
-                    Allocator::GlobalAllocator.processDecHeapEvacuate(obj, cslot);
+                    Allocator::GlobalAllocator.processHeapEvacuateParentViaUnique(cslot, obj);
                     break;
                 case PTR_FIELD_MASK_STRING:
-                    Allocator::gcEvacuateString(cslot, obj);
+                    Allocator::gcEvacuateParentString(cslot, obj);
                     break;
                 case PTR_FIELD_MASK_BIGNUM:
-                    Allocator::gcEvacuateBigNum(cslot, obj);
+                    Allocator::gcEvacuateParentBigNum(cslot, obj);
                     break;
                 case PTR_FIELD_MASK_COLLECTION:
-                    Allocator::gcEvacuateCollection(cslot, obj);
+                    Allocator::gcEvacuateParentCollection(cslot, obj);
                     break;
                 default:
-                    Allocator::gcEvacuateWithUnion(cslot, obj);
+                    Allocator::gcEvacuateParentWithUnion(cslot, obj);
+                    break;
+            }
+            cslot++;
+        }
+    }
+
+    inline static void gcEvacuateChildWithMask(void** slots, void* oobj, void* nobj, RefMask mask)
+    {
+        void** cslot = slots;
+
+        RefMask cmaskop = mask;
+        while (*cmaskop)
+        {
+            char op = *cmaskop++;
+            switch(op)
+            {
+                case PTR_FIELD_MASK_NOP:
+                    break;
+                case PTR_FIELD_MASK_PTR:
+                    Allocator::GlobalAllocator.processHeapEvacuateChildViaUnique(cslot, oobj, nobj);
+                    break;
+                case PTR_FIELD_MASK_STRING:
+                    Allocator::gcEvacuateChildString(cslot, oobj, nobj);
+                    break;
+                case PTR_FIELD_MASK_BIGNUM:
+                    Allocator::gcEvacuateChildBigNum(cslot, oobj, nobj);
+                    break;
+                case PTR_FIELD_MASK_COLLECTION:
+                    Allocator::gcEvacuateChildCollection(cslot, oobj, nobj);
+                    break;
+                default:
+                    Allocator::gcEvacuateChildWithUnion(cslot, oobj, nobj);
                     break;
             }
             cslot++;
@@ -1105,7 +1151,7 @@ public:
                 void* parent = GC_RC_GET_PARENT(w);
                 BSQType* ptype = PAGE_MASK_EXTRACT_ADDR(parent)->btype;
 
-                this->processHeapEvacuateParentViaUnique((void**)parent, (void*)datacurr);
+                ptype->gcops.fpProcessEvacuateUpdateParent(ptype, (void**)parent, (void*)datacurr);
                 
                 *((void**)datacurr) = pp->freelist;
                 *((void**)datacurr + 1) = metacurr;
@@ -1188,22 +1234,6 @@ private:
             }
         }
         this->oldroots.clear();
-
-        GCRefListIterator iter;
-        this->evacobjs.iterBegin(iter);
-        while(this->evacobjs.iterHasMore(iter))
-        {
-            auto obj = iter.get();
-            GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR(obj);
-            GC_META_DATA_WORD w = GC_LOAD_META_DATA_WORD(addr);
-
-            if (!GC_IS_UNREACHABLE(w))
-            {
-                GC_STORE_META_DATA_WORD(addr, GC_SET_DEC_LIST(this->pendingdecs));
-                this->pendingdecs = obj;
-            }
-        }
-        this->evacobjs.reset();
     }
 
     inline static bool dropped_out_of_high_util(PageInfo* pp)
@@ -1502,7 +1532,7 @@ public:
     {
         GCStack::global_init_complete = true;
 
-        this->collect();
+        //this->collect();
     }
 };
 
@@ -1520,15 +1550,22 @@ void gcDecOperator_stringImpl(const BSQType* btype, void** data);
 void gcDecOperator_bignumImpl(const BSQType* btype, void** data);
 void gcDecOperator_collectionImpl(const BSQType* btype, void** data);
 
-void gcEvacuateOperator_nopImpl(const BSQType* btype, void** data, void* obj);
-void gcEvacuateOperator_inlineImpl(const BSQType* btype, void** data, void* obj);
-void gcEvacuateOperator_refImpl(const BSQType* btype, void** data, void* obj);
-void gcEvacuateOperator_stringImpl(const BSQType* btype, void** data, void* obj);
-void gcEvacuateOperator_bignumImpl(const BSQType* btype, void** data, void* obj);
-void gcEvacuateOperator_collectionImpl(const BSQType* btype, void** data, void* obj);
+void gcEvacuateParentOperator_nopImpl(const BSQType* btype, void** data, void* obj);
+void gcEvacuateParentOperator_inlineImpl(const BSQType* btype, void** data, void* obj);
+void gcEvacuateParentOperator_refImpl(const BSQType* btype, void** data, void* obj);
+void gcEvacuateParentOperator_stringImpl(const BSQType* btype, void** data, void* obj);
+void gcEvacuateParentOperator_bignumImpl(const BSQType* btype, void** data, void* obj);
+void gcEvacuateParentOperator_collectionImpl(const BSQType* btype, void** data, void* obj);
 
-constexpr GCFunctorSet REF_GC_FUNCTOR_SET{ gcProcessHeapOperator_refImpl, gcDecOperator_refImpl, gcEvacuateOperator_refImpl };
-constexpr GCFunctorSet STRUCT_LEAF_GC_FUNCTOR_SET{ gcProcessHeapOperator_nopImpl, gcDecOperator_nopImpl, gcEvacuateOperator_nopImpl };
-constexpr GCFunctorSet STRUCT_STD_GC_FUNCTOR_SET{ gcProcessHeapOperator_inlineImpl, gcDecOperator_inlineImpl, gcEvacuateOperator_inlineImpl };
-constexpr GCFunctorSet REGISTER_GC_FUNCTOR_SET{ gcProcessHeapOperator_nopImpl, gcDecOperator_nopImpl, gcEvacuateOperator_nopImpl };
+void gcEvacuateChildOperator_nopImpl(const BSQType* btype, void** data, void* oobj, void* nobj);
+void gcEvacuateChildOperator_inlineImpl(const BSQType* btype, void** data, void* oobj, void* nobj);
+void gcEvacuateChildOperator_refImpl(const BSQType* btype, void** data, void* oobj, void* nobj);
+void gcEvacuateChildOperator_stringImpl(const BSQType* btype, void** data, void* oobj, void* nobj);
+void gcEvacuateChildOperator_bignumImpl(const BSQType* btype, void** data, void* oobj, void* nobj);
+void gcEvacuateChildOperator_collectionImpl(const BSQType* btype, void** data, void* oobj, void* nobj);
+
+constexpr GCFunctorSet REF_GC_FUNCTOR_SET{ gcProcessHeapOperator_refImpl, gcDecOperator_refImpl, gcEvacuateParentOperator_refImpl, gcEvacuateChildOperator_refImpl};
+constexpr GCFunctorSet STRUCT_LEAF_GC_FUNCTOR_SET{ gcProcessHeapOperator_nopImpl, gcDecOperator_nopImpl, gcEvacuateParentOperator_nopImpl, gcEvacuateChildOperator_nopImpl };
+constexpr GCFunctorSet STRUCT_STD_GC_FUNCTOR_SET{ gcProcessHeapOperator_inlineImpl, gcDecOperator_inlineImpl, gcEvacuateParentOperator_inlineImpl, gcEvacuateChildOperator_inlineImpl };
+constexpr GCFunctorSet REGISTER_GC_FUNCTOR_SET{ gcProcessHeapOperator_nopImpl, gcDecOperator_nopImpl, gcEvacuateParentOperator_nopImpl, gcEvacuateChildOperator_nopImpl };
 
