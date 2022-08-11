@@ -277,7 +277,8 @@ typedef const char* RefMask;
 
 typedef void (*GCProcessOperatorVisitFP)(const BSQType*, void**, void*);
 typedef void (*GCProcessOperatorDecFP)(const BSQType*, void**);
-typedef void (*GCProcessOperatorUpdateEvacuateMoveFP)(const BSQType*, void**, void*);
+typedef void (*GCProcessOperatorUpdateEvacuateUpdateParentFP)(const BSQType*, void**, void*);
+typedef void (*GCProcessOperatorUpdateEvacuateUpdateChildrenFP)(const BSQType*, void**, void*, void*);
 
 enum DisplayMode
 {
@@ -306,7 +307,7 @@ struct GCFunctorSet
 {
     GCProcessOperatorVisitFP fpProcessObjVisit;
     GCProcessOperatorDecFP fpDecObj;
-    GCProcessOperatorUpdateEvacuateMoveFP fpProcessMoveObj;
+    GCProcessOperatorUpdateEvacuateUpdateChildrenFP fpProcessEvacuateUpdateChildren;
 };
 
 typedef int (*KeyCmpFP)(const BSQType* btype, StorageLocationPtr, StorageLocationPtr);

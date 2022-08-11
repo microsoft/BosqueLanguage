@@ -171,10 +171,6 @@ public:
         assert((GCStack::stackp - GCStack::sdata) < BSQ_MAX_STACK);
         
         uint8_t* frame = GCStack::stackp;
-
-        //Not required but useful for preventing false pointers -- When we compile might want to only include this prolog on non-leaf or allocating functions (or something similar)
-        GC_MEM_ZERO(frame, bytes);
-
         GCStack::stackp += bytes;
 
         return frame;
@@ -183,6 +179,9 @@ public:
     inline static void popFrame(size_t bytes)
     {
         GCStack::stackp -= bytes;
+
+        //Not required but useful for preventing false pointers -- When we compile might want to only include this prolog on non-leaf or allocating functions (or something similar)
+        GC_MEM_ZERO(GCStack::stackp, bytes);
     }
 };
 
@@ -655,7 +654,6 @@ private:
 
     std::set<void*> oldroots;
     GCRefList roots;
-    GCRefList evacobjs;
 
     std::set<BSQCollectionIterator*> activeiters;
 
@@ -730,18 +728,6 @@ public:
         }
     }
 
-    inline void processDecHeapEvacuate(void* obj, void** slot)
-    {
-        if(obj == *slot)
-        {
-            GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR(obj);
-            auto ometa = PAGE_MASK_EXTRACT_ADDR(*slot)->btype;
-
-            *slot = Allocator::GlobalAllocator.evacuateObject(*slot, ometa, obj);
-            GC_STORE_META_DATA_WORD(addr, GC_RC_SET_PARENT(*addr, nullptr));
-        }
-    }
-
     inline void gcCopyRoots(uintptr_t v)
     {
         if((((uintptr_t)GCStack::sdata) <= v) | (v <= ((uintptr_t)GCStack::stackp)))
@@ -793,6 +779,30 @@ public:
         GC_STORE_META_DATA_WORD(naddr, GC_RC_SET_PARENT(GC_ALLOCATED_BIT, fromObj));
 
         return nobj;
+    }
+
+    inline void processHeapEvacuateChildViaUnique(void** slot, void* oobj, void* nobj)
+    {
+        GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR(*slot);
+
+        if(GC_RC_IS_PARENT(*addr) & GC_RC_GET_PARENT(*addr) == oobj)
+        {
+            GC_STORE_META_DATA_WORD(addr, GC_RC_SET_PARENT(*addr, nobj));
+        }
+    }
+
+    inline void processHeapEvacuateParentViaUnique(void** slot, void* obj)
+    {
+        if(obj == *slot)
+        {
+            GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR(obj);
+            auto ometa = PAGE_MASK_EXTRACT_ADDR(*slot)->btype;
+
+            void* nobj = Allocator::GlobalAllocator.evacuateObject(*slot, ometa, obj);
+            ometa->gcops.fpProcessEvacuateUpdateChildren(ometa, (void**)nobj, *slot, obj);
+
+            *slot = nobj;
+        }
     }
 
     inline static void gcProcessSlotHeap(void** slot, void* fromObj)
@@ -956,19 +966,37 @@ public:
         }
     }
 
-    inline static void gcEvacuateString(void** slot, void* obj)
+    ////////
+    //Operations GC evacuate parent and child using unique RCs
+    inline static void gcEvacuateParentString(void** slot, void* obj)
     {
         if (!IS_INLINE_STRING(*slot))
         {
-            Allocator::GlobalAllocator.processDecHeapEvacuate(obj, slot);
+            Allocator::GlobalAllocator.processHeapEvacuateParentViaUnique(slot, obj);
         }
     }
 
-    inline static void gcEvacuateBigNum(void** slot, void* obj)
+    inline static void gcEvacuateChildString(void** slot, void* oobj, void* nobj)
+    {
+        if (!IS_INLINE_STRING(*slot))
+        {
+            Allocator::GlobalAllocator.processHeapEvacuateChildViaUnique(slot, oobj, nobj);
+        }
+    }
+
+    inline static void gcEvacuateParentBigNum(void** slot, void* obj)
     {
         if (!IS_INLINE_BIGNUM(*slot))
         {
-            Allocator::GlobalAllocator.processDecHeapEvacuate(obj, slot);
+            Allocator::GlobalAllocator.processHeapEvacuateParentViaUnique(slot, obj);
+        }
+    }
+
+    inline static void gcEvacuateChildBigNum(void** slot, void* oobj, void* nobj)
+    {
+        if (!IS_INLINE_BIGNUM(*slot))
+        {
+            Allocator::GlobalAllocator.processHeapEvacuateChildViaUnique(slot, oobj, nobj);
         }
     }
 
@@ -1072,17 +1100,20 @@ public:
                 *metacurr = 0x0;
             }
             
-            if(GC_IS_LIVE(w) & GC_RC_IS_PARENT(w))
+            if(GC_IS_LIVE(w) & !GC_IS_MARKED(w) & GC_RC_IS_PARENT(w))
             {
                 void* parent = GC_RC_GET_PARENT(w);
                 BSQType* ptype = PAGE_MASK_EXTRACT_ADDR(parent)->btype;
 
-                ptype->gcops.fpProcessMoveObj(ptype, (void**)parent, (void*)datacurr);
+                this->processHeapEvacuateParentViaUnique((void**)parent, (void*)datacurr);
                 
-                if(!GC_IS_MARKED(w))
-                {
-                    this->evacobjs.enque((void*)datacurr);
-                }
+                *((void**)datacurr) = pp->freelist;
+                *((void**)datacurr + 1) = metacurr;
+
+                pp->freelist = (void*)datacurr;
+
+                pp->freelist_count++;
+                *metacurr = 0x0;
             }
             
             metacurr++;
@@ -1418,7 +1449,7 @@ private:
     }
 
 public:
-    Allocator() : blockalloc(), worklist(), pendingdecs(nullptr), oldroots(), roots(), evacobjs(), activeiters(), page_cost(DEFAULT_PAGE_COST), dec_ops_count(DEFAULT_DEC_OPS_COUNT), post_release_dec_ops_count(DEFAULT_POST_COLLECT_RUN_DECS_COST)
+    Allocator() : blockalloc(), worklist(), pendingdecs(nullptr), oldroots(), roots(), activeiters(), page_cost(DEFAULT_PAGE_COST), dec_ops_count(DEFAULT_DEC_OPS_COUNT), post_release_dec_ops_count(DEFAULT_POST_COLLECT_RUN_DECS_COST)
     {
         MEM_STATS_OP(this->gccount = 0);
         MEM_STATS_OP(this->maxheap = 0);

@@ -8,7 +8,7 @@
 size_t BSQType::g_typeTableSize = 0;
 const BSQType** BSQType::g_typetable = nullptr;
 
-uint8_t GCStack::sdata[BSQ_MAX_STACK];
+uint8_t GCStack::sdata[BSQ_MAX_STACK] = {0};
 uint8_t* GCStack::stackp = GCStack::sdata;
 
 bool GCStack::global_init_complete = false;
@@ -91,7 +91,7 @@ void gcEvacuateOperator_inlineImpl(const BSQType* btype, void** data, void* obj)
 
 void gcEvacuateOperator_refImpl(const BSQType* btype, void** data, void* obj)
 {
-    Allocator::GlobalAllocator.processDecHeapEvacuate(obj, data);
+    Allocator::GlobalAllocator.processHeapEvacuate(obj, data);
 }
 
 void gcEvacuateOperator_stringImpl(const BSQType* btype, void** data, void* obj)
