@@ -384,8 +384,6 @@ BSQInt BSQListOps::s_find_value_ne(void* t, const BSQListReprType* ttype, Storag
             idx++;
             iter.advance();
         }
-
-        GCStack::popFrame(lentrytype->allocinfo.inlinedatasize);
     }
 
     Allocator::GlobalAllocator.removeCollectionIter(&iter);
@@ -414,8 +412,6 @@ BSQInt BSQListOps::s_find_value_last_ne(void* t, const BSQListReprType* ttype, S
             idx++;
             iter.advance();
         }
-
-        GCStack::popFrame(lentrytype->allocinfo.inlinedatasize);
     }
 
     Allocator::GlobalAllocator.removeCollectionIter(&iter);
@@ -1476,8 +1472,6 @@ std::string entityListDisplay_impl(const BSQType* btype, StorageLocationPtr data
     }
     else
     {
-        PROCESS_DISPLAY_MODE(btype, mode, data);
-
         auto ltype = dynamic_cast<const BSQListType*>(btype);
         auto lflavor = BSQListOps::g_flavormap.find(ltype->etype)->second;
 
@@ -1531,8 +1525,6 @@ std::string entityMapDisplay_impl(const BSQType* btype, StorageLocationPtr data,
     }
     else
     {
-        PROCESS_DISPLAY_MODE(btype, mode, data);
-
         auto mtype = dynamic_cast<const BSQMapType*>(btype);
         auto mflavor = BSQMapOps::g_flavormap.find(std::make_pair(mtype->ktype, mtype->vtype))->second;
 

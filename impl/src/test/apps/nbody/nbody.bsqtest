@@ -23,8 +23,4 @@ errtest function checkErrors(doadvance: Bool): Float {
 
     return system.energy();
 }
-/*
-errtest function createEnergy_Err(): NBodySystem {
-    return NBodySystem::create{};
-}
-*/
+

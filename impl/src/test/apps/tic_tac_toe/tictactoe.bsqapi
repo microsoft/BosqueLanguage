@@ -6,19 +6,16 @@
 namespace Main;
 
 ///////////////////////////////////////////////
-
+/*
 const main_empty_board: Board = Board::createEmpty{};
 const main_no_win_2: Board = Main::main_empty_board.setCellMark(BoardPostion{1, 1}, PlayerMark::x).setCellMark(BoardPostion{0, 2}, PlayerMark::o);
 
-entrypoint function main(c: BoardPostion): Bool
-    requires Main::main_no_win_2.isCellEmpty(c);
+entrypoint function main(): Bool
 {
-    let nb = Main::main_no_win_2.setCellMark(c, PlayerMark::x);
-    return !nb.hasWinner();
+    return !Main::main_empty_board.hasWinner();
 }
-
+*/
 ///////////////////////////////////////////////
-
 
 entrypoint function getInitialBoard(): Board {
     return Board::createEmpty{};

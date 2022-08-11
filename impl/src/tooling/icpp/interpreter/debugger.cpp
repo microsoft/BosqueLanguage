@@ -615,26 +615,9 @@ void dbg_displayExp(Evaluator* vv, std::string vexp)
     StorageLocationPtr cpos = nullptr;
     if(vexp.starts_with("*"))
     {
-        vexp = vexp.substr(1);
-        auto rvp = dbg_extract_accessor_numeric(vexp);
-        if(!rvp.has_value())
-        {
-            printf("Bad value id format\n");
-            fflush(stdout);
-            return;
-        }
-
-        if(vv->dbg_history.size() <= rvp.value().first)
-        {
-            printf("Unknown value id: %i\n", (int)rvp.value().first);
-            fflush(stdout);
-            return;
-        }
-
-        auto ventry = Allocator::dbg_idToObjMap.find(rvp.value().first);
-        btype = ventry->second.first;
-        cpos = &(ventry->second.second);
-        vexp = rvp.value().second;
+        printf("Object ID support not implemented\n");
+        fflush(stdout);
+        return;
     }
     else
     {   
@@ -950,6 +933,4 @@ void debuggerStepAction(Evaluator* vv)
             fflush(stdout);
         }
     }
-
-    Allocator::dbg_idToObjMap.clear();
 }

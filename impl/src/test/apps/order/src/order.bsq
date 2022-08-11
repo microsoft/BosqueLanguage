@@ -2,7 +2,7 @@ namespace Main;
 
 typedef ID = String;
 
-algebraic orderable typedecl Quantity = Nat;
+algebraic orderable typedecl Quantity = Int;
 
 algebraic orderable typedecl Price = Decimal;
 
@@ -130,5 +130,5 @@ function availability(startOfDayPosition: Quantity, buys: List<BuyResponse>): Qu
         .sum()
     ;
 
-    return (sumOfBuys < startOfDayPosition) ? 0_Quantity : (startOfDayPosition - sumOfBuys);
+    return startOfDayPosition - sumOfBuys;
 }

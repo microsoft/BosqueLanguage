@@ -31,10 +31,10 @@ const s_application_list = [
     {dir: "readme_calc", mode: TestMode.AppTest, exepass: 0, exefail: 0, sympass: 3, symfail: 0},
 
     {dir: "tic_tac_toe", mode: TestMode.Test, exepass: 4, exefail: 0, sympass: 2, symfail: 1},
-    //{dir: "tic_tac_toe", mode: TestMode.AppTest, exepass: 1, exefail: 0, sympass: 36, symfail: 1},
+    {dir: "tic_tac_toe", mode: TestMode.AppTest, exepass: 1, exefail: 0, sympass: 26, symfail: 1},
 
     {dir: "order", mode: TestMode.Test, exepass: 3, exefail: 0, sympass: 1, symfail: 1},
-    {dir: "order", mode: TestMode.AppTest, exepass: 1, exefail: 0, sympass: 1, symfail: 0}
+    {dir: "order", mode: TestMode.AppTest, exepass: 1, exefail: 0, sympass: 0, symfail: 0}
 ];
 
 function runTest(t: ApplicationTest): boolean {
@@ -96,6 +96,7 @@ function runTest(t: ApplicationTest): boolean {
             }
             else {
                 process.stdout.write(chalk.blue(`Timeout (or count mismatch) detected in ${t.dir} for ${(t.symfail + t.sympass) - (symfail + sympass)} tests.\n`));
+                process.stdout.write(output + "\n\n");
                 symout = true;
             }
         }
