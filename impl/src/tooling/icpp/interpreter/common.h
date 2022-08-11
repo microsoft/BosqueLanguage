@@ -33,7 +33,6 @@
 #define ALLOC_DEBUG_STW_GC
 #define ALLOC_DEBUG_MEM_INITIALIZE
 #define ALLOC_DEBUG_CANARY
-#define ALLOC_FIXED_MEM_ADDR
 #endif
 
 //Can also use other values like 0xFFFFFFFFFFFFFFFFul

@@ -170,6 +170,11 @@ public:
     {
         assert((GCStack::stackp - GCStack::sdata) < BSQ_MAX_STACK);
         
+#ifdef ALLOC_DEBUG_CANARY
+        *((size_t*)GCStack::stackp) = 17;
+        GCStack::stackp += sizeof(size_t);
+#endif
+
         uint8_t* frame = GCStack::stackp;
         GCStack::stackp += bytes;
 
@@ -179,6 +184,11 @@ public:
     inline static void popFrame(size_t bytes)
     {
         GCStack::stackp -= bytes;
+
+#ifdef ALLOC_DEBUG_CANARY
+        GCStack::stackp -= sizeof(size_t);
+        assert(*((size_t*)GCStack::stackp) == 17);
+#endif
 
         //Not required but useful for preventing false pointers -- When we compile might want to only include this prolog on non-leaf or allocating functions (or something similar)
         GC_MEM_ZERO(GCStack::stackp, bytes);
@@ -379,30 +389,6 @@ public:
         }
     }
 
-#ifdef ALLOC_FIXED_MEM_ADDR
-    uint8_t* dbg_known_mem_range = nullptr;
-    void dbg_try_reserve_page_range()
-    {
-            uintptr_t known_addr = 68719476736ul; //2^36
-            size_t asize = 134217728ul; //2^27
-
-#ifdef _WIN32
-            //https://docs.microsoft.com/en-us/windows/win32/memory/reserving-and-committing-memory
-            this->dbg_known_mem_range = (uint8_t*)VirtualAlloc(reinterpret_cast<void*>(known_addr), asize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
-            assert(this->dbg_known_mem_range != nullptr);
-#else
-            this->dbg_known_mem_range = (uint8_t*)mmap(reinterpret_cast<void*>(known_addr), asize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-            assert(this->dbg_known_mem_range != MAP_FAILED);
-#endif
-
-            if(this->dbg_known_mem_range != reinterpret_cast<void*>(known_addr))
-            {
-                this->dbg_known_mem_range = nullptr;
-                assert(false); //lets flag this and see if/when it triggers
-            }
-    }
-#endif
-
 #ifdef ALLOC_DEBUG_CANARY
     static void checkCanary(void* addr)
     {
@@ -486,16 +472,6 @@ public:
 
     PageInfo* allocateFreePageMemOp()
     {
-#ifdef ALLOC_FIXED_MEM_ADDR
-        if(this->dbg_known_mem_range != nullptr)
-        {
-            auto pp = (PageInfo*)this->dbg_known_mem_range;
-            this->dbg_known_mem_range += BSQ_BLOCK_ALLOCATION_SIZE;
-
-            return pp;
-        }
-#endif
-
 #ifdef _WIN32
             //https://docs.microsoft.com/en-us/windows/win32/memory/reserving-and-committing-memory
             auto pp = (PageInfo*)VirtualAlloc(nullptr, BSQ_BLOCK_ALLOCATION_SIZE, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
@@ -563,13 +539,6 @@ public:
 
     void releasePage(PageInfo* pp)
     {
-#ifdef ALLOC_FIXED_MEM_ADDR
-        if(this->dbg_known_mem_range != nullptr)
-        {
-            return;
-        }
-#endif
-
 #ifdef _WIN32
         VirtualFree(pp, 0, MEM_RELEASE);
 #else
@@ -1519,10 +1488,6 @@ public:
 
     void setGlobalsMemory(const BSQType* global_type)
     {
-#ifdef ALLOC_FIXED_MEM_ADDR
-        this->blockalloc.dbg_try_reserve_page_range();
-#endif
-
         GCStack::global_memory = this->blockalloc.allocateFreePage(const_cast<BSQType*>(global_type));
         GCStack::global_type = const_cast<BSQType*>(global_type);
         GCStack::global_init_complete = false;

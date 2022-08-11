@@ -36,7 +36,7 @@ function runICPPTest(exepath: string, verbose: boolean, test: ICPPTest, icppjson
             }
 
             if(err !== null && stdout.length === 0) {
-                cb("error", test, start, end, icpptime, err.toString());
+                cb("error", test, start, end, icpptime, stderr.toString());
             }
             else {
                 if(test.resultKind === TestResultKind.errors) {

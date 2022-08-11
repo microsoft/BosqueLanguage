@@ -384,8 +384,6 @@ BSQInt BSQListOps::s_find_value_ne(void* t, const BSQListReprType* ttype, Storag
             idx++;
             iter.advance();
         }
-
-        GCStack::popFrame(lentrytype->allocinfo.inlinedatasize);
     }
 
     Allocator::GlobalAllocator.removeCollectionIter(&iter);
@@ -414,8 +412,6 @@ BSQInt BSQListOps::s_find_value_last_ne(void* t, const BSQListReprType* ttype, S
             idx++;
             iter.advance();
         }
-
-        GCStack::popFrame(lentrytype->allocinfo.inlinedatasize);
     }
 
     Allocator::GlobalAllocator.removeCollectionIter(&iter);
