@@ -125,7 +125,6 @@ std::pair<bool, json> run(Evaluator& runner, const APIModule* api, const std::st
                         ;
                     }
 
-                    Allocator::GlobalAllocator.reset();
                     GCStack::reset(istack);
                     runner.reset();
                 }

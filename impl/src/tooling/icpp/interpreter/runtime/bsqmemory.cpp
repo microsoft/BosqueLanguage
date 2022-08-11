@@ -6,7 +6,7 @@
 #include "bsqmemory.h"
 
 size_t BSQType::g_typeTableSize = 0;
-BSQType** BSQType::g_typetable = nullptr;
+const BSQType** BSQType::g_typetable = nullptr;
 
 uint8_t GCStack::sdata[BSQ_MAX_STACK];
 uint8_t* GCStack::stackp = GCStack::sdata;
@@ -18,10 +18,6 @@ BSQType* GCStack::global_type = nullptr;
 PageInfo AllocPages::g_sential_page = {0};
 
 Allocator Allocator::GlobalAllocator;
-
-#ifdef BSQ_DEBUG_BUILD
-    std::map<size_t, std::pair<const BSQType*, void*>> Allocator::dbg_idToObjMap;
-#endif
 
 void gcProcessHeapOperator_nopImpl(const BSQType* btype, void** data, void* fromObj)
 {

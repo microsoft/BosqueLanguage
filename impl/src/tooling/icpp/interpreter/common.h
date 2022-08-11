@@ -138,7 +138,6 @@ typedef uint64_t GC_META_DATA_WORD;
 typedef uint16_t AllocPageInfo;
 #define AllocPageInfo_Alloc 0x1
 #define AllocPageInfo_Ev 0x2
-#define AllocPageInfo_Pending 0x4
 
 struct PageInfo
 {
@@ -211,7 +210,7 @@ struct PageInfo
 //Misc operations
 #define GC_MEM_COPY(DST, SRC, BYTES) std::copy((uint8_t*)SRC, ((uint8_t*)SRC) + (BYTES), (uint8_t*)DST)
 #define GC_MEM_ZERO(DST, BYTES) std::fill((uint8_t*)DST, ((uint8_t*)DST) + (BYTES), (uint8_t)0)
-#define GC_MEM_FILL(DST, BYTES, V) std::fill((size_t*)DST, (size_t*)((uint8_t*)DST) + (BYTES), (size_t)V)
+#define GC_MEM_FILL(DST, BYTES, V) std::fill((size_t*)DST, (size_t*)((uint8_t*)DST + (BYTES)), (size_t)V)
 
 ////////////////////////////////
 //Storage location ops
@@ -283,25 +282,8 @@ typedef void (*GCProcessOperatorUpdateEvacuateMoveFP)(const BSQType*, void**, vo
 enum DisplayMode
 {
     Standard = 0x0,
-    CmdDebug = 0x1,
-    CmdDebugLeaf = 0x2 
+    CmdDebug = 0x1
 };
-
-////////////////
-#define PROCESS_DISPLAY_MODE(BTYPE, MODE, OBJ) {\
-    if(MODE & DisplayMode::CmdDebugLeaf)\
-    {\
-        if(BTYPE->tkind == BSQTypeLayoutKind::Ref)\
-        {\
-            return Allocator::registerDbgObjID(BTYPE, SLPTR_LOAD_CONTENTS_AS_GENERIC_HEAPOBJ(OBJ));\
-        }\
-    }\
-    if(MODE & DisplayMode::CmdDebug)\
-    {\
-        MODE = (DisplayMode)(MODE | DisplayMode::CmdDebugLeaf);\
-    }\
-}
-////////////////
 
 typedef std::string (*DisplayFP)(const BSQType*, StorageLocationPtr, DisplayMode);
 

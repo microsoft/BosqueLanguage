@@ -57,7 +57,7 @@ class BSQType
 {
 public:
     static size_t g_typeTableSize;
-    static BSQType** g_typetable;
+    static const BSQType** g_typetable;
 
     PageInfo* allocpage;
     PageInfo* evacuatepage;
@@ -77,12 +77,12 @@ public:
     size_t tableEntrySize;
     size_t tableEntryCount;
 
+    std::set<PageInfo*> filledpages; //pages that have been filled by the allocator and are pending collection
     AllocPages allocatedPages;
-    std::set<PageInfo*> filledPages; //pages that have been filled by the allocator and are pending collection -- this overlaps with the one in the block allocator but we have it here to so we can process pages of this type when needed
 
     //Constructor that everyone delegates to
     BSQType(BSQTypeID tid, BSQTypeLayoutKind tkind, BSQTypeSizeInfo allocinfo, GCFunctorSet gcops, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyCmpFP fpkeycmp, DisplayFP fpDisplay, std::string name): 
-        allocpage(&AllocPages::g_sential_page), evacuatepage(&AllocPages::g_sential_page), tid(tid), tkind(tkind), allocinfo(allocinfo), gcops(gcops), fpkeycmp(fpkeycmp), vtable(vtable), fpDisplay(fpDisplay), name(name)
+        allocpage(&AllocPages::g_sential_page), evacuatepage(&AllocPages::g_sential_page), tid(tid), tkind(tkind), filledpages(), allocinfo(allocinfo), gcops(gcops), fpkeycmp(fpkeycmp), vtable(vtable), fpDisplay(fpDisplay), name(name)
     {
         static_assert(sizeof(PageInfo) % 8 == 0);
 
@@ -357,9 +357,9 @@ class BlockAllocator
 public:
     //set of all pages that are currently allocated -- TODO: probably want some bitvector and/or semi-hierarchical structure here instead
     std::set<PageInfo*> page_set;
-    std::set<PageInfo*> free_pages; //pages that are completely empty
 
-    std::set<PageInfo*> filled_pages; //pages that have been filled by the allocator and are pending collection
+    std::set<PageInfo*> free_pages; //pages that are completely empty
+    std::set<BSQType*> allocated_types; //the set of types that have a alloc page (and maybe filled pages) that are pending processing
 
     inline bool isAddrAllocated(void* addr, void*& realobj) const
     {
@@ -586,6 +586,7 @@ public:
         }
         else
         {
+            btype->evacuatepage->allocinfo = 0x0;
             btype->allocatedPages.high_utilization.insert(btype->evacuatepage);
             
             if(!btype->allocatedPages.mid_utilization.empty())
@@ -613,12 +614,11 @@ public:
         if(btype->allocpage == &AllocPages::g_sential_page)
         {
             btype->allocpage = this->allocateFreePage(btype);
-            btype->allocpage->allocinfo = AllocPageInfo_Alloc;
         }
         else
         {
             btype->allocpage->allocinfo = 0x0;
-            this->filled_pages.insert(btype->allocpage);
+            btype->filledpages.insert(btype->allocpage);
 
             if(!btype->allocatedPages.low_utilization.empty())
             {
@@ -634,9 +634,10 @@ public:
             {
                 btype->allocpage = this->allocateFreePage(btype);
             }
-
-            btype->allocpage->allocinfo = btype->allocpage->allocinfo | AllocPageInfo_Alloc;
         }
+        btype->allocpage->allocinfo = AllocPageInfo_Alloc;
+
+        this->allocated_types.insert(btype);
 
         return btype->allocpage;
     }
@@ -655,7 +656,6 @@ private:
     std::set<void*> oldroots;
     GCRefList roots;
     GCRefList evacobjs;
-    std::list<PageInfo*> activeallocprocessing; //pages that need to be processed in the STW phase since we are actively allocating from them
 
     std::set<BSQCollectionIterator*> activeiters;
 
@@ -686,7 +686,7 @@ public:
             }
             else
             {
-                GC_STORE_META_DATA_WORD(addr, (GC_ALLOCATED_BIT | GC_RC_KIND_MASK | GC_RC_TWO) | meta);
+                GC_STORE_META_DATA_WORD(addr, GC_ALLOCATED_BIT | (GC_RC_KIND_MASK | GC_RC_TWO) | (meta & GC_MARK_BIT));
             }
         }
     }
@@ -821,13 +821,6 @@ public:
 
                 *slot = Allocator::GlobalAllocator.evacuateObject(*slot, ometa, fromObj);
                 GC_STORE_META_DATA_WORD(addr, GC_SET_FWD_PTR(*slot));
-
-                //if it is an active alloc page but not yet pending then special enqueue it
-                if((pp->allocinfo & (AllocPageInfo_Alloc | AllocPageInfo_Pending)) == AllocPageInfo_Alloc)
-                {
-                    pp->allocinfo = pp->allocinfo | AllocPageInfo_Pending;
-                    Allocator::GlobalAllocator.activeallocprocessing.push_back(pp);
-                }
 
                 if (!ometa->isLeaf())
                 {
@@ -1200,12 +1193,6 @@ private:
 
         if(pp->freelist_count == pp->alloc_entry_count)
         {
-            //it is a filled page so just let it get taken care of when we sweep it
-            if(pp->btype->filledPages.find(pp) != pp->btype->filledPages.cend())
-            {
-                return;
-            }
-
             auto luiter = pp->btype->allocatedPages.low_utilization.find(pp);
             auto huiter = pp->btype->allocatedPages.high_utilization.find(pp);
 
@@ -1280,13 +1267,18 @@ private:
         return GeneralMemoryStats{this->blockalloc.page_set.size(), this->blockalloc.free_pages.size(), live_bytes};
     }
 
-    void processPendingDecs(uint32_t& credits, uint32_t maxcredits)
+    void processPendingDecs(uint32_t credits)
     {
-        for(uint32_t i = 0; i < maxcredits && credits > 0 && this->pendingdecs != nullptr; ++i)
+        for(uint32_t i = 0; i < credits && this->pendingdecs != nullptr; ++i)
         {
-            for(size_t i = 0; i < this->dec_ops_count && this->pendingdecs != nullptr; ++i)
+            for(size_t j = 0; j < this->dec_ops_count && this->pendingdecs != nullptr; ++i)
             {
                 void* decobj = this->pendingdecs;
+
+#ifdef ALLOC_DEBUG_CANARY
+                BlockAllocator::checkCanary(decobj);
+#endif
+
                 PageInfo* pp = PAGE_MASK_EXTRACT_ADDR(decobj);
                 GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR_AND_PAGE(decobj, pp);
 
@@ -1301,32 +1293,26 @@ private:
                 pp->freelist_count++;
                 this->postdec_processing(pp);
             }
-
-            credits--;
         }
     }
 
-    void processBlocks(uint32_t credits, BSQType* mdata)
+    void processBlocks(BSQType* mdata)
     {
-        while(credits > 0 && !this->blockalloc.filled_pages.empty())
+        if(mdata->allocpage != &AllocPages::g_sential_page)
         {
-            PageInfo* pp = nullptr;
-            if(mdata != nullptr && !mdata->filledPages.empty())
-            {
-                pp = *(mdata->filledPages.begin());
-            }
-            else
-            {
-                pp = *(this->blockalloc.filled_pages.begin());
-            }
-
-            this->processFilledPage(pp->btype, pp);
-            
-            pp->btype->filledPages.erase(pp);
-            this->blockalloc.filled_pages.erase(pp);
-
-            credits--;
+            this->processFilledPage(mdata, mdata->allocpage);
         }
+
+        if(mdata->evacuatepage != &AllocPages::g_sential_page)
+        {
+            this->processFilledPage(mdata, mdata->evacuatepage);
+        }
+
+        for(auto iter = mdata->filledpages.begin(); iter != mdata->filledpages.end(); ++iter)
+        {
+            this->processFilledPage(mdata, *iter);
+        }
+        mdata->filledpages.clear();
     }
 
     void collect()
@@ -1380,23 +1366,17 @@ private:
 
         //We will take credits proportional to the newly allocated memory -- so in general most work is done in the STW phase
         uint32_t credits = this->post_release_dec_ops_count;
-        this->processPendingDecs(credits, credits);
-
-        for(auto iter = this->activeallocprocessing.begin(); iter != this->activeallocprocessing.end(); ++iter)
-        {
-            this->processFilledPage((*iter)->btype, *iter);
-        }
-        this->activeallocprocessing.clear();
+        this->processPendingDecs(credits);
 
 #ifdef ALLOC_DEBUG_STW_GC
-        credits = COLLECT_ALL_PAGE_COST;
-        this->processPendingDecs(credits, COLLECT_ALL_PAGE_COST);
-
-        for(size_t i = 0; i < BSQType::g_typeTableSize; ++i)
-        {
-            this->processBlocks(COLLECT_ALL_PAGE_COST, BSQType::g_typetable[i]);
-        }
+        this->processPendingDecs(COLLECT_ALL_PAGE_COST);
 #endif
+
+        for(auto iter = this->blockalloc.allocated_types.begin(); iter != this->blockalloc.allocated_types.end(); ++iter)
+        {
+            this->processBlocks(*iter);
+        }
+        this->blockalloc.allocated_types.clear();
     }
 
     PageInfo* allocate_slow(BSQType* mdata)
@@ -1404,12 +1384,13 @@ private:
         uint32_t credits = this->page_cost;
         bool docollect = false;
 
+        this->current_allocated_bytes += BSQ_BLOCK_ALLOCATION_SIZE;
         if(this->current_allocated_bytes > BSQ_COLLECT_THRESHOLD)
         {
             credits = COLLECT_ALL_PAGE_COST;
             docollect = true;
 
-            if(this->pendingdecs != nullptr || !this->blockalloc.filled_pages.empty())
+            if(this->pendingdecs != nullptr)
             {
                 this->page_cost = (this->page_cost < MAX_PAGE_COST) ? (2 * this->page_cost) : MAX_PAGE_COST;
                 this->post_release_dec_ops_count = 4 * DEFAULT_POST_COLLECT_RUN_DECS_COST;
@@ -1421,16 +1402,10 @@ private:
             }
         }
 
-        this->blockalloc.filled_pages.insert(mdata->allocpage);
-        mdata->filledPages.insert(mdata->allocpage);
-
         if(!docollect)
         {
-            this->processPendingDecs(credits, credits / 2);
+            this->processPendingDecs(credits);
         }
-
-        this->processBlocks(credits, mdata);
-
 
         mdata->allocpage = this->blockalloc.processAndGetNewPageForAllocation(mdata);
 
@@ -1443,7 +1418,7 @@ private:
     }
 
 public:
-    Allocator() : blockalloc(), worklist(), pendingdecs(nullptr), oldroots(), roots(), evacobjs(), activeallocprocessing(), activeiters(), page_cost(DEFAULT_PAGE_COST), dec_ops_count(DEFAULT_DEC_OPS_COUNT), post_release_dec_ops_count(DEFAULT_POST_COLLECT_RUN_DECS_COST)
+    Allocator() : blockalloc(), worklist(), pendingdecs(nullptr), oldroots(), roots(), evacobjs(), activeiters(), page_cost(DEFAULT_PAGE_COST), dec_ops_count(DEFAULT_DEC_OPS_COUNT), post_release_dec_ops_count(DEFAULT_POST_COLLECT_RUN_DECS_COST)
     {
         MEM_STATS_OP(this->gccount = 0);
         MEM_STATS_OP(this->maxheap = 0);
@@ -1483,6 +1458,10 @@ public:
 
     void setGlobalsMemory(const BSQType* global_type)
     {
+#ifdef ALLOC_FIXED_MEM_ADDR
+        this->blockalloc.dbg_try_reserve_page_range();
+#endif
+
         GCStack::global_memory = this->blockalloc.allocateFreePage(const_cast<BSQType*>(global_type));
         GCStack::global_type = const_cast<BSQType*>(global_type);
         GCStack::global_init_complete = false;
@@ -1492,8 +1471,7 @@ public:
     {
         GCStack::global_init_complete = true;
 
-        //Maybe we want to force a collect here or even a very aggressive compact
-        //this->collect();
+        this->collect();
     }
 };
 
