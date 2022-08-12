@@ -186,7 +186,7 @@ class ICPPTypeEmitter {
         else {
             const size = Math.max(...tl.map((oi) => oi.layout === ICPPLayoutCategory.UnionInline ? (oi.size - ICPP_WORD_SIZE) : oi.size));
             
-            let mask: RefMask = "5";
+            let mask: RefMask = "6";
             for(let i = 0; i < (size / ICPP_WORD_SIZE); ++i) {
                 mask = mask + "1";
             }
@@ -444,7 +444,7 @@ class ICPPTypeEmitter {
         else {
             const size = Math.max(...tl.map((oi) => oi.layout === ICPPLayoutCategory.UnionInline ? (oi.size - ICPP_WORD_SIZE) : oi.size));
 
-            let mask: RefMask = "5";
+            let mask: RefMask = "6";
             for(let i = 0; i < (size / ICPP_WORD_SIZE); ++i) {
                 mask = mask + "1";
             }

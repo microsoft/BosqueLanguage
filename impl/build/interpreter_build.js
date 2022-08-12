@@ -22,23 +22,19 @@ let includes = " ";
 let outfile = "";
 if(process.platform === "darwin") {
     compiler = "clang++";
-    ccflags = "-O0 -g -DBSQ_DEBUG_BUILD -Wall -std=c++20 -fsanitize=undefined";
-    //Usefull flags -fsanitize=address -fsanitize=undefined
-    //TODO: probably want to make -fsanitize=leak clean as well
-    //TODO: not supported on macos -fsanitize=memory
+    ccflags = "-Og -g -DBSQ_DEBUG_BUILD -Wall -std=c++20";
     includes = includeheaders.map((ih) => `-I ${ih}`).join(" ");
     outfile = "-o " + outexec+ "/icpp";
 }
 else if(process.platform === "linux") {
     compiler = "clang++";
-    ccflags = "-O0 -g -DBSQ_DEBUG_BUILD -Wall -std=c++20 -fsanitize=undefined";
-    //TODO: Make  -fsanitize=address clean
+    ccflags = "-Og -g -DBSQ_DEBUG_BUILD -Wall -std=c++20";
     includes = includeheaders.map((ih) => `-I ${ih}`).join(" ");
     outfile = "-o " + outexec + "/icpp";
 }
 else {
     compiler = "cl.exe";
-    ccflags = "/EHsc /MP /Zi /D \"BSQ_DEBUG_BUILD\" /std:c++20";  
+    ccflags = "/EHsc /MP /Zi /Od /D \"BSQ_DEBUG_BUILD\" /std:c++20";  
     includes = includeheaders.map((ih) => `/I ${ih}`).join(" ");
     outfile = "/Fo:\"" + outobj + "/\"" + " " + "/Fd:\"" + outexec + "/\"" + " " + "/Fe:\"" + outexec + "\\icpp.exe\"";
 }

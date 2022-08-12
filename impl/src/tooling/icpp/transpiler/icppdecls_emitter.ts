@@ -214,8 +214,8 @@ class ICPPEmitter {
 
 
         this.icppasm.cbuffsize = this.bemitter.constsize;
-        this.icppasm.cmask = "11111";
-        for(let i = 1; i < this.bemitter.constlayout.length; ++i) {
+        this.icppasm.cmask = "11111" + "11"; //the "11" is mask constraints for none and nothing
+        for(let i = 0; i < this.bemitter.constlayout.length; ++i) {
             this.icppasm.cmask += this.bemitter.constlayout[i].storage.allocinfo.inlinedmask;
         }
 
@@ -237,12 +237,9 @@ class ICPPEmitter {
 
             const icppdecl = new ICPPConstDecl(cdecl.gkey, optenumname, offset, cdecl.ivalue, decltype.tkey);
             this.icppasm.constdecls.push(icppdecl);
-
-            this.icppasm.cbuffsize += decltype.allocinfo.inlinedatasize;
-            this.icppasm.cmask += decltype.allocinfo.inlinedmask;
         });
 
-        this.icppasm.litdecls = this.bemitter.constlayout.slice(1)
+        this.icppasm.litdecls = this.bemitter.constlayout
             .filter((cle) => cle.isliteral)
             .map((cle) => {
                 return { offset: cle.offset, storage: cle.storage.allocinfo, value: cle.value };

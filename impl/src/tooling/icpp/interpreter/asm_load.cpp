@@ -106,6 +106,11 @@ void initialize(size_t cbuffsize, const RefMask cmask)
     Evaluator::g_constantbuffer = (uint8_t*)GCStack::global_memory->data;
 }
 
+void completeLoad()
+{
+    Allocator::GlobalAllocator.completeGlobalInitialization();
+}
+
 void initializeLiteral(size_t storageOffset, const BSQType* gtype, std::string& lval)
 {
     StorageLocationPtr sl = Evaluator::g_constantbuffer + storageOffset;
@@ -365,4 +370,6 @@ void loadAssembly(json j, Evaluator& ee)
         jsonLoadBSQConstantDecl(ldecl, storageOffset, ikey, gtype);
         initializeConst(ee, storageOffset, ikey, gtype);
     });
+
+    completeLoad();
 }
