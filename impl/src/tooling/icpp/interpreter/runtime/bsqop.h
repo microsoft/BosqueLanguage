@@ -234,8 +234,9 @@ class InterpOp
 public:
     const OpCodeTag tag;
     const SourceInfo sinfo;
+    const std::string ssrc;
 
-    InterpOp(SourceInfo sinfo, OpCodeTag tag) : tag(tag), sinfo(sinfo) {;}
+    InterpOp(SourceInfo sinfo, std::string ssrc, OpCodeTag tag) : tag(tag), sinfo(sinfo), ssrc(ssrc) {;}
     virtual ~InterpOp() {;}
 
     static InterpOp* jparse(json v);
@@ -244,7 +245,7 @@ public:
 class DeadFlowOp : public InterpOp
 {
 public:
-    DeadFlowOp(SourceInfo sinfo) : InterpOp(sinfo, OpCodeTag::DeadFlowOp) {;}
+    DeadFlowOp(SourceInfo sinfo, std::string ssrc) : InterpOp(sinfo, ssrc, OpCodeTag::DeadFlowOp) {;}
     virtual ~DeadFlowOp() {;}
 
     static DeadFlowOp* jparse(json v);
@@ -255,7 +256,7 @@ class AbortOp : public InterpOp
 public:
     const std::string msg;
 
-    AbortOp(SourceInfo sinfo, const std::string msg) : InterpOp(sinfo, OpCodeTag::AbortOp), msg(msg) {;}
+    AbortOp(SourceInfo sinfo, std::string ssrc, const std::string msg) : InterpOp(sinfo, ssrc, OpCodeTag::AbortOp), msg(msg) {;}
     virtual ~AbortOp() {;}
 
     static AbortOp* jparse(json v);
@@ -267,7 +268,7 @@ public:
     const Argument arg;
     const std::string msg;
 
-    AssertOp(SourceInfo sinfo, Argument arg, const std::string msg) : InterpOp(sinfo, OpCodeTag::AssertOp), arg(arg), msg(msg) {;}
+    AssertOp(SourceInfo sinfo, std::string ssrc, Argument arg, const std::string msg) : InterpOp(sinfo, ssrc, OpCodeTag::AssertOp), arg(arg), msg(msg) {;}
     virtual ~AssertOp() {;}
 
     static AssertOp* jparse(json v);
@@ -279,7 +280,7 @@ public:
     //Arg is invalid and type is nullptr if this is a break
     const Argument arg;
 
-    DebugOp(SourceInfo sinfo, Argument arg) : InterpOp(sinfo, OpCodeTag::DebugOp), arg(arg) {;}
+    DebugOp(SourceInfo sinfo, std::string ssrc, Argument arg) : InterpOp(sinfo, ssrc, OpCodeTag::DebugOp), arg(arg) {;}
     virtual ~DebugOp() {;}
 
     static DebugOp* jparse(json v);
@@ -292,7 +293,7 @@ public:
     const TargetVar trgt;
     const BSQType* oftype;
 
-    LoadUnintVariableValueOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype) : InterpOp(sinfo, OpCodeTag::LoadUnintVariableValueOp), trgt(trgt), oftype(oftype) {;}
+    LoadUnintVariableValueOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, const BSQType* oftype) : InterpOp(sinfo, ssrc, OpCodeTag::LoadUnintVariableValueOp), trgt(trgt), oftype(oftype) {;}
     virtual ~LoadUnintVariableValueOp() {;}
 
     static LoadUnintVariableValueOp* jparse(json v);
@@ -304,7 +305,7 @@ public:
     const TargetVar trgt;
     const BSQUnionType* oftype;
 
-    NoneInitUnionOp(SourceInfo sinfo, TargetVar trgt, const BSQUnionType* oftype) : InterpOp(sinfo, OpCodeTag::NoneInitUnionOp), trgt(trgt), oftype(oftype) {;}
+    NoneInitUnionOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, const BSQUnionType* oftype) : InterpOp(sinfo, ssrc, OpCodeTag::NoneInitUnionOp), trgt(trgt), oftype(oftype) {;}
     virtual ~NoneInitUnionOp() {;}
 
     static NoneInitUnionOp* jparse(json v);
@@ -317,7 +318,7 @@ public:
     const int32_t gindex;
     const bool flag;
 
-    StoreConstantMaskValueOp(SourceInfo sinfo, int32_t gmaskoffset, int32_t gindex, bool flag) : InterpOp(sinfo, OpCodeTag::StoreConstantMaskValueOp), gmaskoffset(gmaskoffset), gindex(gindex), flag(flag) {;}
+    StoreConstantMaskValueOp(SourceInfo sinfo, std::string ssrc, int32_t gmaskoffset, int32_t gindex, bool flag) : InterpOp(sinfo, ssrc, OpCodeTag::StoreConstantMaskValueOp), gmaskoffset(gmaskoffset), gindex(gindex), flag(flag) {;}
     virtual ~StoreConstantMaskValueOp() {;}
 
     static StoreConstantMaskValueOp* jparse(json v);
@@ -331,7 +332,7 @@ public:
     const Argument arg;
     const BSQStatementGuard sguard;
 
-    DirectAssignOp(SourceInfo sinfo, TargetVar trgt, const BSQType* intotype, Argument arg, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::DirectAssignOp), trgt(trgt), intotype(intotype), arg(arg), sguard(sguard) {;}
+    DirectAssignOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, const BSQType* intotype, Argument arg, BSQStatementGuard sguard) : InterpOp(sinfo, ssrc, OpCodeTag::DirectAssignOp), trgt(trgt), intotype(intotype), arg(arg), sguard(sguard) {;}
     virtual ~DirectAssignOp() {;}
 
     static DirectAssignOp* jparse(json v);
@@ -346,7 +347,7 @@ public:
     const BSQType* fromtype;
     const BSQStatementGuard sguard;
 
-    BoxOp(SourceInfo sinfo, TargetVar trgt, const BSQUnionType* intotype, Argument arg, const BSQType* fromtype, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::BoxOp), trgt(trgt), intotype(intotype), arg(arg), fromtype(fromtype), sguard(sguard) {;}
+    BoxOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, const BSQUnionType* intotype, Argument arg, const BSQType* fromtype, BSQStatementGuard sguard) : InterpOp(sinfo, ssrc, OpCodeTag::BoxOp), trgt(trgt), intotype(intotype), arg(arg), fromtype(fromtype), sguard(sguard) {;}
     virtual ~BoxOp() {;}
 
     static BoxOp* jparse(json v);
@@ -361,7 +362,7 @@ public:
     const BSQUnionType* fromtype;
     const BSQStatementGuard sguard;
 
-    ExtractOp(SourceInfo sinfo, TargetVar trgt, const BSQType* intotype, Argument arg, const BSQUnionType* fromtype, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::ExtractOp), trgt(trgt), intotype(intotype), arg(arg), fromtype(fromtype), sguard(sguard) {;}
+    ExtractOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, const BSQType* intotype, Argument arg, const BSQUnionType* fromtype, BSQStatementGuard sguard) : InterpOp(sinfo, ssrc, OpCodeTag::ExtractOp), trgt(trgt), intotype(intotype), arg(arg), fromtype(fromtype), sguard(sguard) {;}
     virtual ~ExtractOp() {;}
 
     static ExtractOp* jparse(json v);
@@ -374,7 +375,7 @@ public:
     const Argument arg;
     const BSQType* oftype;
 
-    LoadConstOp(SourceInfo sinfo, TargetVar trgt, Argument arg, const BSQType* oftype) : InterpOp(sinfo, OpCodeTag::LoadConstOp), trgt(trgt), arg(arg), oftype(oftype) {;}
+    LoadConstOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, Argument arg, const BSQType* oftype) : InterpOp(sinfo, ssrc, OpCodeTag::LoadConstOp), trgt(trgt), arg(arg), oftype(oftype) {;}
     virtual ~LoadConstOp() {;}
 
     static LoadConstOp* jparse(json v);
@@ -388,7 +389,7 @@ public:
     const BSQUnionType* layouttype;
     const BSQTupleIndex idx;
 
-    TupleHasIndexOp(SourceInfo sinfo, TargetVar trgt, Argument arg, const BSQUnionType* layouttype, BSQTupleIndex idx) : InterpOp(sinfo, OpCodeTag::TupleHasIndexOp), trgt(trgt), arg(arg), layouttype(layouttype), idx(idx) {;}
+    TupleHasIndexOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, Argument arg, const BSQUnionType* layouttype, BSQTupleIndex idx) : InterpOp(sinfo, ssrc, OpCodeTag::TupleHasIndexOp), trgt(trgt), arg(arg), layouttype(layouttype), idx(idx) {;}
     virtual ~TupleHasIndexOp() {;}
 
     static TupleHasIndexOp* jparse(json v);
@@ -402,7 +403,7 @@ public:
     const BSQUnionType* layouttype;
     const BSQRecordPropertyID propId;
 
-    RecordHasPropertyOp(SourceInfo sinfo, TargetVar trgt, Argument arg, const BSQUnionType* layouttype, BSQRecordPropertyID propId) : InterpOp(sinfo, OpCodeTag::RecordHasPropertyOp), trgt(trgt), arg(arg), layouttype(layouttype), propId(propId) {;}
+    RecordHasPropertyOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, Argument arg, const BSQUnionType* layouttype, BSQRecordPropertyID propId) : InterpOp(sinfo, ssrc, OpCodeTag::RecordHasPropertyOp), trgt(trgt), arg(arg), layouttype(layouttype), propId(propId) {;}
     virtual ~RecordHasPropertyOp() {;}
 
     static RecordHasPropertyOp* jparse(json v);
@@ -418,7 +419,7 @@ public:
     const uint32_t slotoffset;
     const BSQTupleIndex idx;
 
-    LoadTupleIndexDirectOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQType* layouttype, uint32_t slotoffset, BSQTupleIndex idx) : InterpOp(sinfo, OpCodeTag::LoadTupleIndexDirectOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), slotoffset(slotoffset), idx(idx) {;}
+    LoadTupleIndexDirectOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQType* layouttype, uint32_t slotoffset, BSQTupleIndex idx) : InterpOp(sinfo, ssrc, OpCodeTag::LoadTupleIndexDirectOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), slotoffset(slotoffset), idx(idx) {;}
     virtual ~LoadTupleIndexDirectOp() {;}
 
     static LoadTupleIndexDirectOp* jparse(json v);
@@ -433,7 +434,7 @@ public:
     const BSQUnionType* layouttype;
     const BSQTupleIndex idx;
 
-    LoadTupleIndexVirtualOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQUnionType* layouttype, BSQTupleIndex idx) : InterpOp(sinfo, OpCodeTag::LoadTupleIndexVirtualOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), idx(idx) {;}
+    LoadTupleIndexVirtualOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQUnionType* layouttype, BSQTupleIndex idx) : InterpOp(sinfo, ssrc, OpCodeTag::LoadTupleIndexVirtualOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), idx(idx) {;}
     virtual ~LoadTupleIndexVirtualOp() {;}
 
     static LoadTupleIndexVirtualOp* jparse(json v);
@@ -450,7 +451,7 @@ public:
     const BSQTupleIndex idx;
     const BSQGuard guard;
 
-    LoadTupleIndexSetGuardDirectOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQType* layouttype, uint32_t slotoffset, BSQTupleIndex idx, BSQGuard guard) : InterpOp(sinfo, OpCodeTag::LoadTupleIndexSetGuardDirectOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), slotoffset(slotoffset), idx(idx), guard(guard) {;}
+    LoadTupleIndexSetGuardDirectOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQType* layouttype, uint32_t slotoffset, BSQTupleIndex idx, BSQGuard guard) : InterpOp(sinfo, ssrc, OpCodeTag::LoadTupleIndexSetGuardDirectOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), slotoffset(slotoffset), idx(idx), guard(guard) {;}
     virtual ~LoadTupleIndexSetGuardDirectOp() {;}
 
     static LoadTupleIndexSetGuardDirectOp* jparse(json v);
@@ -466,7 +467,7 @@ public:
     const BSQTupleIndex idx;
     const BSQGuard guard;
 
-    LoadTupleIndexSetGuardVirtualOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQUnionType* layouttype, BSQTupleIndex idx, BSQGuard guard) : InterpOp(sinfo, OpCodeTag::LoadTupleIndexSetGuardVirtualOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), idx(idx), guard(guard) {;}
+    LoadTupleIndexSetGuardVirtualOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQUnionType* layouttype, BSQTupleIndex idx, BSQGuard guard) : InterpOp(sinfo, ssrc, OpCodeTag::LoadTupleIndexSetGuardVirtualOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), idx(idx), guard(guard) {;}
     virtual ~LoadTupleIndexSetGuardVirtualOp() {;}
 
     static LoadTupleIndexSetGuardVirtualOp* jparse(json v);
@@ -482,7 +483,7 @@ public:
     const uint32_t slotoffset;
     const BSQRecordPropertyID propId;
 
-    LoadRecordPropertyDirectOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQType* layouttype, uint32_t slotoffset, BSQRecordPropertyID propId) : InterpOp(sinfo, OpCodeTag::LoadRecordPropertyDirectOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), slotoffset(slotoffset), propId(propId) {;}
+    LoadRecordPropertyDirectOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQType* layouttype, uint32_t slotoffset, BSQRecordPropertyID propId) : InterpOp(sinfo, ssrc, OpCodeTag::LoadRecordPropertyDirectOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), slotoffset(slotoffset), propId(propId) {;}
     virtual ~LoadRecordPropertyDirectOp() {;}
 
     static LoadRecordPropertyDirectOp* jparse(json v);
@@ -497,7 +498,7 @@ public:
     const BSQUnionType* layouttype;
     const BSQRecordPropertyID propId;
 
-    LoadRecordPropertyVirtualOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQUnionType* layouttype, BSQRecordPropertyID propId) : InterpOp(sinfo, OpCodeTag::LoadRecordPropertyVirtualOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), propId(propId) {;}
+    LoadRecordPropertyVirtualOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQUnionType* layouttype, BSQRecordPropertyID propId) : InterpOp(sinfo, ssrc, OpCodeTag::LoadRecordPropertyVirtualOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), propId(propId) {;}
     virtual ~LoadRecordPropertyVirtualOp() {;}
 
     static LoadRecordPropertyVirtualOp* jparse(json v);
@@ -514,7 +515,7 @@ public:
     const BSQRecordPropertyID propId;
     const BSQGuard guard;
 
-    LoadRecordPropertySetGuardDirectOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQType* layouttype, uint32_t slotoffset, BSQRecordPropertyID propId, BSQGuard guard) : InterpOp(sinfo, OpCodeTag::LoadRecordPropertySetGuardDirectOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), slotoffset(slotoffset), propId(propId), guard(guard) {;}
+    LoadRecordPropertySetGuardDirectOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQType* layouttype, uint32_t slotoffset, BSQRecordPropertyID propId, BSQGuard guard) : InterpOp(sinfo, ssrc, OpCodeTag::LoadRecordPropertySetGuardDirectOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), slotoffset(slotoffset), propId(propId), guard(guard) {;}
     virtual ~LoadRecordPropertySetGuardDirectOp() {;}
 
     static LoadRecordPropertySetGuardDirectOp* jparse(json v);
@@ -530,7 +531,7 @@ public:
     const BSQRecordPropertyID propId;
     const BSQGuard guard;
 
-    LoadRecordPropertySetGuardVirtualOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQUnionType* layouttype, BSQRecordPropertyID propId, BSQGuard guard) : InterpOp(sinfo, OpCodeTag::LoadRecordPropertySetGuardVirtualOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), propId(propId), guard(guard) {;}
+    LoadRecordPropertySetGuardVirtualOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQUnionType* layouttype, BSQRecordPropertyID propId, BSQGuard guard) : InterpOp(sinfo, ssrc, OpCodeTag::LoadRecordPropertySetGuardVirtualOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), propId(propId), guard(guard) {;}
     virtual ~LoadRecordPropertySetGuardVirtualOp() {;}
 
     static LoadRecordPropertySetGuardVirtualOp* jparse(json v);
@@ -546,7 +547,7 @@ public:
     const uint32_t slotoffset;
     const BSQFieldID fieldId;
 
-    LoadEntityFieldDirectOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQType* layouttype, uint32_t slotoffset, BSQFieldID fieldId) : InterpOp(sinfo, OpCodeTag::LoadEntityFieldDirectOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), slotoffset(slotoffset), fieldId(fieldId) {;}
+    LoadEntityFieldDirectOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQType* layouttype, uint32_t slotoffset, BSQFieldID fieldId) : InterpOp(sinfo, ssrc, OpCodeTag::LoadEntityFieldDirectOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), slotoffset(slotoffset), fieldId(fieldId) {;}
     virtual ~LoadEntityFieldDirectOp() {;}
 
     static LoadEntityFieldDirectOp* jparse(json v);
@@ -561,7 +562,7 @@ public:
     const BSQUnionType* layouttype;
     const BSQFieldID fieldId;
 
-    LoadEntityFieldVirtualOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQUnionType* layouttype, BSQFieldID fieldId) : InterpOp(sinfo, OpCodeTag::LoadEntityFieldVirtualOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), fieldId(fieldId) {;}
+    LoadEntityFieldVirtualOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQUnionType* layouttype, BSQFieldID fieldId) : InterpOp(sinfo, ssrc, OpCodeTag::LoadEntityFieldVirtualOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), fieldId(fieldId) {;}
     virtual ~LoadEntityFieldVirtualOp() {;}
 
     static LoadEntityFieldVirtualOp* jparse(json v);
@@ -577,7 +578,7 @@ public:
     const BSQType* flowtype;
     const std::vector<std::tuple<BSQTupleIndex, uint32_t, const BSQType*>> idxs;
 
-    ProjectTupleOp(SourceInfo sinfo, TargetVar trgt, const BSQEphemeralListType* trgttype, Argument arg, const BSQType* layouttype, const BSQType* flowtype, std::vector<std::tuple<BSQTupleIndex, uint32_t, const BSQType*>> idxs) : InterpOp(sinfo, OpCodeTag::ProjectTupleOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), flowtype(flowtype), idxs(idxs) {;}
+    ProjectTupleOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, const BSQEphemeralListType* trgttype, Argument arg, const BSQType* layouttype, const BSQType* flowtype, std::vector<std::tuple<BSQTupleIndex, uint32_t, const BSQType*>> idxs) : InterpOp(sinfo, ssrc, OpCodeTag::ProjectTupleOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), flowtype(flowtype), idxs(idxs) {;}
     virtual ~ProjectTupleOp() {;}
 
     static ProjectTupleOp* jparse(json v);
@@ -593,7 +594,7 @@ public:
     const BSQType* flowtype;
     const std::vector<std::tuple<BSQRecordPropertyID, uint32_t, const BSQType*>> props;
 
-    ProjectRecordOp(SourceInfo sinfo, TargetVar trgt, const BSQEphemeralListType* trgttype, Argument arg, const BSQType* layouttype, const BSQType* flowtype, std::vector<std::tuple<BSQRecordPropertyID, uint32_t, const BSQType*>> props) : InterpOp(sinfo, OpCodeTag::ProjectRecordOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), flowtype(flowtype), props(props) {;}
+    ProjectRecordOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, const BSQEphemeralListType* trgttype, Argument arg, const BSQType* layouttype, const BSQType* flowtype, std::vector<std::tuple<BSQRecordPropertyID, uint32_t, const BSQType*>> props) : InterpOp(sinfo, ssrc, OpCodeTag::ProjectRecordOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), flowtype(flowtype), props(props) {;}
     virtual ~ProjectRecordOp() {;}
 
     static ProjectRecordOp* jparse(json v);
@@ -609,7 +610,7 @@ public:
     const BSQType* flowtype;
     const std::vector<std::tuple<BSQFieldID, uint32_t, const BSQType*>> fields;
 
-    ProjectEntityOp(SourceInfo sinfo, TargetVar trgt, const BSQEphemeralListType* trgttype, Argument arg, const BSQType* layouttype, const BSQType* flowtype, std::vector<std::tuple<BSQFieldID, uint32_t, const BSQType*>> fields) : InterpOp(sinfo, OpCodeTag::ProjectEntityOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), flowtype(flowtype), fields(fields) {;}
+    ProjectEntityOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, const BSQEphemeralListType* trgttype, Argument arg, const BSQType* layouttype, const BSQType* flowtype, std::vector<std::tuple<BSQFieldID, uint32_t, const BSQType*>> fields) : InterpOp(sinfo, ssrc, OpCodeTag::ProjectEntityOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), flowtype(flowtype), fields(fields) {;}
     virtual ~ProjectEntityOp() {;}
 
     static ProjectEntityOp* jparse(json v);
@@ -625,7 +626,7 @@ public:
     const BSQType* flowtype;
     const std::vector<std::tuple<BSQTupleIndex, uint32_t, const BSQType*, Argument>> updates;
 
-    UpdateTupleOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQType* layouttype, const BSQType* flowtype, std::vector<std::tuple<BSQTupleIndex, uint32_t, const BSQType*, Argument>> updates) : InterpOp(sinfo, OpCodeTag::UpdateTupleOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), flowtype(flowtype), updates(updates) {;}
+    UpdateTupleOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQType* layouttype, const BSQType* flowtype, std::vector<std::tuple<BSQTupleIndex, uint32_t, const BSQType*, Argument>> updates) : InterpOp(sinfo, ssrc, OpCodeTag::UpdateTupleOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), flowtype(flowtype), updates(updates) {;}
     virtual ~UpdateTupleOp() {;}
 
     static UpdateTupleOp* jparse(json v);
@@ -641,7 +642,7 @@ public:
     const BSQType* flowtype;
     const std::vector<std::tuple<BSQRecordPropertyID, uint32_t, const BSQType*, Argument>> updates;
 
-    UpdateRecordOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQType* layouttype, const BSQType* flowtype, std::vector<std::tuple<BSQRecordPropertyID, uint32_t, const BSQType*, Argument>> updates) : InterpOp(sinfo, OpCodeTag::UpdateRecordOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), flowtype(flowtype), updates(updates) {;}
+    UpdateRecordOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQType* layouttype, const BSQType* flowtype, std::vector<std::tuple<BSQRecordPropertyID, uint32_t, const BSQType*, Argument>> updates) : InterpOp(sinfo, ssrc, OpCodeTag::UpdateRecordOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), flowtype(flowtype), updates(updates) {;}
     virtual ~UpdateRecordOp() {;}
 
     static UpdateRecordOp* jparse(json v);
@@ -657,7 +658,7 @@ public:
     const BSQType* flowtype;
     const std::vector<std::tuple<BSQFieldID, uint32_t, const BSQType*, Argument>> updates;
 
-    UpdateEntityOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQType* layouttype, const BSQType* flowtype, std::vector<std::tuple<BSQFieldID, uint32_t, const BSQType*, Argument>> updates) : InterpOp(sinfo, OpCodeTag::UpdateEntityOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), flowtype(flowtype), updates(updates) {;}
+    UpdateEntityOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQType* layouttype, const BSQType* flowtype, std::vector<std::tuple<BSQFieldID, uint32_t, const BSQType*, Argument>> updates) : InterpOp(sinfo, ssrc, OpCodeTag::UpdateEntityOp), trgt(trgt), trgttype(trgttype), arg(arg), layouttype(layouttype), flowtype(flowtype), updates(updates) {;}
     virtual ~UpdateEntityOp() {;}
 
     static UpdateEntityOp* jparse(json v);
@@ -673,7 +674,7 @@ public:
     const uint32_t slotoffset;
     const uint32_t index;
 
-    LoadFromEpehmeralListOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQEphemeralListType* argtype, uint32_t slotoffset, uint32_t index) : InterpOp(sinfo, OpCodeTag::LoadFromEpehmeralListOp), trgt(trgt), trgttype(trgttype), arg(arg), argtype(argtype), slotoffset(slotoffset), index(index) {;}
+    LoadFromEpehmeralListOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, const BSQType* trgttype, Argument arg, const BSQEphemeralListType* argtype, uint32_t slotoffset, uint32_t index) : InterpOp(sinfo, ssrc, OpCodeTag::LoadFromEpehmeralListOp), trgt(trgt), trgttype(trgttype), arg(arg), argtype(argtype), slotoffset(slotoffset), index(index) {;}
     virtual ~LoadFromEpehmeralListOp() {;}
 
     static LoadFromEpehmeralListOp* jparse(json v);
@@ -689,7 +690,7 @@ public:
     const std::vector<uint32_t> slotoffsets;
     const std::vector<uint32_t> indexs;
 
-    MultiLoadFromEpehmeralListOp(SourceInfo sinfo, std::vector<TargetVar> trgts, std::vector<const BSQType*> trgttypes, Argument arg, const BSQEphemeralListType* argtype, std::vector<uint32_t> slotoffsets, std::vector<uint32_t> indexs) : InterpOp(sinfo, OpCodeTag::MultiLoadFromEpehmeralListOp), trgts(trgts), trgttypes(trgttypes), arg(arg), argtype(argtype), slotoffsets(slotoffsets), indexs(indexs) {;}
+    MultiLoadFromEpehmeralListOp(SourceInfo sinfo, std::string ssrc, std::vector<TargetVar> trgts, std::vector<const BSQType*> trgttypes, Argument arg, const BSQEphemeralListType* argtype, std::vector<uint32_t> slotoffsets, std::vector<uint32_t> indexs) : InterpOp(sinfo, ssrc, OpCodeTag::MultiLoadFromEpehmeralListOp), trgts(trgts), trgttypes(trgttypes), arg(arg), argtype(argtype), slotoffsets(slotoffsets), indexs(indexs) {;}
     virtual ~MultiLoadFromEpehmeralListOp() {;}
 
     static MultiLoadFromEpehmeralListOp* jparse(json v);
@@ -705,7 +706,7 @@ public:
     const uint32_t slotoffsetend;
     const uint32_t indexend;
 
-    SliceEphemeralListOp(SourceInfo sinfo, TargetVar trgt, const BSQEphemeralListType* trgttype, Argument arg, const BSQEphemeralListType* argtype, uint32_t slotoffsetend, uint32_t indexend) : InterpOp(sinfo, OpCodeTag::SliceEphemeralListOp), trgt(trgt), trgttype(trgttype), arg(arg), argtype(argtype), slotoffsetend(slotoffsetend), indexend(indexend) {;}
+    SliceEphemeralListOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, const BSQEphemeralListType* trgttype, Argument arg, const BSQEphemeralListType* argtype, uint32_t slotoffsetend, uint32_t indexend) : InterpOp(sinfo, ssrc, OpCodeTag::SliceEphemeralListOp), trgt(trgt), trgttype(trgttype), arg(arg), argtype(argtype), slotoffsetend(slotoffsetend), indexend(indexend) {;}
     virtual ~SliceEphemeralListOp() {;}
 
     static SliceEphemeralListOp* jparse(json v);
@@ -721,7 +722,7 @@ public:
     const int32_t optmaskoffset;
     const BSQStatementGuard sguard;
 
-    InvokeFixedFunctionOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, BSQInvokeID invokeId, std::vector<Argument> args, BSQStatementGuard sguard, int32_t optmaskoffset) : InterpOp(sinfo, OpCodeTag::InvokeFixedFunctionOp), trgt(trgt), trgttype(trgttype), invokeId(invokeId), args(args), optmaskoffset(optmaskoffset), sguard(sguard) {;}
+    InvokeFixedFunctionOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, const BSQType* trgttype, BSQInvokeID invokeId, std::vector<Argument> args, BSQStatementGuard sguard, int32_t optmaskoffset) : InterpOp(sinfo, ssrc, OpCodeTag::InvokeFixedFunctionOp), trgt(trgt), trgttype(trgttype), invokeId(invokeId), args(args), optmaskoffset(optmaskoffset), sguard(sguard) {;}
     virtual ~InvokeFixedFunctionOp() {;}
 
     static InvokeFixedFunctionOp* jparse(json v);
@@ -737,7 +738,7 @@ public:
     const int32_t optmaskoffset;
     const std::vector<Argument> args;
     
-    InvokeVirtualFunctionOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, BSQVirtualInvokeID invokeId, const BSQUnionType* rcvrlayouttype, std::vector<Argument> args, int32_t optmaskoffset) : InterpOp(sinfo, OpCodeTag::InvokeVirtualFunctionOp), trgt(trgt), trgttype(trgttype), invokeId(invokeId), rcvrlayouttype(rcvrlayouttype), optmaskoffset(optmaskoffset), args(args) {;}
+    InvokeVirtualFunctionOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, const BSQType* trgttype, BSQVirtualInvokeID invokeId, const BSQUnionType* rcvrlayouttype, std::vector<Argument> args, int32_t optmaskoffset) : InterpOp(sinfo, ssrc, OpCodeTag::InvokeVirtualFunctionOp), trgt(trgt), trgttype(trgttype), invokeId(invokeId), rcvrlayouttype(rcvrlayouttype), optmaskoffset(optmaskoffset), args(args) {;}
     virtual ~InvokeVirtualFunctionOp() {;}
 
     static InvokeVirtualFunctionOp* jparse(json v);
@@ -755,7 +756,7 @@ public:
     //TODO: we probably need to know about the layout and flow type of each arg too
     //
 
-    InvokeVirtualOperatorOp(SourceInfo sinfo, TargetVar trgt, const BSQType* trgttype, BSQVirtualInvokeID invokeId, std::vector<Argument> args) : InterpOp(sinfo, OpCodeTag::InvokeVirtualOperatorOp), trgt(trgt), trgttype(trgttype), invokeId(invokeId), args(args) {;}
+    InvokeVirtualOperatorOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, const BSQType* trgttype, BSQVirtualInvokeID invokeId, std::vector<Argument> args) : InterpOp(sinfo, ssrc, OpCodeTag::InvokeVirtualOperatorOp), trgt(trgt), trgttype(trgttype), invokeId(invokeId), args(args) {;}
     virtual ~InvokeVirtualOperatorOp() {;}
 
     static InvokeVirtualOperatorOp* jparse(json v);
@@ -768,7 +769,7 @@ public:
     const BSQType* oftype;
     const std::vector<Argument> args;
     
-    ConstructorTupleOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, std::vector<Argument> args) : InterpOp(sinfo, OpCodeTag::ConstructorTupleOp), trgt(trgt), oftype(oftype), args(args) {;}
+    ConstructorTupleOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, const BSQType* oftype, std::vector<Argument> args) : InterpOp(sinfo, ssrc, OpCodeTag::ConstructorTupleOp), trgt(trgt), oftype(oftype), args(args) {;}
     virtual ~ConstructorTupleOp() {;}
 
     static ConstructorTupleOp* jparse(json v);
@@ -782,7 +783,7 @@ public:
     const Argument arg;
     const BSQEphemeralListType* argtype;
     
-    ConstructorTupleFromEphemeralListOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, Argument arg, const BSQEphemeralListType* argtype) : InterpOp(sinfo, OpCodeTag::ConstructorTupleFromEphemeralListOp), trgt(trgt), oftype(oftype), arg(arg), argtype(argtype) {;}
+    ConstructorTupleFromEphemeralListOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, const BSQType* oftype, Argument arg, const BSQEphemeralListType* argtype) : InterpOp(sinfo, ssrc, OpCodeTag::ConstructorTupleFromEphemeralListOp), trgt(trgt), oftype(oftype), arg(arg), argtype(argtype) {;}
     virtual ~ConstructorTupleFromEphemeralListOp() {;}
 
     static ConstructorTupleFromEphemeralListOp* jparse(json v);
@@ -795,7 +796,7 @@ public:
     const BSQType* oftype;
     const std::vector<Argument> args;
     
-    ConstructorRecordOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, std::vector<Argument> args) : InterpOp(sinfo, OpCodeTag::ConstructorRecordOp), trgt(trgt), oftype(oftype), args(args) {;}
+    ConstructorRecordOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, const BSQType* oftype, std::vector<Argument> args) : InterpOp(sinfo, ssrc, OpCodeTag::ConstructorRecordOp), trgt(trgt), oftype(oftype), args(args) {;}
     virtual ~ConstructorRecordOp() {;}
 
     static ConstructorRecordOp* jparse(json v);
@@ -810,7 +811,7 @@ public:
     const BSQEphemeralListType* argtype;
     const std::vector<uint32_t> proppositions; //if empty then assume properties are in same order as elist
     
-    ConstructorRecordFromEphemeralListOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, Argument arg, const BSQEphemeralListType* argtype, std::vector<BSQRecordPropertyID> proppositions) : InterpOp(sinfo, OpCodeTag::ConstructorRecordFromEphemeralListOp), trgt(trgt), oftype(oftype), arg(arg), argtype(argtype), proppositions(proppositions) {;}
+    ConstructorRecordFromEphemeralListOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, const BSQType* oftype, Argument arg, const BSQEphemeralListType* argtype, std::vector<BSQRecordPropertyID> proppositions) : InterpOp(sinfo, ssrc, OpCodeTag::ConstructorRecordFromEphemeralListOp), trgt(trgt), oftype(oftype), arg(arg), argtype(argtype), proppositions(proppositions) {;}
     virtual ~ConstructorRecordFromEphemeralListOp() {;}
 
     static ConstructorRecordFromEphemeralListOp* jparse(json v);
@@ -825,7 +826,7 @@ public:
     const BSQEphemeralListType* argtype;
     const std::vector<Argument> ext;
 
-    EphemeralListExtendOp(SourceInfo sinfo, TargetVar trgt, const BSQEphemeralListType* resultType, Argument arg, const BSQEphemeralListType* argtype, std::vector<Argument> ext) : InterpOp(sinfo, OpCodeTag::EphemeralListExtendOp), trgt(trgt), resultType(resultType), arg(arg), argtype(argtype), ext(ext) {;}
+    EphemeralListExtendOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, const BSQEphemeralListType* resultType, Argument arg, const BSQEphemeralListType* argtype, std::vector<Argument> ext) : InterpOp(sinfo, ssrc, OpCodeTag::EphemeralListExtendOp), trgt(trgt), resultType(resultType), arg(arg), argtype(argtype), ext(ext) {;}
     virtual ~EphemeralListExtendOp() {;}
 
     static EphemeralListExtendOp* jparse(json v);
@@ -838,7 +839,7 @@ public:
     const BSQEphemeralListType* oftype;
     const std::vector<Argument> args;
     
-    ConstructorEphemeralListOp(SourceInfo sinfo, TargetVar trgt, const BSQEphemeralListType* oftype, std::vector<Argument> args) : InterpOp(sinfo, OpCodeTag::ConstructorEphemeralListOp), trgt(trgt), oftype(oftype), args(args) {;}
+    ConstructorEphemeralListOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, const BSQEphemeralListType* oftype, std::vector<Argument> args) : InterpOp(sinfo, ssrc, OpCodeTag::ConstructorEphemeralListOp), trgt(trgt), oftype(oftype), args(args) {;}
     virtual ~ConstructorEphemeralListOp() {;}
 
     static ConstructorEphemeralListOp* jparse(json v);
@@ -851,7 +852,7 @@ public:
     const BSQType* oftype;
     const std::vector<Argument> args;
     
-    ConstructorEntityDirectOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, std::vector<Argument> args) : InterpOp(sinfo, OpCodeTag::ConstructorEntityDirectOp), trgt(trgt), oftype(oftype), args(args) {;}
+    ConstructorEntityDirectOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, const BSQType* oftype, std::vector<Argument> args) : InterpOp(sinfo, ssrc, OpCodeTag::ConstructorEntityDirectOp), trgt(trgt), oftype(oftype), args(args) {;}
     virtual ~ConstructorEntityDirectOp() {;}
 
     static ConstructorEntityDirectOp* jparse(json v);
@@ -863,7 +864,7 @@ public:
     const TargetVar trgt;
     const Argument arg;
     
-    PrefixNotOp(SourceInfo sinfo, TargetVar trgt, Argument arg) : InterpOp(sinfo, OpCodeTag::PrefixNotOp), trgt(trgt), arg(arg) {;}
+    PrefixNotOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, Argument arg) : InterpOp(sinfo, ssrc, OpCodeTag::PrefixNotOp), trgt(trgt), arg(arg) {;}
     virtual ~PrefixNotOp() {;}
 
     static PrefixNotOp* jparse(json v);
@@ -875,7 +876,7 @@ public:
     const TargetVar trgt;
     const std::vector<Argument> args;
     
-    AllTrueOp(SourceInfo sinfo, TargetVar trgt, std::vector<Argument> args) : InterpOp(sinfo, OpCodeTag::AllTrueOp), trgt(trgt), args(args) {;}
+    AllTrueOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, std::vector<Argument> args) : InterpOp(sinfo, ssrc, OpCodeTag::AllTrueOp), trgt(trgt), args(args) {;}
     virtual ~AllTrueOp() {;}
 
     static AllTrueOp* jparse(json v);
@@ -887,7 +888,7 @@ public:
     const TargetVar trgt;
     const std::vector<Argument> args;
     
-    SomeTrueOp(SourceInfo sinfo, TargetVar trgt, std::vector<Argument> args) : InterpOp(sinfo, OpCodeTag::SomeTrueOp), trgt(trgt), args(args) {;}
+    SomeTrueOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, std::vector<Argument> args) : InterpOp(sinfo, ssrc, OpCodeTag::SomeTrueOp), trgt(trgt), args(args) {;}
     virtual ~SomeTrueOp() {;}
 
     static SomeTrueOp* jparse(json v);
@@ -902,7 +903,7 @@ public:
     const Argument argr;
     const BSQStatementGuard sguard;
     
-    BinKeyEqFastOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, Argument argl, Argument argr, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::BinKeyEqFastOp), trgt(trgt), oftype(oftype), argl(argl), argr(argr), sguard(sguard) {;}
+    BinKeyEqFastOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, const BSQType* oftype, Argument argl, Argument argr, BSQStatementGuard sguard) : InterpOp(sinfo, ssrc, OpCodeTag::BinKeyEqFastOp), trgt(trgt), oftype(oftype), argl(argl), argr(argr), sguard(sguard) {;}
     virtual ~BinKeyEqFastOp() {;}
 
     static BinKeyEqFastOp* jparse(json v);
@@ -919,7 +920,7 @@ public:
     const BSQType* argrlayout;
     const BSQStatementGuard sguard;
     
-    BinKeyEqStaticOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, Argument argl, const BSQType* argllayout, Argument argr, const BSQType* argrlayout, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::BinKeyEqStaticOp), trgt(trgt), oftype(oftype), argl(argl), argllayout(argllayout), argr(argr), argrlayout(argrlayout), sguard(sguard) {;}
+    BinKeyEqStaticOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, const BSQType* oftype, Argument argl, const BSQType* argllayout, Argument argr, const BSQType* argrlayout, BSQStatementGuard sguard) : InterpOp(sinfo, ssrc, OpCodeTag::BinKeyEqStaticOp), trgt(trgt), oftype(oftype), argl(argl), argllayout(argllayout), argr(argr), argrlayout(argrlayout), sguard(sguard) {;}
     virtual ~BinKeyEqStaticOp() {;}
 
     static BinKeyEqStaticOp* jparse(json v);
@@ -936,7 +937,7 @@ public:
     const BSQType* argrlayout;
     const BSQStatementGuard sguard;
     
-    BinKeyEqVirtualOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, Argument argl, const BSQType* argllayout, Argument argr, const BSQType* argrlayout, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::BinKeyEqVirtualOp), trgt(trgt), oftype(oftype), argl(argl), argllayout(argllayout), argr(argr), argrlayout(argrlayout), sguard(sguard) {;}
+    BinKeyEqVirtualOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, const BSQType* oftype, Argument argl, const BSQType* argllayout, Argument argr, const BSQType* argrlayout, BSQStatementGuard sguard) : InterpOp(sinfo, ssrc, OpCodeTag::BinKeyEqVirtualOp), trgt(trgt), oftype(oftype), argl(argl), argllayout(argllayout), argr(argr), argrlayout(argrlayout), sguard(sguard) {;}
     virtual ~BinKeyEqVirtualOp() {;}
 
     static BinKeyEqVirtualOp* jparse(json v);
@@ -951,7 +952,7 @@ public:
     const Argument argl;
     const Argument argr;
     
-    BinKeyLessFastOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, Argument argl, Argument argr) : InterpOp(sinfo, OpCodeTag::BinKeyLessFastOp), trgt(trgt), oftype(oftype), argl(argl), argr(argr) {;}
+    BinKeyLessFastOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, const BSQType* oftype, Argument argl, Argument argr) : InterpOp(sinfo, ssrc, OpCodeTag::BinKeyLessFastOp), trgt(trgt), oftype(oftype), argl(argl), argr(argr) {;}
     virtual ~BinKeyLessFastOp() {;}
 
     static BinKeyLessFastOp* jparse(json v);
@@ -967,7 +968,7 @@ public:
     const Argument argr;
     const BSQType* argrlayout;
     
-    BinKeyLessStaticOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, Argument argl, const BSQType* argllayout, Argument argr, const BSQType* argrlayout) : InterpOp(sinfo, OpCodeTag::BinKeyLessStaticOp), trgt(trgt), oftype(oftype), argl(argl), argllayout(argllayout), argr(argr), argrlayout(argrlayout) {;}
+    BinKeyLessStaticOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, const BSQType* oftype, Argument argl, const BSQType* argllayout, Argument argr, const BSQType* argrlayout) : InterpOp(sinfo, ssrc, OpCodeTag::BinKeyLessStaticOp), trgt(trgt), oftype(oftype), argl(argl), argllayout(argllayout), argr(argr), argrlayout(argrlayout) {;}
     virtual ~BinKeyLessStaticOp() {;}
 
     static BinKeyLessStaticOp* jparse(json v);
@@ -983,7 +984,7 @@ public:
     const Argument argr;
     const BSQType* argrlayout;
     
-    BinKeyLessVirtualOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, Argument argl, const BSQType* argllayout, Argument argr, const BSQType* argrlayout) : InterpOp(sinfo, OpCodeTag::BinKeyLessVirtualOp), trgt(trgt), oftype(oftype), argl(argl), argllayout(argllayout), argr(argr), argrlayout(argrlayout) {;}
+    BinKeyLessVirtualOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, const BSQType* oftype, Argument argl, const BSQType* argllayout, Argument argr, const BSQType* argrlayout) : InterpOp(sinfo, ssrc, OpCodeTag::BinKeyLessVirtualOp), trgt(trgt), oftype(oftype), argl(argl), argllayout(argllayout), argr(argr), argrlayout(argrlayout) {;}
     virtual ~BinKeyLessVirtualOp() {;}
 
     static BinKeyLessVirtualOp* jparse(json v);
@@ -997,7 +998,7 @@ public:
     const BSQUnionType* arglayout;
     const BSQStatementGuard sguard;
     
-    TypeIsNoneOp(SourceInfo sinfo, TargetVar trgt, Argument arg, const BSQUnionType* arglayout, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::TypeIsNoneOp), trgt(trgt), arg(arg), arglayout(arglayout), sguard(sguard) {;}
+    TypeIsNoneOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, Argument arg, const BSQUnionType* arglayout, BSQStatementGuard sguard) : InterpOp(sinfo, ssrc, OpCodeTag::TypeIsNoneOp), trgt(trgt), arg(arg), arglayout(arglayout), sguard(sguard) {;}
     virtual ~TypeIsNoneOp() {;}
 
     static TypeIsNoneOp* jparse(json v);
@@ -1011,7 +1012,7 @@ public:
     const BSQUnionType* arglayout;
     const BSQStatementGuard sguard;
     
-    TypeIsSomeOp(SourceInfo sinfo, TargetVar trgt, Argument arg, const BSQUnionType* arglayout, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::TypeIsSomeOp), trgt(trgt), arg(arg), arglayout(arglayout), sguard(sguard) {;}
+    TypeIsSomeOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, Argument arg, const BSQUnionType* arglayout, BSQStatementGuard sguard) : InterpOp(sinfo, ssrc, OpCodeTag::TypeIsSomeOp), trgt(trgt), arg(arg), arglayout(arglayout), sguard(sguard) {;}
     virtual ~TypeIsSomeOp() {;}
 
     static TypeIsSomeOp* jparse(json v);
@@ -1025,7 +1026,7 @@ public:
     const BSQUnionType* arglayout;
     const BSQStatementGuard sguard;
     
-    TypeIsNothingOp(SourceInfo sinfo, TargetVar trgt, Argument arg, const BSQUnionType* arglayout, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::TypeIsNothingOp), trgt(trgt), arg(arg), arglayout(arglayout), sguard(sguard) {;}
+    TypeIsNothingOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, Argument arg, const BSQUnionType* arglayout, BSQStatementGuard sguard) : InterpOp(sinfo, ssrc, OpCodeTag::TypeIsNothingOp), trgt(trgt), arg(arg), arglayout(arglayout), sguard(sguard) {;}
     virtual ~TypeIsNothingOp() {;}
 
     static TypeIsNothingOp* jparse(json v);
@@ -1040,7 +1041,7 @@ public:
     const BSQUnionType* arglayout;
     const BSQStatementGuard sguard;
     
-    TypeTagIsOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, Argument arg, const BSQUnionType* arglayout, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::TypeTagIsOp), trgt(trgt), oftype(oftype), arg(arg), arglayout(arglayout), sguard(sguard) {;}
+    TypeTagIsOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, const BSQType* oftype, Argument arg, const BSQUnionType* arglayout, BSQStatementGuard sguard) : InterpOp(sinfo, ssrc, OpCodeTag::TypeTagIsOp), trgt(trgt), oftype(oftype), arg(arg), arglayout(arglayout), sguard(sguard) {;}
     virtual ~TypeTagIsOp() {;}
 
     static TypeTagIsOp* jparse(json v);
@@ -1055,7 +1056,7 @@ public:
     const BSQUnionType* arglayout;
     const BSQStatementGuard sguard;
     
-    TypeTagSubtypeOfOp(SourceInfo sinfo, TargetVar trgt, const BSQUnionType* oftype, Argument arg, const BSQUnionType* arglayout, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::TypeTagSubtypeOfOp), trgt(trgt), oftype(oftype), arg(arg), arglayout(arglayout), sguard(sguard) {;}
+    TypeTagSubtypeOfOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, const BSQUnionType* oftype, Argument arg, const BSQUnionType* arglayout, BSQStatementGuard sguard) : InterpOp(sinfo, ssrc, OpCodeTag::TypeTagSubtypeOfOp), trgt(trgt), oftype(oftype), arg(arg), arglayout(arglayout), sguard(sguard) {;}
     virtual ~TypeTagSubtypeOfOp() {;}
 
     static TypeTagSubtypeOfOp* jparse(json v);
@@ -1067,7 +1068,7 @@ public:
     const uint32_t offset;
     const std::string label;
     
-    JumpOp(SourceInfo sinfo, uint32_t offset, const std::string label) : InterpOp(sinfo, OpCodeTag::JumpOp), offset(offset), label(label) {;}
+    JumpOp(SourceInfo sinfo, std::string ssrc, uint32_t offset, const std::string label) : InterpOp(sinfo, ssrc, OpCodeTag::JumpOp), offset(offset), label(label) {;}
     virtual ~JumpOp() {;}
 
     static JumpOp* jparse(json v);
@@ -1082,7 +1083,7 @@ public:
     const std::string tlabel;
     const std::string flabel;
     
-    JumpCondOp(SourceInfo sinfo, Argument arg, uint32_t toffset, uint32_t foffset, const std::string tlabel, const std::string flabel) : InterpOp(sinfo, OpCodeTag::JumpCondOp), arg(arg), toffset(toffset), foffset(foffset), tlabel(tlabel), flabel(flabel) {;}
+    JumpCondOp(SourceInfo sinfo, std::string ssrc, Argument arg, uint32_t toffset, uint32_t foffset, const std::string tlabel, const std::string flabel) : InterpOp(sinfo, ssrc, OpCodeTag::JumpCondOp), arg(arg), toffset(toffset), foffset(foffset), tlabel(tlabel), flabel(flabel) {;}
     virtual ~JumpCondOp() {;}
 
     static JumpCondOp* jparse(json v);
@@ -1098,7 +1099,7 @@ public:
     const std::string nlabel;
     const std::string slabel;
     
-    JumpNoneOp(SourceInfo sinfo, Argument arg, const BSQUnionType* arglayout, uint32_t noffset, uint32_t soffset, const std::string nlabel, const std::string slabel) : InterpOp(sinfo, OpCodeTag::JumpNoneOp), arg(arg), arglayout(arglayout), noffset(noffset), soffset(soffset), nlabel(nlabel), slabel(slabel) {;}
+    JumpNoneOp(SourceInfo sinfo, std::string ssrc, Argument arg, const BSQUnionType* arglayout, uint32_t noffset, uint32_t soffset, const std::string nlabel, const std::string slabel) : InterpOp(sinfo, ssrc, OpCodeTag::JumpNoneOp), arg(arg), arglayout(arglayout), noffset(noffset), soffset(soffset), nlabel(nlabel), slabel(slabel) {;}
     virtual ~JumpNoneOp() {;}
 
     static JumpNoneOp* jparse(json v);
@@ -1112,7 +1113,7 @@ public:
     const BSQType* oftype;
     const BSQStatementGuard sguard;
     
-    RegisterAssignOp(SourceInfo sinfo, TargetVar trgt, Argument arg, const BSQType* oftype, BSQStatementGuard sguard) : InterpOp(sinfo, OpCodeTag::RegisterAssignOp), trgt(trgt), arg(arg), oftype(oftype), sguard(sguard) {;}
+    RegisterAssignOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, Argument arg, const BSQType* oftype, BSQStatementGuard sguard) : InterpOp(sinfo, ssrc, OpCodeTag::RegisterAssignOp), trgt(trgt), arg(arg), oftype(oftype), sguard(sguard) {;}
     virtual ~RegisterAssignOp() {;}
 
     static RegisterAssignOp* jparse(json v);
@@ -1125,7 +1126,7 @@ public:
     const Argument arg;
     const BSQType* oftype;
     
-    ReturnAssignOp(SourceInfo sinfo, TargetVar trgt, Argument arg, const BSQType* oftype) : InterpOp(sinfo, OpCodeTag::ReturnAssignOp), trgt(trgt), arg(arg), oftype(oftype) {;}
+    ReturnAssignOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, Argument arg, const BSQType* oftype) : InterpOp(sinfo, ssrc, OpCodeTag::ReturnAssignOp), trgt(trgt), arg(arg), oftype(oftype) {;}
     virtual ~ReturnAssignOp() {;}
 
     static ReturnAssignOp* jparse(json v);
@@ -1138,7 +1139,7 @@ public:
     const std::vector<Argument> args;
     const BSQType* oftype;
     
-    ReturnAssignOfConsOp(SourceInfo sinfo, TargetVar trgt, std::vector<Argument> args, const BSQType* oftype) : InterpOp(sinfo, OpCodeTag::ReturnAssignOfConsOp), trgt(trgt), args(args), oftype(oftype) {;}
+    ReturnAssignOfConsOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, std::vector<Argument> args, const BSQType* oftype) : InterpOp(sinfo, ssrc, OpCodeTag::ReturnAssignOfConsOp), trgt(trgt), args(args), oftype(oftype) {;}
     virtual ~ReturnAssignOfConsOp() {;}
 
     static ReturnAssignOfConsOp* jparse(json v);
@@ -1151,7 +1152,7 @@ public:
     const BSQType* oftype;
     const std::string name;
     
-    VarLifetimeStartOp(SourceInfo sinfo, TargetVar homelocation, const BSQType* oftype, const std::string name) : InterpOp(sinfo, OpCodeTag::VarLifetimeStartOp), homelocation(homelocation), oftype(oftype), name(name) {;}
+    VarLifetimeStartOp(SourceInfo sinfo, std::string ssrc, TargetVar homelocation, const BSQType* oftype, const std::string name) : InterpOp(sinfo, ssrc, OpCodeTag::VarLifetimeStartOp), homelocation(homelocation), oftype(oftype), name(name) {;}
     virtual ~VarLifetimeStartOp() {;}
 
     static VarLifetimeStartOp* jparse(json v);
@@ -1162,7 +1163,7 @@ class VarLifetimeEndOp : public InterpOp
 public:
     const std::string name;
     
-    VarLifetimeEndOp(SourceInfo sinfo, const std::string name) : InterpOp(sinfo, OpCodeTag::VarLifetimeEndOp), name(name) {;}
+    VarLifetimeEndOp(SourceInfo sinfo, std::string ssrc, const std::string name) : InterpOp(sinfo, ssrc, OpCodeTag::VarLifetimeEndOp), name(name) {;}
     virtual ~VarLifetimeEndOp() {;}
 
     static VarLifetimeEndOp* jparse(json v);
@@ -1176,7 +1177,7 @@ public:
     const Argument updatevar;
     const BSQType* oftype;
     
-    VarHomeLocationValueUpdate(SourceInfo sinfo, TargetVar homelocation, Argument updatevar, const BSQType* oftype) : InterpOp(sinfo, OpCodeTag::VarHomeLocationValueUpdate), homelocation(homelocation), updatevar(updatevar), oftype(oftype) {;}
+    VarHomeLocationValueUpdate(SourceInfo sinfo, std::string ssrc, TargetVar homelocation, Argument updatevar, const BSQType* oftype) : InterpOp(sinfo, ssrc, OpCodeTag::VarHomeLocationValueUpdate), homelocation(homelocation), updatevar(updatevar), oftype(oftype) {;}
     virtual ~VarHomeLocationValueUpdate() {;}
 
     static VarHomeLocationValueUpdate* jparse(json v);
@@ -1190,7 +1191,7 @@ public:
     const BSQType* oftype;
     const Argument arg;
     
-    PrimitiveNegateOperatorOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, Argument arg) : InterpOp(sinfo, ttag), trgt(trgt), oftype(oftype), arg(arg) {;}
+    PrimitiveNegateOperatorOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, const BSQType* oftype, Argument arg) : InterpOp(sinfo, ssrc, ttag), trgt(trgt), oftype(oftype), arg(arg) {;}
     virtual ~PrimitiveNegateOperatorOp() {;}
 
     static PrimitiveNegateOperatorOp* jparse(json v);
@@ -1205,7 +1206,7 @@ public:
     const Argument larg;
     const Argument rarg;
     
-    PrimitiveBinaryOperatorOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, Argument larg, Argument rarg) : InterpOp(sinfo, ttag), trgt(trgt), oftype(oftype), larg(larg), rarg(rarg) {;}
+    PrimitiveBinaryOperatorOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, const BSQType* oftype, Argument larg, Argument rarg) : InterpOp(sinfo, ssrc, ttag), trgt(trgt), oftype(oftype), larg(larg), rarg(rarg) {;}
     virtual ~PrimitiveBinaryOperatorOp() {;}
 
     static PrimitiveBinaryOperatorOp* jparse(json v);
@@ -1220,7 +1221,7 @@ public:
     const Argument larg;
     const Argument rarg;
     
-    PrimitiveBinaryCompareOp(SourceInfo sinfo, TargetVar trgt, const BSQType* oftype, Argument larg, Argument rarg) : InterpOp(sinfo, ttag), trgt(trgt), oftype(oftype), larg(larg), rarg(rarg) {;}
+    PrimitiveBinaryCompareOp(SourceInfo sinfo, std::string ssrc, TargetVar trgt, const BSQType* oftype, Argument larg, Argument rarg) : InterpOp(sinfo, ssrc, ttag), trgt(trgt), oftype(oftype), larg(larg), rarg(rarg) {;}
     virtual ~PrimitiveBinaryCompareOp() {;}
 
     static PrimitiveBinaryCompareOp* jparse(json v);

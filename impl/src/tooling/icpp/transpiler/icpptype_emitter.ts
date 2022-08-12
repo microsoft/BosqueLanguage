@@ -741,38 +741,38 @@ class ICPPTypeEmitter {
 
     private coerceIntoUnion(sinfo: SourceInfo, arg: Argument, from: MIRType, trgt: TargetVar, into: MIRType, sguard: ICPPStatementGuard): ICPPOp {
         if(this.isType(from, "None")) {
-            return ICPPOpEmitter.genNoneInitUnionOp(sinfo, trgt, into.typeID);
+            return ICPPOpEmitter.genNoneInitUnionOp(sinfo, "[COERCE_INTO_UNION]", trgt, into.typeID);
         }
         else {
             const icppinto = this.getICPPLayoutInfo(into);
 
             if(icppinto.layout === ICPPLayoutCategory.UnionRef) {
-                return ICPPOpEmitter.genDirectAssignOp(sinfo, trgt, into.typeID, arg, sguard);
+                return ICPPOpEmitter.genDirectAssignOp(sinfo, "[COERCE_INTO_UNION]", trgt, into.typeID, arg, sguard);
             }
             else {
-                return ICPPOpEmitter.genBoxOp(sinfo, trgt, into.typeID, arg, from.typeID, sguard);
+                return ICPPOpEmitter.genBoxOp(sinfo, "[COERCE_INTO_UNION]", trgt, into.typeID, arg, from.typeID, sguard);
             }
         }
     }
 
     private coerceFromUnion(sinfo: SourceInfo, arg: Argument, from: MIRType, trgt: TargetVar, into: MIRType, sguard: ICPPStatementGuard): ICPPOp {
         if(this.isType(into, "None")) {
-            return ICPPOpEmitter.genDirectAssignOp(sinfo, trgt, into.typeID, { kind: ArgumentTag.Const, location: NONE_VALUE_POSITION }, sguard);
+            return ICPPOpEmitter.genDirectAssignOp(sinfo, "[COERCE_FROM_UNION]", trgt, into.typeID, { kind: ArgumentTag.Const, location: NONE_VALUE_POSITION }, sguard);
         }
         else {
             const icppfrom = this.getICPPLayoutInfo(from);
 
             if(icppfrom.layout === ICPPLayoutCategory.UnionRef) {
-                return ICPPOpEmitter.genDirectAssignOp(sinfo, trgt, into.typeID, arg, sguard);
+                return ICPPOpEmitter.genDirectAssignOp(sinfo, "[COERCE_FROM_UNION]", trgt, into.typeID, arg, sguard);
             }
             else {
-                return ICPPOpEmitter.genExtractOp(sinfo, trgt, into.typeID, arg, from.typeID, sguard);
+                return ICPPOpEmitter.genExtractOp(sinfo, "[COERCE_FROM_UNION]", trgt, into.typeID, arg, from.typeID, sguard);
             }
         }
     }
 
     coerceEquivReprs(sinfo: SourceInfo, arg: Argument, trgt: TargetVar, into: MIRType, sguard: ICPPStatementGuard): ICPPOp {
-        return ICPPOpEmitter.genDirectAssignOp(sinfo, trgt, into.typeID, arg, sguard);
+        return ICPPOpEmitter.genDirectAssignOp(sinfo, "[COPY]", trgt, into.typeID, arg, sguard);
     }
 
     coerce(sinfo: SourceInfo, arg: Argument, from: MIRType, trgt: TargetVar, into: MIRType, sguard: ICPPStatementGuard): ICPPOp {
