@@ -217,8 +217,8 @@ struct PageInfo
 //Generic pointer to a storage location that holds a value
 typedef void* StorageLocationPtr;
 
-#define IS_INLINE_STRING(S) (*(((uint8_t*)(S)) + 15) != 0)
-#define IS_INLINE_BIGNUM(N) false
+#define IS_INLINE_STRING(S) ((*(((uint8_t*)(S)) + 15) != 0) | (*((void**)S) == nullptr))
+#define IS_INLINE_BIGNUM(N) true
 #define IS_EMPTY_COLLECTION(C) (C == nullptr)
 
 #define SLPTR_LOAD_CONTENTS_AS(T, L) (*((T*)L))
