@@ -175,6 +175,9 @@ public:
         GCStack::stackp += sizeof(size_t);
 #endif
 
+        //Not required but useful for preventing false pointers -- We might want to only include this for non-leaf or long running allocating functions (or something similar)
+        GC_MEM_ZERO(GCStack::stackp, bytes);
+
         uint8_t* frame = GCStack::stackp;
         GCStack::stackp += bytes;
 
@@ -189,9 +192,6 @@ public:
         GCStack::stackp -= sizeof(size_t);
         assert(*((size_t*)GCStack::stackp) == 17);
 #endif
-
-        //Not required but useful for preventing false pointers -- When we compile might want to only include this prolog on non-leaf or allocating functions (or something similar)
-        GC_MEM_ZERO(GCStack::stackp, bytes);
     }
 };
 
@@ -423,7 +423,7 @@ public:
     }
 #endif
 
-    void initializePageFreelist(PageInfo* p)
+    void initializePageFreelistFresh(PageInfo* p)
     {
         p->freelist = nullptr;
         p->freelist_count = p->alloc_entry_count;
@@ -532,7 +532,7 @@ public:
         }
 
         this->initializeFreshPageForType(pp, btype);
-        this->initializePageFreelist(pp);
+        this->initializePageFreelistFresh(pp);
 
         return pp;
     }
@@ -733,7 +733,7 @@ public:
 
     inline uint8_t* allocateEvacuate(BSQType* mdata)
     {
-        PageInfo* pp = mdata->allocpage;
+        PageInfo* pp = mdata->evacuatepage;
         if(pp->freelist == nullptr)
         {
             pp = this->blockalloc.processAndGetNewPageForEvacuation(mdata);
@@ -785,13 +785,13 @@ public:
 
     inline static void gcProcessSlotHeap(void** slot, void* fromObj)
     {
-        GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR(slot);
+        GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR(*slot);
         GC_META_DATA_WORD w = GC_LOAD_META_DATA_WORD(addr);
         
         if(GC_IS_FWD_PTR(w))
         {
             *slot = GC_GET_FWD_PTR(w);
-            addr = GC_GET_META_DATA_ADDR(slot);
+            addr = GC_GET_META_DATA_ADDR(*slot);
             w = GC_LOAD_META_DATA_WORD(addr);
 
             Allocator::GlobalAllocator.processIncHeapRC(addr, w, fromObj);
@@ -820,7 +820,7 @@ public:
 
     inline static void gcProcessSlotWithString(void** slot, void* fromObj)
     {
-        if (!IS_INLINE_STRING(*slot))
+        if (!IS_INLINE_STRING(slot))
         {
             Allocator::gcProcessSlotHeap(slot, fromObj);
         }
@@ -828,7 +828,7 @@ public:
 
     inline static void gcProcessSlotWithBigNum(void** slot, void* fromObj)
     {
-        if (!IS_INLINE_BIGNUM(*slot))
+        if (!IS_INLINE_BIGNUM(slot))
         {
             Allocator::gcProcessSlotHeap(slot, fromObj);
         }
@@ -885,7 +885,7 @@ public:
     //Operations GC decrement
     inline static void gcDecrementString(void** v)
     {
-        if (!IS_INLINE_STRING(*v))
+        if (!IS_INLINE_STRING(v))
         {
             Allocator::GlobalAllocator.processDecHeapRC(*v);
         }
@@ -893,7 +893,7 @@ public:
 
     inline static void gcDecrementBigNum(void** v)
     {
-        if (!IS_INLINE_BIGNUM(*v))
+        if (!IS_INLINE_BIGNUM(v))
         {
             Allocator::GlobalAllocator.processDecHeapRC(*v);
         }
@@ -950,7 +950,7 @@ public:
     //Operations GC evacuate parent and child using unique RCs
     inline static void gcEvacuateParentString(void** slot, void* obj)
     {
-        if (!IS_INLINE_STRING(*slot))
+        if (!IS_INLINE_STRING(slot))
         {
             Allocator::GlobalAllocator.processHeapEvacuateParentViaUnique(slot, obj);
         }
@@ -958,7 +958,7 @@ public:
 
     inline static void gcEvacuateChildString(void** slot, void* oobj, void* nobj)
     {
-        if (!IS_INLINE_STRING(*slot))
+        if (!IS_INLINE_STRING(slot))
         {
             Allocator::GlobalAllocator.processHeapEvacuateChildViaUnique(slot, oobj, nobj);
         }
@@ -966,7 +966,7 @@ public:
 
     inline static void gcEvacuateParentBigNum(void** slot, void* obj)
     {
-        if (!IS_INLINE_BIGNUM(*slot))
+        if (!IS_INLINE_BIGNUM(slot))
         {
             Allocator::GlobalAllocator.processHeapEvacuateParentViaUnique(slot, obj);
         }
@@ -974,7 +974,7 @@ public:
 
     inline static void gcEvacuateChildBigNum(void** slot, void* oobj, void* nobj)
     {
-        if (!IS_INLINE_BIGNUM(*slot))
+        if (!IS_INLINE_BIGNUM(slot))
         {
             Allocator::GlobalAllocator.processHeapEvacuateChildViaUnique(slot, oobj, nobj);
         }
@@ -1114,34 +1114,44 @@ public:
         GC_META_DATA_WORD* metacurr = pp->slots;
         uint8_t* datacurr = (uint8_t*)(pp->data);
 
+        //rebuild the freelist
+        pp->freelist = nullptr;
+        pp->freelist_count = 0;
+
         for(uint64_t i = 0; i < pp->alloc_entry_count; ++i)
         {
             GC_META_DATA_WORD w = *metacurr;
-            if(GC_IS_FWD_PTR(w) | GC_IS_UNREACHABLE(w))
+            if(GC_IS_FWD_PTR(w))
             {
-                *((void**)datacurr) = pp->freelist;
-                *((void**)datacurr + 1) = metacurr;
-
-                pp->freelist = (void*)datacurr;
-
-                pp->freelist_count++;
                 *metacurr = 0x0;
             }
-            
-            if(GC_IS_LIVE(w) & !GC_IS_MARKED(w) & GC_RC_IS_PARENT(w))
+            else
             {
-                void* parent = GC_RC_GET_PARENT(w);
-                BSQType* ptype = PAGE_MASK_EXTRACT_ADDR(parent)->btype;
+                if(GC_IS_UNREACHABLE(w))
+                {
+                    *metacurr = 0x0;
+                }
+                else 
+                {
+                    if(!GC_IS_MARKED(w) & GC_RC_IS_PARENT(w))
+                    {
+                        void* parent = GC_RC_GET_PARENT(w);
+                        BSQType* ptype = PAGE_MASK_EXTRACT_ADDR(parent)->btype;
 
-                ptype->gcops.fpProcessEvacuateUpdateParent(ptype, (void**)parent, (void*)datacurr);
-                
+                        ptype->gcops.fpProcessEvacuateUpdateParent(ptype, (void**)parent, (void*)datacurr);
+
+                        *metacurr = 0x0;
+                    }
+                }
+            }
+
+            if(!GC_IS_ALLOCATED(*metacurr))
+            {
                 *((void**)datacurr) = pp->freelist;
                 *((void**)datacurr + 1) = metacurr;
 
                 pp->freelist = (void*)datacurr;
-
                 pp->freelist_count++;
-                *metacurr = 0x0;
             }
             
             metacurr++;
@@ -1344,11 +1354,6 @@ private:
         if(mdata->allocpage != &AllocPages::g_sential_page)
         {
             this->processFilledPage(mdata, mdata->allocpage);
-        }
-
-        if(mdata->evacuatepage != &AllocPages::g_sential_page)
-        {
-            this->processFilledPage(mdata, mdata->evacuatepage);
         }
 
         for(auto iter = mdata->filledpages.begin(); iter != mdata->filledpages.end(); ++iter)
