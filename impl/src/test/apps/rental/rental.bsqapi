@@ -17,3 +17,14 @@ entrypoint function main(forecast: Forecast, inventory: Nat, reservations: Nat, 
     return decision;
 }
 
+entrypoint function mainchk(): Result<Nat, Reason> 
+    ensures $return.isOk() ==> $return.result() <= 30n;
+{
+    let windcat = categorizeWinds(20_MPH);
+    let projectedReservations = probableReservations(10n, 5n, 5n);
+
+    let decision = decide(windcat, ForecastDetail::sun, 30n, projectedReservations, 0n, 8n, true);
+
+    return decision;
+}
+
