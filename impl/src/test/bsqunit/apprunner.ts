@@ -34,7 +34,10 @@ const s_application_list = [
     {dir: "tic_tac_toe", mode: TestMode.AppTest, exepass: 1, exefail: 0, sympass: 26, symfail: 1},
 
     {dir: "order", mode: TestMode.Test, exepass: 3, exefail: 0, sympass: 1, symfail: 1},
-    {dir: "order", mode: TestMode.AppTest, exepass: 1, exefail: 0, sympass: 0, symfail: 0}
+    {dir: "order", mode: TestMode.AppTest, exepass: 1, exefail: 0, sympass: 0, symfail: 0},
+
+    {dir: "rental", mode: TestMode.Test, exepass: 0, exefail: 0, sympass: 3, symfail: 0},
+    {dir: "rental", mode: TestMode.AppTest, exepass: 1, exefail: 0, sympass: 5, symfail: 3}
 ];
 
 function runTest(t: ApplicationTest): boolean {
