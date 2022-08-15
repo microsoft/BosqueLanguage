@@ -1,0 +1,57 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+namespace Main;
+
+typedef DBRecordData = List<String>;
+
+enum DBError
+{
+   InvalidField,
+   EmptyDataBase,
+   InternalError
+}
+
+entity Database provides APIType
+{
+   field dbname: String;
+   field version LogicalTime;
+
+   field List<DBEntryFormat> fmt;
+   field List<DBRecordData> entries;
+
+   field index: List<DBRecordData>? = none;
+   field current_record: Nat? = none;
+   field fnum: Nat? = none;
+
+   method numRecords(): Nat {
+      return this.entries.size();
+   }
+
+   method getRecord(n: Nat): Result<DBRecordData, > {
+      if(this.index === none) {
+         return none;
+      }
+      else {
+
+      }
+   }
+
+   function set_index_default(ref db: MDatabase, crec: Nat?): None {
+      return db.{index = $entries, current_record = crec};
+   }
+
+   function start(ref db: MDatabase): Option<DBRecordData> {
+      if(db.index === none) {
+         Database::set_index_default(db, 0n);
+      }
+
+
+   }
+
+   function end(ref db: MDatabase): Option<DBRecordData> {
+      
+   }
+}
