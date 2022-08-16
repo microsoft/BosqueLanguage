@@ -10,8 +10,7 @@ typedef DBRecordData = List<String>;
 enum DBError
 {
    InvalidField,
-   EmptyDataBase,
-   InternalError
+   InvalidCursorAccess
 }
 
 entity Database provides APIType
@@ -23,35 +22,206 @@ entity Database provides APIType
    field List<DBRecordData> entries;
 
    field index: List<DBRecordData>? = none;
-   field current_record: Nat? = none;
+   field current_record: Int;
    field fnum: Nat? = none;
+
+   invariant -1i <= $current_record && $current_record <= $entries.size();
+   invariant $index !== none => $index.size() == $entries.size();
+   invariant $fnum !== none => ($fnum < $fmt.size() && !$fmt.get($fnum).isHeaderField);
+
+   method empty(): Bool {
+      return this.entries.empty();
+   }
 
    method numRecords(): Nat {
       return this.entries.size();
    }
 
-   method getRecord(n: Nat): Result<DBRecordData, > {
-      if(this.index === none) {
-         return none;
-      }
-      else {
+   function set_index_default(ref db: MDatabase, curr: Int): List<DBRecordData> {
+      let nindex = db.entries;
+      db = db.{index = nindex, current_record = curr};
 
-      }
+      return nindex;
    }
 
-   function set_index_default(ref db: MDatabase, crec: Nat?): None {
-      return db.{index = $entries, current_record = crec};
-   }
-
-   function start(ref db: MDatabase): Option<DBRecordData> {
-      if(db.index === none) {
-         Database::set_index_default(db, 0n);
+   function startCursor(ref db: MDatabase): DBRecordData? {
+      var idx = db.index;
+      if(idx === none) {
+         idx = Database::set_index_default(db, 0i);
       }
 
-
+      return idx.frontOrNone();
    }
 
-   function end(ref db: MDatabase): Option<DBRecordData> {
+   function endCursor(ref db: MDatabase): DBRecordData? {
+      let lidx = this.entries.size().toInt() - 1i;
+      var idx = db.index;
+      if(idx === none) {
+         idx = Database::set_index_default(db, lidx);
+      }
+
+      return idx.backOrNone();
+   }
+
+   function gotoCursor(ref db: MDatabase, curr: Int): Result<DBRecordData, DBError> 
+      validate (0i <= curr && curr < this.entries.size().toInt()) else err(DBError::InvalidCursorAccess);
+   {
+      var idx = db.index;
+      if(idx === none) {
+         idx = Database::set_index_default(db, curr);
+      }
+
+      return idx.get(curr.toNat());
+   }
+
+   function next(ref db: MDatabase): DBRecordData? {
+      var idx = db.index;
+      if(idx === none) {
+         idx = Database::set_index_default(db, 0i);
+      }
+
+      if(this.current_record < (idx.size().toInt() - 1i)) {
+         this.current_record = this.current_record + 1;
+      }
+
+      return idx.getOrNone(this.current_record.toNat());
+   }
+
+	function previous(ref db: MDatabase): DBRecordData? {
+      let lidx = this.entries.size().toInt() - 1i;
+      var idx = db.index;
+      if(idx === none) {
+         idx = Database::set_index_default(db, lidx);
+      }
       
+      if(this.current_record > 0i) {
+         this.current_record = this.current_record - 1;
+      }
+   
+      return idx.getOrNone(this.current_record.toNat());
    }
+
+	public void add(Entry entry)
+	{
+		entries.Add(entry);
+
+		index = null;
+		fnum = -1;
+	}
+
+   public void modify()
+	{
+		String s = null;
+		String field, os;
+		int fn = 0;
+
+		if(index == null)
+		{
+			return;
+		}
+
+		for(int i = 0; i < fmt.Count; ++i)
+		{
+			field = fmt[i];
+
+			if(field != null)
+			{ ;}
+			else
+			{
+				os = index[current_record].items[fn];
+				s = Console.ReadLine();
+
+				if(s.Length > 0)
+				{
+					os = s;
+				}
+
+				index[current_record].items[fn] = os;
+
+				fn++;
+			}
+		}
+
+		fnum = -1;
+	}
+
+public void remove()
+	{
+
+		if(index == null)
+		{
+			set_index();
+		}
+
+		entries.Remove(index[current_record]);
+
+		if(current_record == (index.Length - 1))
+		{
+			current_record = current_record - 1;
+		}
+
+		index = null;
+		fnum = -1;
+	}
+
+	public void status()
+	{
+		if(index == null)
+		{
+			set_index();
+		}
+		Console.WriteLine("Record " + (current_record + 1) + " of " + index.Length);
+	}
+
+   	public void sort()
+	{
+		int fn;
+
+		fn = getfield();
+
+		if(fn < 0)
+		{
+			return;
+		}
+
+		if(fn != fnum)
+		{
+			shell_sort(fn);
+		}
+	}
+
+
+	public void find()
+	{
+		int fn, rec;
+
+		fn = getfield();
+
+		if(fn != fnum)
+		{
+			shell_sort(fn);
+		}
+
+		if((rec = lookup(fieldValue, fnum)) < 0)
+		{
+			Console.WriteLine("NOT found");
+		}
+		else
+		{
+			Console.WriteLine();
+
+			while(rec >= 0)
+			{
+				rec--;
+
+				if(fieldValue.CompareTo(index[rec].items[fnum]) != 0)
+				{
+					break;
+				}
+			}
+
+			current_record = rec + 1;
+			printRec();
+		}
+	}
 }
