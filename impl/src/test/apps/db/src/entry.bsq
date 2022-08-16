@@ -7,9 +7,17 @@ namespace Main;
 
 typedef DBFieldID = Nat;
 
-entity DBEntryFormat provides APIType
-{
+entity DBEntryFormat provides APIType {
     field isHeaderField: Bool;
     field fieldID: DBFieldID;
     field optFieldValidator: Regex?;
+
+    method checkValidator(value: String): Bool {
+        if(this.optFieldValidator === none) {
+            return true;
+        }
+        else {
+            return this.optFieldValidator.accepts(value);
+        }
+    }
 }

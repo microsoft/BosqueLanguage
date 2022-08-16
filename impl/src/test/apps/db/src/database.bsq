@@ -6,222 +6,232 @@
 namespace Main;
 
 typedef DBRecordData = List<String>;
+typedef DBIndexEntry = Nat;
 
 enum DBError
 {
-   InvalidField,
-   InvalidCursorAccess
+    InvalidField,
+    InvalidCursorAccess
 }
 
 entity Database provides APIType
 {
-   field dbname: String;
-   field version LogicalTime;
+    field dbname: String;
+    field version: LogicalTime;
 
-   field List<DBEntryFormat> fmt;
-   field List<DBRecordData> entries;
+    field fmt: List<DBEntryFormat>;
+    field entries: List<DBRecordData>;
 
-   field index: List<DBRecordData>? = none;
-   field current_record: Int;
-   field fnum: Nat? = none;
+    field index: List<DBIndexEntry> = List<DBIndexEntry>{};
+    field current_record: Int = 0i;
+    field fnum: Nat? = none;
 
-   invariant -1i <= $current_record && $current_record <= $entries.size();
-   invariant $index !== none => $index.size() == $entries.size();
-   invariant $fnum !== none => ($fnum < $fmt.size() && !$fmt.get($fnum).isHeaderField);
+    invariant -1i <= $current_record && $current_record <= $entries.size().toInt();
+    invariant !$index.empty() => $index.size() == $entries.size();
+    invariant $fnum !== none => ($fnum < $fmt.size() && !$fmt.get($fnum).isHeaderField);
 
-   method empty(): Bool {
-      return this.entries.empty();
-   }
+    debug invariant Database::checkDBEntryFormats($fmt, $entries);
+    debug invariant Database::checkIndexValid($index);
 
-   method numRecords(): Nat {
-      return this.entries.size();
-   }
+    function isValidDBEntryFormat(fmt: List<DBEntryFormat>, entry: DBRecordData): Bool {
+        if(entry.size() != fmt.size()) {
+            return false;
+        }
 
-   function set_index_default(ref db: MDatabase, curr: Int): List<DBRecordData> {
-      let nindex = db.entries;
-      db = db.{index = nindex, current_record = curr};
+        return fmt.allOf(pred(f, i) => {
+            return f.checkValidator(entry.get(i));
+        });
+    }
 
-      return nindex;
-   }
+    function checkDBEntryFormats(fmt: List<DBEntryFormat>, entries: List<DBRecordData>): Bool {
+        return entries.allOf(pred(entry) => {
+            return Database::isValidDBEntryFormat(fmt, entry);
+        });
+    }
 
-   function startCursor(ref db: MDatabase): DBRecordData? {
-      var idx = db.index;
-      if(idx === none) {
-         idx = Database::set_index_default(db, 0i);
-      }
+    method checkIndexValid(index: List<DBIndexEntry>): Bool {
+        return index.sort(pred(a, b) => a < b).allOf(pred(i, j) => {
+            return i == j;
+        });
+    }
 
-      return idx.frontOrNone();
-   }
+    method empty(): Bool {
+        return this.entries.empty();
+    }
 
-   function endCursor(ref db: MDatabase): DBRecordData? {
-      let lidx = this.entries.size().toInt() - 1i;
-      var idx = db.index;
-      if(idx === none) {
-         idx = Database::set_index_default(db, lidx);
-      }
+    method numRecords(): Nat {
+        return this.entries.size();
+    }
 
-      return idx.backOrNone();
-   }
+    method isValidCurrentRecordPosition(): Bool {
+        return -1i <= this.current_record && this.current_record < this.entries.size().toInt();
+    }
 
-   function gotoCursor(ref db: MDatabase, curr: Int): Result<DBRecordData, DBError> 
-      validate (0i <= curr && curr < this.entries.size().toInt()) else err(DBError::InvalidCursorAccess);
-   {
-      var idx = db.index;
-      if(idx === none) {
-         idx = Database::set_index_default(db, curr);
-      }
+    function set_index_default(ref db: MDatabase, curr: Int) {
+        var nindx = List<DBIndexEntry>{};
+        if(!db.entries.empty()) {
+            nindex = List<Nat>::rangeNat(0, db.entities.lastIndex());
+        }
+        
+        db = db.{index = nindex, current_record = curr, fnum = none};
+    }
 
-      return idx.get(curr.toNat());
-   }
+    function startCursor(ref db: MDatabase): DBRecordData? {
+        if(db.entries.empty()) {
+            return none;
+        }
 
-   function next(ref db: MDatabase): DBRecordData? {
-      var idx = db.index;
-      if(idx === none) {
-         idx = Database::set_index_default(db, 0i);
-      }
+        if(!db.index.empty()) {
+            db = db.{current_record = 0i};
+        }
+        else {
+            Database::set_index_default(db, 0i);
+        }
 
-      if(this.current_record < (idx.size().toInt() - 1i)) {
-         this.current_record = this.current_record + 1;
-      }
+        return db.entries.get(db.index.front());
+    }
 
-      return idx.getOrNone(this.current_record.toNat());
-   }
+    function endCursor(ref db: MDatabase): DBRecordData? {
+        if(db.entries.empty()) {
+            return none;
+        }
+
+        let lidx = this.entries.lastIndex().toInt();
+        if(!db.index.empty()) {
+            db = db.{current_record = lidx};
+        }
+        else {
+            Database::set_index_default(db, lidx);
+        }
+
+        return db.entries.get(db.index.back());
+    }
+
+    function gotoCursor(ref db: MDatabase, curr: Int): Result<DBRecordData, DBError> 
+        validate (0i <= curr && curr < this.entries.size().toInt()) else err(DBError::InvalidCursorAccess);
+    {
+        if(!db.index.empty()) {
+            db = db.{current_record = curr};
+        }
+        else {
+            Database::set_index_default(db, curr);
+        }
+
+        return ok(db.entries.get(db.index.get(db.current_record.toNat())));
+    }
+
+    function next(ref db: MDatabase): DBRecordData? {
+        if(db.entries.empty()) {
+            return none;
+        }
+
+        if(db.index.empty()) {
+            Database::set_index_default(db, 0i);
+        }
+
+        if(db.current_record < db.lastIndex().toInt()) {
+            db.{current_record = $current_record + 1i};
+        }
+
+        if(db.current_record.toNat() == db.entries.size()) {
+            return none;
+        }
+        else {
+            return db.entries.get(db.index.get(this.current_record.toNat()));
+        }
+   	}
 
 	function previous(ref db: MDatabase): DBRecordData? {
-      let lidx = this.entries.size().toInt() - 1i;
-      var idx = db.index;
-      if(idx === none) {
-         idx = Database::set_index_default(db, lidx);
-      }
+        if(db.entries.empty()) {
+            return none;
+        }
+
+        if(db.index.empty()) {
+            let lidx = this.entries.size().toInt() - 1i;
+            Database::set_index_default(db, lidx);
+        }
       
-      if(this.current_record > 0i) {
-         this.current_record = this.current_record - 1;
-      }
+        if(db.current_record >= 0i) {
+            db.{current_record = $current_record - 1i};
+        }
    
-      return idx.getOrNone(this.current_record.toNat());
-   }
+        if(db.current_record == -1i) {
+            return none;
+        }
+        else {
+    	    return db.entries.get(db.index.get(this.current_record.toNat()));
+        }
+    }
 
-	public void add(Entry entry)
-	{
-		entries.Add(entry);
+    function add(ref db: MDatabase, entry: DBRecordData) {
+        db = db.{
+            version = $version.increment(), 
+            entries = $entries.pushBack(entry), 
+            index = List<Nat>{}, 
+            current_record = 0i, 
+            fnum = none
+        };
+    }
 
-		index = null;
-		fnum = -1;
-	}
+    function modify(ref db: MDatabase, entry: DBRecordData): Bool {
+        if(!db.isValidCurrentRecordPosition()) {
+            return false;
+        }
+        else {
+            db = db.{
+                version = $version.increment(), 
+                entries = $entries.set($current_record, entry), 
+                index = List<Nat>{}, 
+                current_record = 0i, 
+                fnum = none
+            };
 
-   public void modify()
-	{
-		String s = null;
-		String field, os;
-		int fn = 0;
+            return true;
+        }
+    }
 
-		if(index == null)
-		{
-			return;
-		}
+    function remove(ref db: MDatabase): Bool {
+        if(!db.isValidCurrentRecordPosition()) {
+            return false;
+        }
+        else {
+            db = db.{
+                    version = $version.increment(), 
+                    entries = $entries.remove($index.get($current_record)), 
+                    index = List<Nat>{}, 
+                    current_record = $current_record.toNat() == $index.lastIndex() ? ($current_record - 1i) : $current_record,
+                    fnum = none
+            };
 
-		for(int i = 0; i < fmt.Count; ++i)
-		{
-			field = fmt[i];
+            return true;
+        }
+    }
 
-			if(field != null)
-			{ ;}
-			else
-			{
-				os = index[current_record].items[fn];
-				s = Console.ReadLine();
+    function find(ref db: Database, fname: String, fvalue: String): Result<DBRecordData?, DBError> {
+        let fidx = db.fmt.indexOfOrNone(fname);
+        validate fidx !== none && !db.fmt.get(fidx).isHeaderField else err(DBError::InvalidFieldName);
+        
+        if(db.entries.empty()) {
+            return ok(none);
+        }
 
-				if(s.Length > 0)
-				{
-					os = s;
-				}
+        if(db.fnum != fidx) {
+            let nindx = List<Nat>::rangeNat(0, db.entities.lastIndex()).sort(pred(i, j) => {
+                return KeyType::less<String>(db.entries.get(i).get(fidx), db.entries.get(j).get(fidx));
+            });
 
-				index[current_record].items[fn] = os;
+            let ncurr = nindx.lowerBound(pred(i) => {
+                return KeyType::less<String>(db.entries.get(i).get(fidx), fvalue);
+            });
 
-				fn++;
-			}
-		}
-
-		fnum = -1;
-	}
-
-public void remove()
-	{
-
-		if(index == null)
-		{
-			set_index();
-		}
-
-		entries.Remove(index[current_record]);
-
-		if(current_record == (index.Length - 1))
-		{
-			current_record = current_record - 1;
-		}
-
-		index = null;
-		fnum = -1;
-	}
-
-	public void status()
-	{
-		if(index == null)
-		{
-			set_index();
-		}
-		Console.WriteLine("Record " + (current_record + 1) + " of " + index.Length);
-	}
-
-   	public void sort()
-	{
-		int fn;
-
-		fn = getfield();
-
-		if(fn < 0)
-		{
-			return;
-		}
-
-		if(fn != fnum)
-		{
-			shell_sort(fn);
-		}
-	}
-
-
-	public void find()
-	{
-		int fn, rec;
-
-		fn = getfield();
-
-		if(fn != fnum)
-		{
-			shell_sort(fn);
-		}
-
-		if((rec = lookup(fieldValue, fnum)) < 0)
-		{
-			Console.WriteLine("NOT found");
-		}
-		else
-		{
-			Console.WriteLine();
-
-			while(rec >= 0)
-			{
-				rec--;
-
-				if(fieldValue.CompareTo(index[rec].items[fnum]) != 0)
-				{
-					break;
-				}
-			}
-
-			current_record = rec + 1;
-			printRec();
-		}
-	}
+            db = db.{index = nindex, current_record = ncurr, fnum = fidx};
+        }
+        
+        if(db.current_record == db.index.size().toInt()) {
+            return ok(none);
+        }
+        else {
+            return ok(db.entries.get(db.index.get(db.current_record.toNat())));
+        }
+    }
 }

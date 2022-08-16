@@ -115,6 +115,12 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
         return ListOps::s_list_empty<T>(this);
     }
 
+    method lastIndex(): Nat
+        requires !ListOps::s_list_empty<T>(this);
+    {
+        return ListOps::s_list_size<T>(this) - 1n;
+    }
+
     method front(): T 
         requires !ListOps::s_list_empty<T>(this);
     {
@@ -2065,6 +2071,59 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                 });
 #endif
             }
+        }
+    }
+
+    //cmp is true if _ is less than
+    recursive? method lowerBound(cmp: recursive? pred(_: T) -> Bool): Nat {
+        if(ListOps::s_list_empty<T>(this)) {
+            return 0;
+        }
+        else {
+#if CHECK_LIBS
+            let idx = ListOps::s_list_find_pred<T>[recursive?](this, recursive? pred(v: T): Bool => !cmp[recursive?](v));
+            if(idx == -1i) {
+                return ListOps::s_list_size<T>(this);
+            }
+            else {
+                return NumericOps::s_intToNat(idx)
+            }
+#else
+            //TODO: implement in Bosque for runtime -- linear search here is not cool
+            let idx = ListOps::s_list_find_pred<T>[recursive?](this, recursive? pred(v: T): Bool => !cmp[recursive?](v, val));
+            if(idx == -1i) {
+                return ListOps::s_list_size<T>(this);
+            }
+            else {
+                return NumericOps::s_intToNat(idx)
+            } 
+#endif
+        }
+    }
+
+    recursive? method upperBound(cmp: recursive? pred(_: T) -> Bool): Nat {
+        if(ListOps::s_list_empty<T>(this)) {
+            return 0;
+        }
+        else {
+#if CHECK_LIBS
+            let idx = ListOps::s_list_find_pred<T>[recursive?](this, recursive? pred(v: T): Bool => cmp[recursive?](v));
+            if(idx == -1i) {
+                return ListOps::s_list_size<T>(this);
+            }
+            else {
+                return NumericOps::s_intToNat(idx)
+            }
+#else
+            //TODO: implement in Bosque for runtime -- linear search here is not cool
+            let idx = ListOps::s_list_find_pred<T>[recursive?](this, recursive? pred(v: T): Bool => cmp[recursive?](v));
+            if(idx == -1i) {
+                return ListOps::s_list_size<T>(this);
+            }
+            else {
+                return NumericOps::s_intToNat(idx)
+            } 
+#endif
         }
     }
 
