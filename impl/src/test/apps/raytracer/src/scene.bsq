@@ -1,0 +1,112 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+namespace Main;
+
+entity Scene provides APIType {
+    field things: List<SceneObject>;
+    field lights: List<Light>;
+    field camera: Camera;
+
+    const checkerBoard: Surface = Surface{Color{0.02f, 0.0f, 0.14f}, Color{1.0f, 1.0f, 1.0f}, 0.5f, 150.0f};
+    const shiny: Surface = Surface{Color{1.0f, 1.0f, 1.0f}, Color{0.5f, 0.5f, 0.5f}, 0.7f, 250.0f};
+    const matteShiny: Surface = Surface{Color{1.0f, 1.0f, 1.0f}, Color{0.25f, 0.25f, 0.25f}, 0.7f, 250.0f};
+}
+
+concept SceneObject provides APIType {
+    field surface: Surface;
+
+    abstract method intersect(ray: Ray): ISect?;
+    abstract method normal(pos: Vector): Vector;
+}
+
+entity Sphere provides SceneObject {
+    field center: Vector;
+    field radius: Float;
+
+    override method intersect(ray: Ray): ISect? {
+        let eo = this->center - ray.start;
+        let v = eo _dotprod_ ray.dir;
+        var dist;
+
+        if(v < 0.0f) {
+            dist = 0.0f;
+        }
+        else {
+            let disc = this.radius.pow(2.0f) - ((eo _dotprod_ eo) - v.pow(2.0f));
+            dist = disc < 0.0f ? 0.0f : v - disc.sqrt();
+        }
+
+        if(dist == 0) {
+            return none;
+        }
+        else {
+            return ISect{this, ray, dist};
+        }
+    }
+
+    override method normal(pos: Vector): Vector {
+        return (pos - this.center).norm();
+    }
+}
+
+entity Plane provides SceneObject {
+    field norm Vector;
+    field offset: Float;
+
+    override method intersect(Ray ray): ISect? {
+        let denom = this.norm _dotprod_ ray.dir;
+
+        if(denom > 0.0f) {
+            return none;
+        }
+        else {
+            return ISect{this, ray, ((this.norm _dotprod_ ray.start) + this.offset) / (-denom)};
+        }
+    }
+
+    override method normal(pos: Vector): Vector {
+        return this.norm;
+    }
+}
+
+entity Surface provides APIType {
+    field diffuse: Color;
+    field specular: Color;
+    field reflect: Float;
+    field roughness: Float;
+}
+
+entity Camera provides APIType {
+    field pos: Vector;
+    field forward: Vector;
+    field up: Vector;
+    field right: Vector;
+
+    function create(Vector pos, Vector lookAt): Camera {
+        let forward = (lookAt - pos).norm();
+        let down = Vector{0.0f, -1.0f, 0.0f};
+        let right = 1.5f * (forward _crossprod_ down).norm();
+        let up = 1.5f * (forward _crossprod_ right).norm();
+
+        return Camera{pos, forward, up, right};
+    }
+}
+
+entity Light provides APIType {
+    field pos: Vector;
+    field color: Color;
+}
+
+entity Ray provides APIType{
+    field start: Vector;
+    field dir: Vector;
+}
+
+entity ISect provides APIType {
+    field thing: SceneObject;
+    field ray: Ray;
+    field dist: Float;
+}

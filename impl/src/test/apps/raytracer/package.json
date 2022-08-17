@@ -1,17 +1,17 @@
 {
-    "name": "db",
+    "name": "raytracer",
     "version": "0.0.0.0",
-    "description": "In memory database",
+    "description": "Super simple raytracer",
     "license": "MIT",
     "src": {
         "bsqsource": [
             "./src/*"
         ],
         "entrypoints": [
-            "./db.bsqapi"
+            "./raytracer.bsqapi"
         ],
         "testfiles": [
-            "./db.bsqtest"
+            "./raytracer.bsqtest"
         ]
     }
 }
