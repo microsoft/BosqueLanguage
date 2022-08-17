@@ -10,8 +10,16 @@ typedef DBIndexEntry = Nat;
 
 enum DBError
 {
-    InvalidField,
-    InvalidCursorAccess
+    invalidField,
+    invalidCursorAccess
+}
+
+enum DBIndexStatus
+{
+    invalid,
+    insertion,
+    sorted,
+    filtered
 }
 
 entity Database provides APIType
@@ -24,11 +32,13 @@ entity Database provides APIType
 
     field index: List<DBIndexEntry> = List<DBIndexEntry>{};
     field current_record: Int = 0i;
-    field fnum: Nat? = none;
+    field idxStatus: DBIndexStatus = DBIndexStatus::invalid;
+    field fnum: Nat = 0;
 
     invariant -1i <= $current_record && $current_record <= $entries.size().toInt();
-    invariant !$index.empty() => $index.size() == $entries.size();
-    invariant $fnum !== none => ($fnum < $fmt.size() && !$fmt.get($fnum).isHeaderField);
+    invariant ($idxStatus === DBIndexStatus::insertion || $idxStatus === DBIndexStatus::sorted) => $index.size() == $entries.size();
+    invariant ($idxStatus === DBIndexStatus::filtered) => $index.size() == $entries.size();
+    invariant ($idxStatus === DBIndexStatus::sorted || $idxStatus === DBIndexStatus::filtered) => ($fnum < $fmt.size() && !$fmt.get($fnum).isHeaderField);
 
     debug invariant Database::checkDBEntryFormats($fmt, $entries);
     debug invariant Database::checkIndexValid($index);
@@ -49,10 +59,25 @@ entity Database provides APIType
         });
     }
 
-    method checkIndexValid(index: List<DBIndexEntry>): Bool {
-        return index.sort(pred(a, b) => a < b).allOf(pred(i, j) => {
-            return i == j;
-        });
+    method checkIndexValid(idxStatus: DBIndexStatus, index: List<DBIndexEntry>): Bool {
+        if(idxStatus === DBIndexStatus::insertion) {
+            return index.allOf(pred(i, j) => {
+                return i == j;
+            });    
+        }
+        elif(idxStatus === DBIndexStatus::sorted) {
+            return index.sort(pred(a, b) => a < b).allOf(pred(i, j) => {
+                return i == j;
+            });
+        }
+        elif(idxStatus === DBIndexStatus::filtered) {
+            return index.sort(pred(a, b) => a < b).allOf(pred(i, j) => {
+                return i <= j && (i < index.size() => i < index.get(j + 1));
+            });
+        }
+        else {
+            return true;
+        }
     }
 
     method empty(): Bool {
@@ -215,7 +240,7 @@ entity Database provides APIType
             return ok(none);
         }
 
-        if(db.fnum != fidx) {
+        if(db.fnum != fidx || db.index.size() < db.entries.size()) {
             let nindx = List<Nat>::rangeNat(0, db.entities.lastIndex()).sort(pred(i, j) => {
                 return KeyType::less<String>(db.entries.get(i).get(fidx), db.entries.get(j).get(fidx));
             });
@@ -225,6 +250,30 @@ entity Database provides APIType
             });
 
             db = db.{index = nindex, current_record = ncurr, fnum = fidx};
+        }
+        
+        if(db.current_record == db.index.size().toInt()) {
+            return ok(none);
+        }
+        else {
+            return ok(db.entries.get(db.index.get(db.current_record.toNat())));
+        }
+    }
+
+    function select(ref db: Database, fname: String, fvalue: String): Result<DBRecordData?, DBError> {
+        let fidx = db.fmt.indexOfOrNone(fname);
+        validate fidx !== none && !db.fmt.get(fidx).isHeaderField else err(DBError::InvalidFieldName);
+        
+        if(db.entries.empty()) {
+            return ok(none);
+        }
+
+        if(db.fnum != fidx || db.index.size() == db.entries.size()) {
+            let nindx = List<Nat>::rangeNat(0, db.entities.lastIndex()).filter(pred(i, j) => {
+                return KeyType::equal<String>(db.entries.get(i).get(fidx), db.entries.get(j).get(fidx));
+            });
+
+            db = db.{index = nindex, current_record = 0i, fnum = fidx};
         }
         
         if(db.current_record == db.index.size().toInt()) {

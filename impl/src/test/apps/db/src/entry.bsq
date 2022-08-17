@@ -14,7 +14,7 @@ entity DBEntryFormat provides APIType {
 
     method checkValidator(value: String): Bool {
         if(this.optFieldValidator === none) {
-            return true;
+            return value === "--";
         }
         else {
             return this.optFieldValidator.accepts(value);
