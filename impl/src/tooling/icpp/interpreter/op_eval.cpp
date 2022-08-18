@@ -2246,6 +2246,14 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         SLPTR_STORE_CONTENTS_AS(BSQLatLongCoordinate, resultsl, llc);
         break;
     }
+    case BSQPrimitiveImplTag::regex_accepts: {
+        BSQString str = SLPTR_LOAD_CONTENTS_AS(BSQString, params[1]);
+        BSQStringForwardIterator iter(&str, 0);
+
+        const BSQRegex* re = SLPTR_LOAD_CONTENTS_AS(BSQRegex*, params[0]);
+        SLPTR_STORE_CONTENTS_AS(BSQBool, resultsl, re->nfare->test(iter));
+        break;
+    }
     case BSQPrimitiveImplTag::s_list_build_empty: {
         LIST_STORE_RESULT_EMPTY(resultsl);
         break;

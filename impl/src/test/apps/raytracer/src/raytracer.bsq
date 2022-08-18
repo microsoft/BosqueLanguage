@@ -49,9 +49,9 @@ entity RayTracer
 	}
 
 	method minIntersection(ray: Ray, scene: Scene): ISect? {
-        let imin = scene.things.argMinOf<ISect?>(
+        let imin = scene.things.argMinOrNoneOf<ISect>(
             (thing) => thing.intersect(ray),
-            (min, val) => val === none || (min !== none && val.dist < min.dist)
+            (min, val) => val.dist < min.dist
         );
 
 		return imin;
@@ -84,7 +84,7 @@ entity RayTracer
             let ldis = light.pos - pos;
             let livec = ldis.norm();
             let neatIsect = this.testRay(Ray{pos, livec}, scene);
-            let isInShadow = !((neatIsect > dis.mag()) || (neatIsect == 0.0f));
+            let isInShadow = !((neatIsect > ldis.mag()) || (neatIsect == 0.0f));
 
             if(isInShadow) {
                 return acc;

@@ -578,7 +578,7 @@ __internal entity Regex provides Some {
     __safe internal function s_accepts(re: Regex, s: String): Bool = regex_accepts;
 
     method accepts(s: String): Bool {
-        return Regex::s_accepts(this,. s);
+        return Regex::s_accepts(this, s);
     }
 }
 

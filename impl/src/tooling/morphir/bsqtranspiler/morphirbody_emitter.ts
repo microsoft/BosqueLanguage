@@ -2608,6 +2608,10 @@ class MorphirBodyEmitter {
                 const dd = new MorphirCallSimple("blatlongcoordinate_cons", args.map((arg) => new MorphirVar(arg.vname)));
                 return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);
             }
+            case "regex_accepts": {
+                let accept = new MorphirCallSimple("Regex.contains", [new MorphirVar(args[0].vname), new MorphirVar(args[1].vname)]);
+                return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, accept);
+            }
             case "s_list_empty": {
                 const dd = new MorphirCallSimple("List.isEmpty", [new MorphirVar(args[0].vname)]);
                 return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);
