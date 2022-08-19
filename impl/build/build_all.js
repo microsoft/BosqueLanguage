@@ -32,6 +32,8 @@ function doneop(iserror, msg) {
     }
 }
 
+const mode = process.argv[2] || "debug";
+
 exec("tsc -p tsconfig.json", {cwd: tscdir}, (err, stdout, stderr) => {
     donets = true;
     doneop(err !== null, err !== null ? err + stderr + stdout : "done tsc..."); 
@@ -42,11 +44,11 @@ exec("node ./resource_copy.js", {cwd: builddir}, (err, stdout, stderr) => {
     doneop(err !== null, err !== null ? stderr : "done copy..."); 
 });
 
-exec("node ./evaluator_build.js", {cwd: builddir}, (err, stdout, stderr) => {
+exec(`node ./evaluator_build.js ${mode}`, {cwd: builddir}, (err, stdout, stderr) => {
     donesmt = true;
     doneop(err !== null, err !== null ? stdout : "done smt..."); 
 
-    exec("node ./interpreter_build.js", {cwd: builddir}, (err, stdout, stderr) => {
+    exec(`node ./interpreter_build.js ${mode}`, {cwd: builddir}, (err, stdout, stderr) => {
         doneicpp = true;
         doneop(err !== null, err !== null ? stdout : "done icpp..."); 
     });

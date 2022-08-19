@@ -16,6 +16,8 @@ const includeheaders = [path.join(includebase, "headers/json"), path.join(includ
 const outexec = path.join(__dirname, "output");
 const outobj = path.join(__dirname, "output", "obj");
 
+const mode = process.argv[2] || "debug";
+
 let compiler = "";
 let ccflags = "";
 let includes = " ";
@@ -23,21 +25,21 @@ let outfile = "";
 let z3lib = "";
 if(process.platform === "darwin") {
     compiler = "clang++";
-    ccflags = "-Og -g -Wall -std=c++20 -arch arm64";
+    ccflags = (mode === "debug" ? "-Og -g" : "-O2") + " -Wall -std=c++20 -arch arm64";
     includes = includeheaders.map((ih) => `-I ${ih}`).join(" ");
     z3lib = path.join(includebase, "/macos/z3/bin/libz3.a")
     outfile = "-o " + outexec + "/chk";
 }
 else if(process.platform === "linux") {
     compiler = "clang++";
-    ccflags = "-Og -g -Wall -std=c++20 -pthread";
+    ccflags = (mode === "debug" ? "-Og -g" : "-O2") + " -Wall -std=c++20 -pthread";
     includes = includeheaders.map((ih) => `-I ${ih}`).join(" ");
     z3lib = path.join(includebase, "/linux/z3/bin/libz3.a")
     outfile = "-o " + outexec + "/chk";
 }
 else {
     compiler = "cl.exe";
-    ccflags = "/EHsc /MP /Zi /Od /std:c++20";  
+    ccflags = "/EHsc /MP " + (mode === "debug" ? "/Zi /Od" : "/O2") + " /std:c++20";  
     includes = includeheaders.map((ih) => `/I ${ih}`).join(" ");
     z3lib = path.join(includebase, "/win/z3/bin/libz3.lib")
     outfile = "/Fo:\"" + outobj + "/\"" + " " + "/Fd:\"" + outexec + "/\"" + " " + "/Fe:\"" + outexec + "\\chk.exe\"";

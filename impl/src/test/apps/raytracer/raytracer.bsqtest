@@ -1,0 +1,49 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+namespace Main;
+
+////
+//Tests for vector operations
+
+chktest function mult_0(v: Vector): Bool {
+    let vvl = 1.0f * v;
+    let vvr = v * 1.0f;
+
+    return /\(vvl == Vector::zero, vvr == Vector::zero);
+}
+
+chktest function mult_1(v: Vector): Bool {
+    let vvl = 1.0f * v;
+    let vvr = v * 1.0f;
+
+    return /\(vvl == v, vvr == v);
+}
+
+chktest function mult_2(): Bool {
+    let vv = 2.0f * Vector{1.0f, 2.0f, 3.0f};
+    return vv == Vector{2.0f, 4.0f, 6.0f};
+}
+
+chktest function dotprod0(v: Vector): Bool {
+    let vvl = v _dotprod_ Vector::zero;
+    let vvr = Vector::zero _dotprod_ v;
+
+    return /\(vvl == Vector::zero, vvr == Vector::zero);
+}
+
+chktest function dotprod1(v: Vector): Bool {
+    let vvl = v _dotprod_ Vector{1.0f, 1.0f, 1.0f};
+    let vvr = Vector{1.0f, 1.0f, 1.0f}; _dotprod_ v;
+
+    return /\(vvl == v, vvr == v);
+}
+
+chktest function addunit(): Bool {
+    let vv = Vector{1.0f, 0.0f, 0.0f} + Vector{0.0f, 1.0f, 0.0f} + Vector{0.0f, 0.0f, 1.0f};
+
+    return vv == Vector{1.0f, 1.0f, 1.0f};
+}
+
