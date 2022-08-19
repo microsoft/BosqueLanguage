@@ -20,19 +20,23 @@ entity Color provides APIType{
 }
 
 inline infix operator *(f: Float, c: Color): Color {
-    return Vector{c.red * f, c.green * f, c.blue * f};
+    return Color{c.red * f, c.green * f, c.blue * f};
 }
 
 inline infix operator *(c: Color, f: Float): Color {
-    return Vector{c.red * f, c.green * f, c.blue * f};
+    return Color{c.red * f, c.green * f, c.blue * f};
+}
+
+inline infix operator *(v1: Color, v2: Color): Color {
+    return Color{v1.red * v2.red, v1.green * v2.green, v1.blue * v2.blue};
 }
 
 inline infix operator +(a: Color, b: Color): Color {
-    return Vector{a.red + b.red, a.green + b.green, a.blue + b.blue};
+    return Color{a.red + b.red, a.green + b.green, a.blue + b.blue};
 }
 
 inline infix operator -(a: Color, b: Color): Color {
-    return Vector{a.red - b.red, a.green - b.green, a.blue - b.blue};
+    return Color{a.red - b.red, a.green - b.green, a.blue - b.blue};
 }
 
 inline infix operator ==(a: Color, b: Color): Bool {

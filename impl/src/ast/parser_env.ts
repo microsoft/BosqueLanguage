@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { Assembly, NamespaceOperatorDecl } from "./assembly";
+import { Assembly } from "./assembly";
 import { NominalTypeSignature, TypeSignature, AutoTypeSignature } from "./type_signature";
 
 class FunctionScope {
@@ -177,40 +177,6 @@ class ParserEnvironment {
                 return fromns !== undefined ? fromns.fromns : undefined;
             }
         }
-    }
-
-    tryResolveAsPrefixUnaryOperator(opname: string, level: number): string | undefined {
-        const nsdecl = this.assembly.getNamespace(this.m_currentNamespace as string);
-        if (nsdecl.declaredNames.has(opname) && nsdecl.operators.get(opname) !== undefined) {
-            const opdecls = nsdecl.operators.get(opname) as NamespaceOperatorDecl[];
-            return opdecls.some((opdecl) => (opdecl.isPrefix && opdecl.level === level)) ? this.m_currentNamespace as string : undefined;
-        }
-
-        const nsmaindecl = this.assembly.getNamespace("Core");
-        if (nsmaindecl.declaredNames.has(opname) && nsmaindecl.operators.get(opname) !== undefined) {
-            const opdecls = nsmaindecl.operators.get(opname) as NamespaceOperatorDecl[];
-            return opdecls.some((opdecl) => (opdecl.isPrefix && opdecl.level === level)) ? "Core" : undefined;
-        }
-
-        const fromns = nsdecl.usings.find((nsuse) => nsuse.names.indexOf(opname) !== -1);
-        return fromns !== undefined ? fromns.fromns : undefined;
-    }
-
-    tryResolveAsInfixBinaryOperator(opname: string, level: number): string | undefined {
-        const nsdecl = this.assembly.getNamespace(this.m_currentNamespace as string);
-        if (nsdecl.declaredNames.has(opname) && nsdecl.operators.get(opname) !== undefined) {
-            const opdecls = nsdecl.operators.get(opname) as NamespaceOperatorDecl[];
-            return opdecls.some((opdecl) => (opdecl.isInfix && opdecl.level === level)) ? this.m_currentNamespace as string : undefined;
-        }
-
-        const nsmaindecl = this.assembly.getNamespace("Core");
-        if (nsmaindecl.declaredNames.has(opname) && nsmaindecl.operators.get(opname) !== undefined) {
-            const opdecls = nsmaindecl.operators.get(opname) as NamespaceOperatorDecl[];
-            return opdecls.some((opdecl) => (opdecl.isInfix && opdecl.level === level)) ? "Core" : undefined;
-        }
-        
-        const fromns = nsdecl.usings.find((nsuse) => nsuse.names.indexOf(opname) !== -1);
-        return fromns !== undefined ? fromns.fromns : undefined;
     }
 }
 

@@ -26,15 +26,15 @@ entity RayTracer
     }
 */
 
-    function renderPixel(scene: Scene, x: Nat, y: Nat): Color {
-        return this.traceRay(Ray{scene.camera.pos, this.getPoint(x, y, scene.camera)}, scene, 0n);
+    method renderPixel(scene: Scene, x: Nat, y: Nat): Color {
+        return this.traceRay(Ray{scene.camera.pos, this.getPoint(x.toFloat(), y.toFloat(), scene.camera)}, scene, 0n);
     }
 
     function createDefaultScene(): Scene {
         let things =  List<SceneObject>{
-            Sphere{Vector{-0.5f, 1.0f, 1.5f}, 0.5f, Scene::matteShiny},
-            Sphere{Vector{0.0f, 1.0f, -0.25f}, 1.0f, Scene::shiny},
-            Plane{Vector{0.0f, 1.0f, 0.0f}, 0.0f, Scene::checkerBoard}
+            Sphere{Scene::matteShiny, Vector{-0.5f, 1.0f, 1.5f}, 0.5f},
+            Sphere{Scene::shiny, Vector{0.0f, 1.0f, -0.25f}, 1.0f},
+            Plane{Scene::checkerBoard, Vector{0.0f, 1.0f, 0.0f}, 0.0f}
         };
 
         let lights = List<Light>{
@@ -67,7 +67,7 @@ entity RayTracer
         }
     }
 
-    recursive method traceRay(ray: Ray, scene: Scene, depth: Nat): Color {
+    method traceRay(ray: Ray, scene: Scene, depth: Nat): Color {
         let isect = this.minIntersection(ray, scene);
 
         if(isect === none) {
@@ -79,7 +79,7 @@ entity RayTracer
     }
 
     method getNaturalColor(thing: SceneObject, pos: Vector, norm: Vector, rd: Vector, scene: Scene): Color {
-        let ret = scene.lights.reduce(Color{0.0f, 0.0f, 0.0f}, fn(acc, light) => {
+        let ret = scene.lights.reduce<Color>(Color{0.0f, 0.0f, 0.0f}, fn(acc, light) => {
             let ldis = light.pos - pos;
             let livec = ldis.norm();
             let neatIsect = this.testRay(Ray{pos, livec}, scene);
@@ -89,9 +89,9 @@ entity RayTracer
                 return acc;
             }
             else {
-                let illum = livec _dotprod_ norm;
-                let lcolor = illum > 0.0f ? (illum * light.Color) : Color{0.0f, 0.0f, 0.0f};
-                let specular = livec _dotprod_ rd.norm();
+                let illum = %dotprod%(livec, norm);
+                let lcolor = illum > 0.0f ? (illum * light.color) : Color{0.0f, 0.0f, 0.0f};
+                let specular = %dotprod%(livec, rd.norm());
                 let scolor = specular > 0.0f ? (specular.pow(thing.surface.roughness) * light.color) : Color{0.0f, 0.0f, 0.0f};
 
                 return acc + (thing.surface.diffuse * lcolor) + (thing.surface.specular * scolor);
@@ -109,7 +109,7 @@ entity RayTracer
         let d = isect.ray.dir;
         let pos = (isect.dist * isect.ray.dir) + isect.ray.start;
         let normal = isect.thing.normal(pos);
-        let reflectDir = d - ((2.0f * (normal _dotprod_ d)) * normal);
+        let reflectDir = d - ((2.0f * %dotprod%(normal, d)) * normal);
         let ret = Color::defaultColor + this.getNaturalColor(isect.thing, pos, normal, reflectDir, scene);
 
         if(depth >= RayTracer::maxDepth) {
@@ -125,7 +125,7 @@ entity RayTracer
     }
 
     method recenterY(y: Float): Float {
-		return -(y - (screenHeight.toFloat() / 2.0f)) / (2.0f * this.screenHeight.toFloat());
+		return -(y - (this.screenHeight.toFloat() / 2.0f)) / (2.0f * this.screenHeight.toFloat());
     }
 
     method getPoint(x: Float, y: Float, camera: Camera): Vector {

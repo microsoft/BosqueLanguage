@@ -6,8 +6,9 @@
 namespace Main;
 
 entrypoint function main(): Color {
+    let tracer = RayTracer{8n, 8n};
     let scene = RayTracer::createDefaultScene();
-    let clr = RayTracer::renderPixel(scene, 0, 0);
+    let clr = tracer.renderPixel(scene, 0, 0);
 
     return clr;
 }
