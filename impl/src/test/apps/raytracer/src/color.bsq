@@ -1,0 +1,44 @@
+
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+namespace Main;
+
+entity Color provides APIType{
+    field red: Float;
+    field green: Float;
+    field blue: Float;
+
+    const background: Color = Color{0.0f, 0.0f, 0.0f};
+    const defaultColor: Color = Color{0.0f, 0.0f, 0.0f};
+
+    function leagalize(c: Float): Float {
+        return Float::max(c, 1.0f);
+    }
+}
+
+inline infix operator *(f: Float, c: Color): Color {
+    return Vector{c.red * f, c.green * f, c.blue * f};
+}
+
+inline infix operator *(c: Color, f: Float): Color {
+    return Vector{c.red * f, c.green * f, c.blue * f};
+}
+
+inline infix operator +(a: Color, b: Color): Color {
+    return Vector{a.red + b.red, a.green + b.green, a.blue + b.blue};
+}
+
+inline infix operator -(a: Color, b: Color): Color {
+    return Vector{a.red - b.red, a.green - b.green, a.blue - b.blue};
+}
+
+inline infix operator ==(a: Color, b: Color): Bool {
+    return /\(a.red == b.red, a.green == b.green, a.blue == b.blue);
+}
+
+inline infix operator !=(a: Color, b: Color): Bool {
+    return \/(a.red != b.red, a.green != b.green, a.blue != b.blue);
+}

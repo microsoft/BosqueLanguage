@@ -1,0 +1,17 @@
+{
+    "name": "db",
+    "version": "0.0.0.0",
+    "description": "In memory database",
+    "license": "MIT",
+    "src": {
+        "bsqsource": [
+            "./src/*"
+        ],
+        "entrypoints": [
+            "./db.bsqapi"
+        ],
+        "testfiles": [
+            "./db.bsqtest"
+        ]
+    }
+}

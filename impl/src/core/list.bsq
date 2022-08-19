@@ -115,6 +115,12 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
         return ListOps::s_list_empty<T>(this);
     }
 
+    method lastIndex(): Nat
+        requires !ListOps::s_list_empty<T>(this);
+    {
+        return ListOps::s_list_size<T>(this) - 1n;
+    }
+
     method front(): T 
         requires !ListOps::s_list_empty<T>(this);
     {
@@ -790,7 +796,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
         }
     }
 
-    method argMaxOrOption(cmp: recursive? pred(_: T, _: T) -> Bool): Option<T> {
+    method argMaxOption(cmp: recursive? pred(_: T, _: T) -> Bool): Option<T> {
         if(ListOps::s_list_empty<T>(this)) {
             return nothing;
         }
@@ -867,6 +873,189 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
         }
     }
 
+
+
+
+
+
+    method argMinOf<U>(f: recursive? fn(_: T) -> U, cmp: recursive? pred(_: U, _: U) -> Bool): U 
+        requires !ListOps::s_list_empty<T>(this);
+    {
+        let iv = f[recursive?](ListOps::s_list_front<T>(this));
+        let tl = ListOps::s_list_pop_front<T>(this);
+        if(ListOps::s_list_empty<T>(tl)) {
+            return iv;
+        }
+        else {
+            return ListOps::s_list_reduce<T, U>(tl, iv, fn(acc: U, v: T): U => {
+                let vv = f[recursive?](v);
+                if(cmp[recursive?](vv, acc)) {
+                    return vv;
+                }
+                else {
+                    return acc;
+                }
+            });
+        }
+    }
+
+    method argMaxOf<T>(f: recursive? fn(_: T) -> U, cmp: recursive? pred(_: U, _: U) -> Bool): U
+        requires !ListOps::s_list_empty<T>(this);
+    {
+        let iv = f[recursive?](ListOps::s_list_front<T>(this));
+        let tl = ListOps::s_list_pop_front<T>(this);
+        if(ListOps::s_list_empty<T>(tl)) {
+            return iv;
+        }
+        else {
+            return ListOps::s_list_reduce<T, U>(tl, iv, fn(acc: U, v: T): U => {
+                let vv = f[recursive?](v);
+                if(cmp[recursive?](acc, vv)) {
+                    return vv;
+                }
+                else {
+                    return acc;
+                }
+            });
+        }
+    }
+
+    method argMinOrNoneOf<U>(f: recursive? fn(_: T) -> U?, cmp: recursive? pred(_: U, _: U) -> Bool): U? {
+        if(ListOps::s_list_empty<T>(this)) {
+            return none;
+        }
+        else {
+            let iv = f[recursive?](ListOps::s_list_front<T>(this));
+            let tl = ListOps::s_list_pop_front<T>(this);
+            if(ListOps::s_list_empty<T>(tl)) {
+                return iv;
+            }
+            else {
+                return ListOps::s_list_reduce<T, U?>(tl, iv, fn(acc: U?, v: T): U? => {
+                    let vv = f[recursive?](v);
+
+                    if(acc === none) {
+                        return vv;
+                    }
+                    elif(vv === none) {
+                        return acc;
+                    }
+                    else {
+                        if(cmp[recursive?](vv, acc)) {
+                            return vv;
+                        }
+                        else {
+                            return acc;
+                        }
+                    }
+                });
+            }
+        }
+    }
+
+    method argMaxOrNoneOf<U>(f: recursive? fn(_: T) -> U?, cmp: recursive? pred(_: U, _: U) -> Bool): U? {
+        if(ListOps::s_list_empty<T>(this)) {
+            return none;
+        }
+        else {
+            let iv = f[recursive?](ListOps::s_list_front<T>(this));
+            let tl = ListOps::s_list_pop_front<T>(this);
+            if(ListOps::s_list_empty<T>(tl)) {
+                return iv;
+            }
+            else {
+                return ListOps::s_list_reduce<T, U?>(tl, iv, fn(acc: U?, v: T): U? => {
+                    let vv = f[recursive?](v);
+
+                    if(acc === none) {
+                        return vv;
+                    }
+                    elif(vv === none) {
+                        return acc;
+                    }
+                    else {
+                        if(cmp[recursive?](acc, vv)) {
+                            return vv;
+                        }
+                        else {
+                            return acc;
+                        }
+                    }
+                });
+            }
+        }
+    }
+
+    method argMinOptionOf<U>(f: recursive? fn(_: T) -> Option<U>, cmp: recursive? pred(_: U, _: U) -> Bool): Option<U> {
+        if(ListOps::s_list_empty<T>(this)) {
+            return nothing;
+        }
+        else {
+            let iv = f[recursive?](ListOps::s_list_front<T>(this));
+            let tl = ListOps::s_list_pop_front<T>(this);
+            if(ListOps::s_list_empty<T>(tl)) {
+                return iv;
+            }
+            else {
+                let res = ListOps::s_list_reduce<T, U>(tl, iv, fn(acc: Option<U>, v: T): Option<U> => {
+                    let vv = f[recursive?](v);
+
+                    if(acc === nothing) {
+                        return vv;
+                    }
+                    elif(vv === nothing) {
+                        return acc;
+                    }
+                    else {
+                        if(cmp[recursive?](vv, acc)) {
+                            return vv;
+                        }
+                        else {
+                            return acc;
+                        }
+                    }
+                });
+
+                return res;
+            }
+        }
+    }
+
+    method argMaxOptionOf<U>(f: recursive? fn(_: T) -> Option<U>, cmp: recursive? pred(_: U, _: U) -> Bool): Option<U> {
+        if(ListOps::s_list_empty<T>(this)) {
+            return nothing;
+        }
+        else {
+            let iv = f[recursive?](ListOps::s_list_front<T>(this));
+            let tl = ListOps::s_list_pop_front<T>(this);
+            if(ListOps::s_list_empty<T>(tl)) {
+                return iv;
+            }
+            else {
+                let res = ListOps::s_list_reduce<T, U>(tl, iv, fn(acc: Option<U>, v: T): Option<U> => {
+                    let vv = f[recursive?](v);
+
+                    if(acc === nothing) {
+                        return vv;
+                    }
+                    elif(vv === nothing) {
+                        return acc;
+                    }
+                    else {
+                        if(cmp[recursive?](acc, vv)) {
+                            return vv;
+                        }
+                        else {
+                            return acc;
+                        }
+                    }
+                });
+
+                return something(res);
+            }
+        }
+    }
+
     method {when T unique Algebraic} sum(): T {
         if(ListOps::s_list_empty<T>(this)) {
             return T::zero;
@@ -879,6 +1068,25 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             }
             else {
                 return ListOps::s_list_reduce<T, T>(tl, iv, fn(a: T, b: T): T => (a + b));
+            }
+        }
+    }
+
+    //TODO: in the future we want to make this accumulate<U ParallelConfig> where ParallelConfig is a type that has a parallelization info -- threads, SIMD, FPGA, etc. 
+    //      This describes the resources that the algorithm uses and now it is a deterministic function -- since runtime heuristics always select same for given parallel config.
+
+    recursive? method accumulate(f: recursive? fn(_: T, _: T) -> T): T {
+        if(ListOps::s_list_empty<T>(this)) {
+            return T::zero;
+        }
+        else {
+            let iv = ListOps::s_list_front<T>(this);
+            let tl = ListOps::s_list_pop_front<T>(this);
+            if(ListOps::s_list_empty<T>(tl)) {
+                return iv;
+            }
+            else {
+                return ListOps::s_list_reduce<T, T>(tl, iv, f);
             }
         }
     }
@@ -2065,6 +2273,59 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                 });
 #endif
             }
+        }
+    }
+
+    //cmp is true if _ is less than
+    recursive? method lowerBound(cmp: recursive? pred(_: T) -> Bool): Nat {
+        if(ListOps::s_list_empty<T>(this)) {
+            return 0;
+        }
+        else {
+#if CHECK_LIBS
+            let idx = ListOps::s_list_find_pred<T>[recursive?](this, recursive? pred(v: T): Bool => !cmp[recursive?](v));
+            if(idx == -1i) {
+                return ListOps::s_list_size<T>(this);
+            }
+            else {
+                return NumericOps::s_intToNat(idx);
+            }
+#else
+            //TODO: implement in Bosque for runtime -- linear search here is not cool
+            let idx = ListOps::s_list_find_pred<T>[recursive?](this, recursive? pred(v: T): Bool => !cmp[recursive?](v, val));
+            if(idx == -1i) {
+                return ListOps::s_list_size<T>(this);
+            }
+            else {
+                return NumericOps::s_intToNat(idx);
+            } 
+#endif
+        }
+    }
+
+    recursive? method upperBound(cmp: recursive? pred(_: T) -> Bool): Nat {
+        if(ListOps::s_list_empty<T>(this)) {
+            return 0;
+        }
+        else {
+#if CHECK_LIBS
+            let idx = ListOps::s_list_find_pred<T>[recursive?](this, recursive? pred(v: T): Bool => cmp[recursive?](v));
+            if(idx == -1i) {
+                return ListOps::s_list_size<T>(this);
+            }
+            else {
+                return NumericOps::s_intToNat(idx);
+            }
+#else
+            //TODO: implement in Bosque for runtime -- linear search here is not cool
+            let idx = ListOps::s_list_find_pred<T>[recursive?](this, recursive? pred(v: T): Bool => cmp[recursive?](v));
+            if(idx == -1i) {
+                return ListOps::s_list_size<T>(this);
+            }
+            else {
+                return NumericOps::s_intToNat(idx);
+            } 
+#endif
         }
     }
 

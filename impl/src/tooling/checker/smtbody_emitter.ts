@@ -2694,6 +2694,16 @@ class SMTBodyEmitter {
                 const dd = new SMTCallSimple("BLatLongCoordinate@cons", args.map((arg) => new SMTVar(arg.vname)));
                 return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);
             }
+            case "regex_accepts": {
+                const bsqreopts = this.assembly.literalRegexs.map((bsqre, j) => {
+                    const lre = bsqre.compileToPatternToSMT(true);
+                    const idxchk = SMTCallSimple.makeEq(new SMTCallSimple("bsq_regex_value", [new SMTVar(args[0].vname)]), new SMTConst(j.toString()));
+                    return SMTCallSimple.makeAndOf(idxchk, new SMTCallSimple("str.in.re", [new SMTVar(args[1].vname), new SMTConst(lre)]));
+                });
+                
+                const accept = SMTCallSimple.makeOrOf(...bsqreopts);
+                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, accept);
+            }
             case "s_list_cons_1": {
                 const vdecl = this.typegen.assembly.entityDecls.get(args[0].vtype.typeID) as MIRObjectEntityTypeDecl;
                 const carg1 = new SMTCallSimple("seq.unit", [new SMTCallSimple(this.typegen.generateEntityFieldGetFunction(vdecl, vdecl.fields[0]), [new SMTVar(args[0].vname)])]);

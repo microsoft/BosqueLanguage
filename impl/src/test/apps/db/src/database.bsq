@@ -1,0 +1,311 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+namespace Main;
+
+typedef DBRecordData = List<String>;
+typedef DBIndexEntry = Nat;
+
+enum DBError
+{
+    invalidField,
+    invalidCursorAccess
+}
+
+enum DBIndexStatus
+{
+    invalid,
+    insertion,
+    sorted,
+    filtered
+}
+
+entity Database provides APIType
+{
+    field dbname: String;
+    field version: LogicalTime;
+
+    field fmt: List<DBEntryFormat>;
+    field entries: List<DBRecordData>;
+
+    field index: List<DBIndexEntry> = List<DBIndexEntry>{};
+    field current_record: Int = 0i;
+    field idxStatus: DBIndexStatus = DBIndexStatus::invalid;
+    field fnum: Nat = 0;
+    field fval: String = "";
+
+    invariant -1i <= $current_record && $current_record <= $entries.size().toInt();
+    invariant ($idxStatus === DBIndexStatus::insertion || $idxStatus === DBIndexStatus::sorted) => $index.size() == $entries.size();
+    invariant ($idxStatus === DBIndexStatus::filtered) => $index.size() == $entries.size();
+    invariant ($idxStatus === DBIndexStatus::sorted || $idxStatus === DBIndexStatus::filtered) => ($fnum < $fmt.size() && !$fmt.get($fnum).isHeaderField);
+    invariant ($idxStatus === DBIndexStatus::filtered) === ($fval !== "");
+
+    debug invariant Database::checkDBEntryFormats($fmt, $entries);
+    debug invariant Database::checkIndexValid($index);
+
+    function isValidDBEntryFormat(fmt: List<DBEntryFormat>, entry: DBRecordData): Bool {
+        if(entry.size() != fmt.size()) {
+            return false;
+        }
+
+        return fmt.allOf(pred(f, i) => {
+            return f.checkValidator(entry.get(i));
+        });
+    }
+
+    function checkDBEntryFormats(fmt: List<DBEntryFormat>, entries: List<DBRecordData>): Bool {
+        return entries.allOf(pred(entry) => {
+            return Database::isValidDBEntryFormat(fmt, entry);
+        });
+    }
+
+    method checkIndexValid(idxStatus: DBIndexStatus, index: List<DBIndexEntry>): Bool {
+        if(idxStatus === DBIndexStatus::insertion) {
+            return index.allOf(pred(i, j) => {
+                return i == j;
+            });    
+        }
+        elif(idxStatus === DBIndexStatus::sorted) {
+            return index.sort(pred(a, b) => a < b).allOf(pred(i, j) => {
+                return i == j;
+            });
+        }
+        elif(idxStatus === DBIndexStatus::filtered) {
+            return index.sort(pred(a, b) => a < b).allOf(pred(i, j) => {
+                return i <= j && (i < index.lastIndex().toInt() => i < index.get(i + 1));
+            });
+        }
+        else {
+            return true;
+        }
+    }
+
+    method empty(): Bool {
+        return this.entries.empty();
+    }
+
+    method numRecords(): Nat {
+        return this.entries.size();
+    }
+
+    method isValidCurrentRecordPosition(): Bool {
+        return -1i <= this.current_record && this.current_record < this.entries.size().toInt();
+    }
+
+    function set_index_default(ref db: MDatabase, curr: Int) {
+        var nindx = List<DBIndexEntry>{};
+        if(!db.entries.empty()) {
+            nindex = List<Nat>::rangeNat(0, db.entities.lastIndex());
+        }
+        
+        db = db.{
+            index = nindex, 
+            current_record = curr, 
+            idxStatus = DBIndexStatus::insertion, 
+            fnum = 0, 
+            fval = ""
+        };
+    }
+
+    function startCursor(ref db: MDatabase): DBRecordData? {
+        if(db.entries.empty()) {
+            return none;
+        }
+
+        if(db.idxStatus !== DBIndexStatus::invalid) {
+            db = db.{current_record = 0i};
+        }
+        else {
+            Database::set_index_default(db, 0i);
+        }
+
+        return db.entries.get(db.index.front());
+    }
+
+    function endCursor(ref db: MDatabase): DBRecordData? {
+        if(db.entries.empty()) {
+            return none;
+        }
+
+        let lidx = this.entries.lastIndex().toInt();
+        if(db.idxStatus !== DBIndexStatus::invalid) {
+            db = db.{current_record = lidx};
+        }
+        else {
+            Database::set_index_default(db, lidx);
+        }
+
+        return db.entries.get(db.index.back());
+    }
+
+    function gotoCursor(ref db: MDatabase, curr: Int): Result<DBRecordData, DBError> {
+        validate 0i <= curr else err(DBError::InvalidCursorAccess);
+
+        if(db.idxStatus !== DBIndexStatus::invalid) {
+            validate curr < this.index.size().toInt() else err(DBError::InvalidCursorAccess);
+            db = db.{current_record = curr};
+        }
+        else {
+            validate curr < this.entries.size().toInt() else err(DBError::InvalidCursorAccess);
+            Database::set_index_default(db, curr);
+        }
+
+        return ok(db.entries.get(db.index.get(db.current_record.toNat())));
+    }
+
+    function next(ref db: MDatabase): DBRecordData? {
+        if(db.entries.empty()) {
+            return none;
+        }
+
+        if(db.idxStatus === DBIndexStatus::invalid) {
+            Database::set_index_default(db, 0i);
+        }
+
+        if(db.current_record < db.index.size().toInt()) {
+            db.{current_record = $current_record + 1i};
+        }
+
+        if(db.current_record.toNat() == db.index.size()) {
+            return none;
+        }
+        else {
+            return db.entries.get(db.index.get(this.current_record.toNat()));
+        }
+   	}
+
+	function previous(ref db: MDatabase): DBRecordData? {
+        if(db.entries.empty()) {
+            return none;
+        }
+
+        if(db.idxStatus === DBIndexStatus::invalid) {
+            let lidx = this.entries.size().toInt() - 1i;
+            Database::set_index_default(db, lidx);
+        }
+      
+        if(db.current_record >= 0i) {
+            db.{current_record = $current_record - 1i};
+        }
+   
+        if(db.current_record == -1i) {
+            return none;
+        }
+        else {
+    	    return db.entries.get(db.index.get(this.current_record.toNat()));
+        }
+    }
+
+    function add(ref db: MDatabase, entry: DBRecordData) {
+        db = db.{
+            version = $version.increment(), 
+            entries = $entries.pushBack(entry), 
+            index = List<Nat>{}, 
+            current_record = 0i, 
+            idxStatus = DBIndexStatus::invalid,
+            fnum = 0,
+            fval = ""
+        };
+    }
+
+    function modify(ref db: MDatabase, entry: DBRecordData): Bool {
+        if(!db.isValidCurrentRecordPosition()) {
+            return false;
+        }
+        else {
+            db = db.{
+                version = $version.increment(), 
+                entries = $entries.set($current_record, entry), 
+                index = List<Nat>{}, 
+                current_record = 0i, 
+                idxStatus = DBIndexStatus::invalid,
+                fnum = 0,
+                fval = ""
+            };
+
+            return true;
+        }
+    }
+
+    function remove(ref db: MDatabase): Bool {
+        if(!db.isValidCurrentRecordPosition()) {
+            return false;
+        }
+        else {
+            db = db.{
+                    version = $version.increment(), 
+                    entries = $entries.remove($index.get($current_record)), 
+                    index = $index.remove($current_record), 
+                    current_record = $current_record - 1i
+            };
+
+            return true;
+        }
+    }
+
+    function find(ref db: Database, fname: String, fvalue: String): Result<DBRecordData?, DBError> {
+        let fidx = db.fmt.indexOfOrNone(fname);
+        validate fidx !== none && !db.fmt.get(fidx).isHeaderField else err(DBError::InvalidFieldName);
+        
+        if(db.entries.empty()) {
+            return ok(none);
+        }
+
+        if(db.fnum != fidx || db.idxStatus !== DBIndexStatus::sorted) {
+            let nindx = List<Nat>::rangeNat(0, db.entities.lastIndex()).sort(pred(i, j) => {
+                return KeyType::less<String>(db.entries.get(i).get(fidx), db.entries.get(j).get(fidx));
+            });
+
+            let ncurr = nindx.lowerBound(pred(i) => {
+                return KeyType::less<String>(db.entries.get(i).get(fidx), fvalue);
+            });
+
+            db = db.{
+                index = nindex, 
+                current_record = ncurr, 
+                idxStatus = DBIndexStatus::sorted,
+                fnum = fidx, 
+                fval = ""
+            };
+        }
+        
+        if(db.current_record == db.index.size().toInt()) {
+            return ok(none);
+        }
+        else {
+            return ok(db.entries.get(db.index.get(db.current_record.toNat())));
+        }
+    }
+
+    function select(ref db: Database, fname: String, fvalue: String): Result<DBRecordData?, DBError> {
+        let fidx = db.fmt.indexOfOrNone(fname);
+        validate fidx !== none && !db.fmt.get(fidx).isHeaderField else err(DBError::InvalidFieldName);
+        
+        if(db.entries.empty()) {
+            return ok(none);
+        }
+
+        if(db.fnum != fidx || db.idxStatus !== DBIndexStatus::filtered) {
+            let nindx = List<Nat>::rangeNat(0, db.entities.lastIndex()).filter(pred(i) => {
+                return KeyType::equal<String>(db.entries.get(i).get(fidx), fvalue);
+            });
+
+            db = db.{
+                index = nindex, 
+                current_record = 0i, 
+                idxStatus = DBIndexStatus::filtered,
+                fnum = fidx, 
+                fval = fvalue
+            };
+        }
+        
+        if(db.current_record == db.index.size().toInt()) {
+            return ok(none);
+        }
+        else {
+            return ok(db.entries.get(db.index.get(db.current_record.toNat())));
+        }
+    }
+}
