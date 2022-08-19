@@ -399,6 +399,7 @@ enum class BSQPrimitiveImplTag
     relativetime_create,
     isotimestamp_create,
     latlongcoordinate_create,
+    regex_accepts,
 
     s_list_build_empty,
     s_list_build_k,

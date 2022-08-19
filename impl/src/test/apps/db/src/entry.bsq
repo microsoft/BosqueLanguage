@@ -1,0 +1,23 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+namespace Main;
+
+typedef DBFieldID = Nat;
+
+entity DBEntryFormat provides APIType {
+    field isHeaderField: Bool;
+    field fieldID: DBFieldID;
+    field optFieldValidator: Regex?;
+
+    method checkValidator(value: String): Bool {
+        if(this.optFieldValidator === none) {
+            return value === "--";
+        }
+        else {
+            return this.optFieldValidator.accepts(value);
+        }
+    }
+}

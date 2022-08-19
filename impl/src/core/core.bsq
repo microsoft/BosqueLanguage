@@ -525,7 +525,12 @@ __internal __typedeclable __typebase entity TickTime provides Some, Orderable, K
 
 //<summary>Primitive LogicalTime value.</summary>
 __internal __typedeclable __typebase entity LogicalTime provides Some, Orderable, KeyType, APIType {
-    //TODO: logical time zero and one
+    __safe internal function s_zero(): LogicalTime = logicaltime_zero;
+    __safe internal function s_increment(t: LogicalTime): LogicalTime = logicaltime_increment;
+
+    method increment(): LogicalTime {
+        return LogicalTime::s_increment(this);
+    }
 }
 
 __internal __typedeclable __typebase entity ISOTimeStamp provides Some, KeyType, APIType {
@@ -570,6 +575,11 @@ __internal __typedeclable __typebase entity LatLongCoordinate provides Some, API
 
 //<summary>Primitive regex value.</summary>
 __internal entity Regex provides Some {
+    __safe internal function s_accepts(re: Regex, s: String): Bool = regex_accepts;
+
+    method accepts(s: String): Bool {
+        return Regex::s_accepts(this, s);
+    }
 }
 
 //<summary>Static methods for Tuples.</summary>

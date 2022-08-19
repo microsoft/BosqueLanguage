@@ -1,0 +1,54 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+namespace Main;
+
+entity Vector provides APIType {
+    field x: Float;
+    field y: Float;
+    field z: Float;
+
+    method norm(): Vector {
+        let mv = this.mag();
+		let dv = mv == 0.0f ? 1000000000.0f : 1.0f / mv;
+		return dv * this;
+    }
+
+    method mag(): Float {
+        return (this _dotprod_ this).sqrt();
+    }
+}
+
+inline infix operator *(f: Float, v: Vector): Vector {
+    return Vector{v.x * f, v.y * f, v.z * f};
+}
+
+inline infix operator *(v: Vector, f: Float): Vector {
+    return Vector{v.x * f, v.y * f, v.z * f};
+}
+
+inline infix operator +(a: Vector, b: Vector): Vector {
+    return Vector{a.x + b.x, a.y + b.y, a.z + b.z};
+}
+
+inline infix operator -(a: Vector, b: Vector): Vector {
+    return Vector{a.x - b.x, a.y - b.y, a.z - b.z};
+}
+
+inline infix operator _dotprod_(a: Vector, b: Float): Float {
+    return (a.x * b.x) + (a.y * b.y) + (a.z * b.z);
+}
+
+inline infox operator _crossprod_(a: Vector, b: Vector): Vector {
+    return Vector{(a.y * b.z) - (a.z * b.y), (a.z * b.x) - (a.x * b.z), (a.x * b.y) - (a.y * b.x)};
+}
+
+inline infix operator ==(a: Vector, b: Vector): Bool {
+    return /\(a.x == b.x, a.y == b.y, a.z == b.z);
+}
+
+inline infix operator !=(a: Vector, b: Vector): Bool {
+    return \/(a.x != b.x, a.y != b.y, a.z != b.z);
+}

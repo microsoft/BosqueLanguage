@@ -1,0 +1,17 @@
+{
+    "name": "raytracer",
+    "version": "0.0.0.0",
+    "description": "Super simple raytracer",
+    "license": "MIT",
+    "src": {
+        "bsqsource": [
+            "./src/*"
+        ],
+        "entrypoints": [
+            "./raytracer.bsqapi"
+        ],
+        "testfiles": [
+            "./raytracer.bsqtest"
+        ]
+    }
+}
