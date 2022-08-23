@@ -26,9 +26,10 @@ The **_Bosque Package Manager_** (see the `bosque` command section) provides a c
 
 # Documentation
 
-Small samples of code and unique Bosque tooling are below in the [Code Snippets](#Code-Snippets) and [Tooling](#Tooling) sections. A rundown of notable and/or unique features in the Bosque language is provided in the [language overview section 0](docs/language/overview.md#0-Highlight-Features).
+Small samples of code and unique Bosque tooling are below in the [Code Snippets](#Code-Snippets) and [Tooling](#Tooling) sections. A rundown of notable and/or unique features in the Bosque language is provided on the [Language Highlights](docs/language/highlights.md) page and complete documenation for the language and standard libraries are on the [Language](docs/language/overview.md) and [Libraries](docs/libraries/overview.md) doc pages respectively.
 
 Detailed Documentation, Tutorials, and Technical Information:
+* [Language Highlights](docs/language/highlights.md)
 * [Language Docs](docs/language/overview.md)
 * [Library Docs](docs/libraries/overview.md)
 * Tutorials - _Coming Eventually!_
