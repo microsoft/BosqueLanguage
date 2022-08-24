@@ -231,6 +231,16 @@ class MIREmitter {
         return ([] as string[]).concat(...ccopts).sort();
     }
 
+    flattenCapturedPCodeVarCapturesWithTypes(cc: Map<string, PCode>): {cname: string, ctype: MIRResolvedTypeKey}[] {
+        const ccopts = [...cc].map((ccx) => {
+           return [...ccx[1].captured].map((cv) => {
+                return {cname: this.generateCapturedVarName(cv[0], ccx[1].code.bodyID), ctype: this.registerResolvedTypeReference(cv[1]).typeID};
+            });
+        });
+
+        return ([] as {cname: string, ctype: MIRResolvedTypeKey}[]).concat(...ccopts).sort();
+    }
+
     createNewBlock(pfx: string): string {
         if(!this.emitEnabled) {
             return "DISABLED";

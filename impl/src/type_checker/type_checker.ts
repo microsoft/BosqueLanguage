@@ -7119,6 +7119,14 @@ class TypeChecker {
                         const capturedname = this.m_emitter.generateCapturedVarName(cv[0], v.code.bodyID);
                         return {cname: capturedname, ctype: cv[1].typeID}; 
                     });
+
+                    if(v.capturedpcode.size !== 0) {
+                        const pcc = this.m_emitter.flattenCapturedPCodeVarCapturesWithTypes(v.capturedpcode);
+                        pcc.forEach((vv) => {
+                            cargs.push(vv);
+                        });
+                    }
+
                     mpc.set(k, { code: v.ikey, cargs: cargs })
                 });
 
