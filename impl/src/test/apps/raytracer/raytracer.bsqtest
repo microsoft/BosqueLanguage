@@ -47,3 +47,23 @@ chktest function addunit(): Bool {
     return vv == Vector{1.0f, 1.0f, 1.0f};
 }
 
+////
+//Tests for color operations
+
+chktest function unitrgb(): Bool {
+    let cc = Color{1.0f, 0.0f, 0.0f} + Color{0.0f, 1.0f, 0.0f} + Color{0.0f, 0.0f, 1.0f};
+
+    return cc == Color{1.0f, 1.0f, 1.0f};
+}
+
+////
+//Tests for errors with planes/spheres
+
+errtest function check_plane_isect(p: Plane, r: Ray): ISect? {
+    return p.intersect(r);
+}
+
+errtest function check_sphere_isect(s: Sphere, r: Ray): ISect? {
+    return s.intersect(r);
+}
+

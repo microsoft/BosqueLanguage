@@ -59,7 +59,7 @@ entity Plane provides SceneObject {
     override method intersect(ray: Ray): ISect? {
         let denom = %dotprod%(this.norm, ray.dir);
 
-        if(denom > 0.0f) {
+        if(denom >= 0.0f) {
             return none;
         }
         else {

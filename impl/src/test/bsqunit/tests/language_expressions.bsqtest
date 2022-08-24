@@ -3,4 +3,30 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-namespace Main;
+namespace Expressions;
+
+////
+//Static Namespace Operators
+
+abstract operator %ns_operator%(a: Any, b: Any): Any;
+
+operator %ns_operator%(a: Int, b: Int): Int {
+    return a + b;
+}
+
+operator %ns_operator%(a: Nat, b: Bool): Nat {
+    if(b) {
+        return a;
+    }
+    else {
+        return 0n;
+    }
+}
+
+chktest function operator_ii(): Bool {
+    return %ns_operator%(1i, 2i) == 3i;
+}
+
+chktest function operator_nb(): Bool {
+    return %ns_operator%(1n, true) == 1n;
+}

@@ -27,7 +27,7 @@ entity RayTracer
 */
 
     method renderPixel(scene: Scene, x: Nat, y: Nat): Color {
-        return this.traceRay(Ray{scene.camera.pos, this.getPoint(x.toFloat(), y.toFloat(), scene.camera)}, scene, 0n);
+        return this.traceRay[recursive](Ray{scene.camera.pos, this.getPoint(x.toFloat(), y.toFloat(), scene.camera)}, scene, 0n);
     }
 
     function createDefaultScene(): Scene {
@@ -67,14 +67,14 @@ entity RayTracer
         }
     }
 
-    method traceRay(ray: Ray, scene: Scene, depth: Nat): Color {
+    recursive method traceRay(ray: Ray, scene: Scene, depth: Nat): Color {
         let isect = this.minIntersection(ray, scene);
 
         if(isect === none) {
             return Color::background;
         }
         else {
-            return this.shade(isect, scene, depth);
+            return this.shade[recursive](isect, scene, depth);
         }
     }
 
@@ -102,10 +102,10 @@ entity RayTracer
     }
 
     recursive method getReflectionColor(thing: SceneObject, pos: Vector, norm: Vector, rd: Vector, scene: Scene, depth: Nat): Color {
-        return thing.surface.reflect * this.traceRay(Ray{pos, rd}, scene, depth + 1n);
+        return thing.surface.reflect * this.traceRay[recursive](Ray{pos, rd}, scene, depth + 1n);
     }
 
-    method shade(isect: ISect, scene: Scene, depth: Nat): Color {
+    recursive method shade(isect: ISect, scene: Scene, depth: Nat): Color {
         let d = isect.ray.dir;
         let pos = (isect.dist * isect.ray.dir) + isect.ray.start;
         let normal = isect.thing.normal(pos);
