@@ -71,6 +71,3 @@ The Bosque language is a hybrid of functional programming language semantics and
   - [6.8 Switch](#6.8-Switch)
   - [6.9 Block](#6.9-Block)
   - [6.9 Statement Calls](#6.9-Statement-Calls)
-- [7 Invokable Declarations](#7-Invokable-Declarations)
-- [8 Concept and Entity Declarations](#8-Concept-and-Entity-Declarations)
-- [9 Namespace Declarations](#9-Namespace-Declarations)

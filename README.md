@@ -32,6 +32,9 @@ Detailed Documentation, Tutorials, and Technical Information:
 * [Language Highlights](docs/language/highlights.md)
 * [Language Docs](docs/language/overview.md)
 * [Library Docs](docs/libraries/overview.md)
+* [Runtime and GC Docs](docs/runtime/overview.md)
+* Tooling -- !TODO!
+* Checkers -- !TODO!
 * Tutorials - _Coming Eventually!_
 * [Technical Papers](docs/papers/publist.md)
 * [Contribution guidelines](CONTRIBUTING.md)
