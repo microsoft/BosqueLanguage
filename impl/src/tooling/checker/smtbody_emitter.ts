@@ -3413,7 +3413,7 @@ class SMTBodyEmitter {
                 else {
                     const resultsmtu = this.typegen.generateResultType(mirrestype);
                     const foldcall = new SMTCallSimple("seq.foldli", [
-                        new SMTConst(`(lambda ((@@idx Int) (@@acc ${resultsmtu.smttypename}) (@@x ${argtype.smttypename})) (ite (${this.typegen.generateResultIsErrorTest(mirrestype, new SMTVar("@@acc"))}) @acc (${pcfn} ${this.typegen.generateResultGetSuccess(mirrestype, new SMTVar("@@acc")).emitSMT2(undefined)} @@x @@idx${captured.length !== 0 ? (" " + captured.join(" ")) : ""})))`),
+                        new SMTConst(`(lambda ((@@idx Int) (@@acc ${resultsmtu.smttypename}) (@@x ${argtype.smttypename})) (ite (${this.typegen.generateResultIsErrorTest(mirrestype, new SMTVar("@@acc")).emitSMT2(undefined)}) @acc (${pcfn} ${this.typegen.generateResultGetSuccess(mirrestype, new SMTVar("@@acc")).emitSMT2(undefined)} @@x @@idx${captured.length !== 0 ? (" " + captured.join(" ")) : ""})))`),
                         new SMTConst("0"),
                         this.typegen.generateResultTypeConstructorSuccess(mirrestype, new SMTVar(args[1].vname)),
                         sval
