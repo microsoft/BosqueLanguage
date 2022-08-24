@@ -7,7 +7,7 @@ import { SourceInfo, Parser } from "../ast/parser";
 import { MIRAbort, MIRArgument, MIRAssertCheck, MIRBasicBlock, MIRBinKeyEq, MIRBinKeyLess, MIRBody, MIRConstantArgument, MIRConstantBigInt, MIRConstantBigNat, MIRConstantDataString, MIRConstantDecimal, MIRConstantFalse, MIRConstantFloat, MIRConstantInt, MIRConstantNat, MIRConstantNone, MIRConstantRational, MIRConstantRegex, MIRConstantString, MIRConstantStringOf, MIRConstantTrue, MIRConstantTypedNumber, MIRConstructorEphemeralList, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionSingletons, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConvertValue, MIRDeadFlow, MIRDebug, MIRDeclareGuardFlagLocation, MIREntityProjectToEphemeral, MIREntityUpdate, MIREphemeralListExtend, MIRFieldKey, MIRGlobalKey, MIRGuard, MIRInvokeFixedFunction, MIRInvokeKey, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRIsTypeOf, MIRJump, MIRJumpCond, MIRJumpNone, MIRLoadConst, MIRLoadField, MIRLoadFromEpehmeralList, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadUnintVariableValue, MIRMultiLoadFromEpehmeralList, MIRNop, MIROp, MIRPrefixNotOp, MIRRecordHasProperty, MIRRecordProjectToEphemeral, MIRRecordUpdate, MIRRegisterArgument, MIRResolvedTypeKey, MIRReturnAssign, MIRReturnAssignOfCons, MIRSetConstantGuardFlag, MIRSliceEpehmeralList, MIRStatmentGuard, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRRegisterAssign, MIRTupleHasIndex, MIRTupleProjectToEphemeral, MIRTupleUpdate, MIRVarLifetimeEnd, MIRVarLifetimeStart, MIRVirtualMethodKey, MIRInject, MIRExtract, MIRGuardedOptionInject, MIRConstantNothing, MIRLogicAction, MIRConstructorEntityDirect, MIRConstructorPrimaryCollectionOneElement } from "./mir_ops";
 import { Assembly, BuildApplicationMode, BuildLevel, ConceptTypeDecl, EntityTypeDecl, InvokeDecl, MemberMethodDecl, NamespaceConstDecl, NamespaceFunctionDecl, NamespaceOperatorDecl, OOMemberLookupInfo, OOPTypeDecl, StaticFunctionDecl, StaticMemberDecl, StaticOperatorDecl } from "../ast/assembly";
 import { ResolvedConceptAtomType, ResolvedConceptAtomTypeEntry, ResolvedEntityAtomType, ResolvedEphemeralListType, ResolvedFunctionType, ResolvedRecordAtomType, ResolvedTupleAtomType, ResolvedType } from "../ast/resolved_type";
-import { MIRAssembly, MIRConceptType, MIREntityType, MIREphemeralListType, MIRRecordType, MIRTupleType, MIRType, MIRTypeOption, PackageConfig } from "./mir_assembly";
+import { MIRAssembly, MIRConceptType, MIREntityType, MIREphemeralListType, MIRInvokeDecl, MIRRecordType, MIRTupleType, MIRType, MIRTypeOption, PackageConfig } from "./mir_assembly";
 
 import { TypeChecker } from "../type_checker/type_checker";
 import { simplifyBody } from "./mir_cleanup";
@@ -18,6 +18,7 @@ import { ConstantExpressionValue, LiteralExpressionValue } from "../ast/body";
 import { ValueType } from "../type_checker/type_environment";
 
 import * as Crypto from "crypto";
+import { constructCallGraphInfo } from "./mir_callg";
 
 type PCode = {
     code: InvokeDecl,
@@ -1284,7 +1285,7 @@ class MIREmitter {
         this.pendingPCodeProcessing.push({ lkey: ikey, lshort: shortname, invoke: idecl, sigt: fsig, bodybinds: bodybinds, cargs: cinfo, capturedpcodes: capturedpcode });
     }
 
-    static generateMASM(buildmode: BuildApplicationMode, pckge: PackageConfig[], buildLevel: BuildLevel, entrypoints: { filename: string, names: string[] }): { masm: MIRAssembly | undefined, errors: string[] } {
+    static generateMASM(buildmode: BuildApplicationMode, pckge: PackageConfig[], buildLevel: BuildLevel, istestbuild: boolean, entrypointkeys: MIRInvokeKey[], entrypoints: { filename: string, names: string[] }): { masm: MIRAssembly | undefined, errors: string[] } {
         ////////////////
         //Parse the contents and generate the assembly
         const assembly = new Assembly();
@@ -1434,7 +1435,6 @@ class MIREmitter {
         emitter.registerResolvedTypeReference(assembly.getSpecialTupleConceptType());
         emitter.registerResolvedTypeReference(assembly.getSpecialRecordConceptType());
 
-        
         emitter.registerResolvedTypeReference(assembly.getSpecialISomethingConceptType());
         emitter.registerResolvedTypeReference(assembly.getSpecialIOptionConceptType());
         emitter.registerResolvedTypeReference(assembly.getSpecialIOptionTConceptType());
@@ -1559,13 +1559,32 @@ class MIREmitter {
             return { masm: undefined, errors: tcerrors.map((err: [string, number, string]) => JSON.stringify(err)) };
         }
         else {
-            let typedefremaps = new Map<string, MIRType>(); 
-            assembly.getTypedefRemap().forEach((tt, tkey) => {
-                typedefremaps.set(tkey, emitter.registerResolvedTypeReference(tt));
+            const cginfo = constructCallGraphInfo(entrypointkeys, masm, istestbuild);
+            const missingrec = cginfo.recursive.find((recset) => {
+                return [...recset].some((inv) => {
+                    const iiv = (masm.invokeDecls.get(inv) || masm.primitiveInvokeDecls.get(inv)) as MIRInvokeDecl;
+                    return !iiv.recursive;
+                });
             });
 
-            masm.entyremaps = {namespaceremap: entryremap, entrytypedef: typedefremaps};
-            return { masm: masm, errors: [] };
+            if(missingrec !== undefined) {
+                const missing = [...missingrec]
+                    .map((inv) => (masm.invokeDecls.get(inv) || masm.primitiveInvokeDecls.get(inv)) as MIRInvokeDecl)
+                    .filter((iiv) => !iiv.recursive)
+                    .map((iiv) => iiv.shortname)
+                    .join(", ");
+
+                return { masm: undefined, errors: [`Recursive function(s) ${missing} are not marked as recursive`] };
+            }
+            else {
+                let typedefremaps = new Map<string, MIRType>();
+                assembly.getTypedefRemap().forEach((tt, tkey) => {
+                    typedefremaps.set(tkey, emitter.registerResolvedTypeReference(tt));
+                });
+
+                masm.entyremaps = { namespaceremap: entryremap, entrytypedef: typedefremaps };
+                return { masm: masm, errors: [] };
+            }
         }
     }
 }

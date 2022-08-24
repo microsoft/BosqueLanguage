@@ -51,10 +51,10 @@ function workflowLoadCoreSrc(): CodeFileInfo[] | undefined {
     }
 }
 
-function generateMASMForICPP(buildlevel: BuildLevel, usercode: PackageConfig[], corecode: CodeFileInfo[], entrypoint: {filename: string, names: string[]}): { masm: MIRAssembly | undefined, errors: string[] } {
+function generateMASMForICPP(buildlevel: BuildLevel, usercode: PackageConfig[], corecode: CodeFileInfo[], entrypointkeys: MIRInvokeKey[], entrypoint: {filename: string, names: string[]}): { masm: MIRAssembly | undefined, errors: string[] } {
     const coreconfig = new PackageConfig(["EXEC_LIBS"], corecode);
 
-    return MIREmitter.generateMASM(BuildApplicationMode.Executable, [coreconfig, ...usercode], buildlevel, entrypoint);
+    return MIREmitter.generateMASM(BuildApplicationMode.Executable, [coreconfig, ...usercode], buildlevel, true, entrypointkeys, entrypoint);
 }
 
 function generateICPPAssembly(srcCode: { fname: string, contents: string }[], masm: MIRAssembly, istestbuild: boolean, topts: TranspilerOptions, entrypoints: MIRInvokeKey[]): [boolean, any] {
@@ -65,7 +65,7 @@ function generateICPPAssembly(srcCode: { fname: string, contents: string }[], ma
     }
 }
 
-function generateMASMForSMT(usercode: PackageConfig[], corecode: CodeFileInfo[], buildlevel: BuildLevel, smallmodelonly: boolean, entrypoint: {filename: string, names: string[]}): { masm: MIRAssembly | undefined, errors: string[] } {
+function generateMASMForSMT(usercode: PackageConfig[], corecode: CodeFileInfo[], buildlevel: BuildLevel, smallmodelonly: boolean, entrypointkeys: MIRInvokeKey[], entrypoint: {filename: string, names: string[]}): { masm: MIRAssembly | undefined, errors: string[] } {
     let smtmacros = ["CHECK_LIBS"];
     if(smallmodelonly) {
         smtmacros.push("CHK_SMALL_ONLY");
@@ -73,7 +73,7 @@ function generateMASMForSMT(usercode: PackageConfig[], corecode: CodeFileInfo[],
 
     const coreconfig = new PackageConfig(smtmacros, corecode);
 
-    return MIREmitter.generateMASM(BuildApplicationMode.ModelChecker, [coreconfig, ...usercode], buildlevel, entrypoint);
+    return MIREmitter.generateMASM(BuildApplicationMode.ModelChecker, [coreconfig, ...usercode], buildlevel, true, entrypointkeys, entrypoint);
 }
 
 function generateSMTPayload(masm: MIRAssembly, istestbuild: boolean, vopts: VerifierOptions, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey): string | undefined {
@@ -107,13 +107,14 @@ function runtestsICPP(buildlevel: BuildLevel, istestbuild: boolean, topts: Trans
     });
 
     for(let i = 0; i < filteredentry.length; ++i) {
-        const {masm, errors} = generateMASMForICPP(buildlevel, usercode, corecode as CodeFileInfo[], filteredentry[i]);
+        const entrykeys = filteredentry[i].names.map((fname) => [fname, MIRKeyGenerator.generateFunctionKeyWNamespace(filteredentry[i].namespace, fname, new Map<string, ResolvedType>(), []).keyid]);
+        
+        const {masm, errors} = generateMASMForICPP(buildlevel, usercode, corecode as CodeFileInfo[], entrykeys.map((kp) => kp[1]), filteredentry[i]);
         if(masm === undefined) {
             cbdone(errors.join("\n"));
             return;
         }
 
-        const entrykeys = filteredentry[i].names.map((fname) => [fname, MIRKeyGenerator.generateFunctionKeyWNamespace(filteredentry[i].namespace, fname, new Map<string, ResolvedType>(), []).keyid]);
         const icppasm = generateICPPAssembly([], masm, istestbuild, topts, entrykeys.map((kp) => kp[1]));
         if(!icppasm[0]) {
             cbdone("Failed to generate ICPP assembly");
@@ -193,13 +194,14 @@ function runtestsSMT(buildlevel: BuildLevel, smallmodelonly: boolean, istestbuil
     });
 
     for(let i = 0; i < filteredentry.length; ++i) {
-        const {masm, errors} = generateMASMForSMT(usercode, corecode as CodeFileInfo[], buildlevel, smallmodelonly, {filename: filteredentry[i].filename, names: filteredentry[i].names});
+        const entrykeys = filteredentry[i].names.map((fname) => [fname, MIRKeyGenerator.generateFunctionKeyWNamespace(filteredentry[i].namespace, fname, new Map<string, ResolvedType>(), []).keyid]);
+        
+        const {masm, errors} = generateMASMForSMT(usercode, corecode as CodeFileInfo[], buildlevel, smallmodelonly, entrykeys.map((kp) => kp[1]), {filename: filteredentry[i].filename, names: filteredentry[i].names});
         if(masm === undefined) {
             cbdone(errors.join("\n"));
             return;
         }
 
-        const entrykeys = filteredentry[i].names.map((fname) => [fname, MIRKeyGenerator.generateFunctionKeyWNamespace(filteredentry[i].namespace, fname, new Map<string, ResolvedType>(), []).keyid]);
         const runnableentries = entrykeys.filter((ekey) => {
             const idcl = masm.invokeDecls.get(ekey[1]);
             if(idcl === undefined) {
