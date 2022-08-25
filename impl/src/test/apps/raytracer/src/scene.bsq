@@ -27,19 +27,19 @@ entity Sphere provides SceneObject {
     field radius: Float;
 
     override method intersect(ray: Ray): ISect? {
-        let eo = this->center - ray.start;
-        let v = eo _dotprod_ ray.dir;
-        var dist;
+        let eo = this.center - ray.start;
+        let v = %dotprod%(eo, ray.dir);
+        var dist: Float;
 
         if(v < 0.0f) {
             dist = 0.0f;
         }
         else {
-            let disc = this.radius.pow(2.0f) - ((eo _dotprod_ eo) - v.pow(2.0f));
+            let disc = this.radius.pow(2.0f) - (%dotprod%(eo, eo) - v.pow(2.0f));
             dist = disc < 0.0f ? 0.0f : v - disc.sqrt();
         }
 
-        if(dist == 0) {
+        if(dist == 0.0f) {
             return none;
         }
         else {
@@ -53,17 +53,17 @@ entity Sphere provides SceneObject {
 }
 
 entity Plane provides SceneObject {
-    field norm Vector;
+    field norm: Vector;
     field offset: Float;
 
-    override method intersect(Ray ray): ISect? {
-        let denom = this.norm _dotprod_ ray.dir;
+    override method intersect(ray: Ray): ISect? {
+        let denom = %dotprod%(this.norm, ray.dir);
 
-        if(denom > 0.0f) {
+        if(denom >= 0.0f) {
             return none;
         }
         else {
-            return ISect{this, ray, ((this.norm _dotprod_ ray.start) + this.offset) / (-denom)};
+            return ISect{this, ray, (%dotprod%(this.norm, ray.start) + this.offset) / (-denom)};
         }
     }
 
@@ -85,11 +85,11 @@ entity Camera provides APIType {
     field up: Vector;
     field right: Vector;
 
-    function create(Vector pos, Vector lookAt): Camera {
+    function create(pos: Vector, lookAt: Vector): Camera {
         let forward = (lookAt - pos).norm();
         let down = Vector{0.0f, -1.0f, 0.0f};
-        let right = 1.5f * (forward _crossprod_ down).norm();
-        let up = 1.5f * (forward _crossprod_ right).norm();
+        let right = 1.5f * %crossprod%(forward, down).norm();
+        let up = 1.5f * %crossprod%(forward, right).norm();
 
         return Camera{pos, forward, up, right};
     }

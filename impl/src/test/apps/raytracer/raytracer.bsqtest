@@ -1,0 +1,69 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+namespace Main;
+
+////
+//Tests for vector operations
+
+chktest function mult_0(v: Vector): Bool {
+    let vvl = 0.0f * v;
+    let vvr = v * 0.0f;
+
+    return /\(vvl == Vector::zero, vvr == Vector::zero);
+}
+
+chktest function mult_1(v: Vector): Bool {
+    let vvl = 1.0f * v;
+    let vvr = v * 1.0f;
+
+    return /\(vvl == v, vvr == v);
+}
+
+chktest function mult_2(): Bool {
+    let vv = 2.0f * Vector{1.0f, 2.0f, 3.0f};
+    return vv == Vector{2.0f, 4.0f, 6.0f};
+}
+
+chktest function dotprod0(v: Vector): Bool {
+    let vvl = %dotprod%(v, Vector::zero);
+    let vvr = %dotprod%(Vector::zero, v);
+
+    return /\(vvl == 0.0f, vvr == 0.0f);
+}
+
+chktest function dotprod1(v: Vector): Bool {
+    let vvl = %dotprod%(v, Vector{1.0f, 1.0f, 1.0f});
+    let vvr = %dotprod%(Vector{1.0f, 1.0f, 1.0f}, v);
+
+    return /\(vvl == v.x + v.y + v.z, vvr == v.x + v.y + v.z);
+}
+
+chktest function addunit(): Bool {
+    let vv = Vector{1.0f, 0.0f, 0.0f} + Vector{0.0f, 1.0f, 0.0f} + Vector{0.0f, 0.0f, 1.0f};
+
+    return vv == Vector{1.0f, 1.0f, 1.0f};
+}
+
+////
+//Tests for color operations
+
+chktest function unitrgb(): Bool {
+    let cc = Color{1.0f, 0.0f, 0.0f} + Color{0.0f, 1.0f, 0.0f} + Color{0.0f, 0.0f, 1.0f};
+
+    return cc == Color{1.0f, 1.0f, 1.0f};
+}
+
+////
+//Tests for errors with planes/spheres
+
+errtest function check_plane_isect(p: Plane, r: Ray): ISect? {
+    return p.intersect(r);
+}
+
+errtest function check_sphere_isect(s: Sphere, r: Ray): ISect? {
+    return s.intersect(r);
+}
+

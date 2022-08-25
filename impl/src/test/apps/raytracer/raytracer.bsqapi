@@ -1,0 +1,14 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+namespace Main;
+
+entrypoint function main(): Color {
+    let tracer = RayTracer{8n, 8n};
+    let scene = RayTracer::createDefaultScene();
+    let clr = tracer.renderPixel(scene, 4, 3);
+
+    return clr;
+}

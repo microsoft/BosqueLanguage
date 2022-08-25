@@ -479,21 +479,19 @@ class NamespaceOperatorDecl {
     readonly isPrefix: boolean;
     readonly isInfix: boolean;
     readonly isDynamic: boolean;
-    readonly level: number;
 
     readonly ns: string;
     readonly name: string;
 
     readonly invoke: InvokeDecl;
 
-    constructor(sinfo: SourceInfo, srcFile: string, ns: string, name: string, invoke: InvokeDecl, level: number) {
+    constructor(sinfo: SourceInfo, srcFile: string, ns: string, name: string, invoke: InvokeDecl) {
         this.sourceLocation = sinfo;
         this.srcFile = srcFile;
 
         this.isPrefix = invoke.attributes.includes("prefix");
         this.isInfix = invoke.attributes.includes("infix");
         this.isDynamic = invoke.attributes.includes("dynamic");
-        this.level = level;
         this.ns = ns;
         this.name = name;
 

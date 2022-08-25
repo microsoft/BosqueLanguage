@@ -399,7 +399,7 @@ class Lexer {
 
     //TODO: we need to make sure that someone doesn't name a local variable "_"
     private isIdentifierName(str: string): boolean {
-        return /^([$]?([_a-z]|([_a-z][_a-zA-Z0-9]*[a-zA-Z0-9])))$/.test(str);
+        return /^([$]?([_a-z]|([_a-z][_a-zA-Z0-9]+)))$/.test(str);
     }
 
     private recordLexToken(epos: number, kind: string) {
@@ -564,26 +564,24 @@ class Lexer {
     }
 
     private static readonly _s_symbolRe = /[\W]+/y;
-    private static readonly _s_operatorRe = /_([\\a-zA-Z0-9]+)_/y;
+    private static readonly _s_operatorRe = /%[a-zA-Z0-9_]+%/y;
     private tryLexSymbol() {
-        Lexer._s_symbolRe.lastIndex = this.m_cpos;
-        const ms = Lexer._s_symbolRe.exec(this.m_input);
-        if (ms === null) {
-            return false;
-        }
-
-        const sym = SymbolStrings.find((value) => ms[0].startsWith(value));
-        if (sym !== undefined) {
-            this.recordLexToken(this.m_cpos + sym.length, sym);
-            return true;
-        }
-
         Lexer._s_operatorRe.lastIndex = this.m_cpos;
         const mo = Lexer._s_operatorRe.exec(this.m_input);
         if (mo !== null) {
             const oper = mo[0];
             this.recordLexTokenWData(this.m_cpos + oper.length, TokenStrings.Operator, oper);
             return true;
+        }
+        
+        Lexer._s_symbolRe.lastIndex = this.m_cpos;
+        const ms = Lexer._s_symbolRe.exec(this.m_input);
+        if (ms !== null) {
+            const sym = SymbolStrings.find((value) => ms[0].startsWith(value));
+            if (sym !== undefined) {
+                this.recordLexToken(this.m_cpos + sym.length, sym);
+                return true;
+            }
         }
 
         return false;
@@ -2518,13 +2516,8 @@ class Parser {
                 exp = new PrefixNotOp(sinfo, exp);
             }
             else {
-                const ons = this.m_penv.tryResolveAsPrefixUnaryOperator(op, 1);
-                if (ons === undefined) {
-                    this.raiseError(sinfo.line, "Could not resolve operator");
-                }
-
                 const arg = new PositionalArgument(undefined, false, exp);
-                return new CallNamespaceFunctionOrOperatorExpression(sinfo, ons as string, op, new TemplateArguments([]), "no", new Arguments([arg]), "prefix");
+                return new CallNamespaceFunctionOrOperatorExpression(sinfo, "Core" as string, op, new TemplateArguments([]), "no", new Arguments([arg]), "prefix");
             }
         }
 
@@ -2546,9 +2539,6 @@ class Parser {
         if(this.testToken("*") || this.testToken("/")) {
             return true;
         }
-        else if(this.testToken(TokenStrings.Operator) && this.m_penv.tryResolveAsInfixBinaryOperator(this.peekTokenData(), 2) !== undefined) {
-            return true;
-        }
         else {
             return false;
         }
@@ -2564,25 +2554,11 @@ class Parser {
         else {
             let aexp: Expression = exp;
             while (this.isMultiplicativeFollow()) {
-                if (this.testToken("*") || this.testToken("/")) {
-                    const op = this.consumeTokenAndGetValue();
-                    const ons = this.m_penv.tryResolveAsInfixBinaryOperator(op, 2);
-                    if (ons === undefined) {
-                        this.raiseError(sinfo.line, "Could not resolve operator");
-                    }
+                const op = this.consumeTokenAndGetValue();
 
-                    const lhs = new PositionalArgument(undefined, false, aexp);
-                    const rhs = new PositionalArgument(undefined, false, this.parsePrefixExpression());
-                    aexp = new CallNamespaceFunctionOrOperatorExpression(sinfo, ons as string, op, new TemplateArguments([]), "no", new Arguments([lhs, rhs]), "infix");
-                }
-                else {
-                    const ons = this.m_penv.tryResolveAsInfixBinaryOperator(this.peekTokenData(), 2) as string;
-
-                    const op = this.consumeTokenAndGetValue();
-                    const lhs = new PositionalArgument(undefined, false, aexp);
-                    const rhs = new PositionalArgument(undefined, false, this.parsePrefixExpression());
-                    aexp = new CallNamespaceFunctionOrOperatorExpression(sinfo, ons as string, op, new TemplateArguments([]), "no", new Arguments([lhs, rhs]), "infix");
-                }
+                const lhs = new PositionalArgument(undefined, false, aexp);
+                const rhs = new PositionalArgument(undefined, false, this.parsePrefixExpression());
+                aexp = new CallNamespaceFunctionOrOperatorExpression(sinfo, "Core" as string, op, new TemplateArguments([]), "no", new Arguments([lhs, rhs]), "infix");
             }
 
             return aexp;
@@ -2591,9 +2567,6 @@ class Parser {
 
     private isAdditiveFollow(): boolean {
         if(this.testToken("+") || this.testToken("-")) {
-            return true;
-        }
-        else if(this.testToken(TokenStrings.Operator) && this.m_penv.tryResolveAsInfixBinaryOperator(this.peekTokenData(), 3) !== undefined) {
             return true;
         }
         else {
@@ -2611,25 +2584,11 @@ class Parser {
         else {
             let aexp: Expression = exp;
             while (this.isAdditiveFollow()) {
-                if (this.testToken("+") || this.testToken("-")) {
-                    const op = this.consumeTokenAndGetValue();
-                    const ons = this.m_penv.tryResolveAsInfixBinaryOperator(op, 3);
-                    if (ons === undefined) {
-                        this.raiseError(sinfo.line, "Could not resolve operator");
-                    }
-
-                    const lhs = new PositionalArgument(undefined, false, aexp);
-                    const rhs = new PositionalArgument(undefined, false, this.parseMultiplicativeExpression());
-                    aexp = new CallNamespaceFunctionOrOperatorExpression(sinfo, ons as string, op, new TemplateArguments([]), "no", new Arguments([lhs, rhs]), "infix");
-                }
-                else {
-                    const ons = this.m_penv.tryResolveAsInfixBinaryOperator(this.peekTokenData(), 3) as string;
-
-                    const op = this.consumeTokenAndGetValue();
-                    const lhs = new PositionalArgument(undefined, false, aexp);
-                    const rhs = new PositionalArgument(undefined, false, this.parseMultiplicativeExpression());
-                    aexp = new CallNamespaceFunctionOrOperatorExpression(sinfo, ons as string, op, new TemplateArguments([]), "no", new Arguments([lhs, rhs]), "infix");
-                }
+               const op = this.consumeTokenAndGetValue();
+                    
+                const lhs = new PositionalArgument(undefined, false, aexp);
+                const rhs = new PositionalArgument(undefined, false, this.parseMultiplicativeExpression());
+                aexp = new CallNamespaceFunctionOrOperatorExpression(sinfo, "Core" as string, op, new TemplateArguments([]), "no", new Arguments([lhs, rhs]), "infix");
             }
 
             return aexp;
@@ -2645,23 +2604,11 @@ class Parser {
             return new BinKeyExpression(sinfo, exp, op, this.parseRelationalExpression());
         }
         else if(this.testToken("==") || this.testToken("!=") || this.testToken("<") || this.testToken(">") || this.testToken("<=") || this.testToken(">=")) {
-            const ons = this.m_penv.tryResolveAsInfixBinaryOperator(this.peekTokenData(), 4);
-            if (ons === undefined) {
-                this.raiseError(sinfo.line, "Could not resolve operator");
-            }
-
             const op = this.consumeTokenAndGetValue();
+
             const lhs = new PositionalArgument(undefined, false, exp);
             const rhs = new PositionalArgument(undefined, false, this.parseRelationalExpression());
-            return new CallNamespaceFunctionOrOperatorExpression(sinfo, ons as string, op, new TemplateArguments([]), "no", new Arguments([lhs, rhs]), "infix");
-        }
-        else if(this.testToken(TokenStrings.Operator) && this.m_penv.tryResolveAsInfixBinaryOperator(this.peekTokenData(), 4) !== undefined) {
-            const ons = this.m_penv.tryResolveAsInfixBinaryOperator(this.peekTokenData(), 4) as string;
-
-            const op = this.consumeTokenAndGetValue();
-            const lhs = new PositionalArgument(undefined, false, exp);
-            const rhs = new PositionalArgument(undefined, false, this.parseRelationalExpression());
-            return new CallNamespaceFunctionOrOperatorExpression(sinfo, ons as string, op, new TemplateArguments([]), "no", new Arguments([lhs, rhs]), "infix");
+            return new CallNamespaceFunctionOrOperatorExpression(sinfo, "Core" as string, op, new TemplateArguments([]), "no", new Arguments([lhs, rhs]), "infix");
         }
         else {
             return exp;
@@ -4463,21 +4410,11 @@ class Parser {
                 const body = new BodyImplementation(bodyid, this.m_penv.getCurrentFile(), new BlockStatement(sinfo, [new ReturnStatement(sinfo, [bexp])]));
                 const sig = InvokeDecl.createStandardInvokeDecl("Core", sinfo, sinfo, bodyid, this.m_penv.getCurrentFile(), [isprefix ? "prefix" : "infix"], "no", [], undefined, params, undefined, undefined, resultType, [], [], body);
 
-                let level = -1;
-                if (opstr === "+" || opstr === "-") {
-                    level = isprefix ? 1 : 3;
-                }
-                else if (opstr === "*" || opstr === "/") {
-                    level = 2;
-                }
-                else {
-                    level = 4;
-                }
 
                 if (!ns.operators.has(opstr)) {
                     ns.operators.set(opstr, []);
                 }
-                (ns.operators.get(opstr) as NamespaceOperatorDecl[]).push(new NamespaceOperatorDecl(sinfo, this.m_penv.getCurrentFile(), "Core", opstr, sig, level));
+                (ns.operators.get(opstr) as NamespaceOperatorDecl[]).push(new NamespaceOperatorDecl(sinfo, this.m_penv.getCurrentFile(), "Core", opstr, sig));
             });
 
             if (this.testAndConsumeTokenIf("&")) {
@@ -4735,21 +4672,10 @@ class Parser {
             const ns = this.m_penv.assembly.getNamespace("Core");
             const sig = this.parseInvokableCommon(InvokableKind.StaticOperator, attributes.includes("abstract"), attributes, recursive, [], undefined);
 
-            let level = -1;
-            if(fname === "+" || fname === "-") {
-                level = attributes.includes("prefix") ? 1 : 3 ;
-            }
-            else if(fname === "*" || fname === "/") {
-                level = 2;
-            }
-            else {
-                level = 4;
-            }
-
             if (!ns.operators.has(fname)) {
                 ns.operators.set(fname, []);
             }
-            (ns.operators.get(fname) as NamespaceOperatorDecl[]).push(new NamespaceOperatorDecl(sinfo, this.m_penv.getCurrentFile(), "Core", fname, sig, level));
+            (ns.operators.get(fname) as NamespaceOperatorDecl[]).push(new NamespaceOperatorDecl(sinfo, this.m_penv.getCurrentFile(), "Core", fname, sig));
         }
         else {
             if(!this.testToken(TokenStrings.Identifier) && !this.testToken(TokenStrings.Operator)) {
@@ -4780,16 +4706,10 @@ class Parser {
             const ikind = attributes.includes("dynamic") ? InvokableKind.DynamicOperator : InvokableKind.StaticOperator;
             const sig = this.parseInvokableCommon(ikind, isabstract, attributes, recursive, [], undefined);
 
-            let level = -1;
-            if(isabstract) {
-                level = Number.parseInt(this.consumeTokenAndGetValue());
-                this.ensureAndConsumeToken(";");
-            }
-
             if (!ns.operators.has(fname)) {
                 ns.operators.set(fname, []);
             }
-            (ns.operators.get(fname) as NamespaceOperatorDecl[]).push(new NamespaceOperatorDecl(sinfo, this.m_penv.getCurrentFile(), ns.ns, fname, sig, level));
+            (ns.operators.get(fname) as NamespaceOperatorDecl[]).push(new NamespaceOperatorDecl(sinfo, this.m_penv.getCurrentFile(), ns.ns, fname, sig));
         }
     }
 

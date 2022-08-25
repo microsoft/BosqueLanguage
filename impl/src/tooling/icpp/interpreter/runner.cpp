@@ -241,7 +241,8 @@ int main(int argc, char** argv)
         {
             if(outmode == "simple")
             {
-                printf("%s\n", jout.c_str());
+                printf("> %s\n", jout.c_str());
+                printf("Elapsed time %ims...\n", (int)delta_ms);
             }
             else
             {
@@ -254,7 +255,8 @@ int main(int argc, char** argv)
         {
             if(outmode == "simple")
             {
-                printf("%s\n", jout.c_str());
+                printf("> %s\n", jout.c_str());
+                printf("Elapsed time %ims...\n", (int)delta_ms);
             }
             else
             {
@@ -311,7 +313,7 @@ int main(int argc, char** argv)
             if(outmode == "simple")
             {
                 printf("> %s\n", jout.c_str());
-                printf("Elapsed time %i...\n", (int)delta_ms);
+                printf("Elapsed time %ims...\n", (int)delta_ms);
             }
             else
             {
