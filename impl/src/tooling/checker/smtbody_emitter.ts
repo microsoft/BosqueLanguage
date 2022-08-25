@@ -34,8 +34,6 @@ class SMTBodyEmitter {
     currentSCC = new Set<string>();
 
     private pendingMask: SMTMaskConstruct[] = [];
-    requiredTypecheck: { inv: string, flowtype: MIRType, oftype: MIRType }[] = [];
-
     maskSizes: Set<number> = new Set<number>();
 
     //!!!
@@ -103,19 +101,6 @@ class SMTBodyEmitter {
         if (stc === undefined) {
             this.requiredRecordTagChecks.push({ pname: pname, oftype: oftype });
         }
-    }
-
-    private generateTypeCheckName(argflowtype: MIRType, oftype: MIRType): string {
-        return `$SubtypeCheck_${this.typegen.lookupTypeName(argflowtype.typeID)}_oftype_${this.typegen.lookupTypeName(oftype.typeID)}`;
-    }
-
-    private registerRequiredTypeCheck(argflowtype: MIRType, oftype: MIRType): string {
-        const inv = this.generateTypeCheckName(argflowtype, oftype);
-        if (this.requiredTypecheck.findIndex((rtc) => rtc.inv === inv) === -1) {
-            this.requiredTypecheck.push({ inv: inv, flowtype: argflowtype, oftype: oftype });
-        }
-
-        return inv;
     }
 
     generateUFConstantForType(tt: MIRType): string {
@@ -297,7 +282,7 @@ class SMTBodyEmitter {
         else {
             const ops = ttuples.map((tt) => {
                 const mtt = this.typegen.getMIRType(tt.typeID);
-                const test = new SMTCallSimple(this.registerRequiredTypeCheck(geninfo.argflowtype, mtt), [new SMTVar("arg")]);
+                const test = this.processIsTypeOf_Helper(new MIRRegisterArgument("arg"), geninfo.argflowtype, geninfo.argflowtype, mtt);
 
                 const argpp = this.typegen.coerce(new SMTVar("arg"), geninfo.argflowtype, mtt);
                 const idxr = new SMTCallSimple(this.typegen.generateTupleIndexGetFunction(tt, geninfo.idx), [argpp]);
@@ -330,7 +315,7 @@ class SMTBodyEmitter {
         else {
             const ops = trecords.map((tt) => {
                 const mtt = this.typegen.getMIRType(tt.typeID);
-                const test = new SMTCallSimple(this.registerRequiredTypeCheck(geninfo.argflowtype, mtt), [new SMTVar("arg")]);
+                const test = this.processIsTypeOf_Helper(new MIRRegisterArgument("arg"), geninfo.argflowtype, geninfo.argflowtype, mtt);
 
                 const argpp = this.typegen.coerce(new SMTVar("arg"), geninfo.argflowtype, mtt);
                 const idxr = new SMTCallSimple(this.typegen.generateRecordPropertyGetFunction(tt, geninfo.pname), [argpp]);
@@ -357,7 +342,7 @@ class SMTBodyEmitter {
         const rtype = this.typegen.getSMTTypeFor(geninfo.resulttype);
         let ops = tentities.map((tt) => {
             const mtt = this.typegen.getMIRType(tt.tkey);
-            const test = new SMTCallSimple(this.registerRequiredTypeCheck(geninfo.argflowtype, mtt), [new SMTVar("arg")]);
+            const test = this.processIsTypeOf_Helper(new MIRRegisterArgument("arg"), geninfo.argflowtype, geninfo.argflowtype, mtt);
 
             const argpp = this.typegen.coerce(new SMTVar("arg"), geninfo.argflowtype, mtt);
             const action = new SMTCallSimple(this.typegen.generateEntityFieldGetFunction(tt, geninfo.field), [argpp]);
@@ -382,7 +367,7 @@ class SMTBodyEmitter {
         const rtype = this.typegen.getSMTTypeFor(geninfo.resulttype);
         let ops = ttuples.map((tt) => {
             const mtt = this.typegen.getMIRType(tt.typeID);
-            const test = new SMTCallSimple(this.registerRequiredTypeCheck(geninfo.argflowtype, mtt), [new SMTVar("arg")]);
+            const test = this.processIsTypeOf_Helper(new MIRRegisterArgument("arg"), geninfo.argflowtype, geninfo.argflowtype, mtt);
 
             const argpp = this.typegen.coerce(new SMTVar("arg"), geninfo.argflowtype, mtt);
             const pargs = geninfo.indecies.map((idx, i) => {
@@ -411,7 +396,7 @@ class SMTBodyEmitter {
         const rtype = this.typegen.getSMTTypeFor(geninfo.resulttype);
         let ops = trecords.map((tt) => {
             const mtt = this.typegen.getMIRType(tt.typeID);
-            const test = new SMTCallSimple(this.registerRequiredTypeCheck(geninfo.argflowtype, mtt), [new SMTVar("arg")]);
+            const test = this.processIsTypeOf_Helper(new MIRRegisterArgument("arg"), geninfo.argflowtype, geninfo.argflowtype, mtt);
 
             const argpp = this.typegen.coerce(new SMTVar("arg"), geninfo.argflowtype, mtt);
             const pargs = geninfo.properties.map((pname, i) => {
@@ -440,7 +425,7 @@ class SMTBodyEmitter {
         const rtype = this.typegen.getSMTTypeFor(geninfo.resulttype);
         let ops = tentities.map((tt) => {
             const mtt = this.typegen.getMIRType(tt.tkey);
-            const test = new SMTCallSimple(this.registerRequiredTypeCheck(geninfo.argflowtype, mtt), [new SMTVar("arg")]);
+            const test = this.processIsTypeOf_Helper(new MIRRegisterArgument("arg"), geninfo.argflowtype, geninfo.argflowtype, mtt);
 
             const argpp = this.typegen.coerce(new SMTVar("arg"), geninfo.argflowtype, mtt);
             const pargs = geninfo.fields.map((field, i) => {
@@ -509,7 +494,7 @@ class SMTBodyEmitter {
         const rtype = this.typegen.getSMTTypeFor(geninfo.resulttype);
         let ops = ttuples.map((tt) => {
             const mtt = this.typegen.getMIRType(tt.typeID);
-            const test = new SMTCallSimple(this.registerRequiredTypeCheck(geninfo.argflowtype, mtt), [new SMTVar("arg")]);
+            const test = this.processIsTypeOf_Helper(new MIRRegisterArgument("arg"), geninfo.argflowtype, geninfo.argflowtype, mtt);
 
             const argpp = this.typegen.coerce(new SMTVar("arg"), geninfo.argflowtype, mtt);
             let cargs: SMTExp[] = [];
@@ -551,7 +536,7 @@ class SMTBodyEmitter {
         const rtype = this.typegen.getSMTTypeFor(geninfo.resulttype);
         let ops = trecords.map((tt) => {
             const mtt = this.typegen.getMIRType(tt.typeID);
-            const test = new SMTCallSimple(this.registerRequiredTypeCheck(geninfo.argflowtype, mtt), [new SMTVar("arg")]);
+            const test = this.processIsTypeOf_Helper(new MIRRegisterArgument("arg"), geninfo.argflowtype, geninfo.argflowtype, mtt);
 
             const argpp = this.typegen.coerce(new SMTVar("arg"), geninfo.argflowtype, mtt);
             let cargs: SMTExp[] = [];
@@ -594,7 +579,7 @@ class SMTBodyEmitter {
             const mtt = this.typegen.getMIRType(tt.tkey);
             const consfields = (this.assembly.entityDecls.get(tt.tkey) as MIRObjectEntityTypeDecl).consfuncfields.map((ccf) => this.assembly.fieldDecls.get(ccf.cfkey) as MIRFieldDecl);
 
-            const test = new SMTCallSimple(this.registerRequiredTypeCheck(geninfo.argflowtype, mtt), [new SMTVar("arg")]);
+            const test = this.processIsTypeOf_Helper(new MIRRegisterArgument("arg"), geninfo.argflowtype, geninfo.argflowtype, mtt);
 
             const argpp = this.typegen.coerce(new SMTVar("arg"), geninfo.argflowtype, mtt);
            
@@ -664,7 +649,7 @@ class SMTBodyEmitter {
             const mtt = this.typegen.getMIRType(tt.tkey);
             const vfunc = (this.assembly.entityDecls.get(tt.tkey) as MIRObjectEntityTypeDecl).vcallMap.get(geninfo.vfname) as MIRInvokeKey;
             
-            const test = new SMTCallSimple(this.registerRequiredTypeCheck(geninfo.argflowtype, mtt), [new SMTVar("arg")]);
+            const test = this.processIsTypeOf_Helper(new MIRRegisterArgument("arg"), geninfo.argflowtype, geninfo.argflowtype, mtt);
 
             const argpp = this.typegen.coerce(new SMTVar("arg"), geninfo.argflowtype, mtt);
             const invk = this.assembly.invokeDecls.get(vfunc) as MIRInvokeBodyDecl;
@@ -1771,24 +1756,21 @@ class SMTBodyEmitter {
         }
     }
 
-    processIsTypeOf(op: MIRIsTypeOf, continuation: SMTExp): SMTExp {
-        const layout = this.typegen.getMIRType(op.srclayouttype);
-        const flow = this.typegen.getMIRType(op.srcflowtype);
-        const oftype = this.typegen.getMIRType(op.chktype);
-
+    processIsTypeOf_Helper(arg: MIRArgument, layout: MIRType, flow: MIRType, oftype: MIRType): SMTExp {
         let ttop: SMTExp = new SMTConst("false");
+
         if(this.assembly.subtypeOf(flow, oftype)) {
             //also handles the oftype is Any case
             ttop = new SMTConst("true");
         }
         else if(this.typegen.isType(oftype, "None")) {
-            ttop = this.generateNoneCheck(op.arg, layout);
+            ttop = this.generateNoneCheck(arg, layout);
         }
         else if (this.typegen.isType(oftype, "Some")) {
-            ttop = this.generateSomeCheck(op.arg, layout);
+            ttop = this.generateSomeCheck(arg, layout);
         }
         else if(this.typegen.isType(oftype, "Nothing")) {
-            ttop = this.generateNothingCheck(op.arg, layout);
+            ttop = this.generateNothingCheck(arg, layout);
         }
         else {
             const tests = oftype.options.map((topt) => {
@@ -1796,18 +1778,18 @@ class SMTBodyEmitter {
                 assert(mtype !== undefined, "We should generate all the component types by default??");
     
                 if(topt instanceof MIREntityType) {
-                    return this.generateSubtypeCheckEntity(op.arg, layout, flow, mtype);
+                    return this.generateSubtypeCheckEntity(arg, layout, flow, mtype);
                 }
                 else if (topt instanceof MIRConceptType) {
-                    return this.generateSubtypeCheckConcept(op.arg, layout, flow, mtype);
+                    return this.generateSubtypeCheckConcept(arg, layout, flow, mtype);
                 }
                 else if (topt instanceof MIRTupleType) {
-                    return this.generateSubtypeCheckTuple(op.arg, layout, flow, mtype);
+                    return this.generateSubtypeCheckTuple(arg, layout, flow, mtype);
                 }
                 else {
                     assert(topt instanceof MIRRecordType, "All other cases should be handled previously (e.g. dynamic subtype of ephemeral or literal types is not good here)");
 
-                    return this.generateSubtypeCheckRecord(op.arg, layout, flow, mtype);
+                    return this.generateSubtypeCheckRecord(arg, layout, flow, mtype);
                 }
             })
             .filter((test) => !(test instanceof SMTConst) || test.cname !== "false");
@@ -1826,6 +1808,16 @@ class SMTBodyEmitter {
             }
         }
 
+        return ttop;
+    }
+
+    processIsTypeOf(op: MIRIsTypeOf, continuation: SMTExp): SMTExp {
+        const layout = this.typegen.getMIRType(op.srclayouttype);
+        const flow = this.typegen.getMIRType(op.srcflowtype);
+        const oftype = this.typegen.getMIRType(op.chktype);
+
+        const ttop: SMTExp = this.processIsTypeOf_Helper(op.arg, layout, flow, oftype)
+        
         const gop = this.generateGuardStmtCond(op.sguard, ttop, "Bool");
         return new SMTLet(this.varToSMTName(op.trgt).vname, gop, continuation);
     }
