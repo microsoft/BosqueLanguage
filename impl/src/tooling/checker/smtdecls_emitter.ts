@@ -751,19 +751,22 @@ class SMTEmitter {
 
     private processVirtualInvokes() {
         for(let i = this.lastVInvokeIdx; i < this.bemitter.requiredVirtualFunctionInvokes.length; ++i) {
-            this.bemitter.generateVirtualFunctionInvoke(this.bemitter.requiredVirtualFunctionInvokes[i]);
+            const vfunc = this.bemitter.generateVirtualFunctionInvoke(this.bemitter.requiredVirtualFunctionInvokes[i]);
+            this.assembly.functions.push(vfunc);
         }
         this.lastVInvokeIdx = this.bemitter.requiredVirtualFunctionInvokes.length;
 
         for(let i = this.lastVOperatorIdx; i < this.bemitter.requiredVirtualOperatorInvokes.length; ++i) {
-            this.bemitter.generateVirtualOperatorInvoke(this.bemitter.requiredVirtualOperatorInvokes[i]);
+            const vop = this.bemitter.generateVirtualOperatorInvoke(this.bemitter.requiredVirtualOperatorInvokes[i]);
+            this.assembly.functions.push(vop);
         }
         this.lastVOperatorIdx = this.bemitter.requiredVirtualOperatorInvokes.length;
     }
 
     private processVirtualEntityUpdates() {
         for(let i = this.lastVEntityUpdateIdx; i < this.bemitter.requiredUpdateVirtualEntity.length; ++i) {
-            this.bemitter.generateUpdateEntityFieldVirtual(this.bemitter.requiredUpdateVirtualEntity[i]);
+            const vupdate = this.bemitter.generateUpdateEntityFieldVirtual(this.bemitter.requiredUpdateVirtualEntity[i]);
+            this.assembly.functions.push(vupdate);
         }
         this.lastVInvokeIdx = this.bemitter.requiredUpdateVirtualEntity.length;
     }

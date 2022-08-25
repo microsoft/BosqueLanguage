@@ -12,35 +12,34 @@ entity RayTracer
 
     const maxDepth: Nat = 5n;
 
-	function RenderColors(scene: Scene): List<List<Color>>
-	{
-		for(int y = 0; y < screenHeight; y++)
-		{
-			int stride = y * screenWidth;
-			Camera camera = scene.Camera;
+/*
+    function RenderColors(scene: Scene): List<List<Color>> {
+        for(int y = 0; y < screenHeight; y++) {
+            int stride = y * screenWidth;
+            Camera camera = scene.Camera;
 			
-			for(int x = 0; x < screenWidth; x++)
-			{
-				Color color = TraceRay(new Ray(camera.Pos, GetPoint(x, y, camera)), scene, 0);
-				rgb[x + stride] = color.ToInt32();
-			}
-		}
-	}
+            for(int x = 0; x < screenWidth; x++) {
+                Color color = TraceRay(new Ray(camera.Pos, GetPoint(x, y, camera)), scene, 0);
+                rgb[x + stride] = color.ToInt32();
+            }
+        }
+    }
+*/
 
-    function RenderPixel(scene: Scene, x: Nat, y: Nat): Color {
-        return this.traceRay(Ray{scene.camera.pos, this.getPoint(x, y, scene.camera)}, scene, 0n);
-	}
-	
+    method renderPixel(scene: Scene, x: Nat, y: Nat): Color {
+        return this.traceRay[recursive](Ray{scene.camera.pos, this.getPoint(x.toFloat(), y.toFloat(), scene.camera)}, scene, 0n);
+    }
+
     function createDefaultScene(): Scene {
-        let things =  List<SceneObject>{;
-            Sphere{Vector{-0.5f, 1.0f, 1.5f}, 0.5f, Scene::matteShiny},
-            Sphere{Vector{0.0f, 1.0f, -0.25f}, 1.0f, Scene::shiny},
-            Plane{Vector{0.0f, 1.0f, 0.0f}, 0.0f, Scene::checkerBoard}
+        let things =  List<SceneObject>{
+            Sphere{Scene::matteShiny, Vector{-0.5f, 1.0f, 1.5f}, 0.5f},
+            Sphere{Scene::shiny, Vector{0.0f, 1.0f, -0.25f}, 1.0f},
+            Plane{Scene::checkerBoard, Vector{0.0f, 1.0f, 0.0f}, 0.0f}
         };
 
         let lights = List<Light>{
             Light{Vector{-2.0f, 2.5f, 0.0f}, Color{0.5f, 0.45f, 0.41f}},
-            Light{Vector(2.0f, 4.5f, 2.0f), Color{0.99f, 0.95f, 0.8f}}
+            Light{Vector{2.0f, 4.5f, 2.0f}, Color{0.99f, 0.95f, 0.8f}}
         };
 
         let camera = Camera::create(Vector{2.75f, 2.0f, 3.75f}, Vector{-0.6f, 0.5f, 0.0f});
@@ -50,8 +49,8 @@ entity RayTracer
 
 	method minIntersection(ray: Ray, scene: Scene): ISect? {
         let imin = scene.things.argMinOrNoneOf<ISect>(
-            (thing) => thing.intersect(ray),
-            (min, val) => val.dist < min.dist
+            fn(thing) => thing.intersect(ray),
+            pred(min, val) => val.dist < min.dist
         );
 
 		return imin;
@@ -75,12 +74,12 @@ entity RayTracer
             return Color::background;
         }
         else {
-            return this.shade(isect, scene, depth);
+            return this.shade[recursive](isect, scene, depth);
         }
     }
 
     method getNaturalColor(thing: SceneObject, pos: Vector, norm: Vector, rd: Vector, scene: Scene): Color {
-        let ret = scene.lights.reduce(Color{0.0f, 0.0f, 0.0f}, (acc, light) => {
+        let ret = scene.lights.reduce<Color>(Color{0.0f, 0.0f, 0.0f}, fn(acc, light) => {
             let ldis = light.pos - pos;
             let livec = ldis.norm();
             let neatIsect = this.testRay(Ray{pos, livec}, scene);
@@ -90,9 +89,9 @@ entity RayTracer
                 return acc;
             }
             else {
-                let illum = livec _dotprod_ norm;
-                let lcolor = illum > 0.0f ? (illum * light.Color) : Color{0.0f, 0.0f, 0.0f};
-                let specular = livec _dotprod_ rd.norm();
+                let illum = %dotprod%(livec, norm);
+                let lcolor = illum > 0.0f ? (illum * light.color) : Color{0.0f, 0.0f, 0.0f};
+                let specular = %dotprod%(livec, rd.norm());
                 let scolor = specular > 0.0f ? (specular.pow(thing.surface.roughness) * light.color) : Color{0.0f, 0.0f, 0.0f};
 
                 return acc + (thing.surface.diffuse * lcolor) + (thing.surface.specular * scolor);
@@ -103,14 +102,14 @@ entity RayTracer
     }
 
     recursive method getReflectionColor(thing: SceneObject, pos: Vector, norm: Vector, rd: Vector, scene: Scene, depth: Nat): Color {
-        return thing.surface.reflect * this.traceRay(Ray{pos, rd}, scene, depth + 1n));
+        return thing.surface.reflect * this.traceRay[recursive](Ray{pos, rd}, scene, depth + 1n);
     }
 
-    method shade(isect: ISect, scene: Scene, depth: Nat): Color {
+    recursive method shade(isect: ISect, scene: Scene, depth: Nat): Color {
         let d = isect.ray.dir;
         let pos = (isect.dist * isect.ray.dir) + isect.ray.start;
         let normal = isect.thing.normal(pos);
-        let reflectDir = d - ((2.0f * (normal _dotprod_ d)) * normal);
+        let reflectDir = d - ((2.0f * %dotprod%(normal, d)) * normal);
         let ret = Color::defaultColor + this.getNaturalColor(isect.thing, pos, normal, reflectDir, scene);
 
         if(depth >= RayTracer::maxDepth) {
@@ -126,7 +125,7 @@ entity RayTracer
     }
 
     method recenterY(y: Float): Float {
-		return -(y - (screenHeight.toFloat() / 2.0f)) / (2.0f * this.screenHeight.toFloat());
+		return -(y - (this.screenHeight.toFloat() / 2.0f)) / (2.0f * this.screenHeight.toFloat());
     }
 
     method getPoint(x: Float, y: Float, camera: Camera): Vector {

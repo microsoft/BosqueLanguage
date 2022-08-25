@@ -10,6 +10,8 @@ entity Vector provides APIType {
     field y: Float;
     field z: Float;
 
+    const zero: Vector = Vector{0.0f, 0.0f, 0.0f};
+
     method norm(): Vector {
         let mv = this.mag();
 		let dv = mv == 0.0f ? 1000000000.0f : 1.0f / mv;
@@ -17,9 +19,12 @@ entity Vector provides APIType {
     }
 
     method mag(): Float {
-        return (this _dotprod_ this).sqrt();
+        return %dotprod%(this, this).sqrt();
     }
 }
+
+abstract operator %dotprod%(a: Any, b: Any): Any;
+abstract operator %crossprod%(a: Any, b: Any): Any;
 
 inline infix operator *(f: Float, v: Vector): Vector {
     return Vector{v.x * f, v.y * f, v.z * f};
@@ -37,11 +42,11 @@ inline infix operator -(a: Vector, b: Vector): Vector {
     return Vector{a.x - b.x, a.y - b.y, a.z - b.z};
 }
 
-inline infix operator _dotprod_(a: Vector, b: Float): Float {
+inline operator %dotprod%(a: Vector, b: Vector): Float {
     return (a.x * b.x) + (a.y * b.y) + (a.z * b.z);
 }
 
-inline infox operator _crossprod_(a: Vector, b: Vector): Vector {
+inline operator %crossprod%(a: Vector, b: Vector): Vector {
     return Vector{(a.y * b.z) - (a.z * b.y), (a.z * b.x) - (a.x * b.z), (a.x * b.y) - (a.y * b.x)};
 }
 

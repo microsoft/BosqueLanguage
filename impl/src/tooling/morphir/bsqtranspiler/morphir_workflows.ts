@@ -63,11 +63,11 @@ function workflowLoadRuntime(): string | undefined {
     }
 }
 
-function generateMASM(usercode: PackageConfig, buildlevel: BuildLevel, entrypoint: {filename: string, names: string[]}): MIRAssembly {
+function generateMASM(usercode: PackageConfig, buildlevel: BuildLevel, entrypointkeys: MIRInvokeKey[], entrypoint: {filename: string, names: string[]}): MIRAssembly {
     const corecode = workflowLoadCoreSrc() as CodeFileInfo[];
     const coreconfig = new PackageConfig(["EXEC_LIBS"], corecode);
 
-    const { masm, errors } = MIREmitter.generateMASM(BuildApplicationMode.FunctionalizedExecutable, [coreconfig, usercode], buildlevel, entrypoint);
+    const { masm, errors } = MIREmitter.generateMASM(BuildApplicationMode.FunctionalizedExecutable, [coreconfig, usercode], buildlevel, false, entrypointkeys, entrypoint);
     if (errors.length !== 0) {
         for (let i = 0; i < errors.length; ++i) {
             process.stdout.write(chalk.red(`Parse error -- ${errors[i]}\n`));
@@ -101,7 +101,7 @@ function emitElmFile(cfile: string, into: string): boolean {
 }
 
 function workflowEmitMorphirElmFile(into: string, usercode: PackageConfig, buildlevel: BuildLevel, istestbuild: boolean, entrypoint: {filename: string, names: string[], fkeys: MIRResolvedTypeKey[]}): boolean {
-    const massembly = generateMASM(usercode, buildlevel, {filename: entrypoint.filename, names: entrypoint.names});
+    const massembly = generateMASM(usercode, buildlevel, entrypoint.fkeys, {filename: entrypoint.filename, names: entrypoint.names});
 
     const runtime = workflowLoadRuntime();
     if(runtime === undefined) {

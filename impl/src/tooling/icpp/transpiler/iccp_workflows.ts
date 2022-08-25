@@ -58,11 +58,11 @@ function workflowLoadCoreSrc(): CodeFileInfo[] | undefined {
     }
 }
 
-function generateMASM(usercode: PackageConfig, buildlevel: BuildLevel, entrypoint: {filename: string, names: string[]}): MIRAssembly {
+function generateMASM(usercode: PackageConfig, buildlevel: BuildLevel, istestbuild: boolean, entrypointkeys: MIRInvokeKey[], entrypoint: {filename: string, names: string[]}): MIRAssembly {
     const corecode = workflowLoadCoreSrc() as CodeFileInfo[];
     const coreconfig = new PackageConfig(["EXEC_LIBS"], corecode);
 
-    const { masm, errors } = MIREmitter.generateMASM(BuildApplicationMode.Executable, [coreconfig, usercode], buildlevel, entrypoint);
+    const { masm, errors } = MIREmitter.generateMASM(BuildApplicationMode.Executable, [coreconfig, usercode], buildlevel, istestbuild, entrypointkeys, entrypoint);
     if (errors.length !== 0) {
         for (let i = 0; i < errors.length; ++i) {
             process.stdout.write(chalk.red(`Parse error -- ${errors[i]}\n`));
@@ -114,7 +114,7 @@ function runICPPFile(icppjson: {code: object, args: any[], main: string}, debug:
 }
 
 function workflowEmitICPPFile(into: string, usercode: PackageConfig, emitsrcmap: boolean, buildlevel: BuildLevel, istestbuild: boolean, topts: TranspilerOptions, entrypoint: {filename: string, names: string[], fkeys: MIRResolvedTypeKey[]}): boolean {
-    const massembly = generateMASM(usercode, buildlevel, {filename: entrypoint.filename, names: entrypoint.names});
+    const massembly = generateMASM(usercode, buildlevel, istestbuild, entrypoint.fkeys, {filename: entrypoint.filename, names: entrypoint.names});
 
     //TODO: we want to strip to a relative path here to avoid shipping any system specific info
     const srcCode = emitsrcmap ? usercode.src.map((sf) => { return {fname: sf.srcpath, contents: sf.contents}; }) : [];
@@ -130,7 +130,7 @@ function workflowEmitICPPFile(into: string, usercode: PackageConfig, emitsrcmap:
 } 
 
 function workflowRunICPPFile(args: any[], usercode: PackageConfig, emitsrcmap: boolean, buildlevel: BuildLevel, istestbuild: boolean, debug: boolean, topts: TranspilerOptions, entrypoint: {filename: string, name: string, fkey: MIRResolvedTypeKey}, cb: (result: string | undefined) => void) {
-    const massembly = generateMASM(usercode, buildlevel, {filename: entrypoint.filename, names: [entrypoint.name]});
+    const massembly = generateMASM(usercode, buildlevel, istestbuild, [entrypoint.fkey], {filename: entrypoint.filename, names: [entrypoint.name]});
 
     //TODO: we want to strip to a relative path here to avoid shipping any system specific info
     const srcCode = emitsrcmap ? usercode.src.map((sf) => { return {fname: sf.srcpath, contents: sf.contents}; }) : [];
