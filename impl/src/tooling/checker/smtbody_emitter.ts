@@ -17,7 +17,7 @@ function NOT_IMPLEMENTED(msg: string): SMTExp {
     throw new Error(`Not Implemented: ${msg}`);
 }
 
-const REC_FUN_GAS_LIMIT = 1;
+const REC_FUN_GAS_LIMIT = 2;
 
 class RecFunGas {
     readonly declGas: number | undefined;

@@ -894,31 +894,36 @@ class SMTEmitter {
         const cginfo = constructCallGraphInfo([entrypoint], assembly, istestbuild);
         const rcg = [...cginfo.topologicalOrder].reverse();
 
+        let donescc = new Set<string>();
         for (let i = 0; i < rcg.length; ++i) {
             const cn = rcg[i];
             const cscc = cginfo.recursive.find((scc) => scc.has(cn.invoke));
-            
 
-            if(cscc === undefined) {
+            if (cscc === undefined) {
                 this.bemitter.currentGas = RecFunGas.createNonRecGas();
 
                 this.processSingleInvokeDecl(assembly, cn.invoke);
             }
             else {
-                this.bemitter.currentGas = RecFunGas.createInitialRecGas();
+                if (!donescc.has(cn.invoke)) {
+                    cscc.forEach((iiv) => donescc.add(iiv));
 
-                while(!this.bemitter.currentGas.outOfDeclGas()) {
-                    let worklist = [...cscc].sort();
-                    for (let mi = 0; mi < worklist.length; ++mi) {
-                        this.processSingleInvokeDecl(assembly, worklist[mi]);
+                    this.bemitter.currentSCC = cscc;
+                    this.bemitter.currentGas = RecFunGas.createInitialRecGas();
+
+                    while (!this.bemitter.currentGas.outOfDeclGas()) {
+                        let worklist = [...cscc].sort();
+                        for (let mi = 0; mi < worklist.length; ++mi) {
+                            this.processSingleInvokeDecl(assembly, worklist[mi]);
+                        }
+
+                        this.bemitter.currentGas = this.bemitter.currentGas.decrementGasLevel();
                     }
 
-                    this.bemitter.currentGas = this.bemitter.currentGas.decrementGasLevel();
-                }
-
-                let oogworklist = [...cscc].sort();
-                for (let ogi = 0; ogi < oogworklist.length; ++ogi) {
-                    this.processSingleOutOfGas(assembly, oogworklist[ogi]);
+                    let oogworklist = [...cscc].sort();
+                    for (let ogi = 0; ogi < oogworklist.length; ++ogi) {
+                        this.processSingleOutOfGas(assembly, oogworklist[ogi]);
+                    }
                 }
             }
         }
