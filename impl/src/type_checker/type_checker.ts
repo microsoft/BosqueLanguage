@@ -6822,6 +6822,9 @@ class TypeChecker {
                 else if(tdecl.attributes.includes("__list_type")) {
                     const mirbinds = new Map<string, MIRType>().set("T", this.m_emitter.registerResolvedTypeReference(binds.get("T") as ResolvedType));
 
+                    const llresolved = this.resolveAndEnsureTypeOnly(tdecl.sourceLocation, new NominalTypeSignature("Core", ["ListRepr"], [new TemplateTypeSignature("T")]), binds);
+                    this.m_emitter.registerResolvedTypeReference(llresolved);
+                    
                     const mirentity = new MIRPrimitiveListEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, mirbinds);
                     this.m_emitter.masm.entityDecls.set(tkey, mirentity);
                 }
@@ -6839,6 +6842,9 @@ class TypeChecker {
                 }
                 else if(tdecl.attributes.includes("__map_type")) {
                     const mirbinds = new Map<string, MIRType>().set("K", this.m_emitter.registerResolvedTypeReference(binds.get("K") as ResolvedType)).set("V", this.m_emitter.registerResolvedTypeReference(binds.get("V") as ResolvedType));
+
+                    const mmresolved = this.resolveAndEnsureTypeOnly(tdecl.sourceLocation, new NominalTypeSignature("Core", ["MapRepr"], [new TemplateTypeSignature("K"), new TemplateTypeSignature("V")]), binds);
+                    this.m_emitter.registerResolvedTypeReference(mmresolved);
 
                     const mirentity = new MIRPrimitiveMapEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, mirbinds);
                     this.m_emitter.masm.entityDecls.set(tkey, mirentity);
