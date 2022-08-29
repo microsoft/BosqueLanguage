@@ -193,7 +193,7 @@ function isSafeInvoke(idecl: MIRInvokeDecl): boolean {
     return idecl.attributes.includes("__safe") || idecl.attributes.includes("__assume_safe");
 }
 
-function isBodySafe(ikey: MIRInvokeKey, masm: MIRAssembly, errorTrgtPos: { file: string, line: number, pos: number }, callg: CallGInfo, safeinfo: Map<MIRInvokeKey, { safe: boolean, trgt: boolean }>): { safe: boolean, trgt: boolean } {
+function isBodySafe(ikey: MIRInvokeKey, masm: MIRAssembly, errorTrgtPos: { file: string, line: number, pos: number }, callg: CallGInfo, inscc: boolean, safeinfo: Map<MIRInvokeKey, { safe: boolean, trgt: boolean }>): { safe: boolean, trgt: boolean } {
     if(masm.primitiveInvokeDecls.has(ikey)) {
         const pinvk = masm.primitiveInvokeDecls.get(ikey) as MIRInvokePrimitiveDecl;
         const cn = callg.invokes.get(ikey) as CallGNode;
@@ -207,7 +207,7 @@ function isBodySafe(ikey: MIRInvokeKey, masm: MIRAssembly, errorTrgtPos: { file:
                 return { safe: false, trgt: istrgt };
             }
             else {
-                const issafe = [...cn.callees].every((callee) => safeinfo.has(callee) && (safeinfo.get(callee) as { safe: boolean, trgt: boolean }).safe);
+                const issafe = !inscc && [...cn.callees].every((callee) => safeinfo.has(callee) && (safeinfo.get(callee) as { safe: boolean, trgt: boolean }).safe);
                 return { safe: issafe, trgt: istrgt };
             }
         }
@@ -237,7 +237,7 @@ function isBodySafe(ikey: MIRInvokeKey, masm: MIRAssembly, errorTrgtPos: { file:
                 }
             });
             
-            if (!haserrorop && allcalleesafe) {
+            if (!inscc && !haserrorop && allcalleesafe) {
                 return { safe: true, trgt: false };
             }
             else {
@@ -263,7 +263,7 @@ function markSafeCalls(entryPoints: MIRInvokeKey[], masm: MIRAssembly, istestbui
 
         while (worklist.length !== 0) {
             const ikey = worklist.shift() as string;
-            const issafe = isBodySafe(ikey, masm, etrgt, cginfo, safeinfo);
+            const issafe = isBodySafe(ikey, masm, etrgt, cginfo, cscc !== undefined, safeinfo);
 
             const osafe = safeinfo.get(ikey);
             if(osafe === undefined || issafe.safe !== osafe.safe || issafe.trgt !== osafe.trgt) {

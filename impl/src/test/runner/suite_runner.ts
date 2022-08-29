@@ -246,7 +246,7 @@ function runtestsSMT(buildlevel: BuildLevel, smallmodelonly: boolean, istestbuil
                 if(idcl.attributes.includes("chktest")) {
                     const smtasm = generateSMTPayload(masm, istestbuild, SMT_VOPTS_CHK, noerrorpos, ekey[1]);
                     if(smtasm === undefined) {
-                        cbdone("Failed to generate SMT assembly");
+                        cbdone(`Failed to generate SMT assembly -- ${ekey[1]}`);
                     }
                     else {
                     const smtpayload = generateCheckerPayload(masm, smtasm as string, SMT_TIMEOUT, ekey[1]);
@@ -263,7 +263,7 @@ function runtestsSMT(buildlevel: BuildLevel, smallmodelonly: boolean, istestbuil
                     errors.forEach((errpos) => {
                         const smtasm = generateSMTPayload(masm, istestbuild, SMT_VOPTS_ERR, errpos, ekey[1]);
                         if(smtasm === undefined) {
-                            cbdone("Failed to generate SMT assembly");
+                            cbdone(`Failed to generate SMT assembly -- ${ekey[1]}`);
                         }
                         else {
                             const smtpayload = generateCheckerPayload(masm, smtasm as string, SMT_TIMEOUT, ekey[1]);
