@@ -2745,13 +2745,20 @@ class SMTBodyEmitter {
                 );
                 return SMTFunction.create(ideclname, args, chkrestype, truncate);
             }
-            case "float_power":
-            case "decimal_power": {
-                const rr = new SMTCallSimple("^", [new SMTVar(args[0].vname), new SMTVar(args[0].vname)]);
+            case "float_power": {
+                const rr = new SMTCallSimple("Float@Pow", [new SMTVar(args[0].vname), new SMTVar(args[1].vname)]);
                 return SMTFunction.create(ideclname, args, chkrestype, rr);
             }
-            case "nat_mod": {
-                const rr = new SMTCallSimple("mod", [new SMTVar(args[0].vname), new SMTVar(args[0].vname)]);
+            case "decimal_power": {
+                const rr = new SMTCallSimple("Decimal@Pow", [new SMTVar(args[0].vname), new SMTVar(args[1].vname)]);
+                return SMTFunction.create(ideclname, args, chkrestype, rr);
+            }
+            case "float_sqrt": {
+                const rr = new SMTCallSimple("^", [new SMTVar(args[0].vname), new SMTConst("0.5")]);
+                return SMTFunction.create(ideclname, args, chkrestype, rr);
+            }
+            case "decimal_sqrt": {
+                const rr = new SMTCallSimple("^", [new SMTVar(args[0].vname), new SMTConst("0.5")]);
                 return SMTFunction.create(ideclname, args, chkrestype, rr);
             }
             case "string_empty": {

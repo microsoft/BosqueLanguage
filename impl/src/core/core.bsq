@@ -264,8 +264,14 @@ __internal __typedeclable __typebase entity Float provides Some, Algebraic, Orde
         return this * this;
     }
 
-    method sqrt(): Float {
-        return NumericOps::s_floatPower(this, 0.5f);
+    method cube(): Float {
+        return this * this * this;
+    }
+
+    method sqrt(): Float
+        requires this >= 0.0f;
+    {
+        return NumericOps::s_floatSqrt(this);
     }
 }
 __safe __primitive inline prefix operator +(a: Float): Float = default;
@@ -311,8 +317,14 @@ __internal __typedeclable __typebase entity Decimal provides Some, Algebraic, Or
         return this * this;
     }
 
-    method sqrt(): Decimal {
-        return NumericOps::s_decimalPower(this, 0.5f);
+    method cube(): Decimal {
+        return this * this * this;
+    }
+
+    method sqrt(): Decimal
+        requires this >= 0.0d;
+    {
+        return NumericOps::s_decimalSqrt(this);
     }
 }
 __safe __primitive inline prefix operator +(a: Decimal): Decimal = default;
