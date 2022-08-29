@@ -4,7 +4,7 @@
 //-------------------------------------------------------------------------------------------------------
 
 import { ResolvedType, ResolvedTupleAtomType, ResolvedEntityAtomType, ResolvedRecordAtomType, ResolvedConceptAtomType, ResolvedFunctionType, ResolvedEphemeralListType, ResolvedConceptAtomTypeEntry } from "../ast/resolved_type";
-import { Assembly, NamespaceConstDecl, OOPTypeDecl, StaticMemberDecl, EntityTypeDecl, StaticFunctionDecl, InvokeDecl, MemberFieldDecl, NamespaceFunctionDecl, TemplateTermDecl, OOMemberLookupInfo, MemberMethodDecl, BuildLevel, isBuildLevelEnabled, PreConditionDecl, PostConditionDecl, TypeConditionRestriction, ConceptTypeDecl, NamespaceOperatorDecl, StaticOperatorDecl } from "../ast/assembly";
+import { Assembly, NamespaceConstDecl, OOPTypeDecl, StaticMemberDecl, EntityTypeDecl, StaticFunctionDecl, InvokeDecl, MemberFieldDecl, NamespaceFunctionDecl, TemplateTermDecl, OOMemberLookupInfo, MemberMethodDecl, BuildLevel, isBuildLevelEnabled, PreConditionDecl, PostConditionDecl, TypeConditionRestriction, ConceptTypeDecl, NamespaceOperatorDecl, StaticOperatorDecl, BuildApplicationMode } from "../ast/assembly";
 import { TypeEnvironment, VarInfo, FlowTypeTruthValue, ValueType } from "./type_environment";
 import { TypeSignature, TemplateTypeSignature, NominalTypeSignature, AutoTypeSignature, FunctionParameter, FunctionTypeSignature } from "../ast/type_signature";
 import { Expression, ExpressionTag, LiteralTypedStringExpression, LiteralTypedStringConstructorExpression, AccessNamespaceConstantExpression, AccessStaticFieldExpression, AccessVariableExpression, NamedArgument, ConstructorPrimaryExpression, ConstructorPrimaryWithFactoryExpression, ConstructorTupleExpression, ConstructorRecordExpression, Arguments, PositionalArgument, CallNamespaceFunctionOrOperatorExpression, CallStaticFunctionOrOperatorExpression, PostfixOp, PostfixOpTag, PostfixAccessFromIndex, PostfixProjectFromIndecies, PostfixAccessFromName, PostfixProjectFromNames, PostfixInvoke, PostfixModifyWithIndecies, PostfixModifyWithNames, PrefixNotOp, LiteralNoneExpression, BinLogicExpression, SelectExpression, VariableDeclarationStatement, VariableAssignmentStatement, IfElseStatement, Statement, StatementTag, BlockStatement, ReturnStatement, LiteralBoolExpression, LiteralStringExpression, BodyImplementation, AssertStatement, DebugStatement, StructuredVariableAssignmentStatement, StructuredAssignment, RecordStructuredAssignment, VariableDeclarationStructuredAssignment, TupleStructuredAssignment, MatchStatement, MatchGuard, WildcardMatchGuard, TypeMatchGuard, StructureMatchGuard, AbortStatement, YieldStatement, IfExpression, MatchExpression, BlockStatementExpression, ConstructorPCodeExpression, PCodeInvokeExpression, ExpOrExpression, LiteralRegexExpression, ConstructorEphemeralValueList, VariablePackDeclarationStatement, VariablePackAssignmentStatement, NominalStructuredAssignment, ValueListStructuredAssignment, NakedCallStatement, ValidateStatement, IfElse, CondBranchEntry, MapEntryConstructorExpression, SpecialConstructorExpression, RecursiveAnnotation, PostfixIs, PostfixHasIndex, PostfixHasProperty, PostfixAs, LiteralIntegralExpression, LiteralRationalExpression, LiteralFloatPointExpression, LiteralExpressionValue, PostfixGetIndexOrNone, PostfixGetIndexTry, PostfixGetPropertyOrNone, PostfixGetPropertyTry, ConstantExpressionValue, LiteralNumberinoExpression, BinKeyExpression, LiteralNothingExpression, LiteralTypedPrimitiveConstructorExpression, IsTypeExpression, AsTypeExpression, PostfixGetPropertyOption, PostfixGetIndexOption, SwitchExpression, WildcardSwitchGuard, LiteralSwitchGuard, SwitchGuard, SwitchStatement, LogicActionExpression } from "../ast/body";
@@ -97,6 +97,7 @@ class InitializerEvaluationCallAction extends InitializerEvaluationAction {
 class TypeChecker {
     private readonly m_assembly: Assembly;
 
+    readonly buildmode: BuildApplicationMode;
     private readonly m_buildLevel: BuildLevel;
 
     private m_file: string;
@@ -105,9 +106,10 @@ class TypeChecker {
     private readonly m_emitter: MIREmitter;
     private readonly m_sortedSrcFiles: {fullname: string, shortname: string}[]; 
 
-    constructor(assembly: Assembly, emitter: MIREmitter, buildlevel: BuildLevel, sortedSrcFiles: {fullname: string, shortname: string}[]) {
+    constructor(buildmode: BuildApplicationMode, assembly: Assembly, emitter: MIREmitter, buildlevel: BuildLevel, sortedSrcFiles: {fullname: string, shortname: string}[]) {
         this.m_assembly = assembly;
 
+        this.buildmode = buildmode;
         this.m_buildLevel = buildlevel;
 
         this.m_file = "[No File]";
@@ -6822,9 +6824,11 @@ class TypeChecker {
                 else if(tdecl.attributes.includes("__list_type")) {
                     const mirbinds = new Map<string, MIRType>().set("T", this.m_emitter.registerResolvedTypeReference(binds.get("T") as ResolvedType));
 
-                    const llresolved = this.resolveAndEnsureTypeOnly(tdecl.sourceLocation, new NominalTypeSignature("Core", ["ListRepr"], [new TemplateTypeSignature("T")]), binds);
-                    this.m_emitter.registerResolvedTypeReference(llresolved);
-                    
+                    if(this.buildmode === BuildApplicationMode.ModelChecker) {
+                        const llresolved = this.resolveAndEnsureTypeOnly(tdecl.sourceLocation, new NominalTypeSignature("Core", ["ListRepr"], [new TemplateTypeSignature("T")]), binds);
+                        this.m_emitter.registerResolvedTypeReference(llresolved);
+                    }
+
                     const mirentity = new MIRPrimitiveListEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, mirbinds);
                     this.m_emitter.masm.entityDecls.set(tkey, mirentity);
                 }
@@ -6843,9 +6847,11 @@ class TypeChecker {
                 else if(tdecl.attributes.includes("__map_type")) {
                     const mirbinds = new Map<string, MIRType>().set("K", this.m_emitter.registerResolvedTypeReference(binds.get("K") as ResolvedType)).set("V", this.m_emitter.registerResolvedTypeReference(binds.get("V") as ResolvedType));
 
-                    const mmresolved = this.resolveAndEnsureTypeOnly(tdecl.sourceLocation, new NominalTypeSignature("Core", ["MapRepr"], [new TemplateTypeSignature("K"), new TemplateTypeSignature("V")]), binds);
-                    this.m_emitter.registerResolvedTypeReference(mmresolved);
-
+                    if(this.buildmode === BuildApplicationMode.ModelChecker) {
+                        const mmresolved = this.resolveAndEnsureTypeOnly(tdecl.sourceLocation, new NominalTypeSignature("Core", ["MapRepr"], [new TemplateTypeSignature("K"), new TemplateTypeSignature("V")]), binds);
+                        this.m_emitter.registerResolvedTypeReference(mmresolved);
+                    }
+                    
                     const mirentity = new MIRPrimitiveMapEntityTypeDecl(tdecl.sourceLocation, tdecl.srcFile, tkey, tdecl.attributes, tdecl.ns, tdecl.name, terms, provides, mirbinds);
                     this.m_emitter.masm.entityDecls.set(tkey, mirentity);
                 }
