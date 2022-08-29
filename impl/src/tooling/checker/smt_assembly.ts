@@ -8,6 +8,8 @@ import { SymbolicActionMode } from "../../compiler/mir_assembly";
 import { MIRResolvedTypeKey } from "../../compiler/mir_ops";
 import { SMTExp, SMTTypeInfo, VerifierOptions } from "./smt_exp";
 
+import * as assert from "assert";
+
 type SMT2FileInfo = {
     TYPE_TAG_DECLS: string[],
     ORDINAL_TYPE_TAG_DECLS: string[],
@@ -713,6 +715,8 @@ class SMTAssembly {
         const cginfo = SMTAssembly.constructCallGraphInfo([this.entrypoint, ...this.havocfuncs], this);
         const rcg = [...cginfo.topologicalOrder];
 
+        assert(cginfo.recursive.length === 0, "Should have eliminated all recursive processing already!!!");
+
         for (let i = 0; i < rcg.length; ++i) {
             const cn = rcg[i];
             if(doneset.has(cn.invoke)) {
@@ -720,44 +724,8 @@ class SMTAssembly {
             }
 
             const rf = this.functions.find((f) => f.fname === cn.invoke) as SMTFunction;
-            const cscc = cginfo.recursive.find((scc) => scc.has(cn.invoke));
-            if(cscc === undefined) {
-                doneset.add(cn.invoke);
-                foutput.push(rf.emitSMT2());
-            }
-            else {
-                let worklist = [...cscc].sort();
-                if(worklist.length === 1) {
-                    const cf = worklist.shift() as string;
-                    const crf = this.functions.find((f) => f.fname === cf) as SMTFunction;
-
-                    const decl = crf.emitSMT2_SingleDeclOnly();
-                    const impl = crf.body.emitSMT2("  ");
-
-                    if (cscc !== undefined) {
-                        cscc.forEach((v) => doneset.add(v));
-                    }
-
-                    foutput.push(`(define-fun-rec ${decl}\n ${impl}\n)`);
-                }
-                else {
-                    let decls: string[] = [];
-                    let impls: string[] = [];
-                    while (worklist.length !== 0) {
-                        const cf = worklist.shift() as string;
-                        const crf = this.functions.find((f) => f.fname === cf) as SMTFunction;
-
-                        decls.push(crf.emitSMT2_DeclOnly());
-                        impls.push(crf.body.emitSMT2("  "));
-                    }
-
-                    if (cscc !== undefined) {
-                        cscc.forEach((v) => doneset.add(v));
-                    }
-
-                    foutput.push(`(define-funs-rec (\n  ${decls.join("\n  ")}\n) (\n${impls.join("\n")}))`);
-                }
-            }
+            doneset.add(cn.invoke);
+            foutput.push(rf.emitSMT2());
         }   
 
         return {
