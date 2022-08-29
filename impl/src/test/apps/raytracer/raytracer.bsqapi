@@ -12,3 +12,15 @@ entrypoint function main(): Color {
 
     return Color{0.0f, 0.0f, 0.0f};
 }
+
+
+entrypoint function rpx(x: Nat, y: Nat): Color 
+    requires x < 8n;
+    requires y < 8n;
+{
+    let tracer = RayTracer{8n, 8n};
+    let scene = RayTracer::createDefaultScene();
+    let clr = tracer.renderPixel(scene, 4, 3);
+
+    return Color{0.0f, 0.0f, 0.0f};
+}

@@ -385,7 +385,8 @@ enum class BSQPrimitiveImplTag
 
     float_power,
     decimal_power,
-    nat_mod,
+    float_sqrt,
+    decimal_sqrt,
 
     string_empty,
     string_append,
