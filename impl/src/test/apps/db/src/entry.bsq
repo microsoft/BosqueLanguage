@@ -14,11 +14,12 @@ entity DBEntryFormat provides APIType {
     field optFieldValidator: Regex?;
 
     method checkValidator(value: String): Bool {
-        if(this.optFieldValidator === none) {
+        let ofv = this.optFieldValidator;
+        if(ofv === none) {
             return value === "--";
         }
         else {
-            return this.optFieldValidator.accepts(value);
+            return ofv.accepts(value);
         }
     }
 

@@ -7,7 +7,7 @@
 namespace Core;
 
 internal entity NumericOps provides Some {
-    __assume_safe function s_natToInt(n: Nat): Int number_nattoint
+    __assume_safe function s_natToInt(n: Nat): Int = number_nattoint;
     __safe function s_natToBigNat(n: Nat): BigNat = number_nattobignat;
 
     __assume_safe function s_intToNat(i: Int): Nat = number_inttonat;

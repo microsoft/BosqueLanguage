@@ -82,7 +82,7 @@ entity Database provides APIType
         }
         elif(idxStatus === DBIndexStatus::filtered) {
             return index.sort(pred(a, b) => a < b).allOf(pred(i, j) => {
-                return i <= j && (i < index.lastIndex().toInt() => i < index.get(i + 1));
+                return i <= j && (i < index.lastIndex() ==> i < index.get(i + 1n));
             });
         }
         else {

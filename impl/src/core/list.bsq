@@ -2223,7 +2223,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
             return List<T>{};
         }
         else {
-            if(ListOps::s_list_size<T>(this) == 1) {
+            if(ListOps::s_list_size<T>(this) == 1n) {
                 return this;
             }
             else {
@@ -2233,7 +2233,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                 }
                 else {
                     return ListOps::s_list_reduce<T, List<T>>[recursive?](this, List<T>{}, recursive? fn(acc: List<T>, v: T): List<T> => {
-                        if(ListOps::s_empty<T>(acc)) {
+                        if(ListOps::s_list_empty<T>(acc)) {
                             return List<T>{v};
                         }
                         else {
@@ -2242,11 +2242,11 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                             if(iidx == -1i) {
                                 return ListOps::s_list_push_back<T>(acc, v);
                             }
-                            elif(iidx == 0) {
+                            elif(iidx == 0i) {
                                 return ListOps::s_list_push_front<T>(acc, v);
                             }
                             else {
-                                return ListOps::s_list_insert<T>(acc, iidx, v);
+                                return ListOps::s_list_insert<T>(acc, NumericOps::s_intToNat(iidx), v);
                             }
                         }
                     });
@@ -2254,7 +2254,7 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
 #else
                //TODO: implement in Bosque for runtime -- insertion sort is slow so do a merge sort or something better?
                return ListOps::s_list_reduce<T, List<T>>[recursive?](this, List<T>{}, recursive? fn(acc: List<T>, v: T): List<T> => {
-                    if(ListOps::s_empty<T>(acc)) {
+                    if(ListOps::s_list_empty<T>(acc)) {
                         return List<T>{v};
                     }
                     else {
@@ -2263,11 +2263,11 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
                         if(iidx == -1i) {
                             return ListOps::s_list_push_back<T>(acc, v);
                         }
-                        elif(iidx == 0) {
+                        elif(iidx == 0i) {
                             return ListOps::s_list_push_front<T>(acc, v);
                         }
                         else {
-                            return ListOps::s_list_insert<T>(acc, iidx, v);
+                            return ListOps::s_list_insert<T>(acc, NumericOps::s_intToNat(iidx), v);
                         }
                     }
                 });
