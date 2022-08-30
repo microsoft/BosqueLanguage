@@ -23,14 +23,14 @@ let ccflags = "";
 let includes = " ";
 let outfile = "";
 if(process.platform === "darwin") {
-    compiler = "clang++";
-    ccflags = (mode === "debug" ? "-Og -g" : "-O2") + " -DBSQ_DEBUG_BUILD -Wall -std=c++20";
+    compiler = "g++";
+    ccflags = (mode === "debug" ? "-ggdb -Og" : "-O2") + " -DBSQ_DEBUG_BUILD -Wall -std=c++20";
     includes = includeheaders.map((ih) => `-I ${ih}`).join(" ");
     outfile = "-o " + outexec+ "/icpp";
 }
 else if(process.platform === "linux") {
-    compiler = "clang++";
-    ccflags = (mode === "debug" ? "-Og -g" : "-O2") + " -DBSQ_DEBUG_BUILD -Wall -std=c++20";
+    compiler = "g++";
+    ccflags = (mode === "debug" ? "-ggdb3 -Og" : "-O2") + " -DBSQ_DEBUG_BUILD -Wall -std=c++20";
     includes = includeheaders.map((ih) => `-I ${ih}`).join(" ");
     outfile = "-o " + outexec + "/icpp";
 }

@@ -67,7 +67,9 @@ std::map<std::string, BSQPrimitiveImplTag> MarshalEnvironment::g_primitiveinvoke
     {"utcdatetime_create", BSQPrimitiveImplTag::utcdatetime_create},
     {"calendartime_create", BSQPrimitiveImplTag::calendardate_create},
     {"relativetime_create", BSQPrimitiveImplTag::relativetime_create},
+    {"logicaltime_zero", BSQPrimitiveImplTag::logicaltime_zero},
     {"isotimestamp_create", BSQPrimitiveImplTag::isotimestamp_create},
+    {"logicaltime_increment", BSQPrimitiveImplTag::logicaltime_increment},
     {"latlongcoordinate_create", BSQPrimitiveImplTag::latlongcoordinate_create},
     {"regex_accepts", BSQPrimitiveImplTag::regex_accepts},
 

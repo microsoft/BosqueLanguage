@@ -2223,6 +2223,15 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         SLPTR_STORE_CONTENTS_AS(BSQRelativeTime, resultsl, dt);
         break;
     }
+    case BSQPrimitiveImplTag::logicaltime_zero: {
+        SLPTR_STORE_CONTENTS_AS(BSQLogicalTime, resultsl, 0);
+        break;
+    }
+    case BSQPrimitiveImplTag::logicaltime_increment: {
+        auto ival = SLPTR_LOAD_CONTENTS_AS(BSQLogicalTime, params[0]) + 1;
+        SLPTR_STORE_CONTENTS_AS(BSQLogicalTime, resultsl, ival);
+        break;
+    }
     case BSQPrimitiveImplTag::isotimestamp_create: {
         BSQISOTimeStamp its = {
             (uint16_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[0]),

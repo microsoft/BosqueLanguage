@@ -1208,7 +1208,7 @@ class MIRAssembly {
                 }
                 else {
                     const mentity = entity as MIRPrimitiveMapEntityTypeDecl;
-                    return {tag: APIEmitTypeTag.ContainerKVTag, name: tt.typeID, ktype: mentity.getTypeK(), vtype: mentity.getTypeV()};
+                    return {tag: APIEmitTypeTag.ContainerKVTag, name: tt.typeID, ktype: mentity.getTypeK().typeID, vtype: mentity.getTypeV().typeID};
                 }
             }
         }

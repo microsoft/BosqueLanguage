@@ -2789,6 +2789,12 @@ class SMTBodyEmitter {
                 const dd = new SMTCallSimple("BRelativeTime@cons", args.map((arg) => new SMTVar(arg.vname)));
                 return SMTFunction.create(ideclname, args, chkrestype, dd);
             }
+            case "logicaltime_zero": {
+                return SMTFunction.create(ideclname, args, chkrestype, new SMTConst("0"));
+            }
+            case "logicaltime_increment": {
+                return SMTFunction.create(ideclname, args, chkrestype, new SMTCallSimple("+", [new SMTVar(args[0].vname), new SMTConst("1")]));
+            }
             case "isotimestamp_create": {
                 const dd = new SMTCallSimple("BISOTimeStamp@cons", args.map((arg) => new SMTVar(arg.vname)));
                 return SMTFunction.create(ideclname, args, chkrestype, dd);
