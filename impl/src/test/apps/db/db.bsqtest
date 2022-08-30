@@ -10,10 +10,15 @@ function createDefaultEmptyDB(): Database {
         "default",
         LogicalTime::zero,
         List<DBEntryFormat>{
-            DBEntryFormat{true, "User", 0, none},
-            DBEntryFormat{false, "Name", 1, none},
-            DBEntryFormat{false, "ID", 2, /[a-z]/},
+            DBEntryFormat{true, "User", 0n, none},
+            DBEntryFormat{false, "Name", 1n, none},
+            DBEntryFormat{false, "ID", 2n, /[a-z]/},
         },
+        Map<String, DBFieldID>{
+            "User" => 0n,
+            "Name" => 1n,
+            "ID" => 2n
+        }
         List<DBRecordData>{
         }
     };

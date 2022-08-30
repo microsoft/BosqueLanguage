@@ -540,6 +540,8 @@ __internal __typedeclable __typebase entity LogicalTime provides Some, Orderable
     __safe internal function s_zero(): LogicalTime = logicaltime_zero;
     __safe internal function s_increment(t: LogicalTime): LogicalTime = logicaltime_increment;
 
+    const zero: LogicalTime = LogicalTime::s_zero();
+
     method increment(): LogicalTime {
         return LogicalTime::s_increment(this);
     }
