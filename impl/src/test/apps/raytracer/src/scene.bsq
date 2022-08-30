@@ -17,7 +17,8 @@ entity Scene provides APIType {
 
 concept SceneObject provides APIType {
     field surface: Surface;
-
+    field id: Nat;
+    
     abstract method intersect(ray: Ray): ISect?;
     abstract method normal(pos: Vector): Vector;
 }
@@ -35,7 +36,7 @@ entity Sphere provides SceneObject {
             dist = 0.0f;
         }
         else {
-            let disc = this.radius.pow(2.0f) - (%dotprod%(eo, eo) - v.pow(2.0f));
+            let disc = this.radius.square() - (%dotprod%(eo, eo) - v.square());
             dist = disc < 0.0f ? 0.0f : v - disc.sqrt();
         }
 

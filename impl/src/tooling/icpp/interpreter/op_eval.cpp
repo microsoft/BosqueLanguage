@@ -2135,8 +2135,12 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         SLPTR_STORE_CONTENTS_AS(BSQDecimal, resultsl, std::pow(SLPTR_LOAD_CONTENTS_AS(BSQDecimal, params[0]), SLPTR_LOAD_CONTENTS_AS(BSQDecimal, params[1])));
         break;
     }
-    case BSQPrimitiveImplTag::nat_mod: {
-        SLPTR_STORE_CONTENTS_AS(BSQNat, resultsl, SLPTR_LOAD_CONTENTS_AS(BSQNat, params[0]) % SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]));
+    case BSQPrimitiveImplTag::float_sqrt: {
+        SLPTR_STORE_CONTENTS_AS(BSQFloat, resultsl, std::sqrt(SLPTR_LOAD_CONTENTS_AS(BSQFloat, params[0])));
+        break;
+    }
+    case BSQPrimitiveImplTag::decimal_sqrt: {
+        SLPTR_STORE_CONTENTS_AS(BSQDecimal, resultsl, std::sqrt(SLPTR_LOAD_CONTENTS_AS(BSQDecimal, params[0])));
         break;
     }
     case BSQPrimitiveImplTag::string_empty: {

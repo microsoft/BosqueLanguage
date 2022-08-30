@@ -54,7 +54,8 @@ std::map<std::string, BSQPrimitiveImplTag> MarshalEnvironment::g_primitiveinvoke
     {"float_power", BSQPrimitiveImplTag::float_power},
     {"decimal_power", BSQPrimitiveImplTag::decimal_power},
 
-    {"nat_mod", BSQPrimitiveImplTag::nat_mod},
+    {"float_sqrt", BSQPrimitiveImplTag::float_sqrt},
+    {"decimal_sqrt", BSQPrimitiveImplTag::decimal_sqrt},
 
     {"string_empty", BSQPrimitiveImplTag::string_empty},
     {"string_append", BSQPrimitiveImplTag::string_append},

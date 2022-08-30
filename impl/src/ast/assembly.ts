@@ -18,17 +18,10 @@ enum BuildApplicationMode {
     TypeChecker
 }
 
-type BuildLevel = "doc" | "spec" | "debug" | "test" | "release";
+type BuildLevel = "debug" | "test" | "release";
 
 function isBuildLevelEnabled(check: BuildLevel, enabled: BuildLevel): boolean {
-    if(check === "doc") {
-        return false;
-    }
-
-    if(enabled === "spec") {
-        return true;
-    }
-    else if(enabled === "debug") {
+    if(enabled === "debug") {
         return check === "debug" || check === "test" || check === "release";
     }
     else if(enabled === "test") {

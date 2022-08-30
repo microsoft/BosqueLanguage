@@ -5,7 +5,28 @@
 
 namespace Main;
 
-chktest function createEnergy_Not0(): Bool {
+function createDefaultEmptyDB(): Database {
+    return Database{
+        "default",
+        LogicalTime::zero,
+        List<DBEntryFormat>{
+            DBEntryFormat{true, "User", 0n, none},
+            DBEntryFormat{false, "Name", 1n, none},
+            DBEntryFormat{false, "ID", 2n, /[a-z]/},
+        },
+        Map<String, DBFieldID>{
+            "User" => 0n,
+            "Name" => 1n,
+            "ID" => 2n
+        }
+        List<DBRecordData>{
+        }
+    };
+}
+
+chktest function createDB(): Bool {
+    let dd = createDefaultEmptyDB();
+    return dd.empty();
 }
 
 errtest function checkErrors(doadvance: Bool): Float {
