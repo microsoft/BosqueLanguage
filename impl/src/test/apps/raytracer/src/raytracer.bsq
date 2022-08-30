@@ -32,9 +32,9 @@ entity RayTracer
 
     function createDefaultScene(): Scene {
         let things =  List<SceneObject>{
-            Sphere{Scene::matteShiny, Vector{-0.5f, 1.0f, 1.5f}, 0.5f},
-            Sphere{Scene::shiny, Vector{0.0f, 1.0f, -0.25f}, 1.0f},
-            Plane{Scene::checkerBoard, Vector{0.0f, 1.0f, 0.0f}, 0.0f}
+            Sphere{Scene::matteShiny, 0n, Vector{-0.5f, 1.0f, 1.5f}, 0.5f},
+            Sphere{Scene::shiny, 1n, Vector{0.0f, 1.0f, -0.25f}, 1.0f},
+            Plane{Scene::checkerBoard, 2n, Vector{0.0f, 1.0f, 0.0f}, 0.0f}
         };
 
         let lights = List<Light>{

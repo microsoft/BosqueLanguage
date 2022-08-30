@@ -10,7 +10,7 @@ entrypoint function main(): Color {
     let scene = RayTracer::createDefaultScene();
     let clr = tracer.renderPixel(scene, 4, 3);
 
-    return Color{0.0f, 0.0f, 0.0f};
+    return clr;
 }
 
 

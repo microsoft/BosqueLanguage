@@ -17,7 +17,8 @@ entity Scene provides APIType {
 
 concept SceneObject provides APIType {
     field surface: Surface;
-
+    field id: Nat;
+    
     abstract method intersect(ray: Ray): ISect?;
     abstract method normal(pos: Vector): Vector;
 }
