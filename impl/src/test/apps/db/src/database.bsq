@@ -28,6 +28,7 @@ entity Database provides APIType
     field version: LogicalTime;
 
     field fmt: List<DBEntryFormat>;
+    field fmtMap: Map<String, DBFieldID>;
     field entries: List<DBRecordData>;
 
     field index: List<DBIndexEntry> = List<DBIndexEntry>{};
@@ -37,13 +38,14 @@ entity Database provides APIType
     field fval: String = "";
 
     invariant -1i <= $current_record && $current_record <= $entries.size().toInt();
-    invariant ($idxStatus === DBIndexStatus::insertion || $idxStatus === DBIndexStatus::sorted) => $index.size() == $entries.size();
-    invariant ($idxStatus === DBIndexStatus::filtered) => $index.size() == $entries.size();
-    invariant ($idxStatus === DBIndexStatus::sorted || $idxStatus === DBIndexStatus::filtered) => ($fnum < $fmt.size() && !$fmt.get($fnum).isHeaderField);
+    invariant ($idxStatus === DBIndexStatus::insertion || $idxStatus === DBIndexStatus::sorted) ==> $index.size() == $entries.size();
+    invariant ($idxStatus === DBIndexStatus::filtered) ==> $index.size() == $entries.size();
+    invariant ($idxStatus === DBIndexStatus::sorted || $idxStatus === DBIndexStatus::filtered) ==> ($fnum < $fmt.size() && !$fmt.get($fnum).isHeaderField);
     invariant ($idxStatus === DBIndexStatus::filtered) === ($fval !== "");
 
+    debug invariant Database::checkDBEntryFormatInfo($fmt, $fmtMap);
     debug invariant Database::checkDBEntryFormats($fmt, $entries);
-    debug invariant Database::checkIndexValid($index);
+    debug invariant Database::checkIndexValid($idxStatus, $index);
 
     function isValidDBEntryFormat(fmt: List<DBEntryFormat>, entry: DBRecordData): Bool {
         if(entry.size() != fmt.size()) {
@@ -55,13 +57,19 @@ entity Database provides APIType
         });
     }
 
+    function checkDBEntryFormatInfo(fmt: List<DBEntryFormat>, fmtMap: Map<String, DBFieldID>): Bool {
+        return fmt.allOf(pred(entry) => {
+            return entry.checkFieldIdInfo(fmtMap);
+        });
+    }
+
     function checkDBEntryFormats(fmt: List<DBEntryFormat>, entries: List<DBRecordData>): Bool {
         return entries.allOf(pred(entry) => {
             return Database::isValidDBEntryFormat(fmt, entry);
         });
     }
 
-    method checkIndexValid(idxStatus: DBIndexStatus, index: List<DBIndexEntry>): Bool {
+    function checkIndexValid(idxStatus: DBIndexStatus, index: List<DBIndexEntry>): Bool {
         if(idxStatus === DBIndexStatus::insertion) {
             return index.allOf(pred(i, j) => {
                 return i == j;
@@ -95,7 +103,7 @@ entity Database provides APIType
     }
 
     function set_index_default(ref db: MDatabase, curr: Int) {
-        var nindx = List<DBIndexEntry>{};
+        var nindex = List<DBIndexEntry>{};
         if(!db.entries.empty()) {
             nindex = List<Nat>::rangeNat(0, db.entities.lastIndex());
         }
@@ -141,14 +149,14 @@ entity Database provides APIType
     }
 
     function gotoCursor(ref db: MDatabase, curr: Int): Result<DBRecordData, DBError> {
-        validate 0i <= curr else err(DBError::InvalidCursorAccess);
+        validate 0i <= curr else err(DBError::invalidCursorAccess);
 
         if(db.idxStatus !== DBIndexStatus::invalid) {
-            validate curr < this.index.size().toInt() else err(DBError::InvalidCursorAccess);
+            validate curr < this.index.size().toInt() else err(DBError::invalidCursorAccess);
             db = db.{current_record = curr};
         }
         else {
-            validate curr < this.entries.size().toInt() else err(DBError::InvalidCursorAccess);
+            validate curr < this.entries.size().toInt() else err(DBError::invalidCursorAccess);
             Database::set_index_default(db, curr);
         }
 
@@ -165,7 +173,7 @@ entity Database provides APIType
         }
 
         if(db.current_record < db.index.size().toInt()) {
-            db.{current_record = $current_record + 1i};
+            db = db.{current_record = $current_record + 1i};
         }
 
         if(db.current_record.toNat() == db.index.size()) {
@@ -187,7 +195,7 @@ entity Database provides APIType
         }
       
         if(db.current_record >= 0i) {
-            db.{current_record = $current_record - 1i};
+            db = db.{current_record = $current_record - 1i};
         }
    
         if(db.current_record == -1i) {
@@ -246,8 +254,11 @@ entity Database provides APIType
     }
 
     function find(ref db: Database, fname: String, fvalue: String): Result<DBRecordData?, DBError> {
-        let fidx = db.fmt.indexOfOrNone(fname);
-        validate fidx !== none && !db.fmt.get(fidx).isHeaderField else err(DBError::InvalidFieldName);
+        let fid = this.fmtMap.getOrNone(fname);
+        validate fid !== none else err(DBError::invalidFieldName);
+
+        let fidx = db.fmt.findIndexOfOrNone((entry) => entry.fieldID === fid);
+        validate fidx !== none && !db.fmt.get(fidx).isHeaderField else err(DBError::invalidFieldName);
         
         if(db.entries.empty()) {
             return ok(none);
@@ -280,8 +291,11 @@ entity Database provides APIType
     }
 
     function select(ref db: Database, fname: String, fvalue: String): Result<DBRecordData?, DBError> {
-        let fidx = db.fmt.indexOfOrNone(fname);
-        validate fidx !== none && !db.fmt.get(fidx).isHeaderField else err(DBError::InvalidFieldName);
+        let fid = this.fmtMap.getOrNone(fname);
+        validate fid !== none else err(DBError::invalidFieldName);
+
+        let fidx = db.fmt.findIndexOfOrNone((entry) => entry.fieldID === fid);
+        validate fidx !== none && !db.fmt.get(fidx).isHeaderField else err(DBError::invalidFieldName);
         
         if(db.entries.empty()) {
             return ok(none);

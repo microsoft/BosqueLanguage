@@ -5,3 +5,27 @@
 
 namespace Main;
 
+
+function createDefaultEmptyDB(): Database {
+    return Database{
+        "default",
+        LogicalTime::zero,
+        List<DBEntryFormat>{
+            DBEntryFormat{true, 0n, "User", none},
+            DBEntryFormat{false, 1n, "Name", none},
+            DBEntryFormat{false, 2n, "ID", /[a-z]/}
+        },
+        Map<String, DBFieldID>{
+            "User" => 0n,
+            "Name" => 1n,
+            "ID" => 2n
+        },
+        List<DBRecordData>{
+        }
+    };
+}
+
+entrypoint function main(): Bool {
+    let dd = createDefaultEmptyDB();
+    return dd.empty();
+}

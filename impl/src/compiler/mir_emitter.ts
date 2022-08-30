@@ -1399,7 +1399,7 @@ class MIREmitter {
 
         const masm = new MIRAssembly(pckge, masmsrc, hash.digest("hex"));
         const emitter = new MIREmitter(assembly, masm, true);
-        const checker = new TypeChecker(assembly, emitter, buildLevel, p.sortedSrcFiles);
+        const checker = new TypeChecker(buildmode, assembly, emitter, buildLevel, p.sortedSrcFiles);
 
         emitter.registerResolvedTypeReference(assembly.getSpecialNoneType());
         emitter.registerResolvedTypeReference(assembly.getSpecialBoolType());

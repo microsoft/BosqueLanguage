@@ -17,6 +17,47 @@ function NOT_IMPLEMENTED(msg: string): SMTExp {
     throw new Error(`Not Implemented: ${msg}`);
 }
 
+const REC_FUN_GAS_LIMIT = 2;
+
+class RecFunGas {
+    readonly declGas: number | undefined;
+    readonly calleeGas: number | undefined;
+
+    constructor(declGas: number | undefined, calleeGas: number | undefined) {
+        this.declGas = declGas;
+        this.calleeGas = calleeGas;
+    }
+
+    generateDeclGasSuffix(): string {
+        return (this.declGas !== undefined) ? `$_gas${this.declGas}_` : "";
+    }
+
+    generateCalleeGasSuffix(mayrec: boolean): string {
+        return (mayrec && this.calleeGas !== undefined) ? `$_gas${this.calleeGas}_` : "";
+    }
+
+    outOfDeclGas(): boolean {
+        return this.declGas !== undefined && this.declGas === 0;
+    }
+
+    decrementGasLevel(): RecFunGas {
+        if(this.declGas === undefined) {
+            return new RecFunGas(REC_FUN_GAS_LIMIT, REC_FUN_GAS_LIMIT - 1);
+        }
+        else {
+            return new RecFunGas(this.declGas - 1, this.declGas - 2);
+        }
+    }
+
+    static createNonRecGas() {
+        return new RecFunGas(undefined, undefined);
+    }
+
+    static createInitialRecGas() {
+        return new RecFunGas(undefined, REC_FUN_GAS_LIMIT);
+    }
+}
+
 class SMTBodyEmitter {
     readonly assembly: MIRAssembly;
     readonly typegen: SMTTypeEmitter;
@@ -31,7 +72,8 @@ class SMTBodyEmitter {
 
     currentFile: string = "[No File]";
     currentRType: MIRType;
-    currentSCC = new Set<string>();
+    currentGas: RecFunGas;
+    currentSCC: Set<string> = new Set<string>();
 
     private pendingMask: SMTMaskConstruct[] = [];
     maskSizes: Set<number> = new Set<number>();
@@ -63,6 +105,23 @@ class SMTBodyEmitter {
 
     requiredUFConsts: SMTTypeInfo[] = [];
     requiredUFOps: string[] = [];
+
+    lookupFunctionNameDirect(keyid: MIRInvokeKey): string {
+        return this.typegen.lookupFunctionMangledName(keyid);
+    }
+
+    lookupFunctionNameStd(keyid: MIRInvokeKey): string {
+        const isrec = this.currentSCC !== undefined && this.currentSCC.has(keyid);
+        return this.typegen.lookupFunctionMangledName(keyid) + this.currentGas.generateCalleeGasSuffix(isrec);
+    }
+
+    lookupVirtualFunctionNameStd(keyid: MIRInvokeKey, isrectrgts: boolean): string {
+        return this.typegen.lookupFunctionMangledName(keyid) + (isrectrgts ? this.currentGas.generateDeclGasSuffix() : "");
+    }
+
+    lookupFunctionNameDecl(keyid: MIRInvokeKey): string {
+        return this.typegen.lookupFunctionMangledName(keyid) + this.currentGas.generateDeclGasSuffix();
+    }
 
     varStringToSMT(name: string): SMTVar {
         if (name === "$$return") {
@@ -277,7 +336,7 @@ class SMTBodyEmitter {
         const ufcname = this.generateUFConstantForType(geninfo.resulttype);
         if(ttuples.length === 0) {
             const rbody = geninfo.guard !== undefined ? this.typegen.generateAccessWithSetGuardResultTypeConstructorLoad(geninfo.resulttype, new SMTConst(ufcname), false) : new SMTConst(ufcname);
-            return SMTFunction.create(this.typegen.lookupFunctionName(geninfo.inv), [{ vname: "arg", vtype: this.typegen.getSMTTypeFor(geninfo.argflowtype) }], rtype, rbody);
+            return SMTFunction.create(this.lookupFunctionNameDirect(geninfo.inv), [{ vname: "arg", vtype: this.typegen.getSMTTypeFor(geninfo.argflowtype) }], rtype, rbody);
         }
         else {
             const ops = ttuples.map((tt) => {
@@ -294,7 +353,7 @@ class SMTBodyEmitter {
 
             const orelse = geninfo.guard !== undefined ? this.typegen.generateAccessWithSetGuardResultTypeConstructorLoad(geninfo.resulttype, new SMTConst(ufcname), false) : new SMTConst(ufcname);
 
-            return SMTFunction.create(this.typegen.lookupFunctionName(geninfo.inv), [{ vname: "arg", vtype: this.typegen.getSMTTypeFor(geninfo.argflowtype) }], rtype, new SMTCond(ops, orelse));
+            return SMTFunction.create(this.lookupFunctionNameDirect(geninfo.inv), [{ vname: "arg", vtype: this.typegen.getSMTTypeFor(geninfo.argflowtype) }], rtype, new SMTCond(ops, orelse));
         }
     }
 
@@ -310,7 +369,7 @@ class SMTBodyEmitter {
         const ufcname = this.generateUFConstantForType(geninfo.resulttype);
         if(trecords.length === 0) {
             const rbody = geninfo.guard !== undefined ? this.typegen.generateAccessWithSetGuardResultTypeConstructorLoad(geninfo.resulttype, new SMTConst(ufcname), false) : new SMTConst(ufcname);
-            return SMTFunction.create(this.typegen.lookupFunctionName(geninfo.inv), [{ vname: "arg", vtype: this.typegen.getSMTTypeFor(geninfo.argflowtype) }], rtype, rbody);
+            return SMTFunction.create(this.lookupFunctionNameDirect(geninfo.inv), [{ vname: "arg", vtype: this.typegen.getSMTTypeFor(geninfo.argflowtype) }], rtype, rbody);
         }
         else {
             const ops = trecords.map((tt) => {
@@ -327,7 +386,7 @@ class SMTBodyEmitter {
 
             const orelse = geninfo.guard !== undefined ? this.typegen.generateAccessWithSetGuardResultTypeConstructorLoad(geninfo.resulttype, new SMTConst(ufcname), false) : new SMTConst(ufcname);
 
-            return SMTFunction.create(this.typegen.lookupFunctionName(geninfo.inv), [{ vname: "arg", vtype: this.typegen.getSMTTypeFor(geninfo.argflowtype) }], rtype, new SMTCond(ops, orelse));
+            return SMTFunction.create(this.lookupFunctionNameDirect(geninfo.inv), [{ vname: "arg", vtype: this.typegen.getSMTTypeFor(geninfo.argflowtype) }], rtype, new SMTCond(ops, orelse));
         }
     }
 
@@ -353,7 +412,7 @@ class SMTBodyEmitter {
         const orelse = ops[ops.length - 1].result;
         ops = ops.slice(0, ops.length - 1);
 
-        return SMTFunction.create(this.typegen.lookupFunctionName(geninfo.inv), [{ vname: "arg", vtype: this.typegen.getSMTTypeFor(geninfo.argflowtype) }], rtype, new SMTCond(ops, orelse));
+        return SMTFunction.create(this.lookupFunctionNameDirect(geninfo.inv), [{ vname: "arg", vtype: this.typegen.getSMTTypeFor(geninfo.argflowtype) }], rtype, new SMTCond(ops, orelse));
     }
 
     generateProjectTupleIndexVirtual(geninfo: { inv: string, argflowtype: MIRType, indecies: number[], resulttype: MIRType }): SMTFunction {
@@ -382,7 +441,7 @@ class SMTBodyEmitter {
         const orelse = ops[ops.length - 1].result;
         ops = ops.slice(0, ops.length - 1);
             
-        return SMTFunction.create(this.typegen.lookupFunctionName(geninfo.inv), [{ vname: "arg", vtype: this.typegen.getSMTTypeFor(geninfo.argflowtype) }], rtype, new SMTCond(ops, orelse));
+        return SMTFunction.create(this.lookupFunctionNameDirect(geninfo.inv), [{ vname: "arg", vtype: this.typegen.getSMTTypeFor(geninfo.argflowtype) }], rtype, new SMTCond(ops, orelse));
     }
 
     generateProjectRecordPropertyVirtual(geninfo: { inv: string, argflowtype: MIRType, properties: string[], resulttype: MIRType }): SMTFunction {
@@ -411,7 +470,7 @@ class SMTBodyEmitter {
         const orelse = ops[ops.length - 1].result;
         ops = ops.slice(0, ops.length - 1);
 
-        return SMTFunction.create(this.typegen.lookupFunctionName(geninfo.inv), [{ vname: "arg", vtype: this.typegen.getSMTTypeFor(geninfo.argflowtype) }], rtype, new SMTCond(ops, orelse));
+        return SMTFunction.create(this.lookupFunctionNameDirect(geninfo.inv), [{ vname: "arg", vtype: this.typegen.getSMTTypeFor(geninfo.argflowtype) }], rtype, new SMTCond(ops, orelse));
     }
 
     generateProjectEntityFieldVirtual(geninfo: { inv: string, argflowtype: MIRType, fields: MIRFieldDecl[], resulttype: MIRType }): SMTFunction {
@@ -440,7 +499,7 @@ class SMTBodyEmitter {
         const orelse = ops[ops.length - 1].result;
         ops = ops.slice(0, ops.length - 1);
 
-        return SMTFunction.create(this.typegen.lookupFunctionName(geninfo.inv), [{ vname: "arg", vtype: this.typegen.getSMTTypeFor(geninfo.argflowtype) }], rtype, new SMTCond(ops, orelse));
+        return SMTFunction.create(this.lookupFunctionNameDirect(geninfo.inv), [{ vname: "arg", vtype: this.typegen.getSMTTypeFor(geninfo.argflowtype) }], rtype, new SMTCond(ops, orelse));
     }
 
     generateSingletonConstructorList(geninfo: { inv: string, argc: number, resulttype: MIRType }): SMTFunction {
@@ -480,7 +539,7 @@ class SMTBodyEmitter {
             bbody = this.typegen.coerceContainerAtomIntoTermRepresentation(this.typegen.generateSeqListTypeConstructorSeq(lltype, new SMTCallSimple("seq.++", args)), lltype);
         }
 
-        return SMTFunction.create(this.typegen.lookupFunctionName(geninfo.inv), args, this.typegen.getSMTTypeFor(geninfo.resulttype), bbody);
+        return SMTFunction.create(this.lookupFunctionNameDirect(geninfo.inv), args, this.typegen.getSMTTypeFor(geninfo.resulttype), bbody);
     }
 
     generateUpdateTupleIndexVirtual(geninfo: { inv: string, argflowtype: MIRType, updates: [number, MIRResolvedTypeKey][], resulttype: MIRType }): SMTFunction {
@@ -522,7 +581,7 @@ class SMTBodyEmitter {
                 return { vname: `arg_${i}`, vtype: this.typegen.getSMTTypeFor(this.typegen.getMIRType(upd[1])) };
             })
         ];
-        return SMTFunction.create(this.typegen.lookupFunctionName(geninfo.inv), fargs, rtype, new SMTCond(ops, orelse));
+        return SMTFunction.create(this.lookupFunctionNameDirect(geninfo.inv), fargs, rtype, new SMTCond(ops, orelse));
     }
 
     generateUpdateRecordPropertyVirtual(geninfo: { inv: string, argflowtype: MIRType, updates: [string, MIRResolvedTypeKey][], resulttype: MIRType }): SMTFunction {
@@ -563,7 +622,7 @@ class SMTBodyEmitter {
                 return { vname: `arg_${i}`, vtype: this.typegen.getSMTTypeFor(this.typegen.getMIRType(upd[1])) };
             })
         ];
-        return SMTFunction.create(this.typegen.lookupFunctionName(geninfo.inv), fargs, rtype, new SMTCond(ops, orelse));
+        return SMTFunction.create(this.lookupFunctionNameDirect(geninfo.inv), fargs, rtype, new SMTCond(ops, orelse));
     }
 
     generateUpdateEntityFieldVirtual(geninfo: { inv: string, argflowtype: MIRType, allsafe: boolean, updates: [MIRFieldKey, MIRResolvedTypeKey][], resulttype: MIRType }): SMTFunction {
@@ -606,7 +665,7 @@ class SMTBodyEmitter {
                 }
                 else {
                     const consfunc = (this.assembly.entityDecls.get(tt.tkey) as MIRObjectEntityTypeDecl).consfunc;
-                    const ccall = new SMTCallGeneral(this.typegen.lookupFunctionName(consfunc as MIRInvokeKey), cargs);
+                    const ccall = new SMTCallGeneral(this.lookupFunctionNameDirect(consfunc as MIRInvokeKey), cargs);
                     if(mtt.typeID === geninfo.resulttype.typeID) {
                         action = ccall;
                     }
@@ -633,7 +692,7 @@ class SMTBodyEmitter {
                 return { vname: `arg_${i}`, vtype: this.typegen.getSMTTypeFor(this.typegen.getMIRType(upd[1])) };
             })
         ];
-        return SMTFunction.create(this.typegen.lookupFunctionName(geninfo.inv), fargs, rtype, new SMTCond(ops, orelse));
+        return SMTFunction.create(this.lookupFunctionNameDirect(geninfo.inv), fargs, rtype, new SMTCond(ops, orelse));
     }
 
     generateVirtualFunctionInvoke(geninfo: { inv: string, allsafe: boolean, argflowtype: MIRType, vfname: MIRVirtualMethodKey, optmask: string | undefined, resulttype: MIRType }): SMTFunction {
@@ -657,7 +716,7 @@ class SMTBodyEmitter {
 
             const cargs = [argpp, ...invk.params.slice(1).map((p, i) =>new SMTVar(`arg_${i}`))];
 
-            const gcall = geninfo.optmask !== undefined ? new SMTCallGeneralWPassThroughMask(this.typegen.lookupFunctionName(vfunc), cargs, geninfo.optmask) : new SMTCallGeneral(this.typegen.lookupFunctionName(vfunc), cargs);
+            const gcall = geninfo.optmask !== undefined ? new SMTCallGeneralWPassThroughMask(this.lookupFunctionNameStd(vfunc), cargs, geninfo.optmask) : new SMTCallGeneral(this.lookupFunctionNameStd(vfunc), cargs);
                 
             let action: SMTExp = new SMTConst("[NOT SET]"); 
             if (this.isSafeInvoke(vfunc) && geninfo.allsafe) {
@@ -701,7 +760,7 @@ class SMTBodyEmitter {
         ];
 
         const rrtype = geninfo.allsafe ? rtype : this.typegen.generateResultType(geninfo.resulttype);
-        return SMTFunction.create(this.typegen.lookupFunctionName(geninfo.inv), fargs, rrtype, new SMTCond(ops, orelse));
+        return SMTFunction.create(this.lookupFunctionNameDecl(geninfo.inv), fargs, rrtype, new SMTCond(ops, orelse));
     }
 
     generateVirtualOperatorInvoke(geninfo: { inv: string, argflowtype: MIRType, opname: MIRVirtualMethodKey, args: MIRResolvedTypeKey[], resulttype: MIRType }): SMTFunction {
@@ -796,6 +855,7 @@ class SMTBodyEmitter {
         this.vopts = vopts;
 
         this.currentRType = typegen.getMIRType("None");
+        this.currentGas = RecFunGas.createNonRecGas();
 
         const safecalls = new Set<MIRInvokeKey>();
         callsafety.forEach((pv, inv) => {
@@ -854,6 +914,17 @@ class SMTBodyEmitter {
         })
         .every((edcl) => {
             return this.isSafeInvoke((this.assembly.entityDecls.get(edcl[1].tkey) as MIRObjectEntityTypeDecl).vcallMap.get(vkey) as MIRInvokeKey);
+        });
+    }
+
+    isRecursiveVirtualInvoke(vkey: MIRVirtualMethodKey, rcvrtype: MIRType): boolean {
+        return [...this.assembly.entityDecls]
+        .filter((tt) => {
+            const mtt = this.typegen.getMIRType(tt[1].tkey);
+            return this.typegen.isUniqueEntityType(mtt) && this.assembly.subtypeOf(mtt, rcvrtype);
+        })
+        .some((edcl) => {
+            return this.currentSCC.has((this.assembly.entityDecls.get(edcl[1].tkey) as MIRObjectEntityTypeDecl).vcallMap.get(vkey) as MIRInvokeKey);
         });
     }
 
@@ -1103,7 +1174,7 @@ class SMTBodyEmitter {
             }
             
             const argpp = this.typegen.coerce(this.argToSMT(op.arg), arglayouttype, argflowtype);
-            return new SMTLet(this.varToSMTName(op.trgt).vname, new SMTCallSimple(this.typegen.lookupFunctionName(icall), [argpp]), continuation);
+            return new SMTLet(this.varToSMTName(op.trgt).vname, new SMTCallSimple(this.lookupFunctionNameDirect(icall), [argpp]), continuation);
         }
         else {
             const argpp = this.typegen.coerce(this.argToSMT(op.arg), arglayouttype, argflowtype);
@@ -1124,7 +1195,7 @@ class SMTBodyEmitter {
             }
             
             const argpp = this.typegen.coerce(this.argToSMT(op.arg), arglayouttype, argflowtype);
-            const cc = new SMTCallSimple(this.typegen.lookupFunctionName(icall), [argpp]);
+            const cc = new SMTCallSimple(this.lookupFunctionNameDirect(icall), [argpp]);
 
             const callbind = this.generateTempName();
             const smtcallvar = new SMTVar(callbind);
@@ -1176,7 +1247,7 @@ class SMTBodyEmitter {
             }
             
             const argpp = this.typegen.coerce(this.argToSMT(op.arg), arglayouttype, argflowtype);
-            return new SMTLet(this.varToSMTName(op.trgt).vname, new SMTCallSimple(this.typegen.lookupFunctionName(icall), [argpp]), continuation);
+            return new SMTLet(this.varToSMTName(op.trgt).vname, new SMTCallSimple(this.lookupFunctionNameDirect(icall), [argpp]), continuation);
         }
         else {
             const argpp = this.typegen.coerce(this.argToSMT(op.arg), arglayouttype, argflowtype);
@@ -1197,7 +1268,7 @@ class SMTBodyEmitter {
             }
             
             const argpp = this.typegen.coerce(this.argToSMT(op.arg), arglayouttype, argflowtype);
-            const cc = new SMTCallSimple(this.typegen.lookupFunctionName(icall), [argpp]);
+            const cc = new SMTCallSimple(this.lookupFunctionNameDirect(icall), [argpp]);
 
             const callbind = this.generateTempName();
             const smtcallvar = new SMTVar(callbind);
@@ -1249,7 +1320,7 @@ class SMTBodyEmitter {
             }
             
             const argpp = this.typegen.coerce(this.argToSMT(op.arg), arglayouttype, argflowtype);
-            return new SMTLet(this.varToSMTName(op.trgt).vname, new SMTCallSimple(this.typegen.lookupFunctionName(icall), [argpp]), continuation);
+            return new SMTLet(this.varToSMTName(op.trgt).vname, new SMTCallSimple(this.lookupFunctionNameDirect(icall), [argpp]), continuation);
         }
         else {
             const argpp = this.typegen.coerce(this.argToSMT(op.arg), arglayouttype, argflowtype);
@@ -1272,7 +1343,7 @@ class SMTBodyEmitter {
             }
             
             const argpp = this.typegen.coerce(this.argToSMT(op.arg), arglayouttype, argflowtype);
-            return new SMTLet(this.varToSMTName(op.trgt).vname, new SMTCallSimple(this.typegen.lookupFunctionName(icall), [argpp]), continuation);
+            return new SMTLet(this.varToSMTName(op.trgt).vname, new SMTCallSimple(this.lookupFunctionNameDirect(icall), [argpp]), continuation);
         }
         else {
             const argpp = this.typegen.coerce(this.argToSMT(op.arg), arglayouttype, argflowtype);
@@ -1298,7 +1369,7 @@ class SMTBodyEmitter {
             }
             
             const argpp = this.typegen.coerce(this.argToSMT(op.arg), arglayouttype, argflowtype);
-            return new SMTLet(this.varToSMTName(op.trgt).vname, new SMTCallSimple(this.typegen.lookupFunctionName(icall), [argpp]), continuation);
+            return new SMTLet(this.varToSMTName(op.trgt).vname, new SMTCallSimple(this.lookupFunctionNameDirect(icall), [argpp]), continuation);
         }
         else {
             const argpp = this.typegen.coerce(this.argToSMT(op.arg), arglayouttype, argflowtype);
@@ -1324,7 +1395,7 @@ class SMTBodyEmitter {
             }
             
             const argpp = this.typegen.coerce(this.argToSMT(op.arg), arglayouttype, argflowtype);
-            return new SMTLet(this.varToSMTName(op.trgt).vname, new SMTCallSimple(this.typegen.lookupFunctionName(icall), [argpp]), continuation);
+            return new SMTLet(this.varToSMTName(op.trgt).vname, new SMTCallSimple(this.lookupFunctionNameDirect(icall), [argpp]), continuation);
         }
         else {
             const argpp = this.typegen.coerce(this.argToSMT(op.arg), arglayouttype, argflowtype);
@@ -1351,7 +1422,7 @@ class SMTBodyEmitter {
             }
             
             const argpp = this.typegen.coerce(this.argToSMT(op.arg), arglayouttype, argflowtype);
-            return new SMTLet(this.varToSMTName(op.trgt).vname, new SMTCallSimple(this.typegen.lookupFunctionName(icall), [argpp]), continuation);
+            return new SMTLet(this.varToSMTName(op.trgt).vname, new SMTCallSimple(this.lookupFunctionNameDirect(icall), [argpp]), continuation);
         }
         else {
             const ttype = argflowtype.options[0] as MIRTupleType;
@@ -1385,7 +1456,7 @@ class SMTBodyEmitter {
             }
             
             const argpp = this.typegen.coerce(this.argToSMT(op.arg), arglayouttype, argflowtype);
-            return new SMTLet(this.varToSMTName(op.trgt).vname, new SMTCallSimple(this.typegen.lookupFunctionName(icall), [argpp]), continuation);
+            return new SMTLet(this.varToSMTName(op.trgt).vname, new SMTCallSimple(this.lookupFunctionNameDirect(icall), [argpp]), continuation);
         }
         else {
             const ttype = argflowtype.options[0] as MIRRecordType;
@@ -1422,10 +1493,10 @@ class SMTBodyEmitter {
 
             const argpp = this.typegen.coerce(this.argToSMT(op.arg), arglayouttype, argflowtype);
             if (allsafe) {
-                return new SMTLet(this.varToSMTName(op.trgt).vname, new SMTCallSimple(this.typegen.lookupFunctionName(icall), [argpp]), continuation);
+                return new SMTLet(this.varToSMTName(op.trgt).vname, new SMTCallSimple(this.lookupFunctionNameDirect(icall), [argpp]), continuation);
             }
             else {
-                return this.generateGeneralCallValueProcessing(this.currentRType, resulttype, new SMTCallGeneral(this.typegen.lookupFunctionName(icall), [argpp]), op.trgt, continuation);
+                return this.generateGeneralCallValueProcessing(this.currentRType, resulttype, new SMTCallGeneral(this.lookupFunctionNameDirect(icall), [argpp]), op.trgt, continuation);
             }
         }
         else {
@@ -1451,7 +1522,7 @@ class SMTBodyEmitter {
                 return new SMTLet(this.varToSMTName(op.trgt).vname, ccall, continuation);
             }
             else {
-                const ccall = new SMTCallGeneral(this.typegen.lookupFunctionName(consfunc as MIRInvokeKey), cargs);
+                const ccall = new SMTCallGeneral(this.lookupFunctionNameDirect(consfunc as MIRInvokeKey), cargs);
                 return this.generateGeneralCallValueProcessing(this.currentRType, resulttype, ccall, op.trgt, continuation);
             }
         }
@@ -1501,7 +1572,7 @@ class SMTBodyEmitter {
             }
 
             const args = op.args.map((arg) => this.argToSMT(arg));
-            const call = mask !== undefined ? new SMTCallGeneralWOptMask(this.typegen.lookupFunctionName(op.mkey), args, mask) : new SMTCallGeneral(this.typegen.lookupFunctionName(op.mkey), args);
+            const call = mask !== undefined ? new SMTCallGeneralWOptMask(this.lookupFunctionNameStd(op.mkey), args, mask) : new SMTCallGeneral(this.lookupFunctionNameStd(op.mkey), args);
             const gcall = this.generateGuardStmtCond(op.sguard, call, invk.resultType);
 
             if (this.isSafeInvoke(op.mkey)) {
@@ -1533,7 +1604,9 @@ class SMTBodyEmitter {
             
         const argpp = this.typegen.coerce(this.argToSMT(op.args[0]), rcvrlayouttype, rcvrflowtype);
         const args = [argpp, ...op.args.slice(1).map((arg) => this.argToSMT(arg))];
-        const call = mask !== undefined ? new SMTCallGeneralWOptMask(this.typegen.lookupFunctionName(icall), args, mask) : new SMTCallGeneral(this.typegen.lookupFunctionName(icall), args);    
+
+        const rectargets = this.isRecursiveVirtualInvoke(op.vresolve, rcvrflowtype);
+        const call = mask !== undefined ? new SMTCallGeneralWOptMask(this.lookupVirtualFunctionNameStd(icall, rectargets), args, mask) : new SMTCallGeneral(this.lookupVirtualFunctionNameStd(icall, rectargets), args);    
 
         if(allsafe) {
             return new SMTLet(this.varToSMTName(op.trgt).vname, call, continuation);
@@ -1679,7 +1752,7 @@ class SMTBodyEmitter {
             this.requiredSingletonConstructorsList.push(geninfo);
         }
 
-        return new SMTCallSimple(this.typegen.lookupFunctionName(icall), exps);
+        return new SMTCallSimple(this.lookupFunctionNameDirect(icall), exps);
     }
 
     processConstructorPrimaryCollectionSingletons(op: MIRConstructorPrimaryCollectionSingletons, continuation: SMTExp): SMTExp {
@@ -2525,24 +2598,53 @@ class SMTBodyEmitter {
         const issafe = this.isSafeInvoke(idecl.ikey);
         const restype = issafe ? this.typegen.getSMTTypeFor(this.typegen.getMIRType(idecl.resultType)) : this.typegen.generateResultType(this.typegen.getMIRType(idecl.resultType));
 
+        const ideclname = this.lookupFunctionNameDecl(idecl.ikey);
+
         if (idecl instanceof MIRInvokeBodyDecl) {
             const body = this.generateBlockExps(issafe, (idecl as MIRInvokeBodyDecl).body.body);
 
             if (idecl.masksize === 0) {
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, restype, body);
+                return SMTFunction.create(ideclname, args, restype, body);
             }
             else {
-                return SMTFunction.createWithMask(this.typegen.lookupFunctionName(idecl.ikey), args, "@maskparam@", idecl.masksize, restype, body);
+                return SMTFunction.createWithMask(ideclname, args, "@maskparam@", idecl.masksize, restype, body);
             }
         }
         else {
             assert(idecl instanceof MIRInvokePrimitiveDecl);
 
-            return this.generateBuiltinFunction(idecl as MIRInvokePrimitiveDecl);
+            return this.generateBuiltinFunction(ideclname, idecl as MIRInvokePrimitiveDecl);
         }
     }
 
-    generateBuiltinFunction(idecl: MIRInvokePrimitiveDecl): SMTFunction | undefined {
+    generateSMTInvokeOutOfGas(idecl: MIRInvokeDecl): SMTFunction {
+        this.currentFile = idecl.srcFile;
+        this.currentRType = this.typegen.getMIRType(idecl.resultType);
+
+        const args = idecl.params.map((arg) => {
+            return { vname: this.varStringToSMT(arg.name).vname, vtype: this.typegen.getSMTTypeFor(this.typegen.getMIRType(arg.type)) };
+        });
+
+        const ideclname = this.lookupFunctionNameDecl(idecl.ikey);
+        const body = this.typegen.generateErrorResultAssert(this.typegen.getMIRType(idecl.resultType))
+        const restype = this.typegen.generateResultType(this.typegen.getMIRType(idecl.resultType));
+
+        if (idecl instanceof MIRInvokeBodyDecl) {
+            if (idecl.masksize === 0) {
+                return SMTFunction.create(ideclname, args, restype, body);
+            }
+            else {
+                return SMTFunction.createWithMask(ideclname, args, "@maskparam@", idecl.masksize, restype, body);
+            }
+        }
+        else {
+            assert(idecl instanceof MIRInvokePrimitiveDecl);
+
+            return SMTFunction.create(ideclname, args, restype, body);
+        }
+    }
+
+    generateBuiltinFunction(ideclname: string, idecl: MIRInvokePrimitiveDecl): SMTFunction | undefined {
         const args = idecl.params.map((arg) => {
             return { vname: this.varStringToSMT(arg.name).vname, vtype: this.typegen.getSMTTypeFor(this.typegen.getMIRType(arg.type)) };
         });
@@ -2567,31 +2669,31 @@ class SMTBodyEmitter {
                 const lre = bsqre.compileToPatternToSMT(true);
 
                 let accept = new SMTCallSimple("str.in.re", [new SMTVar(args[0].vname), new SMTConst(lre)]);
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, accept);
+                return SMTFunction.create(ideclname, args, chkrestype, accept);
             }
             case "number_nattoint": {
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTVar(args[0].vname));
+                return SMTFunction.create(ideclname, args, chkrestype, new SMTVar(args[0].vname));
             }
             case "number_inttonat": {
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTVar(args[0].vname));
+                return SMTFunction.create(ideclname, args, chkrestype, new SMTVar(args[0].vname));
             }
             case "number_nattobignat": {
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTVar(args[0].vname));
+                return SMTFunction.create(ideclname, args, chkrestype, new SMTVar(args[0].vname));
             }
             case "number_inttobigint": {
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTVar(args[0].vname));
+                return SMTFunction.create(ideclname, args, chkrestype, new SMTVar(args[0].vname));
             }
             case "number_bignattonat": {
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTVar(args[0].vname));
+                return SMTFunction.create(ideclname, args, chkrestype, new SMTVar(args[0].vname));
             }
             case "number_biginttoint": {
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTVar(args[0].vname)); 
+                return SMTFunction.create(ideclname, args, chkrestype, new SMTVar(args[0].vname)); 
             }
             case "number_bignattobigint": {
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTVar(args[0].vname));
+                return SMTFunction.create(ideclname, args, chkrestype, new SMTVar(args[0].vname));
             }
             case "number_biginttobignat": {
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTVar(args[0].vname));
+                return SMTFunction.create(ideclname, args, chkrestype, new SMTVar(args[0].vname));
             }
             case "number_bignattofloat":
             case "number_bignattodecimal":
@@ -2599,12 +2701,12 @@ class SMTBodyEmitter {
             case "number_biginttofloat":
             case "number_biginttodecimal":
             case "number_biginttorational": {
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTCallSimple("to_real", [new SMTVar(args[0].vname)]));
+                return SMTFunction.create(ideclname, args, chkrestype, new SMTCallSimple("to_real", [new SMTVar(args[0].vname)]));
             }
             case "number_floattobigint":
             case "number_decimaltobigint": 
             case "number_rationaltobigint": {
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTCallSimple("to_int", [new SMTVar(args[0].vname)]));
+                return SMTFunction.create(ideclname, args, chkrestype, new SMTCallSimple("to_int", [new SMTVar(args[0].vname)]));
             }
             case "number_floattodecimal":
             case "number_floattorational":
@@ -2612,7 +2714,7 @@ class SMTBodyEmitter {
             case "number_decimaltorational":
             case "number_rationaltofloat":
             case "number_rationaltodecimal": {
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTVar(args[0].vname));
+                return SMTFunction.create(ideclname, args, chkrestype, new SMTVar(args[0].vname));
             }
             case "float_floor":
             case "decimal_floor": {
@@ -2622,7 +2724,7 @@ class SMTBodyEmitter {
                     new SMTCallSimple("-", [new SMTCallSimple("to_int", [new SMTVar(args[0].vname)]), new SMTConst("1")])
                 );
                 const vvround = new SMTLet("vvround", new SMTCallSimple("to_real", [new SMTCallSimple("to_int", [new SMTVar(args[0].vname)])]), new SMTCallSimple("to_real", [floor]));
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, vvround);
+                return SMTFunction.create(ideclname, args, chkrestype, vvround);
             }
             case "float_ceil":
             case "decimal_ceil": {
@@ -2632,7 +2734,7 @@ class SMTBodyEmitter {
                     new SMTCallSimple("+", [new SMTCallSimple("to_int", [new SMTVar(args[0].vname)]), new SMTConst("1")])
                 );
                 const vvround = new SMTLet("vvround", new SMTCallSimple("to_real", [new SMTCallSimple("to_int", [new SMTVar(args[0].vname)])]), new SMTCallSimple("to_real", [ceil]));
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, vvround);
+                return SMTFunction.create(ideclname, args, chkrestype, vvround);
             }
             case "float_truncate":
             case "decimal_truncate":  {
@@ -2641,52 +2743,59 @@ class SMTBodyEmitter {
                     new SMTCallSimple("to_int", [new SMTVar(args[0].vname)]),
                     new SMTCallSimple("-", [new SMTCallSimple("to_int", [new SMTCallSimple("-", [new SMTVar(args[0].vname)])])])
                 );
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, truncate);
+                return SMTFunction.create(ideclname, args, chkrestype, truncate);
             }
-            case "float_power":
+            case "float_power": {
+                const rr = new SMTCallSimple("Float@Pow", [new SMTVar(args[0].vname), new SMTVar(args[1].vname)]);
+                return SMTFunction.create(ideclname, args, chkrestype, rr);
+            }
             case "decimal_power": {
-                const rr = new SMTCallSimple("^", [new SMTVar(args[0].vname), new SMTVar(args[0].vname)]);
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, rr);
+                const rr = new SMTCallSimple("Decimal@Pow", [new SMTVar(args[0].vname), new SMTVar(args[1].vname)]);
+                return SMTFunction.create(ideclname, args, chkrestype, rr);
             }
-            case "nat_mod": {
-                const rr = new SMTCallSimple("mod", [new SMTVar(args[0].vname), new SMTVar(args[0].vname)]);
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, rr);
+            case "float_sqrt": {
+                const rr = new SMTCallSimple("^", [new SMTVar(args[0].vname), new SMTConst("0.5")]);
+                return SMTFunction.create(ideclname, args, chkrestype, rr);
+            }
+            case "decimal_sqrt": {
+                const rr = new SMTCallSimple("^", [new SMTVar(args[0].vname), new SMTConst("0.5")]);
+                return SMTFunction.create(ideclname, args, chkrestype, rr);
             }
             case "string_empty": {
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, SMTCallSimple.makeEq(new SMTCallSimple("str.len", [new SMTVar(args[0].vname)]), new SMTConst("0")));
+                return SMTFunction.create(ideclname, args, chkrestype, SMTCallSimple.makeEq(new SMTCallSimple("str.len", [new SMTVar(args[0].vname)]), new SMTConst("0")));
             }
             case "string_append": {
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTCallSimple("str.++", [new SMTVar(args[0].vname), new SMTVar(args[1].vname)]));
+                return SMTFunction.create(ideclname, args, chkrestype, new SMTCallSimple("str.++", [new SMTVar(args[0].vname), new SMTVar(args[1].vname)]));
             }
             case "bytebuffer_getformat": {
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTCallSimple("BByteBuffer@format", [new SMTVar(args[0].vname)]));
+                return SMTFunction.create(ideclname, args, chkrestype, new SMTCallSimple("BByteBuffer@format", [new SMTVar(args[0].vname)]));
             }
             case "bytebuffer_getcompression": {
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTCallSimple("BByteBuffer@compress", [new SMTVar(args[0].vname)]));
+                return SMTFunction.create(ideclname, args, chkrestype, new SMTCallSimple("BByteBuffer@compress", [new SMTVar(args[0].vname)]));
             }
             case "datetime_create": {
                 const dd = new SMTCallSimple("BDateTime@cons", args.map((arg) => new SMTVar(arg.vname)));
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);
+                return SMTFunction.create(ideclname, args, chkrestype, dd);
             }
             case "utcdatetime_create": {
                 const dd = new SMTCallSimple("BUTCDateTime@cons", args.map((arg) => new SMTVar(arg.vname)));
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);
+                return SMTFunction.create(ideclname, args, chkrestype, dd);
             }
             case "calendardate_create": {
                 const dd = new SMTCallSimple("BCalendarDate@cons", args.map((arg) => new SMTVar(arg.vname)));
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);
+                return SMTFunction.create(ideclname, args, chkrestype, dd);
             }
             case "relativetime_create": {
                 const dd = new SMTCallSimple("BRelativeTime@cons", args.map((arg) => new SMTVar(arg.vname)));
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);
+                return SMTFunction.create(ideclname, args, chkrestype, dd);
             }
             case "isotimestamp_create": {
                 const dd = new SMTCallSimple("BISOTimeStamp@cons", args.map((arg) => new SMTVar(arg.vname)));
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);
+                return SMTFunction.create(ideclname, args, chkrestype, dd);
             }
             case "latlongcoordinate_create": {
                 const dd = new SMTCallSimple("BLatLongCoordinate@cons", args.map((arg) => new SMTVar(arg.vname)));
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);
+                return SMTFunction.create(ideclname, args, chkrestype, dd);
             }
             case "regex_accepts": {
                 const bsqreopts = this.assembly.literalRegexs.map((bsqre, j) => {
@@ -2696,13 +2805,13 @@ class SMTBodyEmitter {
                 });
                 
                 const accept = SMTCallSimple.makeOrOf(...bsqreopts);
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, accept);
+                return SMTFunction.create(ideclname, args, chkrestype, accept);
             }
             case "s_list_cons_1": {
                 const vdecl = this.typegen.assembly.entityDecls.get(args[0].vtype.typeID) as MIRObjectEntityTypeDecl;
                 const carg1 = new SMTCallSimple("seq.unit", [new SMTCallSimple(this.typegen.generateEntityFieldGetFunction(vdecl, vdecl.fields[0]), [new SMTVar(args[0].vname)])]);
                 const cbody = this.typegen.generateSeqListTypeConstructorSeq(mirrestype, carg1);
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                return SMTFunction.create(ideclname, args, chkrestype, cbody);
             }
             case "s_list_cons_2": {
                 const vdecl = this.typegen.assembly.entityDecls.get(args[0].vtype.typeID) as MIRObjectEntityTypeDecl;
@@ -2710,7 +2819,7 @@ class SMTBodyEmitter {
                 const carg2 = new SMTCallSimple("seq.unit", [new SMTCallSimple(this.typegen.generateEntityFieldGetFunction(vdecl, vdecl.fields[1]), [new SMTVar(args[0].vname)])]);
 
                 const cbody = this.typegen.generateSeqListTypeConstructorSeq(mirrestype, new SMTCallSimple("seq.++", [carg1, carg2]));
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                return SMTFunction.create(ideclname, args, chkrestype, cbody);
             }
             case "s_list_cons_3": {
                 const vdecl = this.typegen.assembly.entityDecls.get(args[0].vtype.typeID) as MIRObjectEntityTypeDecl;
@@ -2719,7 +2828,7 @@ class SMTBodyEmitter {
                 const carg3 = new SMTCallSimple("seq.unit", [new SMTCallSimple(this.typegen.generateEntityFieldGetFunction(vdecl, vdecl.fields[2]), [new SMTVar(args[0].vname)])]);
 
                 const cbody = this.typegen.generateSeqListTypeConstructorSeq(mirrestype, new SMTCallSimple("seq.++", [carg1, carg2, carg3]));
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                return SMTFunction.create(ideclname, args, chkrestype, cbody);
             }
             case "s_list_cons_4": {
                 const vdecl = this.typegen.assembly.entityDecls.get(args[0].vtype.typeID) as MIRObjectEntityTypeDecl;
@@ -2729,7 +2838,7 @@ class SMTBodyEmitter {
                 const carg4 = new SMTCallSimple("seq.unit", [new SMTCallSimple(this.typegen.generateEntityFieldGetFunction(vdecl, vdecl.fields[3]), [new SMTVar(args[0].vname)])]);
 
                 const cbody = this.typegen.generateSeqListTypeConstructorSeq(mirrestype, new SMTCallSimple("seq.++", [carg1, carg2, carg3, carg4]));
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                return SMTFunction.create(ideclname, args, chkrestype, cbody);
             }
             case "s_list_index": {
                 //TODO: would special Seq constructor support improve this (see also fill)
@@ -2747,12 +2856,12 @@ class SMTBodyEmitter {
                     )
                 );
 
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                return SMTFunction.create(ideclname, args, chkrestype, cbody);
             }
             case "s_list_size": {
                 const lt = this.typegen.getMIRType(idecl.params[0].type);
                 const cbody = this.typegen.generateSeqListTypeGetLength(lt, new SMTVar(args[0].vname));
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                return SMTFunction.create(ideclname, args, chkrestype, cbody);
             }
             case "s_list_fill": {
                 //TODO: would special Seq constructor support improve this (see also index)
@@ -2775,30 +2884,30 @@ class SMTBodyEmitter {
                     )
                 );
 
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                return SMTFunction.create(ideclname, args, chkrestype, cbody);
             }
             case "s_list_append": {
                 const cbody = this.typegen.generateSeqListTypeConstructorSeq(mirrestype, new SMTCallSimple("seq.++", [
                     this.typegen.generateSeqListTypeGetData(mirrestype, new SMTVar(args[0].vname)),
                     this.typegen.generateSeqListTypeGetData(mirrestype, new SMTVar(args[1].vname))
                 ]));
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                return SMTFunction.create(ideclname, args, chkrestype, cbody);
             }
             case "s_list_get": {
                 const sval = this.typegen.generateSeqListTypeGetData(this.typegen.getMIRType(idecl.params[0].type), new SMTVar(args[0].vname));
                 const cbody = new SMTCallSimple("seq.nth", [sval, new SMTVar(args[1].vname)]);
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                return SMTFunction.create(ideclname, args, chkrestype, cbody);
             }
             case "s_list_back": {
                 const sval = this.typegen.generateSeqListTypeGetData(this.typegen.getMIRType(idecl.params[0].type), new SMTVar(args[0].vname));
                 const idx = this.typegen.generateSeqListTypeGetLengthMinus1(this.typegen.getMIRType(idecl.params[0].type), new SMTVar(args[0].vname));
                 const cbody = new SMTCallSimple("seq.nth", [sval, idx]);
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                return SMTFunction.create(ideclname, args, chkrestype, cbody);
             }
             case "s_list_front": {
                 const sval = this.typegen.generateSeqListTypeGetData(this.typegen.getMIRType(idecl.params[0].type), new SMTVar(args[0].vname));
                 const cbody = new SMTCallSimple("seq.nth", [sval, new SMTConst("0")]);
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                return SMTFunction.create(ideclname, args, chkrestype, cbody);
             }
             case "s_list_set": {
                 const sval = this.typegen.generateSeqListTypeGetData(mirrestype, new SMTVar(args[0].vname));
@@ -2810,7 +2919,7 @@ class SMTBodyEmitter {
                     new SMTCallSimple("-", [this.typegen.generateSeqListTypeGetLength(mirrestype, new SMTVar(args[0].vname)), new SMTCallSimple("+", [new SMTVar(args[1].vname), new SMTConst("1")])
                     ])])
                 ])));
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                return SMTFunction.create(ideclname, args, chkrestype, cbody);
             }
             case "s_list_remove": {
                 const sval = this.typegen.generateSeqListTypeGetData(mirrestype, new SMTVar(args[0].vname));
@@ -2821,7 +2930,7 @@ class SMTBodyEmitter {
                     new SMTCallSimple("-", [this.typegen.generateSeqListTypeGetLength(mirrestype, new SMTVar(args[0].vname)), new SMTCallSimple("+", [new SMTVar(args[1].vname), new SMTConst("1")])
                     ])])
                 ]));
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                return SMTFunction.create(ideclname, args, chkrestype, cbody);
             }
             case "s_list_insert": {
                 const sval = this.typegen.generateSeqListTypeGetData(mirrestype, new SMTVar(args[0].vname));
@@ -2830,7 +2939,7 @@ class SMTBodyEmitter {
                     new SMTCallSimple("seq.unit", [new SMTVar(args[2].vname)]),
                     new SMTCallSimple("seq.extract", [sval, new SMTVar(args[1].vname), new SMTCallSimple("-", [this.typegen.generateSeqListTypeGetLength(mirrestype, new SMTVar(args[0].vname)), new SMTVar(args[1].vname)])])
                 ]));
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                return SMTFunction.create(ideclname, args, chkrestype, cbody);
             }
             case "s_list_pop_back": {
                 const sval = this.typegen.generateSeqListTypeGetData(mirrestype, new SMTVar(args[0].vname));
@@ -2839,7 +2948,7 @@ class SMTBodyEmitter {
                     new SMTConst("0"),
                     this.typegen.generateSeqListTypeGetLengthMinus1(mirrestype, new SMTVar(args[0].vname))
                 ]));
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                return SMTFunction.create(ideclname, args, chkrestype, cbody);
             } 
             case "s_list_pop_front": {
                 const sval = this.typegen.generateSeqListTypeGetData(mirrestype, new SMTVar(args[0].vname));
@@ -2848,7 +2957,7 @@ class SMTBodyEmitter {
                     new SMTConst("1"),
                     this.typegen.generateSeqListTypeGetLengthMinus1(mirrestype, new SMTVar(args[0].vname))
                 ]));
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                return SMTFunction.create(ideclname, args, chkrestype, cbody);
             }
             case "s_list_push_back": {
                 const sval = this.typegen.generateSeqListTypeGetData(mirrestype, new SMTVar(args[0].vname));
@@ -2856,7 +2965,7 @@ class SMTBodyEmitter {
                     sval,
                     new SMTCallSimple("seq.unit", [new SMTVar(args[1].vname)])
                 ]));
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                return SMTFunction.create(ideclname, args, chkrestype, cbody);
             }
             case "s_list_push_front": {
                 const sval = this.typegen.generateSeqListTypeGetData(mirrestype, new SMTVar(args[0].vname));
@@ -2864,7 +2973,7 @@ class SMTBodyEmitter {
                    new SMTCallSimple("seq.unit", [new SMTVar(args[1].vname)]),
                     sval
                 ]));
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                return SMTFunction.create(ideclname, args, chkrestype, cbody);
             }
             case "s_list_map_pred": {
                 const lt = this.typegen.getMIRType(idecl.params[0].type);
@@ -2873,7 +2982,7 @@ class SMTBodyEmitter {
                 const pc = idecl.pcodes.get("p") as MIRPCode;
                 const pcdcl = this.typegen.assembly.invokeDecls.get(pc.code) as MIRInvokeDecl;
                 const argtype = this.typegen.getSMTTypeFor(this.typegen.getMIRType(pcdcl.params[0].type));
-                const pcfn = this.typegen.lookupFunctionName(pc.code);
+                const pcfn = this.lookupFunctionNameStd(pc.code);
                 const captured = pc.cargs.map((carg) => carg.cname);
 
                 const implicitlambdas = [pcfn];
@@ -2884,7 +2993,7 @@ class SMTBodyEmitter {
                 ]);
 
                 if (this.isSafeInvoke(pc.code)) {
-                    return SMTFunction.createWithImplicitLambdas(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateSeqListTypeConstructorSeq(mirrestype, maparray), implicitlambdas);
+                    return SMTFunction.createWithImplicitLambdas(ideclname, args, chkrestype, this.typegen.generateSeqListTypeConstructorSeq(mirrestype, maparray), implicitlambdas);
                 }
                 else {
                     const trgterr = this.typegen.generateResultTypeConstructorError(this.typegen.getMIRType("Bool"), new SMTConst("ErrorID_Target"));
@@ -2921,7 +3030,7 @@ class SMTBodyEmitter {
                         )
                     );
 
-                    return SMTFunction.createWithImplicitLambdas(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody, implicitlambdas);
+                    return SMTFunction.createWithImplicitLambdas(ideclname, args, chkrestype, cbody, implicitlambdas);
                 }
             }
             case "s_list_map_pred_idx": {
@@ -2931,7 +3040,7 @@ class SMTBodyEmitter {
                 const pc = idecl.pcodes.get("p") as MIRPCode;
                 const pcdcl = this.typegen.assembly.invokeDecls.get(pc.code) as MIRInvokeDecl;
                 const argtype = this.typegen.getSMTTypeFor(this.typegen.getMIRType(pcdcl.params[0].type));
-                const pcfn = this.typegen.lookupFunctionName(pc.code);
+                const pcfn = this.lookupFunctionNameStd(pc.code);
                 const captured = pc.cargs.map((carg) => carg.cname);
 
                 const implicitlambdas = [pcfn];
@@ -2943,7 +3052,7 @@ class SMTBodyEmitter {
                 ]);
 
                 if (this.isSafeInvoke(pc.code)) {
-                    return SMTFunction.createWithImplicitLambdas(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateSeqListTypeConstructorSeq(mirrestype, maparray), implicitlambdas);
+                    return SMTFunction.createWithImplicitLambdas(ideclname, args, chkrestype, this.typegen.generateSeqListTypeConstructorSeq(mirrestype, maparray), implicitlambdas);
                 }
                 else {
                     const trgterr = this.typegen.generateResultTypeConstructorError(this.typegen.getMIRType("Bool"), new SMTConst("ErrorID_Target"));
@@ -2980,7 +3089,7 @@ class SMTBodyEmitter {
                         )
                     );
 
-                    return SMTFunction.createWithImplicitLambdas(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody, implicitlambdas);
+                    return SMTFunction.createWithImplicitLambdas(ideclname, args, chkrestype, cbody, implicitlambdas);
                 }
             }
             case "s_list_map_fn": {
@@ -2990,7 +3099,7 @@ class SMTBodyEmitter {
                 const pc = idecl.pcodes.get("f") as MIRPCode;
                 const pcdcl = this.typegen.assembly.invokeDecls.get(pc.code) as MIRInvokeDecl;
                 const argtype = this.typegen.getSMTTypeFor(this.typegen.getMIRType(pcdcl.params[0].type));
-                const pcfn = this.typegen.lookupFunctionName(pc.code);
+                const pcfn = this.lookupFunctionNameStd(pc.code);
                 const captured = pc.cargs.map((carg) => carg.cname);
 
                 const implicitlambdas = [pcfn];
@@ -3001,7 +3110,7 @@ class SMTBodyEmitter {
                 ]);
 
                 if (this.isSafeInvoke(pc.code)) {
-                    return SMTFunction.createWithImplicitLambdas(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateSeqListTypeConstructorSeq(mirrestype, maparray), implicitlambdas);
+                    return SMTFunction.createWithImplicitLambdas(ideclname, args, chkrestype, this.typegen.generateSeqListTypeConstructorSeq(mirrestype, maparray), implicitlambdas);
                 }
                 else {
                     const mirresult_T = (this.typegen.assembly.entityDecls.get(mirrestype.typeID) as MIRPrimitiveInternalEntityTypeDecl).terms.get("T") as MIRType;
@@ -3040,7 +3149,7 @@ class SMTBodyEmitter {
                         )
                     );
 
-                    return SMTFunction.createWithImplicitLambdas(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody, implicitlambdas);
+                    return SMTFunction.createWithImplicitLambdas(ideclname, args, chkrestype, cbody, implicitlambdas);
                 }
             }
             case "s_list_map_fn_idx": {
@@ -3050,7 +3159,7 @@ class SMTBodyEmitter {
                 const pc = idecl.pcodes.get("f") as MIRPCode;
                 const pcdcl = this.typegen.assembly.invokeDecls.get(pc.code) as MIRInvokeDecl;
                 const argtype = this.typegen.getSMTTypeFor(this.typegen.getMIRType(pcdcl.params[0].type));
-                const pcfn = this.typegen.lookupFunctionName(pc.code);
+                const pcfn = this.lookupFunctionNameStd(pc.code);
                 const captured = pc.cargs.map((carg) => carg.cname);
 
                 const implicitlambdas = [pcfn];
@@ -3062,7 +3171,7 @@ class SMTBodyEmitter {
                 ]);
 
                 if (this.isSafeInvoke(pc.code)) {
-                    return SMTFunction.createWithImplicitLambdas(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateSeqListTypeConstructorSeq(mirrestype, maparray), implicitlambdas);
+                    return SMTFunction.createWithImplicitLambdas(ideclname, args, chkrestype, this.typegen.generateSeqListTypeConstructorSeq(mirrestype, maparray), implicitlambdas);
                 }
                 else {
                     const mirresult_T = (this.typegen.assembly.entityDecls.get(mirrestype.typeID) as MIRPrimitiveInternalEntityTypeDecl).terms.get("T") as MIRType;
@@ -3101,7 +3210,7 @@ class SMTBodyEmitter {
                         )
                     );
 
-                    return SMTFunction.createWithImplicitLambdas(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody, implicitlambdas);
+                    return SMTFunction.createWithImplicitLambdas(ideclname, args, chkrestype, cbody, implicitlambdas);
                 }
             }
             case "s_list_map_sync": {
@@ -3115,7 +3224,7 @@ class SMTBodyEmitter {
                 const pc = idecl.pcodes.get("f") as MIRPCode;
                 const pcdcl = this.typegen.assembly.invokeDecls.get(pc.code) as MIRInvokeDecl;
                 const argtype = this.typegen.getSMTTypeFor(this.typegen.getMIRType(pcdcl.params[0].type));
-                const pcfn = this.typegen.lookupFunctionName(pc.code);
+                const pcfn = this.lookupFunctionNameStd(pc.code);
                 const captured = pc.cargs.map((carg) => carg.cname);
 
                 const implicitlambdas = [pcfn];
@@ -3127,7 +3236,7 @@ class SMTBodyEmitter {
                 ]);
 
                 if (this.isSafeInvoke(pc.code)) {
-                    return SMTFunction.createWithImplicitLambdas(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateSeqListTypeConstructorSeq(mirrestype, maparray), implicitlambdas);
+                    return SMTFunction.createWithImplicitLambdas(ideclname, args, chkrestype, this.typegen.generateSeqListTypeConstructorSeq(mirrestype, maparray), implicitlambdas);
                 }
                 else {
                     const mirresult_T = (this.typegen.assembly.entityDecls.get(mirrestype.typeID) as MIRPrimitiveInternalEntityTypeDecl).terms.get("T") as MIRType;
@@ -3166,7 +3275,7 @@ class SMTBodyEmitter {
                         )
                     );
 
-                    return SMTFunction.createWithImplicitLambdas(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody, implicitlambdas);
+                    return SMTFunction.createWithImplicitLambdas(ideclname, args, chkrestype, cbody, implicitlambdas);
                 }
             }
             case "s_list_has": {
@@ -3176,7 +3285,7 @@ class SMTBodyEmitter {
                     new SMTConst("false"),
                     sval
                 ]);
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                return SMTFunction.create(ideclname, args, chkrestype, cbody);
             }
             case "s_list_indexof": {
                 const sval = this.typegen.generateSeqListTypeGetData(this.typegen.getMIRType(idecl.params[0].type), new SMTVar(args[0].vname));
@@ -3192,7 +3301,7 @@ class SMTBodyEmitter {
                     new SMTConst("-1"),
                     sval
                 ]);
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                return SMTFunction.create(ideclname, args, chkrestype, cbody);
             }
             case "s_list_last_indexof": {
                 const sval = this.typegen.generateSeqListTypeGetData(this.typegen.getMIRType(idecl.params[0].type), new SMTVar(args[0].vname));
@@ -3208,7 +3317,7 @@ class SMTBodyEmitter {
                     new SMTConst("-1"),
                     sval
                 ]);
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                return SMTFunction.create(ideclname, args, chkrestype, cbody);
             }
             case "s_list_has_true": {
                 const sval = this.typegen.generateSeqListTypeGetData(this.typegen.getMIRType(idecl.params[0].type), new SMTVar(args[0].vname));
@@ -3217,7 +3326,7 @@ class SMTBodyEmitter {
                     new SMTConst("false"),
                     sval
                 ]);
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                return SMTFunction.create(ideclname, args, chkrestype, cbody);
             }
             case "s_list_has_false": {
                 const sval = this.typegen.generateSeqListTypeGetData(this.typegen.getMIRType(idecl.params[0].type), new SMTVar(args[0].vname));
@@ -3226,7 +3335,7 @@ class SMTBodyEmitter {
                     new SMTConst("false"),
                     sval
                 ]);
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                return SMTFunction.create(ideclname, args, chkrestype, cbody);
             }
             case "s_list_all_true": {
                 const sval = this.typegen.generateSeqListTypeGetData(this.typegen.getMIRType(idecl.params[0].type), new SMTVar(args[0].vname));
@@ -3235,7 +3344,7 @@ class SMTBodyEmitter {
                     new SMTConst("true"),
                     sval
                 ]);
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                return SMTFunction.create(ideclname, args, chkrestype, cbody);
             }
             case "s_list_all_false": {
                 const sval = this.typegen.generateSeqListTypeGetData(this.typegen.getMIRType(idecl.params[0].type), new SMTVar(args[0].vname));
@@ -3244,7 +3353,7 @@ class SMTBodyEmitter {
                     new SMTConst("true"),
                     sval
                 ]);
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                return SMTFunction.create(ideclname, args, chkrestype, cbody);
             }
             case "s_list_indexof_true": {
                 const sval = this.typegen.generateSeqListTypeGetData(this.typegen.getMIRType(idecl.params[0].type), new SMTVar(args[0].vname));
@@ -3260,7 +3369,7 @@ class SMTBodyEmitter {
                     new SMTConst("-1"),
                     sval
                 ]);
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                return SMTFunction.create(ideclname, args, chkrestype, cbody);
             }
             case "s_list_last_indexof_true": {
                 const sval = this.typegen.generateSeqListTypeGetData(this.typegen.getMIRType(idecl.params[0].type), new SMTVar(args[0].vname));
@@ -3276,7 +3385,7 @@ class SMTBodyEmitter {
                     new SMTConst("-1"),
                     sval
                 ]);
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                return SMTFunction.create(ideclname, args, chkrestype, cbody);
             }
             case "s_list_slice_front": {
                 const sval = this.typegen.generateSeqListTypeGetData(mirrestype, new SMTVar(args[0].vname));
@@ -3285,7 +3394,7 @@ class SMTBodyEmitter {
                     new SMTVar(args[1].vname),
                     new SMTCallSimple("-", [this.typegen.generateSeqListTypeGetLength(mirrestype, sval), new SMTVar(args[1].vname)])
                 ]));
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                return SMTFunction.create(ideclname, args, chkrestype, cbody);
             }
             case "s_list_slice_end": {
                 const sval = this.typegen.generateSeqListTypeGetData(mirrestype, new SMTVar(args[0].vname));
@@ -3294,7 +3403,7 @@ class SMTBodyEmitter {
                     new SMTConst("0"),
                     new SMTVar(args[1].vname)
                 ]));
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                return SMTFunction.create(ideclname, args, chkrestype, cbody);
             }
             case "s_list_slice": {
                 const sval = this.typegen.generateSeqListTypeGetData(mirrestype, new SMTVar(args[0].vname));
@@ -3303,7 +3412,7 @@ class SMTBodyEmitter {
                     new SMTVar(args[1].vname),
                     new SMTVar(args[2].vname)
                 ]));
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                return SMTFunction.create(ideclname, args, chkrestype, cbody);
             }
             case "s_list_mask_select": {
                 const lt = this.typegen.getMIRType(idecl.params[0].type);
@@ -3322,7 +3431,7 @@ class SMTBodyEmitter {
                     tsval
                 ]);
 
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateSeqListTypeConstructorSeq(mirrestype, foldcall));
+                return SMTFunction.create(ideclname, args, chkrestype, this.typegen.generateSeqListTypeConstructorSeq(mirrestype, foldcall));
             }
             case "s_list_reverse": {
                 const lt = this.typegen.getMIRType(idecl.params[0].type);
@@ -3337,7 +3446,7 @@ class SMTBodyEmitter {
                     tsval
                 ]);
 
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateSeqListTypeConstructorSeq(mirrestype, foldcall));
+                return SMTFunction.create(ideclname, args, chkrestype, this.typegen.generateSeqListTypeConstructorSeq(mirrestype, foldcall));
             }
             case "s_list_is_sorted": {
                 const lt = this.typegen.getMIRType(idecl.params[0].type);
@@ -3348,7 +3457,7 @@ class SMTBodyEmitter {
                 
                 const issorted = `(not (exists ((@ii Int)) (and (<= 0 @ii) (< @ii ${lenm1.emitSMT2(undefined)}) (${this.typegen.getSMTTypeFor(ttype).smttypename}@less (seq.nth ${tsval.emitSMT2(undefined)} (+ @ii 1)) (seq.nth ${tsval.emitSMT2(undefined)} @ii))))`;
                 
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new SMTConst(issorted));
+                return SMTFunction.create(ideclname, args, chkrestype, new SMTConst(issorted));
             }
             case "s_list_reduce": {
                 const lt = this.typegen.getMIRType(idecl.params[0].type);
@@ -3357,7 +3466,7 @@ class SMTBodyEmitter {
                 const pc = idecl.pcodes.get("f") as MIRPCode;
                 const pcdcl = this.typegen.assembly.invokeDecls.get(pc.code) as MIRInvokeDecl;
                 const argtype = this.typegen.getSMTTypeFor(this.typegen.getMIRType(pcdcl.params[1].type));
-                const pcfn = this.typegen.lookupFunctionName(pc.code);
+                const pcfn = this.lookupFunctionNameStd(pc.code);
                 const captured = pc.cargs.map((carg) => carg.cname);
 
                 const implicitlambdas = [pcfn];
@@ -3369,7 +3478,7 @@ class SMTBodyEmitter {
                         sval
                     ]);
 
-                    return SMTFunction.createWithImplicitLambdas(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, foldcall, implicitlambdas);
+                    return SMTFunction.createWithImplicitLambdas(ideclname, args, chkrestype, foldcall, implicitlambdas);
                 }
                 else {
                     const resultsmtu = this.typegen.generateResultType(mirrestype);
@@ -3379,7 +3488,7 @@ class SMTBodyEmitter {
                         sval
                     ]);
 
-                    return SMTFunction.createWithImplicitLambdas(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, foldcall, implicitlambdas);
+                    return SMTFunction.createWithImplicitLambdas(ideclname, args, chkrestype, foldcall, implicitlambdas);
                 }
             }
             case "s_list_reduce_idx": {
@@ -3389,7 +3498,7 @@ class SMTBodyEmitter {
                 const pc = idecl.pcodes.get("f") as MIRPCode;
                 const pcdcl = this.typegen.assembly.invokeDecls.get(pc.code) as MIRInvokeDecl;
                 const argtype = this.typegen.getSMTTypeFor(this.typegen.getMIRType(pcdcl.params[1].type));
-                const pcfn = this.typegen.lookupFunctionName(pc.code);
+                const pcfn = this.lookupFunctionNameStd(pc.code);
                 const captured = pc.cargs.map((carg) => carg.cname);
 
                 const implicitlambdas = [pcfn];
@@ -3402,7 +3511,7 @@ class SMTBodyEmitter {
                         sval
                     ]);
 
-                    return SMTFunction.createWithImplicitLambdas(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, foldcall, implicitlambdas);
+                    return SMTFunction.createWithImplicitLambdas(ideclname, args, chkrestype, foldcall, implicitlambdas);
                 }
                 else {
                     const resultsmtu = this.typegen.generateResultType(mirrestype);
@@ -3413,7 +3522,7 @@ class SMTBodyEmitter {
                         sval
                     ]);
 
-                    return SMTFunction.createWithImplicitLambdas(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, foldcall, implicitlambdas);
+                    return SMTFunction.createWithImplicitLambdas(ideclname, args, chkrestype, foldcall, implicitlambdas);
                 }
             }
             case "s_list_transduce": {
@@ -3428,7 +3537,7 @@ class SMTBodyEmitter {
                 const carg1 = new SMTCallSimple(this.typegen.generateEntityFieldGetFunction(vdecl, vdecl.fields[0]), [new SMTVar(args[0].vname)]);
                 const centry1 = new SMTCallSimple("seq.unit", [this.typegen.generateSeqMapEntryTypeConstructor(mirrestype, new SMTCallSimple(this.typegen.generateTupleIndexGetFunction(tupdecl, 0), [carg1]), new SMTCallSimple(this.typegen.generateTupleIndexGetFunction(tupdecl, 1), [carg1]))]);
                 const cbody = this.typegen.generateSeqMapTypeConstructor(mirrestype, centry1);
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                return SMTFunction.create(ideclname, args, chkrestype, cbody);
             }
             case "s_map_cons_2": {
                 const vdecl = this.typegen.assembly.entityDecls.get(args[0].vtype.typeID) as MIRObjectEntityTypeDecl;
@@ -3440,7 +3549,7 @@ class SMTBodyEmitter {
                 const centry2 = new SMTCallSimple("seq.unit", [this.typegen.generateSeqMapEntryTypeConstructor(mirrestype, new SMTCallSimple(this.typegen.generateTupleIndexGetFunction(tupdecl, 0), [carg2]), new SMTCallSimple(this.typegen.generateTupleIndexGetFunction(tupdecl, 1), [carg2]))]);
                 
                 const cbody = this.typegen.generateSeqMapTypeConstructor(mirrestype, new SMTCallSimple("seq.++", [centry1, centry2]));
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                return SMTFunction.create(ideclname, args, chkrestype, cbody);
             }
             case "s_map_cons_3": {
                 const vdecl = this.typegen.assembly.entityDecls.get(args[0].vtype.typeID) as MIRObjectEntityTypeDecl;
@@ -3454,7 +3563,7 @@ class SMTBodyEmitter {
                 const centry3 = new SMTCallSimple("seq.unit", [this.typegen.generateSeqMapEntryTypeConstructor(mirrestype, new SMTCallSimple(this.typegen.generateTupleIndexGetFunction(tupdecl, 0), [carg3]), new SMTCallSimple(this.typegen.generateTupleIndexGetFunction(tupdecl, 1), [carg3]))]);
                 
                 const cbody = this.typegen.generateSeqMapTypeConstructor(mirrestype, new SMTCallSimple("seq.++", [centry1, centry2, centry3]));
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                return SMTFunction.create(ideclname, args, chkrestype, cbody);
             }
             case "s_map_cons_4": {
                 const vdecl = this.typegen.assembly.entityDecls.get(args[0].vtype.typeID) as MIRObjectEntityTypeDecl;
@@ -3470,7 +3579,7 @@ class SMTBodyEmitter {
                 const centry4 = new SMTCallSimple("seq.unit", [this.typegen.generateSeqMapEntryTypeConstructor(mirrestype, new SMTCallSimple(this.typegen.generateTupleIndexGetFunction(tupdecl, 0), [carg4]), new SMTCallSimple(this.typegen.generateTupleIndexGetFunction(tupdecl, 1), [carg4]))]);
                 
                 const cbody = this.typegen.generateSeqMapTypeConstructor(mirrestype, new SMTCallSimple("seq.++", [centry1, centry2, centry3, centry4]));
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                return SMTFunction.create(ideclname, args, chkrestype, cbody);
             }
             case "s_map_get_elem_order": {
                 const mt = this.typegen.getMIRType(idecl.params[0].type);
@@ -3483,12 +3592,12 @@ class SMTBodyEmitter {
                 const constup = this.typegen.getSMTConstructorName(ttype);
                 const cbody = new SMTCallSimple(constup.cons, [accesskey, accessval]);
 
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                return SMTFunction.create(ideclname, args, chkrestype, cbody);
             }
             case "s_map_count": {
                 const mt = this.typegen.getMIRType(idecl.params[0].type);
                 const cbody = this.typegen.generateSeqMapTypeGetLength(mt, new SMTVar(args[0].vname));
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                return SMTFunction.create(ideclname, args, chkrestype, cbody);
             }
             case "s_map_entries": {
                 const mt = this.typegen.getMIRType(idecl.params[0].type);
@@ -3507,18 +3616,18 @@ class SMTBodyEmitter {
                 ]);
 
                 const cbody = this.typegen.generateSeqListTypeConstructorSeq(mirrestype, maparray);
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                return SMTFunction.create(ideclname, args, chkrestype, cbody);
             }
             case "s_map_min_key": {
                 const mt = this.typegen.getMIRType(idecl.params[0].type);
                 const cbody = this.typegen.generateSeqMapEntryTypeGetKey(mt, new SMTCallSimple("seq.nth", [this.typegen.generateSeqMapTypeGetData(mt, new SMTVar(args[0].vname)), new SMTConst("0")]));
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                return SMTFunction.create(ideclname, args, chkrestype, cbody);
             }
             case "s_map_max_key": {
                 const mt = this.typegen.getMIRType(idecl.params[0].type);
                 const idx = this.typegen.generateSeqMapTypeGetLengthMinus1(this.typegen.getMIRType(idecl.params[0].type), new SMTVar(args[0].vname));
                 const cbody = this.typegen.generateSeqMapEntryTypeGetKey(mt, new SMTCallSimple("seq.nth", [this.typegen.generateSeqMapTypeGetData(mt, new SMTVar(args[0].vname)), idx]));
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                return SMTFunction.create(ideclname, args, chkrestype, cbody);
             }
             case "s_map_has": {
                 //TODO: this is applying map just to do a find since we ignore the value part -- candidate for special solver support?
@@ -3534,7 +3643,7 @@ class SMTBodyEmitter {
                     mval
                 ]);
 
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                return SMTFunction.create(ideclname, args, chkrestype, cbody);
             }
             case "s_map_get": {
                 //TODO: this is applying map just to do a find since we ignore the value part -- candidate for special solver support?
@@ -3558,14 +3667,14 @@ class SMTBodyEmitter {
                 ]);
 
                 const cbody = this.typegen.generateSeqMapEntryTypeGetValue(mt, new SMTCallSimple("seq.nth", [mval, idxbody])); 
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                return SMTFunction.create(ideclname, args, chkrestype, cbody);
             }
             case "s_map_union_fast": {
                 const mval1 = this.typegen.generateSeqMapTypeGetData(mirrestype, new SMTVar(args[0].vname));
                 const mval2 = this.typegen.generateSeqMapTypeGetData(mirrestype, new SMTVar(args[1].vname));
 
                 const cbody = this.typegen.generateSeqMapTypeConstructor(mirrestype, new SMTCallSimple("seq.++", [mval1, mval2]));
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateSeqMapTypeConstructor(mirrestype, cbody));
+                return SMTFunction.create(ideclname, args, chkrestype, this.typegen.generateSeqMapTypeConstructor(mirrestype, cbody));
             }
             case "s_map_map_pred": {
                 const mt = this.typegen.getMIRType(idecl.params[0].type);
@@ -3574,7 +3683,7 @@ class SMTBodyEmitter {
                 const pc = idecl.pcodes.get("p") as MIRPCode;
                 const pcdcl = this.typegen.assembly.invokeDecls.get(pc.code) as MIRInvokeDecl;
                 const argtype = this.typegen.getSMTTypeFor(this.typegen.getMIRType(pcdcl.params[0].type));
-                const pcfn = this.typegen.lookupFunctionName(pc.code);
+                const pcfn = this.lookupFunctionNameStd(pc.code);
                 const captured = pc.cargs.map((carg) => carg.cname);
 
                 const implicitlambdas = [pcfn];
@@ -3587,7 +3696,7 @@ class SMTBodyEmitter {
                 ]);
 
                 if (this.isSafeInvoke(pc.code)) {
-                    return SMTFunction.createWithImplicitLambdas(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateSeqListTypeConstructorSeq(mirrestype, maparray), implicitlambdas);
+                    return SMTFunction.createWithImplicitLambdas(ideclname, args, chkrestype, this.typegen.generateSeqListTypeConstructorSeq(mirrestype, maparray), implicitlambdas);
                 }
                 else {
                     const trgterr = this.typegen.generateResultTypeConstructorError(this.typegen.getMIRType("Bool"), new SMTConst("ErrorID_Target"));
@@ -3624,7 +3733,7 @@ class SMTBodyEmitter {
                         )
                     );
 
-                    return SMTFunction.createWithImplicitLambdas(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody, implicitlambdas);
+                    return SMTFunction.createWithImplicitLambdas(ideclname, args, chkrestype, cbody, implicitlambdas);
                 }
             }
             case "s_map_mask_select": {
@@ -3644,7 +3753,7 @@ class SMTBodyEmitter {
                     mval
                 ]);
 
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateSeqListTypeConstructorSeq(mirrestype, foldcall));
+                return SMTFunction.create(ideclname, args, chkrestype, this.typegen.generateSeqListTypeConstructorSeq(mirrestype, foldcall));
             }
             case "s_map_remap": {
                 const mt = this.typegen.getMIRType(idecl.params[0].type);
@@ -3653,7 +3762,7 @@ class SMTBodyEmitter {
                 const pc = idecl.pcodes.get("f") as MIRPCode;
                 const pcdcl = this.typegen.assembly.invokeDecls.get(pc.code) as MIRInvokeDecl;
                 const argtype = this.typegen.getSMTTypeFor(this.typegen.getMIRType(pcdcl.params[0].type));
-                const pcfn = this.typegen.lookupFunctionName(pc.code);
+                const pcfn = this.lookupFunctionNameStd(pc.code);
                 const captured = pc.cargs.map((carg) => carg.cname);
 
                 const implicitlambdas = [pcfn];
@@ -3672,7 +3781,7 @@ class SMTBodyEmitter {
                         new SMTVar("@maparray")
                     ]);
 
-                    return SMTFunction.createWithImplicitLambdas(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateSeqMapTypeConstructor(mirrestype, entries), implicitlambdas);
+                    return SMTFunction.createWithImplicitLambdas(ideclname, args, chkrestype, this.typegen.generateSeqMapTypeConstructor(mirrestype, entries), implicitlambdas);
                 }
                 else {
                     const mirresult_V = (this.typegen.assembly.entityDecls.get(mirrestype.typeID) as MIRPrimitiveInternalEntityTypeDecl).terms.get("V") as MIRType;
@@ -3712,7 +3821,7 @@ class SMTBodyEmitter {
                         )
                     );
 
-                    return SMTFunction.createWithImplicitLambdas(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody, implicitlambdas);
+                    return SMTFunction.createWithImplicitLambdas(ideclname, args, chkrestype, cbody, implicitlambdas);
                 }
             }
             case "s_map_add": {
@@ -3750,7 +3859,7 @@ class SMTBodyEmitter {
                     )
                 );
                 
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                return SMTFunction.create(ideclname, args, chkrestype, cbody);
             }
             case "s_map_set": {
                 //TODO: this is applying map just to do a find since we ignore the value part -- candidate for special solver support?
@@ -3786,7 +3895,7 @@ class SMTBodyEmitter {
                     )
                 );
 
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                return SMTFunction.create(ideclname, args, chkrestype, cbody);
             }
             case "s_map_remove": {
                 //TODO: this is applying map just to do a find since we ignore the value part -- candidate for special solver support?
@@ -3821,10 +3930,10 @@ class SMTBodyEmitter {
                     )
                 );
 
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, cbody);
+                return SMTFunction.create(ideclname, args, chkrestype, cbody);
             }
             case "s_blockingfailure": {
-                return SMTFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
+                return SMTFunction.create(ideclname, args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
             }
             default: {
                 assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
@@ -3835,5 +3944,6 @@ class SMTBodyEmitter {
 }
 
 export {
-     SMTBodyEmitter
+    REC_FUN_GAS_LIMIT, RecFunGas,
+    SMTBodyEmitter
 };

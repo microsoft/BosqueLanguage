@@ -48,8 +48,9 @@ internal entity NumericOps provides Some {
     //
     //TODO: there are some failure cases here we may want to include checks for (like x = 0, y = -2)
     //
-    __assume_safe function s_floatPower(x: Float, y: Float): Float = float_power;
-    __assume_safe function s_decimalPower(x: Decimal, y: Decimal): Decimal = decimal_power;
+    function s_floatPower(x: Float, y: Float): Float = float_power;
+    function s_decimalPower(x: Decimal, y: Decimal): Decimal = decimal_power;
 
-    __safe function s_modNat(x: Nat, y: Nat): Nat = nat_mod;
+    __assume_safe function s_floatSqrt(x: Float): Float = float_sqrt;
+    __assume_safe function s_decimalSqrt(x: Decimal): Decimal = decimal_sqrt;
 }

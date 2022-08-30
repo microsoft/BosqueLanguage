@@ -542,7 +542,7 @@
   (let ((sv (BString@UFCons_API ctx)))
     (ite (<= (str.len sv) @SLENMAX)
       ($Result_BString@success sv)
-      ($Result_BString@error ErrorID_AssumeCheck) 
+      ($Result_BString@error ErrorID_AssumeCheck)
     )
   )
 )
@@ -668,6 +668,40 @@
       ($Result_BLatLongCoordinate@error ErrorID_AssumeCheck) 
     )
   )
+)
+
+(declare-fun Real@Pow@UF (Real Real) Real)
+
+(define-fun Float@Pow ((x BFloat) (y BFloat)) $Result_BFloat
+    (ite (or (= x 0.0) (= x 1.0) (= y 1.0))
+        ($Result_BFloat@success x)
+        (ite (= y 0.0)
+            ($Result_BFloat@success 0.0)
+            (let ((rr (Real@Pow@UF x y)))
+                ;;TODO add some other algebraic info here -- = y 2 then sqrt, < x 1 and > y 1 => rr < x, etc.
+                (ite (or (= rr 0.0) (= rr x))
+                    ($Result_BFloat@error ErrorID_AssumeCheck) 
+                    ($Result_BFloat@success rr)
+                )
+            )
+        )
+    )
+)
+
+(define-fun Decimal@Pow ((x BFloat) (y BFloat)) $Result_BDecimal
+    (ite (or (= x 0.0) (= x 1.0) (= y 1.0))
+        ($Result_BDecimal@success x)
+        (ite (= y 0.0)
+            ($Result_BDecimal@success 0.0)
+            (let ((rr (Real@Pow@UF x y)))
+                ;;TODO add some other algebraic info here -- = y 2 then sqrt, < x 1 and > y 1 => rr < x, etc.
+                (ite (or (= rr 0.0) (= rr x))
+                    ($Result_BDecimal@error ErrorID_AssumeCheck) 
+                    ($Result_BDecimal@success rr)
+                )
+            )
+        )
+    )
 )
 
 (declare-fun @@SortedIntSeq@@Create (Int Int Int) (Seq Int))

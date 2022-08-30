@@ -202,8 +202,8 @@ __internal entity Map<K grounded KeyType, V> provides Some, Expandoable<[K, V]>,
     //
 
     internal function s_initializer_add(m: Map<K, V>, vtup: [K, V]): Map<K, V> {
-        assert(!MapOps::s_map_has<K, V>(this, k));
+        assert(!MapOps::s_map_has<K, V>(m, vtup.0));
 
-        return MapOps::s_map_add<K, V>(this, vtup.0, vtup.1);
+        return MapOps::s_map_add<K, V>(m, vtup.0, vtup.1);
     }
 }

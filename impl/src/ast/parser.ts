@@ -51,8 +51,6 @@ const KeywordStrings = [
     "return",
     "requires",
     "something",
-    "spec",
-    "doc",
     "debug",
     "switch",
     "test",
@@ -172,6 +170,9 @@ const AttributeStrings = [
     "sensitive",
     "chktest",
     "errtest",
+    "debug",
+    "test",
+    "release",
 
     "__chktest",
 
@@ -1013,8 +1014,8 @@ class Parser {
     }
 
     parseBuildInfo(cb: BuildLevel): BuildLevel {
-        if(this.testToken("doc") || this.testToken("spec") || this.testToken("debug") || this.testToken("test") || this.testToken("release")) {
-            return this.consumeTokenAndGetValue() as "doc" | "spec" | "debug" | "test" | "release";
+        if( this.testToken("debug") || this.testToken("test") || this.testToken("release")) {
+            return this.consumeTokenAndGetValue() as "debug" | "test" | "release";
         }
         else {
             return cb;
@@ -3117,7 +3118,7 @@ class Parser {
 
             const exp = this.parseOfExpression();
             let err = new LiteralNoneExpression(sinfo);
-            if (this.testFollows("else")) {
+            if (this.testAndConsumeTokenIf("else")) {
                 err = this.parseExpression();
             }
 

@@ -2565,11 +2565,12 @@ class MorphirBodyEmitter {
             }
             case "float_power":
             case "decimal_power": {
-                const rr = new MorphirCallSimple("^", [new MorphirVar(args[0].vname), new MorphirVar(args[0].vname)]);
+                const rr = new MorphirCallSimple("^", [new MorphirVar(args[0].vname), new MorphirVar(args[1].vname)]);
                 return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, rr);
             }
-            case "nat_mod": {
-                const rr = new MorphirCallSimple("mod", [new MorphirVar(args[0].vname), new MorphirVar(args[0].vname)]);
+            case "float_sqrt":
+            case "decimal_sqrt": {
+                const rr = new MorphirCallSimple("^", [new MorphirVar(args[0].vname), new MorphirConst("0.5")]);
                 return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, rr);
             }
             case "string_empty": {
