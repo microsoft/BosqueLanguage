@@ -10,15 +10,15 @@ function createDefaultEmptyDB(): Database {
         "default",
         LogicalTime::zero,
         List<DBEntryFormat>{
-            DBEntryFormat{true, "User", 0n, none},
-            DBEntryFormat{false, "Name", 1n, none},
-            DBEntryFormat{false, "ID", 2n, /[a-z]/},
+            DBEntryFormat{true, 0n, "User", none},
+            DBEntryFormat{false, 1n, "Name", none},
+            DBEntryFormat{false, 2n, "ID", /[a-z]/}
         },
         Map<String, DBFieldID>{
             "User" => 0n,
             "Name" => 1n,
             "ID" => 2n
-        }
+        },
         List<DBRecordData>{
         }
     };
@@ -30,5 +30,6 @@ chktest function createDB(): Bool {
 }
 
 errtest function checkErrors(doadvance: Bool): Float {
+    return 0.0f;
 }
 

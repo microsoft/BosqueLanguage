@@ -187,7 +187,7 @@ internal entity MapOpsVector1 provides Some {
         return m.v0.0;
     }
 
-    internal function s_map_has_key<K grounded KeyType, V>(m: Vector1<[K, V]>, k: K): K {
+    internal function s_map_has_key<K grounded KeyType, V>(m: Vector1<[K, V]>, k: K): Bool {
         return KeyType::equal<K>(k, m.v0.0);
     }
 
@@ -523,7 +523,7 @@ internal entity MapOpsVector2 provides Some {
         return m.v1.0;
     }
 
-    internal function s_map_has_key<K grounded KeyType, V>(m: Vector2<[K, V]>, k: K): K {
+    internal function s_map_has_key<K grounded KeyType, V>(m: Vector2<[K, V]>, k: K): Bool {
         return \/(KeyType::equal<K>(k, m.v0.0), KeyType::equal<K>(k, m.v1.0));
     }
 
@@ -972,7 +972,7 @@ internal entity MapOpsVector3 provides Some {
         return m.v2.0;
     }
 
-    internal function s_map_has_key<K grounded KeyType, V>(m: Vector3<[K, V]>, k: K): K {
+    internal function s_map_has_key<K grounded KeyType, V>(m: Vector3<[K, V]>, k: K): Bool {
         return \/(KeyType::equal<K>(k, m.v0.0), KeyType::equal<K>(k, m.v1.0), KeyType::equal<K>(k, m.v2.0));
     }
 
@@ -1519,7 +1519,7 @@ internal entity MapOpsVector4 provides Some {
         return m.v3.0;
     }
 
-    internal function s_map_has_key<K grounded KeyType, V>(m: Vector4<[K, V]>, k: K): K {
+    internal function s_map_has_key<K grounded KeyType, V>(m: Vector4<[K, V]>, k: K): Bool {
         return \/(KeyType::equal<K>(k, m.v0.0), KeyType::equal<K>(k, m.v1.0), KeyType::equal<K>(k, m.v2.0), KeyType::equal<K>(k, m.v3.0));
     }
 
@@ -2127,7 +2127,7 @@ internal entity VectorOps provides Some {
         }
     }
 
-    internal function s_map_has_key<K grounded KeyType, V>(m: MapVector<K, V>, k: K): K {
+    internal function s_map_has_key<K grounded KeyType, V>(m: MapVector<K, V>, k: K): Bool {
         if(l.is<Vector1<[K, V]>>()) {
             return MapOpsVector1::s_map_has_key<K, V>(m, k);
         }

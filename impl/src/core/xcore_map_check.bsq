@@ -89,8 +89,8 @@ internal entity MapOps provides Some {
             return Vector4<[K, V]>{ll.v0, rr.v0, rr.v1, rr.v2};
         }
         elif(/\(l.is<Vector2<[K, V]>>(), r.is<Vector1<[K, V]>>())) {
-            let ll = s_safeAs<MapRepr<T>, Vector2<[K, V]>>(l);
-            let rr = s_safeAs<MapRepr<T>, Vector1<[K, V]>>(r);
+            let ll = s_safeAs<MapRepr<K, V>, Vector2<[K, V]>>(l);
+            let rr = s_safeAs<MapRepr<K, V>, Vector1<[K, V]>>(r);
             return Vector3<[K, V]>{ll.v0, ll.v1, rr.v0};
         }
         elif(/\(l.is<Vector2<[K, V]>>(), r.is<Vector2<[K, V]>>())) {
@@ -156,7 +156,7 @@ internal entity MapOps provides Some {
 #endif
         }
         else {
-            return ListOps::s_into<[K, V]>(s_safeAs<MapRepr<T>, MapVector<T>>(mm));
+            return ListOps::s_into<[K, V]>(s_safeAs<MapRepr<K, V>, MapVector<K, V>>(mm));
         }
     }
 
@@ -171,7 +171,7 @@ internal entity MapOps provides Some {
 #endif
         }
         else {
-            return VectorOps::s_map_min_elem<K, V>(s_safeAs<MapRepr<T>, MapVector<T>>(mm));
+            return VectorOps::s_map_min_elem<K, V>(s_safeAs<MapRepr<K, V>, MapVector<K, V>>(mm));
         }
     }
 
@@ -186,7 +186,7 @@ internal entity MapOps provides Some {
 #endif
         }
         else {
-            return VectorOps::s_map_max_elem<K, V>(s_safeAs<MapRepr<T>, MapVector<T>>(mm));
+            return VectorOps::s_map_max_elem<K, V>(s_safeAs<MapRepr<K, V>, MapVector<K, V>>(mm));
         }
     }
 
@@ -201,7 +201,7 @@ internal entity MapOps provides Some {
 #endif
         }
         else {
-            return VectorOps::s_map_has_key<[K, V]>(s_safeAs<MapRepr<T>, MapVector<T>>(mm), k);
+            return VectorOps::s_map_has_key<K, V>(s_safeAs<MapRepr<K, V>, MapVector<K, V>>(mm), k);
         }
     }
 
@@ -216,7 +216,7 @@ internal entity MapOps provides Some {
 #endif
         }
         else {
-            return VectorOps::s_map_get_key<K, V>(s_safeAs<MapRepr<T>, MapVector<T>>(mm), k);
+            return VectorOps::s_map_get_key<K, V>(s_safeAs<MapRepr<K, V>, MapVector<K, V>>(mm), k);
         }
     }
     
@@ -245,7 +245,7 @@ internal entity MapOps provides Some {
 #endif
         }
         else {
-            return MapOps::s_into<K, V>(VectorOps::s_map_filter_pred<K, V>[recursive?](s_safeAs<MapRepr<T>, MapVector<T>>(mm), p));
+            return MapOps::s_into<K, V>(VectorOps::s_map_filter_pred<K, V>[recursive?](s_safeAs<MapRepr<K, V>, MapVector<K, V>>(mm), p));
         }
     }
 
@@ -260,18 +260,18 @@ internal entity MapOps provides Some {
 #endif
         }
         else {
-            return MapOps::s_into<K, V>(VectorOps::s_map_remap<K, V>[recursive?](s_safeAs<MapRepr<T>, MapVector<T>>(mm), f));
+            return MapOps::s_into<K, V>(VectorOps::s_map_remap<K, V>[recursive?](s_safeAs<MapRepr<K, V>, MapVector<K, V>>(mm), f));
         }
     }
 
-    internal function s_map_add<K grounded KeyType, V>(m: Map<K, V>, k: K, vtup: [K, V]): Map<K, V> {
+    internal function s_map_add<K grounded KeyType, V>(m: Map<K, V>, k: K, v: V): Map<K, V> {
         let mm = MapOps::s_value<K, V>(m);
 
         if(mm.is<SeqMap<K, V>>()) {
 #if CHK_SMALL_ONLY
             return s_blockingfailure<Map<K, V>>();
 #else
-            return MapOps::s_into<K, V>(SeqMapOps::s_map_add<K, V>(mm, k, vtup.1));
+            return MapOps::s_into<K, V>(SeqMapOps::s_map_add<K, V>(mm, k, v));
 #endif
         }
         else {
@@ -279,11 +279,11 @@ internal entity MapOps provides Some {
 #if CHK_SMALL_ONLY
                 return s_blockingfailure<Map<K, V>>();
 #else
-                return MapOps::s_into<K, V>(SeqMapOps::s_map_add<K, V>(MapOps::s_vector_to_seqmap<K, V>(mm), k, vtup.1));
+                return MapOps::s_into<K, V>(SeqMapOps::s_map_add<K, V>(MapOps::s_vector_to_seqmap<K, V>(mm), k, v));
 #endif
             }
             else {
-                return MapOps::s_into<K, V>(VectorOps::s_map_add<K, V>[recursive?](s_safeAs<MapRepr<T>, MapVector<T>>(mm), f));
+                return MapOps::s_into<K, V>(VectorOps::s_map_add<K, V>[recursive?](s_safeAs<MapRepr<K, V>, MapVector<K, V>>(mm), k, v));
             }
         }
     }
@@ -299,7 +299,7 @@ internal entity MapOps provides Some {
 #endif
         }
         else {
-            return MapOps::s_into<K, V>(VectorOps::s_map_set<K, V>(s_safeAs<MapRepr<T>, MapVector<T>>(mm), k, vtup));
+            return MapOps::s_into<K, V>(VectorOps::s_map_set<K, V>(s_safeAs<MapRepr<K, V>, MapVector<K, V>>(mm), k, vtup));
         }
     }
 
@@ -315,7 +315,7 @@ internal entity MapOps provides Some {
 #endif
         }
         else {
-            return MapOps::s_into<K, V>(VectorOps::s_map_remove<K, V>(s_safeAs<MapRepr<T>, MapVector<T>>(mm), k));
+            return MapOps::s_into<K, V>(VectorOps::s_map_remove<K, V>(s_safeAs<MapRepr<K, V>, MapVector<K, V>>(mm), k));
         }
     }
 }

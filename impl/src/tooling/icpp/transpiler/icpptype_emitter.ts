@@ -345,21 +345,21 @@ class ICPPTypeEmitter {
                     assert(entity instanceof MIRPrimitiveCollectionEntityTypeDecl, "Should be a collection type");
 
                     if(entity instanceof MIRPrimitiveMapEntityTypeDecl) {
-                        res = {layout: ICPPLayoutCategory.Inline, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "2"};
+                        res = {layout: ICPPLayoutCategory.Inline, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "5"};
                     }
                     else if(entity instanceof MIRPrimitiveStackEntityTypeDecl) {
-                        res = {layout: ICPPLayoutCategory.Inline, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "2"};
+                        res = {layout: ICPPLayoutCategory.Inline, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "5"};
                     }
                     else if(entity instanceof MIRPrimitiveQueueEntityTypeDecl) {
-                        res = {layout: ICPPLayoutCategory.Inline, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "2"};
+                        res = {layout: ICPPLayoutCategory.Inline, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "5"};
                     }
                     else if(entity instanceof MIRPrimitiveSetEntityTypeDecl) {
-                        res = {layout: ICPPLayoutCategory.Inline, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "2"};
+                        res = {layout: ICPPLayoutCategory.Inline, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "5"};
                     }
                     else {
                         assert(entity instanceof MIRPrimitiveListEntityTypeDecl, "Should be a list type");
     
-                        res = {layout: ICPPLayoutCategory.Inline, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "2"};
+                        res = {layout: ICPPLayoutCategory.Inline, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "5"};
                     }
                 }
             }
