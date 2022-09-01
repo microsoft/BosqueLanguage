@@ -29,7 +29,14 @@ chktest function createDB(): Bool {
     return dd.empty();
 }
 
+chktest function createDB_X(forceysm: Bool): Bool {
+    let dd = createDefaultEmptyDB();
+    return dd.empty();
+}
+
+/*
 errtest function checkErrors(doadvance: Bool): Float {
     return 0.0f;
 }
+*/
 

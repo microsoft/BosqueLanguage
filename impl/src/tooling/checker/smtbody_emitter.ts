@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { MIRAssembly, MIRConceptType, MIRConstructableEntityTypeDecl, MIREntityType, MIREntityTypeDecl, MIREphemeralListType, MIRFieldDecl, MIRInvokeBodyDecl, MIRInvokeDecl, MIRInvokePrimitiveDecl, MIRObjectEntityTypeDecl, MIRPCode, MIRPrimitiveCollectionEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRRecordType, MIRTupleType, MIRType } from "../../compiler/mir_assembly";
+import { MIRAssembly, MIRConceptType, MIRConstructableEntityTypeDecl, MIREntityType, MIREntityTypeDecl, MIREphemeralListType, MIRFieldDecl, MIRInternalEntityTypeDecl, MIRInvokeBodyDecl, MIRInvokeDecl, MIRInvokePrimitiveDecl, MIRObjectEntityTypeDecl, MIRPCode, MIRPrimitiveCollectionEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRRecordType, MIRTupleType, MIRType } from "../../compiler/mir_assembly";
 import { SMTTypeEmitter } from "./smttype_emitter";
 import { MIRAbort, MIRArgGuard, MIRArgument, MIRAssertCheck, MIRBasicBlock, MIRBinKeyEq, MIRBinKeyLess, MIRConstantArgument, MIRConstantBigInt, MIRConstantBigNat, MIRConstantDataString, MIRConstantDecimal, MIRConstantFalse, MIRConstantFloat, MIRConstantInt, MIRConstantNat, MIRConstantNone, MIRConstantNothing, MIRConstantRational, MIRConstantRegex, MIRConstantString, MIRConstantStringOf, MIRConstantTrue, MIRConstantTypedNumber, MIRConstructorEntityDirect, MIRConstructorEphemeralList, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionOneElement, MIRConstructorPrimaryCollectionSingletons, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConvertValue, MIRDeclareGuardFlagLocation, MIREntityProjectToEphemeral, MIREntityUpdate, MIREphemeralListExtend, MIRExtract, MIRFieldKey, MIRGlobalVariable, MIRGuard, MIRGuardedOptionInject, MIRInject, MIRInvokeFixedFunction, MIRInvokeKey, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRIsTypeOf, MIRJump, MIRJumpCond, MIRJumpNone, MIRLoadConst, MIRLoadField, MIRLoadFromEpehmeralList, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadUnintVariableValue, MIRLogicAction, MIRMaskGuard, MIRMultiLoadFromEpehmeralList, MIROp, MIROpTag, MIRPhi, MIRPrefixNotOp, MIRRecordHasProperty, MIRRecordProjectToEphemeral, MIRRecordUpdate, MIRRegisterArgument, MIRRegisterAssign, MIRResolvedTypeKey, MIRReturnAssign, MIRReturnAssignOfCons, MIRSetConstantGuardFlag, MIRSliceEpehmeralList, MIRStatmentGuard, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRTupleHasIndex, MIRTupleProjectToEphemeral, MIRTupleUpdate, MIRVirtualMethodKey } from "../../compiler/mir_ops";
 import { SMTCallSimple, SMTCallGeneral, SMTCallGeneralWOptMask, SMTCond, SMTConst, SMTExp, SMTIf, SMTLet, SMTLetMulti, SMTMaskConstruct, SMTVar, SMTCallGeneralWPassThroughMask, SMTTypeInfo, VerifierOptions } from "./smt_exp";
@@ -3427,7 +3427,7 @@ class SMTBodyEmitter {
                 const lm = this.typegen.getMIRType(idecl.params[1].type);
                 const msval = this.typegen.generateSeqListTypeGetData(lm, new SMTVar(args[0].vname));
 
-                const ttype = (this.assembly.entityDecls.get(lt.typeID) as MIRPrimitiveListEntityTypeDecl).getTypeT();
+                const ttype = (this.assembly.entityDecls.get(lt.typeID) as MIRInternalEntityTypeDecl).terms.get("T") as MIRType;
                 const emptyconst = new SMTConst(`(as seq.empty (Seq ${this.typegen.getSMTTypeFor(ttype).smttypename}))`);
 
                 const foldcall = new SMTCallSimple("seq.foldli", [
@@ -3443,7 +3443,7 @@ class SMTBodyEmitter {
                 const lt = this.typegen.getMIRType(idecl.params[0].type);
                 const tsval = this.typegen.generateSeqListTypeGetData(lt, new SMTVar(args[0].vname));
 
-                const ttype = (this.assembly.entityDecls.get(lt.typeID) as MIRPrimitiveListEntityTypeDecl).getTypeT();
+                const ttype = (this.assembly.entityDecls.get(lt.typeID) as MIRInternalEntityTypeDecl).terms.get("T") as MIRType;
                 const emptyconst = new SMTConst(`(as seq.empty (Seq ${this.typegen.getSMTTypeFor(ttype).smttypename}))`);
 
                 const foldcall = new SMTCallSimple("seq.foldl", [
@@ -3459,7 +3459,7 @@ class SMTBodyEmitter {
                 const tsval = this.typegen.generateSeqListTypeGetData(lt, new SMTVar(args[0].vname));
                 const lenm1 = this.typegen.generateSeqListTypeGetLengthMinus1(lt, new SMTVar(args[0].vname));
 
-                const ttype = (this.assembly.entityDecls.get(lt.typeID) as MIRPrimitiveListEntityTypeDecl).getTypeT();
+                const ttype = (this.assembly.entityDecls.get(lt.typeID) as MIRInternalEntityTypeDecl).terms.get("T") as MIRType;
                 
                 const issorted = `(not (exists ((@ii Int)) (and (<= 0 @ii) (< @ii ${lenm1.emitSMT2(undefined)}) (${this.typegen.getSMTTypeFor(ttype).smttypename}@less (seq.nth ${tsval.emitSMT2(undefined)} (+ @ii 1)) (seq.nth ${tsval.emitSMT2(undefined)} @ii))))`;
                 
@@ -3835,7 +3835,7 @@ class SMTBodyEmitter {
                 const mt = this.typegen.getMIRType(idecl.params[0].type);
                 const mval = this.typegen.generateSeqMapTypeGetData(mt, new SMTVar(args[0].vname));
                 
-                const ktype = (this.assembly.entityDecls.get(mt.typeID) as MIRPrimitiveMapEntityTypeDecl).getTypeK();
+                const ktype = this.typegen.getMIRType(idecl.params[1].type);
                 const kless = `${this.typegen.getSMTTypeFor(ktype).smttypename}@less`;
 
                 const entrytype = this.typegen.generateSeqMapEntryType(mt);

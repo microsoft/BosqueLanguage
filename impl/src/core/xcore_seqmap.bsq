@@ -7,7 +7,7 @@
 namespace Core;
 
 #if CHECK_LIBS
-__internal entity SeqMap<T> provides Some {
+__internal entity SeqMap<K, V> provides Some {
 }
 
 internal entity SeqMapOps provides Some {
