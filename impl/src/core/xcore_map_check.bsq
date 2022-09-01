@@ -283,23 +283,23 @@ internal entity MapOps provides Some {
 #endif
             }
             else {
-                return MapOps::s_into<K, V>(VectorOps::s_map_add<K, V>[recursive?](s_safeAs<MapRepr<K, V>, MapVector<K, V>>(mm), k, v));
+                return MapOps::s_into<K, V>(VectorOps::s_map_add<K, V>[recursive?](s_safeAs<MapRepr<K, V>, Vector1<[K, V]> | Vector2<[K, V]> | Vector3<[K, V]>>(mm), k, [k, v]));
             }
         }
     }
 
-    internal function s_map_set<K grounded KeyType, V>(m: Map<K, V>, k: K, vtup: [K, V]): Map<K, V>  {
+    internal function s_map_set<K grounded KeyType, V>(m: Map<K, V>, k: K, v: V): Map<K, V>  {
         let mm = MapOps::s_value<K, V>(m);
 
         if(mm.is<SeqMap<K, V>>()) {
 #if CHK_SMALL_ONLY
             return s_blockingfailure<Map<K, V>>();
 #else
-            return MapOps::s_into<K, V>(SeqMapOps::s_map_set<K, V>(mm, k, vtup.1));
+            return MapOps::s_into<K, V>(SeqMapOps::s_map_set<K, V>(mm, k, v));
 #endif
         }
         else {
-            return MapOps::s_into<K, V>(VectorOps::s_map_set<K, V>(s_safeAs<MapRepr<K, V>, MapVector<K, V>>(mm), k, vtup));
+            return MapOps::s_into<K, V>(VectorOps::s_map_set<K, V>(s_safeAs<MapRepr<K, V>, MapVector<K, V>>(mm), k, [k, v]));
         }
     }
 
