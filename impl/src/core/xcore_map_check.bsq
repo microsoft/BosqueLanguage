@@ -16,17 +16,17 @@ internal entity MapOps provides Some {
     internal function s_value<K grounded KeyType, V>(m: Map<K, V>): MapRepr<K, V> = special_extract;
 
     internal function s_vector_to_seqmap<K grounded KeyType, V>(m: MapVector<K, V>): SeqMap<K, V> {
-        if(l.is<Vector1<[K, V]>>()) {
-            return SeqMapOps::s_map_cons_1<K, V>(m.v0);
+        if(m.is<Vector1<[K, V]>>()) {
+            return SeqMapOps::s_map_cons_1<K, V>(m);
         }
-        elif(l.is<Vector2<[K, V]>>()) {
-            return SeqMapOps::s_map_cons_2<K, V>(m.v0, m.v1);
+        elif(m.is<Vector2<[K, V]>>()) {
+            return SeqMapOps::s_map_cons_2<K, V>(m);
         }
-        elif(l.is<Vector3<[K, V]>>()) {
-            return SeqMapOps::s_map_cons_3<K, V>(m.v0, m.v1, m.v2);
+        elif(m.is<Vector3<[K, V]>>()) {
+            return SeqMapOps::s_map_cons_3<K, V>(m);
         }
         else {
-            return SeqMapOps::s_map_cons_4<K, V>(m.v0, m.v1, m.v2, m.v3);
+            return SeqMapOps::s_map_cons_4<K, V>(m);
         }
     }
 
@@ -49,7 +49,7 @@ internal entity MapOps provides Some {
     }
 
     internal function s_ensure_seq_repr<K grounded KeyType, V>(m: MapVector<K, V> | SeqMap<K, V>): SeqMap<K, V> {
-        if(l.is<SeqMap<K, V>>()) {
+        if(m.is<SeqMap<K, V>>()) {
             return m;
         }
         else {
