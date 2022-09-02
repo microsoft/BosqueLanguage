@@ -3072,13 +3072,13 @@ class SMTBodyEmitter {
                     ]);
 
                     const cerrtrgt = new SMTCallSimple("seq.foldl", [
-                        new SMTConst(`(lambda ((@@acc Bool) (@@r ${this.typegen.generateResultType(this.typegen.getMIRType("Bool")).smttypename})) ${SMTCallSimple.makeOrOf(new SMTVar("@@acc"), SMTCallSimple.makeEq(new SMTVar("@@r"), trgterr)).emitSMT2(undefined)}`),
+                        new SMTConst(`(lambda ((@@acc Bool) (@@r ${this.typegen.generateResultType(this.typegen.getMIRType("Bool")).smttypename})) ${SMTCallSimple.makeOrOf(new SMTVar("@@acc"), SMTCallSimple.makeEq(new SMTVar("@@r"), trgterr)).emitSMT2(undefined)})`),
                         new SMTConst("false"),
                         new SMTVar("@maparray")
                     ]);
 
                     const cerrother = new SMTCallSimple("seq.foldl", [
-                        new SMTConst(`(lambda ((@@acc Bool) (@@r ${this.typegen.generateResultType(this.typegen.getMIRType("Bool")).smttypename})) ${SMTCallSimple.makeOrOf(new SMTVar("@@acc"), SMTCallSimple.makeEq(new SMTVar("@@r"), othererr)).emitSMT2(undefined)}`),
+                        new SMTConst(`(lambda ((@@acc Bool) (@@r ${this.typegen.generateResultType(this.typegen.getMIRType("Bool")).smttypename})) ${SMTCallSimple.makeOrOf(new SMTVar("@@acc"), SMTCallSimple.makeEq(new SMTVar("@@r"), othererr)).emitSMT2(undefined)})`),
                         new SMTConst("false"),
                         new SMTVar("@maparray")
                     ]);
@@ -3461,7 +3461,7 @@ class SMTBodyEmitter {
 
                 const ttype = (this.assembly.entityDecls.get(lt.typeID) as MIRInternalEntityTypeDecl).terms.get("T") as MIRType;
                 
-                const issorted = `(not (exists ((@ii Int)) (and (<= 0 @ii) (< @ii ${lenm1.emitSMT2(undefined)}) (${this.typegen.getSMTTypeFor(ttype).smttypename}@less (seq.nth ${tsval.emitSMT2(undefined)} (+ @ii 1)) (seq.nth ${tsval.emitSMT2(undefined)} @ii))))`;
+                const issorted = `(not (exists ((@ii Int)) (and (<= 0 @ii) (< @ii ${lenm1.emitSMT2(undefined)}) (${this.typegen.getSMTTypeFor(ttype).smttypename}@less (seq.nth ${tsval.emitSMT2(undefined)} (+ @ii 1)) (seq.nth ${tsval.emitSMT2(undefined)} @ii)))))`;
                 
                 return SMTFunction.create(ideclname, args, chkrestype, new SMTConst(issorted));
             }
