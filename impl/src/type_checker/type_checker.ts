@@ -1825,7 +1825,7 @@ class TypeChecker {
                     if(scodes[j].islocal) {
                         const vinfo = env.lookupVar(cnames[i]) as VarInfo;
 
-                        margs.push(new MIRRegisterArgument(cnames[i]));
+                        margs.push(this.emitInlineConvertToFlow<MIRRegisterArgument>(sinfo, new MIRRegisterArgument(cnames[i]), new ValueType(vinfo.declaredType, vinfo.flowType)));
                         cinfo.push([cname, vinfo.flowType]);
                     }
                     else {
@@ -1847,7 +1847,7 @@ class TypeChecker {
             [...indirectcapture].sort().forEach((vv) => {
                 const vinfo = env.lookupVar(vv) as VarInfo;
 
-                margs.push(new MIRRegisterArgument(vv));
+                margs.push(this.emitInlineConvertToFlow<MIRRegisterArgument>(sinfo, new MIRRegisterArgument(vv), new ValueType(vinfo.declaredType, vinfo.flowType)));
                 cinfo.push([vv, vinfo.flowType]);
             });
         }
@@ -2011,7 +2011,7 @@ class TypeChecker {
                     if(scodes[j].islocal) {
                         const vinfo = env.lookupVar(cnames[i]) as VarInfo;
 
-                        margs.push(new MIRRegisterArgument(cnames[i]));
+                        margs.push(this.emitInlineConvertToFlow<MIRRegisterArgument>(sinfo, new MIRRegisterArgument(cnames[i]), new ValueType(vinfo.declaredType, vinfo.flowType)));
                         cinfo.push([cname, vinfo.flowType]);
                     }
                     else {
@@ -2033,7 +2033,7 @@ class TypeChecker {
             [...indirectcapture].sort().forEach((vv) => {
                 const vinfo = env.lookupVar(vv) as VarInfo;
 
-                margs.push(new MIRRegisterArgument(vv));
+                margs.push(this.emitInlineConvertToFlow<MIRRegisterArgument>(sinfo, new MIRRegisterArgument(vv), new ValueType(vinfo.declaredType, vinfo.flowType)));
                 cinfo.push([vv, vinfo.flowType]);
             });
         }
