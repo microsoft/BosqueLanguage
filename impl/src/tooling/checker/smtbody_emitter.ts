@@ -2849,6 +2849,7 @@ class SMTBodyEmitter {
             case "s_list_index": {
                 //TODO: would special Seq constructor support improve this (see also fill)
 
+                assert(false, "TODO: Change this to use a reduce and error to force the order -- no forall in there. See fill as well.");
                 const genlist = new SMTCallSimple("@@SortedIntSeq@@Create", args.map((arg) => new SMTVar(arg.vname)));
                 const chklist = SMTCallSimple.makeAndOf(
                     new SMTCallSimple("@@CheckIntSeqLen", [new SMTVar("seq"), new SMTVar(args[2].vname)]),
@@ -2880,6 +2881,7 @@ class SMTBodyEmitter {
                     this.requiredUFOps.push(newfillop);
                 }
 
+                assert(false, "TODO: Change this to use a reduce and error to force the order -- no forall in there");
                 const cbody = new SMTLet("seq", new SMTCallSimple(fillfun, [new SMTVar(args[1].vname)]), 
                     new SMTIf(SMTCallSimple.makeAndOf(
                             SMTCallSimple.makeEq(new SMTCallSimple("seq.len", [new SMTVar("seq")]), new SMTVar(args[0].vname)),
@@ -3453,17 +3455,6 @@ class SMTBodyEmitter {
                 ]);
 
                 return SMTFunction.create(ideclname, args, chkrestype, this.typegen.generateSeqListTypeConstructorSeq(mirrestype, foldcall));
-            }
-            case "s_list_is_sorted": {
-                const lt = this.typegen.getMIRType(idecl.params[0].type);
-                const tsval = this.typegen.generateSeqListTypeGetData(lt, new SMTVar(args[0].vname));
-                const lenm1 = this.typegen.generateSeqListTypeGetLengthMinus1(lt, new SMTVar(args[0].vname));
-
-                const ttype = (this.assembly.entityDecls.get(lt.typeID) as MIRInternalEntityTypeDecl).terms.get("T") as MIRType;
-                
-                const issorted = `(not (exists ((@ii Int)) (and (<= 0 @ii) (< @ii ${lenm1.emitSMT2(undefined)}) (${this.typegen.getSMTTypeFor(ttype).smttypename}@less (seq.nth ${tsval.emitSMT2(undefined)} (+ @ii 1)) (seq.nth ${tsval.emitSMT2(undefined)} @ii)))))`;
-                
-                return SMTFunction.create(ideclname, args, chkrestype, new SMTConst(issorted));
             }
             case "s_list_reduce": {
                 const lt = this.typegen.getMIRType(idecl.params[0].type);

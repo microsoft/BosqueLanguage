@@ -753,7 +753,16 @@ internal entity ListOps provides Some {
 #if CHK_SMALL_ONLY
             return s_blockingfailure<Bool>();
 #else
-            return SeqListOps::s_list_is_sorted<T>[recursive?](ll, cmp);
+            let mask = SeqListOps::s_list_map_pred_idx<T, Bool>[recursive?](ll, recursive? pred(v: T, idx: Nat): Bool => {
+                if(idx == 0n) {
+                    return true;
+                }
+                else {
+                    let vp = SeqListOps::s_list_get<T>(ll, idx - 1n);
+                    return !cmp[recursive?](v, vp);
+                }
+            });
+            return SeqListOps::s_list_all_true(mask);
 #endif
         }
         else {
