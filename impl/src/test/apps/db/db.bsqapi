@@ -49,5 +49,5 @@ function createDefault3DB(): Database {
 
 entrypoint function main(): Bool {
     let dd = createDefault3DB();
-    return !dd.empty(); //dd.numRecords() == 3n;
+    return dd.numRecords() == 3n;
 }

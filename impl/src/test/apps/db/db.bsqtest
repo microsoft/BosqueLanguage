@@ -62,7 +62,7 @@ chktest function createDB_X(forceysm: Bool): Bool {
 }
 
 chktest function createDB3_X(forceysm: Bool): Bool {
-    let dd = createDefaultEmptyDB();
+    let dd = createDefault3DB();
     return dd.numRecords() == 3n;
 }
 
