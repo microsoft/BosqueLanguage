@@ -210,7 +210,7 @@ internal entity MapOps provides Some {
 
         if(mm.is<SeqMap<K, V>>()) {
 #if CHK_SMALL_ONLY
-            return s_blockingfailure<Bool>();
+            return s_blockingfailure<V>();
 #else
             return SeqMapOps::s_map_get<K, V>(mm, k);
 #endif

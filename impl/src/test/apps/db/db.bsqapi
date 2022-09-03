@@ -13,7 +13,7 @@ function createDefaultEmptyDB(): Database {
         List<DBEntryFormat>{
             DBEntryFormat{true, 0n, "User", none},
             DBEntryFormat{false, 1n, "Name", none},
-            DBEntryFormat{false, 2n, "ID", /[a-z]/}
+            DBEntryFormat{false, 2n, "ID", /[a-z]+/}
         },
         Map<String, DBFieldID>{
             "User" => 0n,
@@ -25,7 +25,29 @@ function createDefaultEmptyDB(): Database {
     };
 }
 
+function createDefault3DB(): Database {
+    return Database{
+        "default",
+        LogicalTime::zero,
+        List<DBEntryFormat>{
+            DBEntryFormat{true, 0n, "User", none},
+            DBEntryFormat{false, 1n, "Name", none},
+            DBEntryFormat{false, 2n, "ID", /[a-z]+/}
+        },
+        Map<String, DBFieldID>{
+            "User" => 0n,
+            "Name" => 1n,
+            "ID" => 2n
+        },
+        List<DBRecordData>{
+            List<String>{"--", "Bob", "bob"},
+            List<String>{"--", "Steve", "sam"},
+            List<String>{"--", "Eugene", "az"}
+        }
+    };
+}
+
 entrypoint function main(): Bool {
-    let dd = createDefaultEmptyDB();
-    return dd.empty();
+    let dd = createDefault3DB();
+    return !dd.empty(); //dd.numRecords() == 3n;
 }

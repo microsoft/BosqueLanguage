@@ -363,7 +363,6 @@ public:
 
     static BSQRegexOpt* parse(json j);
     virtual StateID compile(StateID follows, std::vector<NFAOpt*>& states) const = 0;
-    virtual StateID compileReverse(StateID follows, std::vector<NFAOpt*>& states) const = 0;
 };
 
 class BSQLiteralRe : public BSQRegexOpt
@@ -377,7 +376,6 @@ public:
 
     static BSQLiteralRe* parse(json j);
     virtual StateID compile(StateID follows, std::vector<NFAOpt*>& states) const override final;
-    virtual StateID compileReverse(StateID follows, std::vector<NFAOpt*>& states) const override final;
 };
 
 class BSQCharRangeRe : public BSQRegexOpt
@@ -391,7 +389,6 @@ public:
 
     static BSQCharRangeRe* parse(json j);
     virtual StateID compile(StateID follows, std::vector<NFAOpt*>& states) const override final;
-    virtual StateID compileReverse(StateID follows, std::vector<NFAOpt*>& states) const override final;
 };
 
 class BSQCharClassDotRe : public BSQRegexOpt
@@ -402,7 +399,6 @@ public:
 
     static BSQCharClassDotRe* parse(json j);
     virtual StateID compile(StateID follows, std::vector<NFAOpt*>& states) const override final;
-    virtual StateID compileReverse(StateID follows, std::vector<NFAOpt*>& states) const override final;
 };
 
 class BSQStarRepeatRe : public BSQRegexOpt
@@ -419,7 +415,6 @@ public:
 
     static BSQStarRepeatRe* parse(json j);
     virtual StateID compile(StateID follows, std::vector<NFAOpt*>& states) const override final;
-    virtual StateID compileReverse(StateID follows, std::vector<NFAOpt*>& states) const override final;
 };
 
 class BSQPlusRepeatRe : public BSQRegexOpt
@@ -436,7 +431,6 @@ public:
 
     static BSQPlusRepeatRe* parse(json j);
     virtual StateID compile(StateID follows, std::vector<NFAOpt*>& states) const override final;
-    virtual StateID compileReverse(StateID follows, std::vector<NFAOpt*>& states) const override final;
 };
 
 class BSQRangeRepeatRe : public BSQRegexOpt
@@ -455,7 +449,6 @@ public:
 
     static BSQRangeRepeatRe* parse(json j);
     virtual StateID compile(StateID follows, std::vector<NFAOpt*>& states) const override final;
-    virtual StateID compileReverse(StateID follows, std::vector<NFAOpt*>& states) const override final;
 };
 
 class BSQOptionalRe : public BSQRegexOpt
@@ -468,7 +461,6 @@ public:
 
     static BSQOptionalRe* parse(json j);
     virtual StateID compile(StateID follows, std::vector<NFAOpt*>& states) const override final;
-    virtual StateID compileReverse(StateID follows, std::vector<NFAOpt*>& states) const override final;
 };
 
 class BSQAlternationRe : public BSQRegexOpt
@@ -488,7 +480,6 @@ public:
 
     static BSQAlternationRe* parse(json j);
     virtual StateID compile(StateID follows, std::vector<NFAOpt*>& states) const override final;
-    virtual StateID compileReverse(StateID follows, std::vector<NFAOpt*>& states) const override final;
 };
 
 class BSQSequenceRe : public BSQRegexOpt
@@ -508,7 +499,6 @@ public:
 
     static BSQSequenceRe* parse(json j);
     virtual StateID compile(StateID follows, std::vector<NFAOpt*>& states) const override final;
-    virtual StateID compileReverse(StateID follows, std::vector<NFAOpt*>& states) const override final;
 };
 
 class BSQRegex
@@ -517,9 +507,8 @@ public:
     const std::string restr;
     const BSQRegexOpt* re;
     const NFA* nfare;
-    const NFA* nfare_rev;
 
-    BSQRegex(std::string restr, const BSQRegexOpt* re, NFA* nfare, NFA* nfare_rev): restr(restr), re(re), nfare(nfare), nfare_rev(nfare_rev) {;}
+    BSQRegex(std::string restr, const BSQRegexOpt* re, NFA* nfare): restr(restr), re(re), nfare(nfare) {;}
     ~BSQRegex() {;}
 
     static BSQRegex* jparse(json j);
@@ -544,39 +533,6 @@ public:
     {
         StdStringCodeIterator siter(s);
         return this->nfare->match(siter);
-    }
-
-    std::optional<std::pair<size_t, size_t>> find(CharCodeIterator& cci)
-    {
-        return this->nfare->find(cci);
-    }
-
-    std::optional<std::pair<size_t, size_t>> find(std::string& s)
-    {
-        StdStringCodeIterator siter(s);
-        return this->nfare->find(siter);
-    }
-
-    std::optional<size_t> matchLast(CharCodeIterator& cci)
-    {
-        return this->nfare_rev->match(cci);
-    }
-
-    std::optional<size_t> matchLast(std::string& s)
-    {
-        StdStringCodeReverseIterator siter(s);
-        return this->nfare_rev->match(siter);
-    }
-
-    std::optional<std::pair<size_t, size_t>> findLast(CharCodeIterator& cci)
-    {
-        return this->nfare->find(cci);
-    }
-
-    std::optional<std::pair<size_t, size_t>> findLast(std::string& s)
-    {
-        StdStringCodeReverseIterator siter(s);
-        return this->nfare->find(siter);
     }
 
     std::string generate(RandGenerator& rnd)
