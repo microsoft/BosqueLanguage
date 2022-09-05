@@ -133,7 +133,7 @@ class FunctionTypeSignature extends TypeSignature {
     }
 
     getDiagnosticName(): string {
-        return "[FUNCTION SIGNATURE]";
+        return "function (" + this.params.map((p) => p.type.getDiagnosticName()).join(", ") + ")";
     }
 }
 

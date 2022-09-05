@@ -56,14 +56,19 @@ chktest function createDB3(): Bool {
     return dd.numRecords() == 3n;
 }
 
-chktest function createDB_X(forceysm: Bool): Bool {
-    let dd = createDefaultEmptyDB();
-    return dd.empty();
+chktest function db_start(): Bool {
+    var dd = createDefault3DB();
+
+    let ee = Database::startCursor(ref dd);
+    return ee !== none && ee.getOrNone(1) === "Bob";
 }
 
-chktest function createDB3_X(forceysm: Bool): Bool {
-    let dd = createDefault3DB();
-    return dd.numRecords() == 3n;
+chktest function db_empty_add_start(name: String): Bool {
+    let dd = createDefaultEmptyDB();
+    Database::add(ref dd, List<String>{"--", "Bob", "bob"});
+
+    let ee = Database::startCursor(ref dd);
+    return dd.numRecords() == 1n && ee !== none && ee.getOrNone(1) === name;
 }
 
 /*

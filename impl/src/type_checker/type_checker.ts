@@ -929,7 +929,7 @@ class TypeChecker {
         this.checkTemplateTypes(sinfo, invk.terms, rrbinds);
 
         const fsig = this.m_assembly.normalizeTypeFunction(invk.generateSig(), rrbinds);
-        this.raiseErrorIf(sinfo, fsig === undefined, "Invalid function signature");
+        this.raiseErrorIf(sinfo, fsig === undefined, `Invalid function signature: ${invk.generateSig().getDiagnosticName()}`);
 
         const eargs = this.checkArgumentsEvaluationWSig(sinfo, env, fsig as ResolvedFunctionType, implicitBinds, args, optSelfValue, refallowed);
 
