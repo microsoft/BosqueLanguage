@@ -10,16 +10,38 @@ function createDefaultEmptyDB(): Database {
         "default",
         LogicalTime::zero,
         List<DBEntryFormat>{
-            DBEntryFormat{true, "User", 0n, none},
-            DBEntryFormat{false, "Name", 1n, none},
-            DBEntryFormat{false, "ID", 2n, /[a-z]/},
+            DBEntryFormat{true, 0n, "User", none},
+            DBEntryFormat{false, 1n, "Name", none},
+            DBEntryFormat{false, 2n, "ID", /[a-z]+/}
         },
         Map<String, DBFieldID>{
             "User" => 0n,
             "Name" => 1n,
             "ID" => 2n
-        }
+        },
         List<DBRecordData>{
+        }
+    };
+}
+
+function createDefault3DB(): Database {
+    return Database{
+        "default",
+        LogicalTime::zero,
+        List<DBEntryFormat>{
+            DBEntryFormat{true, 0n, "User", none},
+            DBEntryFormat{false, 1n, "Name", none},
+            DBEntryFormat{false, 2n, "ID", /[a-z]+/}
+        },
+        Map<String, DBFieldID>{
+            "User" => 0n,
+            "Name" => 1n,
+            "ID" => 2n
+        },
+        List<DBRecordData>{
+            List<String>{"--", "Bob", "bob"},
+            List<String>{"--", "Steve", "sam"},
+            List<String>{"--", "Eugene", "az"}
         }
     };
 }
@@ -29,6 +51,29 @@ chktest function createDB(): Bool {
     return dd.empty();
 }
 
-errtest function checkErrors(doadvance: Bool): Float {
+chktest function createDB3(): Bool {
+    let dd = createDefault3DB();
+    return dd.numRecords() == 3n;
 }
+
+chktest function db_start(): Bool {
+    var dd = createDefault3DB();
+
+    let ee = Database::startCursor(ref dd);
+    return ee !== none && ee.getOrNone(1) === "Bob";
+}
+
+chktest function db_empty_add_start(name: String): Bool {
+    let dd = createDefaultEmptyDB();
+    Database::add(ref dd, List<String>{"--", "Bob", "bob"});
+
+    let ee = Database::startCursor(ref dd);
+    return dd.numRecords() == 1n && ee !== none && ee.getOrNone(1) === name;
+}
+
+/*
+errtest function checkErrors(doadvance: Bool): Float {
+    return 0.0f;
+}
+*/
 

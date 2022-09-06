@@ -929,7 +929,7 @@ class TypeChecker {
         this.checkTemplateTypes(sinfo, invk.terms, rrbinds);
 
         const fsig = this.m_assembly.normalizeTypeFunction(invk.generateSig(), rrbinds);
-        this.raiseErrorIf(sinfo, fsig === undefined, "Invalid function signature");
+        this.raiseErrorIf(sinfo, fsig === undefined, `Invalid function signature: ${invk.generateSig().getDiagnosticName()}`);
 
         const eargs = this.checkArgumentsEvaluationWSig(sinfo, env, fsig as ResolvedFunctionType, implicitBinds, args, optSelfValue, refallowed);
 
@@ -1825,7 +1825,7 @@ class TypeChecker {
                     if(scodes[j].islocal) {
                         const vinfo = env.lookupVar(cnames[i]) as VarInfo;
 
-                        margs.push(new MIRRegisterArgument(cnames[i]));
+                        margs.push(this.emitInlineConvertToFlow<MIRRegisterArgument>(sinfo, new MIRRegisterArgument(cnames[i]), new ValueType(vinfo.declaredType, vinfo.flowType)));
                         cinfo.push([cname, vinfo.flowType]);
                     }
                     else {
@@ -1847,7 +1847,7 @@ class TypeChecker {
             [...indirectcapture].sort().forEach((vv) => {
                 const vinfo = env.lookupVar(vv) as VarInfo;
 
-                margs.push(new MIRRegisterArgument(vv));
+                margs.push(this.emitInlineConvertToFlow<MIRRegisterArgument>(sinfo, new MIRRegisterArgument(vv), new ValueType(vinfo.declaredType, vinfo.flowType)));
                 cinfo.push([vv, vinfo.flowType]);
             });
         }
@@ -2011,7 +2011,7 @@ class TypeChecker {
                     if(scodes[j].islocal) {
                         const vinfo = env.lookupVar(cnames[i]) as VarInfo;
 
-                        margs.push(new MIRRegisterArgument(cnames[i]));
+                        margs.push(this.emitInlineConvertToFlow<MIRRegisterArgument>(sinfo, new MIRRegisterArgument(cnames[i]), new ValueType(vinfo.declaredType, vinfo.flowType)));
                         cinfo.push([cname, vinfo.flowType]);
                     }
                     else {
@@ -2033,7 +2033,7 @@ class TypeChecker {
             [...indirectcapture].sort().forEach((vv) => {
                 const vinfo = env.lookupVar(vv) as VarInfo;
 
-                margs.push(new MIRRegisterArgument(vv));
+                margs.push(this.emitInlineConvertToFlow<MIRRegisterArgument>(sinfo, new MIRRegisterArgument(vv), new ValueType(vinfo.declaredType, vinfo.flowType)));
                 cinfo.push([vv, vinfo.flowType]);
             });
         }
@@ -2868,7 +2868,7 @@ class TypeChecker {
                 const isigs = opdecls.map((opd) => this.m_assembly.normalizeTypeFunction(opd.invoke.generateSig(), new Map<string, ResolvedType>()) as ResolvedFunctionType);
                 const opidx = this.m_assembly.tryGetUniqueStaticOperatorResolve(rargs.types.map((vt) => vt.flowtype), isigs);
 
-                this.raiseErrorIf(exp.sinfo, opidx === -1 || (opsintro !== undefined && opsintro.isDynamic), "Cannot resolve operator");
+                this.raiseErrorIf(exp.sinfo, opidx === -1 || (opsintro !== undefined && opsintro.isDynamic), `Cannot resolve operator: ${exp.name}`);
                 const opdecl = opidx !== -1 ? opdecls[opidx] : opsintro as NamespaceOperatorDecl;
 
                 return this.checkNamespaceOperatorInvoke(exp.sinfo, env, opdecl, rargs.args, rargs.types, rargs.refs, rargs.pcodes, rargs.cinfo, exp.rec, trgt, refok);
@@ -3011,7 +3011,7 @@ class TypeChecker {
                 const isigs = opdecls.map((opd) => this.m_assembly.normalizeTypeFunction(opd.invoke.generateSig(), new Map<string, ResolvedType>()) as ResolvedFunctionType);
                 const opidx = this.m_assembly.tryGetUniqueStaticOperatorResolve(rargs.types.map((vt) => vt.flowtype), isigs);
 
-                this.raiseErrorIf(exp.sinfo, opidx !== -1 || (opsintro !== undefined && opsintro.isDynamic), "Cannot resolve operator");
+                this.raiseErrorIf(exp.sinfo, opidx !== -1 || (opsintro !== undefined && opsintro.isDynamic), `Cannot resolve operator: ${exp.name}`);
                 const opdecl = opidx !== -1 ? opdecls[opidx] : opsintro as StaticOperatorDecl;
             
                 return this.checkStaticOperatorInvoke(exp.sinfo, env, oodecl, oobinds, opdecl, rargs.args, rargs.types, rargs.refs, rargs.pcodes, rargs.cinfo, exp.rec, trgt, refok); 

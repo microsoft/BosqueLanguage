@@ -50,7 +50,7 @@ entity RayTracer
 	method minIntersection(ray: Ray, scene: Scene): ISect? {
         let imin = scene.things.argMinOrNoneOf<ISect>(
             fn(thing) => thing.intersect(ray),
-            pred(min, val) => val.dist < min.dist
+            pred(a, b) => a.dist < b.dist
         );
 
 		return imin;

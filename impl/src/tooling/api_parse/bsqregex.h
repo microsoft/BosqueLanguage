@@ -21,7 +21,15 @@ public:
     NFAOpt(StateID stateid) : stateid(stateid) {;}
     virtual ~NFAOpt() {;}
 
-    virtual void advance(CharCode c, const std::vector<NFAOpt*>& nfaopts, std::vector<StateID>& nstates) const = 0;
+    virtual void advanceChar(CharCode c, const std::vector<NFAOpt*>& nfaopts, std::vector<StateID>& nstates) const
+    {
+        return;
+    }
+    
+    virtual void advanceEpsilon(const std::vector<NFAOpt*>& nfaopts, std::vector<StateID>& nstates) const
+    {
+        nstates.push_back(this->stateid);
+    }
 
     virtual std::pair<CharCode, StateID> generate(RandGenerator& rnd, const std::vector<NFAOpt*>& nfaopts) const = 0;
 };
@@ -31,11 +39,6 @@ class NFAOptAccept : public NFAOpt
 public:
     NFAOptAccept(StateID stateid) : NFAOpt(stateid) {;}
     virtual ~NFAOptAccept() {;}
-
-    virtual void advance(CharCode c, const std::vector<NFAOpt*>& nfaopts, std::vector<StateID>& nstates) const override final
-    {
-        return;
-    }
 
     virtual std::pair<CharCode, StateID> generate(RandGenerator& rnd, const std::vector<NFAOpt*>& nfaopts) const override final
     {
@@ -52,7 +55,7 @@ public:
     NFAOptCharCode(StateID stateid, CharCode c, StateID follow) : NFAOpt(stateid), c(c), follow(follow) {;}
     virtual ~NFAOptCharCode() {;}
 
-    virtual void advance(CharCode c, const std::vector<NFAOpt*>& nfaopts, std::vector<StateID>& nstates) const override final
+    virtual void advanceChar(CharCode c, const std::vector<NFAOpt*>& nfaopts, std::vector<StateID>& nstates) const override final
     {
         if(this->c == c)
         {
@@ -76,7 +79,7 @@ public:
     NFAOptRange(StateID stateid, bool compliment, std::vector<SingleCharRange> ranges, StateID follow) : NFAOpt(stateid), compliment(compliment), ranges(ranges), follow(follow) {;}
     virtual ~NFAOptRange() {;}
 
-    virtual void advance(CharCode c, const std::vector<NFAOpt*>& nfaopts, std::vector<StateID>& nstates) const override final
+    virtual void advanceChar(CharCode c, const std::vector<NFAOpt*>& nfaopts, std::vector<StateID>& nstates) const override final
     {
         auto chkrng = std::find_if(this->ranges.cbegin(), this->ranges.cend(), [c](const SingleCharRange& rr) {
             return (rr.low <= c && c <= rr.high);
@@ -149,7 +152,7 @@ public:
     NFAOptDot(StateID stateid, StateID follow) : NFAOpt(stateid), follow(follow) {;}
     virtual ~NFAOptDot() {;}
 
-    virtual void advance(CharCode c, const std::vector<NFAOpt*>& nfaopts, std::vector<StateID>& nstates) const override final
+    virtual void advanceChar(CharCode c, const std::vector<NFAOpt*>& nfaopts, std::vector<StateID>& nstates) const override final
     {
         nstates.push_back(this->follow);
     }
@@ -169,11 +172,11 @@ public:
     NFAOptAlternate(StateID stateid, std::vector<StateID> follows) : NFAOpt(stateid), follows(follows) {;}
     virtual ~NFAOptAlternate() {;}
 
-    virtual void advance(CharCode c, const std::vector<NFAOpt*>& nfaopts, std::vector<StateID>& nstates) const override final
+    virtual void advanceEpsilon(const std::vector<NFAOpt*>& nfaopts, std::vector<StateID>& nstates) const override final
     {
         for(size_t i = 0; i < this->follows.size(); ++i)
         {
-            nfaopts[this->follows[i]]->advance(c, nfaopts, nstates);
+            nfaopts[this->follows[i]]->advanceEpsilon(nfaopts, nstates);
         }
     }
 
@@ -195,10 +198,10 @@ public:
     NFAOptStar(StateID stateid, StateID matchfollow, StateID skipfollow) : NFAOpt(stateid), matchfollow(matchfollow), skipfollow(skipfollow) {;}
     virtual ~NFAOptStar() {;}
 
-    virtual void advance(CharCode c, const std::vector<NFAOpt*>& nfaopts, std::vector<StateID>& nstates) const override final
+    virtual void advanceEpsilon(const std::vector<NFAOpt*>& nfaopts, std::vector<StateID>& nstates) const override final
     {
-        nfaopts[this->matchfollow]->advance(c, nfaopts, nstates);
-        nfaopts[this->skipfollow]->advance(c, nfaopts, nstates);
+        nfaopts[this->matchfollow]->advanceEpsilon(nfaopts, nstates);
+        nfaopts[this->skipfollow]->advanceEpsilon(nfaopts, nstates);
     }
 
     virtual std::pair<CharCode, StateID> generate(RandGenerator& rnd, const std::vector<NFAOpt*>& nfaopts) const override final
@@ -233,24 +236,35 @@ public:
 
     bool test(CharCodeIterator& cci) const
     {
-        std::vector<StateID> cstates = { this->startstate };
-        std::vector<StateID> nstates = { };
-
+        std::vector<StateID> cstates;
+        this->nfaopts[this->startstate]->advanceEpsilon(this->nfaopts, cstates);
+        
         while(cci.valid())
         {
             auto cc = cci.get();
             cci.advance();
 
+            std::vector<StateID> nstates;
             for(size_t i = 0; i < cstates.size(); ++i)
             {
-                this->nfaopts[cstates[i]]->advance(cc, this->nfaopts, nstates);
+                this->nfaopts[cstates[i]]->advanceChar(cc, this->nfaopts, nstates);
             }
 
             std::sort(nstates.begin(), nstates.end());
             auto nend = std::unique(nstates.begin(), nstates.end());
             nstates.erase(nend, nstates.end());
 
-            cstates = std::move(nstates);
+            std::vector<StateID> estates;
+            for(size_t i = 0; i < nstates.size(); ++i)
+            {
+                this->nfaopts[nstates[i]]->advanceEpsilon(this->nfaopts, estates);
+            }
+
+            std::sort(estates.begin(), estates.end());
+            auto eend = std::unique(estates.begin(), estates.end());
+            estates.erase(eend, estates.end());
+
+            cstates = std::move(estates);
             if(cstates.empty())
             {
                 return false;
@@ -258,80 +272,6 @@ public:
         }
 
         return std::find(cstates.cbegin(), cstates.cend(), this->acceptstate) != cstates.cend();
-    }
-
-    std::optional<size_t> match(CharCodeIterator& cci) const
-    {
-        std::vector<StateID> cstates = { this->startstate };
-        std::vector<StateID> nstates = { };
-
-        while(cci.valid())
-        {
-            auto cc = cci.get();
-            cci.advance();
-
-            for(size_t i = 0; i < cstates.size(); ++i)
-            {
-                this->nfaopts[cstates[i]]->advance(cc, this->nfaopts, nstates);
-            }
-
-            std::sort(nstates.begin(), nstates.end());
-            auto nend = std::unique(nstates.begin(), nstates.end());
-            nstates.erase(nend, nstates.end());
-
-            cstates = std::move(nstates);
-            if(cstates.empty())
-            {
-                return std::nullopt;
-            }
-
-            if(std::find(cstates.cbegin(), cstates.cend(), this->acceptstate) != cstates.cend())
-            {
-                return std::make_optional(cci.distance());
-            }
-        }
-
-        return std::nullopt;
-    }
-
-    std::optional<std::pair<size_t, size_t>> find(CharCodeIterator& cci) const
-    {
-        size_t rdist = cci.distance();
-        std::vector<StateID> cstates = { this->startstate };
-        std::vector<StateID> nstates = { };
-
-        while(cci.valid())
-        {
-            auto cc = cci.get();
-            cci.advance();
-
-            for(size_t i = 0; i < cstates.size(); ++i)
-            {
-                this->nfaopts[cstates[i]]->advance(cc, this->nfaopts, nstates);
-            }
-
-            std::sort(nstates.begin(), nstates.end());
-            auto nend = std::unique(nstates.begin(), nstates.end());
-            nstates.erase(nend, nstates.end());
-
-            cstates = std::move(nstates);
-            if(cstates.empty())
-            {
-                //
-                //TODO: this is a pretty slow way to search -- we probably want to do better in the future
-                //
-                cstates = { this->startstate };
-                rdist++;
-                cci.resetTo(rdist);
-            }
-
-            if(std::find(cstates.cbegin(), cstates.cend(), this->acceptstate) != cstates.cend())
-            {
-                return std::make_optional(std::make_pair(rdist, cci.distance() - rdist));
-            }
-        }
-
-        return std::nullopt;
     }
 
     std::string generate(RandGenerator& rnd) const
@@ -363,7 +303,6 @@ public:
 
     static BSQRegexOpt* parse(json j);
     virtual StateID compile(StateID follows, std::vector<NFAOpt*>& states) const = 0;
-    virtual StateID compileReverse(StateID follows, std::vector<NFAOpt*>& states) const = 0;
 };
 
 class BSQLiteralRe : public BSQRegexOpt
@@ -377,7 +316,6 @@ public:
 
     static BSQLiteralRe* parse(json j);
     virtual StateID compile(StateID follows, std::vector<NFAOpt*>& states) const override final;
-    virtual StateID compileReverse(StateID follows, std::vector<NFAOpt*>& states) const override final;
 };
 
 class BSQCharRangeRe : public BSQRegexOpt
@@ -391,7 +329,6 @@ public:
 
     static BSQCharRangeRe* parse(json j);
     virtual StateID compile(StateID follows, std::vector<NFAOpt*>& states) const override final;
-    virtual StateID compileReverse(StateID follows, std::vector<NFAOpt*>& states) const override final;
 };
 
 class BSQCharClassDotRe : public BSQRegexOpt
@@ -402,7 +339,6 @@ public:
 
     static BSQCharClassDotRe* parse(json j);
     virtual StateID compile(StateID follows, std::vector<NFAOpt*>& states) const override final;
-    virtual StateID compileReverse(StateID follows, std::vector<NFAOpt*>& states) const override final;
 };
 
 class BSQStarRepeatRe : public BSQRegexOpt
@@ -419,7 +355,6 @@ public:
 
     static BSQStarRepeatRe* parse(json j);
     virtual StateID compile(StateID follows, std::vector<NFAOpt*>& states) const override final;
-    virtual StateID compileReverse(StateID follows, std::vector<NFAOpt*>& states) const override final;
 };
 
 class BSQPlusRepeatRe : public BSQRegexOpt
@@ -436,7 +371,6 @@ public:
 
     static BSQPlusRepeatRe* parse(json j);
     virtual StateID compile(StateID follows, std::vector<NFAOpt*>& states) const override final;
-    virtual StateID compileReverse(StateID follows, std::vector<NFAOpt*>& states) const override final;
 };
 
 class BSQRangeRepeatRe : public BSQRegexOpt
@@ -455,7 +389,6 @@ public:
 
     static BSQRangeRepeatRe* parse(json j);
     virtual StateID compile(StateID follows, std::vector<NFAOpt*>& states) const override final;
-    virtual StateID compileReverse(StateID follows, std::vector<NFAOpt*>& states) const override final;
 };
 
 class BSQOptionalRe : public BSQRegexOpt
@@ -468,7 +401,6 @@ public:
 
     static BSQOptionalRe* parse(json j);
     virtual StateID compile(StateID follows, std::vector<NFAOpt*>& states) const override final;
-    virtual StateID compileReverse(StateID follows, std::vector<NFAOpt*>& states) const override final;
 };
 
 class BSQAlternationRe : public BSQRegexOpt
@@ -488,7 +420,6 @@ public:
 
     static BSQAlternationRe* parse(json j);
     virtual StateID compile(StateID follows, std::vector<NFAOpt*>& states) const override final;
-    virtual StateID compileReverse(StateID follows, std::vector<NFAOpt*>& states) const override final;
 };
 
 class BSQSequenceRe : public BSQRegexOpt
@@ -508,7 +439,6 @@ public:
 
     static BSQSequenceRe* parse(json j);
     virtual StateID compile(StateID follows, std::vector<NFAOpt*>& states) const override final;
-    virtual StateID compileReverse(StateID follows, std::vector<NFAOpt*>& states) const override final;
 };
 
 class BSQRegex
@@ -517,9 +447,8 @@ public:
     const std::string restr;
     const BSQRegexOpt* re;
     const NFA* nfare;
-    const NFA* nfare_rev;
 
-    BSQRegex(std::string restr, const BSQRegexOpt* re, NFA* nfare, NFA* nfare_rev): restr(restr), re(re), nfare(nfare), nfare_rev(nfare_rev) {;}
+    BSQRegex(std::string restr, const BSQRegexOpt* re, NFA* nfare): restr(restr), re(re), nfare(nfare) {;}
     ~BSQRegex() {;}
 
     static BSQRegex* jparse(json j);
@@ -533,50 +462,6 @@ public:
     {
         StdStringCodeIterator siter(s);
         return this->nfare->test(siter);
-    }
-
-    std::optional<size_t> match(CharCodeIterator& cci)
-    {
-        return this->nfare->match(cci);
-    }
-
-    std::optional<size_t> match(std::string& s)
-    {
-        StdStringCodeIterator siter(s);
-        return this->nfare->match(siter);
-    }
-
-    std::optional<std::pair<size_t, size_t>> find(CharCodeIterator& cci)
-    {
-        return this->nfare->find(cci);
-    }
-
-    std::optional<std::pair<size_t, size_t>> find(std::string& s)
-    {
-        StdStringCodeIterator siter(s);
-        return this->nfare->find(siter);
-    }
-
-    std::optional<size_t> matchLast(CharCodeIterator& cci)
-    {
-        return this->nfare_rev->match(cci);
-    }
-
-    std::optional<size_t> matchLast(std::string& s)
-    {
-        StdStringCodeReverseIterator siter(s);
-        return this->nfare_rev->match(siter);
-    }
-
-    std::optional<std::pair<size_t, size_t>> findLast(CharCodeIterator& cci)
-    {
-        return this->nfare->find(cci);
-    }
-
-    std::optional<std::pair<size_t, size_t>> findLast(std::string& s)
-    {
-        StdStringCodeReverseIterator siter(s);
-        return this->nfare->find(siter);
     }
 
     std::string generate(RandGenerator& rnd)
