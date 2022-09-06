@@ -16,10 +16,10 @@ let builddir = path.join(z3dir, "build");
 
 let runconfig = "";
 if(process.platform === "darwin") {
-    runconfig = "CXX=clang++ CC=clang FPMATH_ENABLED=False python scripts/mk_make.py --arm64=true --staticlib";
+    runconfig = "FPMATH_ENABLED=False python scripts/mk_make.py --arm64=true --staticlib";
 }
 else if(process.platform === "linux") {
-    runconfig = "CXX=clang++ CC=clang python scripts/mk_make.py --staticlib";
+    runconfig = "python scripts/mk_make.py --staticlib";
 }
 else {
     runconfig = "python scripts/mk_make.py -x";
