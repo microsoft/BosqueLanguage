@@ -529,11 +529,11 @@ class ICPPAssembly
 
     private processPrimitiveMapEntityDecl(edecl: MIRPrimitiveMapEntityTypeDecl, icpptype: ICPPLayoutInfo): object {
         return {
-            ptag: ICPPParseTag.ListTag,
+            ptag: ICPPParseTag.MapTag,
             tkey: icpptype.tkey,
             name: edecl.tkey,
-            ktype: edecl.getTypeK(),
-            vtype: edecl.getTypeV()
+            ktype: edecl.getTypeK().typeID,
+            vtype: edecl.getTypeV().typeID
         };
     }
 

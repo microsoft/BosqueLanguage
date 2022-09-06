@@ -14,12 +14,12 @@ entity DBEntryFormat provides APIType {
     field optFieldValidator: Regex?;
 
     method checkValidator(value: String): Bool {
-        if(this.optFieldValidator === none) {
+        if(this.isHeaderField) {
             return value === "--";
         }
-        else {
-            return this.optFieldValidator.accepts(value);
-        }
+
+        let ofv = this.optFieldValidator;
+        return (ofv === none) || ofv.accepts(value);
     }
 
     method checkFieldIdInfo(fmap: Map<String, DBFieldID>): Bool {

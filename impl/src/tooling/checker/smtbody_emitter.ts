@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
 //-------------------------------------------------------------------------------------------------------
 
-import { MIRAssembly, MIRConceptType, MIRConstructableEntityTypeDecl, MIREntityType, MIREntityTypeDecl, MIREphemeralListType, MIRFieldDecl, MIRInvokeBodyDecl, MIRInvokeDecl, MIRInvokePrimitiveDecl, MIRObjectEntityTypeDecl, MIRPCode, MIRPrimitiveCollectionEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRRecordType, MIRTupleType, MIRType } from "../../compiler/mir_assembly";
+import { MIRAssembly, MIRConceptType, MIRConstructableEntityTypeDecl, MIREntityType, MIREntityTypeDecl, MIREphemeralListType, MIRFieldDecl, MIRInternalEntityTypeDecl, MIRInvokeBodyDecl, MIRInvokeDecl, MIRInvokePrimitiveDecl, MIRObjectEntityTypeDecl, MIRPCode, MIRPrimitiveCollectionEntityTypeDecl, MIRPrimitiveInternalEntityTypeDecl, MIRPrimitiveListEntityTypeDecl, MIRPrimitiveMapEntityTypeDecl, MIRPrimitiveQueueEntityTypeDecl, MIRPrimitiveSetEntityTypeDecl, MIRPrimitiveStackEntityTypeDecl, MIRRecordType, MIRTupleType, MIRType } from "../../compiler/mir_assembly";
 import { SMTTypeEmitter } from "./smttype_emitter";
 import { MIRAbort, MIRArgGuard, MIRArgument, MIRAssertCheck, MIRBasicBlock, MIRBinKeyEq, MIRBinKeyLess, MIRConstantArgument, MIRConstantBigInt, MIRConstantBigNat, MIRConstantDataString, MIRConstantDecimal, MIRConstantFalse, MIRConstantFloat, MIRConstantInt, MIRConstantNat, MIRConstantNone, MIRConstantNothing, MIRConstantRational, MIRConstantRegex, MIRConstantString, MIRConstantStringOf, MIRConstantTrue, MIRConstantTypedNumber, MIRConstructorEntityDirect, MIRConstructorEphemeralList, MIRConstructorPrimaryCollectionEmpty, MIRConstructorPrimaryCollectionOneElement, MIRConstructorPrimaryCollectionSingletons, MIRConstructorRecord, MIRConstructorRecordFromEphemeralList, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConvertValue, MIRDeclareGuardFlagLocation, MIREntityProjectToEphemeral, MIREntityUpdate, MIREphemeralListExtend, MIRExtract, MIRFieldKey, MIRGlobalVariable, MIRGuard, MIRGuardedOptionInject, MIRInject, MIRInvokeFixedFunction, MIRInvokeKey, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRIsTypeOf, MIRJump, MIRJumpCond, MIRJumpNone, MIRLoadConst, MIRLoadField, MIRLoadFromEpehmeralList, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadUnintVariableValue, MIRLogicAction, MIRMaskGuard, MIRMultiLoadFromEpehmeralList, MIROp, MIROpTag, MIRPhi, MIRPrefixNotOp, MIRRecordHasProperty, MIRRecordProjectToEphemeral, MIRRecordUpdate, MIRRegisterArgument, MIRRegisterAssign, MIRResolvedTypeKey, MIRReturnAssign, MIRReturnAssignOfCons, MIRSetConstantGuardFlag, MIRSliceEpehmeralList, MIRStatmentGuard, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRTupleHasIndex, MIRTupleProjectToEphemeral, MIRTupleUpdate, MIRVirtualMethodKey } from "../../compiler/mir_ops";
 import { SMTCallSimple, SMTCallGeneral, SMTCallGeneralWOptMask, SMTCond, SMTConst, SMTExp, SMTIf, SMTLet, SMTLetMulti, SMTMaskConstruct, SMTVar, SMTCallGeneralWPassThroughMask, SMTTypeInfo, VerifierOptions } from "./smt_exp";
@@ -2789,6 +2789,12 @@ class SMTBodyEmitter {
                 const dd = new SMTCallSimple("BRelativeTime@cons", args.map((arg) => new SMTVar(arg.vname)));
                 return SMTFunction.create(ideclname, args, chkrestype, dd);
             }
+            case "logicaltime_zero": {
+                return SMTFunction.create(ideclname, args, chkrestype, new SMTConst("0"));
+            }
+            case "logicaltime_increment": {
+                return SMTFunction.create(ideclname, args, chkrestype, new SMTCallSimple("+", [new SMTVar(args[0].vname), new SMTConst("1")]));
+            }
             case "isotimestamp_create": {
                 const dd = new SMTCallSimple("BISOTimeStamp@cons", args.map((arg) => new SMTVar(arg.vname)));
                 return SMTFunction.create(ideclname, args, chkrestype, dd);
@@ -2843,6 +2849,7 @@ class SMTBodyEmitter {
             case "s_list_index": {
                 //TODO: would special Seq constructor support improve this (see also fill)
 
+                assert(false, "TODO: Change this to use a reduce and error to force the order -- no forall in there. See fill as well.");
                 const genlist = new SMTCallSimple("@@SortedIntSeq@@Create", args.map((arg) => new SMTVar(arg.vname)));
                 const chklist = SMTCallSimple.makeAndOf(
                     new SMTCallSimple("@@CheckIntSeqLen", [new SMTVar("seq"), new SMTVar(args[2].vname)]),
@@ -2874,6 +2881,7 @@ class SMTBodyEmitter {
                     this.requiredUFOps.push(newfillop);
                 }
 
+                assert(false, "TODO: Change this to use a reduce and error to force the order -- no forall in there");
                 const cbody = new SMTLet("seq", new SMTCallSimple(fillfun, [new SMTVar(args[1].vname)]), 
                     new SMTIf(SMTCallSimple.makeAndOf(
                             SMTCallSimple.makeEq(new SMTCallSimple("seq.len", [new SMTVar("seq")]), new SMTVar(args[0].vname)),
@@ -3066,13 +3074,13 @@ class SMTBodyEmitter {
                     ]);
 
                     const cerrtrgt = new SMTCallSimple("seq.foldl", [
-                        new SMTConst(`(lambda ((@@acc Bool) (@@r ${this.typegen.generateResultType(this.typegen.getMIRType("Bool")).smttypename})) ${SMTCallSimple.makeOrOf(new SMTVar("@@acc"), SMTCallSimple.makeEq(new SMTVar("@@r"), trgterr))}`),
+                        new SMTConst(`(lambda ((@@acc Bool) (@@r ${this.typegen.generateResultType(this.typegen.getMIRType("Bool")).smttypename})) ${SMTCallSimple.makeOrOf(new SMTVar("@@acc"), SMTCallSimple.makeEq(new SMTVar("@@r"), trgterr)).emitSMT2(undefined)})`),
                         new SMTConst("false"),
                         new SMTVar("@maparray")
                     ]);
 
                     const cerrother = new SMTCallSimple("seq.foldl", [
-                        new SMTConst(`(lambda ((@@acc Bool) (@@r ${this.typegen.generateResultType(this.typegen.getMIRType("Bool")).smttypename})) ${SMTCallSimple.makeOrOf(new SMTVar("@@acc"), SMTCallSimple.makeEq(new SMTVar("@@r"), othererr))}`),
+                        new SMTConst(`(lambda ((@@acc Bool) (@@r ${this.typegen.generateResultType(this.typegen.getMIRType("Bool")).smttypename})) ${SMTCallSimple.makeOrOf(new SMTVar("@@acc"), SMTCallSimple.makeEq(new SMTVar("@@r"), othererr)).emitSMT2(undefined)})`),
                         new SMTConst("false"),
                         new SMTVar("@maparray")
                     ]);
@@ -3421,7 +3429,7 @@ class SMTBodyEmitter {
                 const lm = this.typegen.getMIRType(idecl.params[1].type);
                 const msval = this.typegen.generateSeqListTypeGetData(lm, new SMTVar(args[0].vname));
 
-                const ttype = (this.assembly.entityDecls.get(lt.typeID) as MIRPrimitiveListEntityTypeDecl).getTypeT();
+                const ttype = (this.assembly.entityDecls.get(lt.typeID) as MIRInternalEntityTypeDecl).terms.get("T") as MIRType;
                 const emptyconst = new SMTConst(`(as seq.empty (Seq ${this.typegen.getSMTTypeFor(ttype).smttypename}))`);
 
                 const foldcall = new SMTCallSimple("seq.foldli", [
@@ -3437,7 +3445,7 @@ class SMTBodyEmitter {
                 const lt = this.typegen.getMIRType(idecl.params[0].type);
                 const tsval = this.typegen.generateSeqListTypeGetData(lt, new SMTVar(args[0].vname));
 
-                const ttype = (this.assembly.entityDecls.get(lt.typeID) as MIRPrimitiveListEntityTypeDecl).getTypeT();
+                const ttype = (this.assembly.entityDecls.get(lt.typeID) as MIRInternalEntityTypeDecl).terms.get("T") as MIRType;
                 const emptyconst = new SMTConst(`(as seq.empty (Seq ${this.typegen.getSMTTypeFor(ttype).smttypename}))`);
 
                 const foldcall = new SMTCallSimple("seq.foldl", [
@@ -3447,17 +3455,6 @@ class SMTBodyEmitter {
                 ]);
 
                 return SMTFunction.create(ideclname, args, chkrestype, this.typegen.generateSeqListTypeConstructorSeq(mirrestype, foldcall));
-            }
-            case "s_list_is_sorted": {
-                const lt = this.typegen.getMIRType(idecl.params[0].type);
-                const tsval = this.typegen.generateSeqListTypeGetData(lt, new SMTVar(args[0].vname));
-                const lenm1 = this.typegen.generateSeqListTypeGetLengthMinus1(lt, new SMTVar(args[0].vname));
-
-                const ttype = (this.assembly.entityDecls.get(lt.typeID) as MIRPrimitiveListEntityTypeDecl).getTypeT();
-                
-                const issorted = `(not (exists ((@ii Int)) (and (<= 0 @ii) (< @ii ${lenm1.emitSMT2(undefined)}) (${this.typegen.getSMTTypeFor(ttype).smttypename}@less (seq.nth ${tsval.emitSMT2(undefined)} (+ @ii 1)) (seq.nth ${tsval.emitSMT2(undefined)} @ii))))`;
-                
-                return SMTFunction.create(ideclname, args, chkrestype, new SMTConst(issorted));
             }
             case "s_list_reduce": {
                 const lt = this.typegen.getMIRType(idecl.params[0].type);
@@ -3829,7 +3826,7 @@ class SMTBodyEmitter {
                 const mt = this.typegen.getMIRType(idecl.params[0].type);
                 const mval = this.typegen.generateSeqMapTypeGetData(mt, new SMTVar(args[0].vname));
                 
-                const ktype = (this.assembly.entityDecls.get(mt.typeID) as MIRPrimitiveMapEntityTypeDecl).getTypeK();
+                const ktype = this.typegen.getMIRType(idecl.params[1].type);
                 const kless = `${this.typegen.getSMTTypeFor(ktype).smttypename}@less`;
 
                 const entrytype = this.typegen.generateSeqMapEntryType(mt);
@@ -3847,14 +3844,16 @@ class SMTBodyEmitter {
                     mval
                 ]);
 
+                const entrycons = this.typegen.generateSeqMapEntryTypeConstructor(mt, new SMTVar(args[1].vname), new SMTVar(args[2].vname));
+
                 const cbody = new SMTLet("@@idx", idxbody,
                     new SMTIf(SMTCallSimple.makeEq(new SMTVar("@@idx"), new SMTConst("-1")),
-                        this.typegen.generateSeqMapTypeConstructor(mirrestype, new SMTCallSimple("seq.++", [mval, new SMTCallSimple("seq.unit", [new SMTVar(args[1].vname)])])),
+                        this.typegen.generateSeqMapTypeConstructor(mirrestype, new SMTCallSimple("seq.++", [mval, new SMTCallSimple("seq.unit", [entrycons])])),
                         this.typegen.generateSeqMapTypeConstructor(mirrestype, new SMTCallSimple("seq.++", 
                         [   
-                            new SMTCallSimple("seq.extract", [new SMTVar("mval"), new SMTConst("0"), new SMTVar("@@idx")]),
-                            new SMTCallSimple("seq.unit", [new SMTVar(args[1].vname)]),
-                            new SMTCallSimple("seq.extract", [new SMTVar("mval"), new SMTVar("@@idx"), new SMTCallSimple("-", [this.typegen.generateSeqMapTypeGetLength(mirrestype, new SMTVar(args[0].vname)), new SMTVar("@@idx")])])
+                            new SMTCallSimple("seq.extract", [mval, new SMTConst("0"), new SMTVar("@@idx")]),
+                            new SMTCallSimple("seq.unit", [entrycons]),
+                            new SMTCallSimple("seq.extract", [mval, new SMTVar("@@idx"), new SMTCallSimple("-", [this.typegen.generateSeqMapTypeGetLength(mirrestype, new SMTVar(args[0].vname)), new SMTVar("@@idx")])])
                         ])),
                     )
                 );
@@ -3882,11 +3881,13 @@ class SMTBodyEmitter {
                     mval
                 ]);
 
+                const entrycons = this.typegen.generateSeqMapEntryTypeConstructor(mt, new SMTVar(args[1].vname), new SMTVar(args[2].vname));
+
                 const cbody = new SMTLet("@@idx", idxbody,
                     this.typegen.generateSeqMapTypeConstructor(mirrestype, new SMTCallSimple("seq.++", 
                     [   
                         new SMTCallSimple("seq.extract", [mval, new SMTConst("0"), new SMTVar("@@idx")]),
-                        new SMTCallSimple("seq.unit", [new SMTVar(args[1].vname)]),
+                        new SMTCallSimple("seq.unit", [entrycons]),
                         new SMTCallSimple("seq.extract", [mval,
                         new SMTCallSimple("+", [new SMTVar("@@idx"), new SMTConst("1")]),
                         new SMTCallSimple("-", [this.typegen.generateSeqMapTypeGetLength(mirrestype, new SMTVar(args[0].vname)), new SMTCallSimple("+", [new SMTVar("@@idx"), new SMTConst("1")])

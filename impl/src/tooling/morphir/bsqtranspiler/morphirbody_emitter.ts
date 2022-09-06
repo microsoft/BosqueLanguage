@@ -2601,6 +2601,12 @@ class MorphirBodyEmitter {
                 const dd = new MorphirCallSimple("brelativetime_cons", args.map((arg) => new MorphirVar(arg.vname)));
                 return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);
             }
+            case "logicaltime_zero": {
+                return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new MorphirConst("0"));
+            }
+            case "logicaltime_increment": {
+                return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, new MorphirCallSimple("+", [new MorphirVar(args[0].vname), new MorphirConst("1")], true));
+            }
             case "isotimestamp_create": {
                 const dd = new MorphirCallSimple("bisotimestamp_cons", args.map((arg) => new MorphirVar(arg.vname)));
                 return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);

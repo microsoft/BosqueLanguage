@@ -10,7 +10,7 @@ entrypoint function main(): Color {
     let scene = RayTracer::createDefaultScene();
     let clr = tracer.renderPixel(scene, 4, 3);
 
-    return clr;
+    return clr; //{blue=0.7595520248956552, green=0.896312128581779, red=0.9388144506120109}
 }
 
 

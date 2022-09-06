@@ -145,8 +145,6 @@ public:
 
     inline void pop()
     {
-        assert(this->valid());
-
         this->lcurr = this->iterstack.back();
         this->iterstack.pop_back();
     }

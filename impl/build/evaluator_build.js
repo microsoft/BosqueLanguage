@@ -32,7 +32,7 @@ if(process.platform === "darwin") {
 }
 else if(process.platform === "linux") {
     compiler = "clang++";
-    ccflags = (mode === "debug" ? "-Og -g" : "-O2") + " -Wall -std=c++20 -pthread";
+    ccflags = (mode === "debug" ? "-Og -g" : "-O2") + " -Wall -std=c++2a -pthread";
     includes = includeheaders.map((ih) => `-I ${ih}`).join(" ");
     z3lib = path.join(includebase, "/linux/z3/bin/libz3.a")
     outfile = "-o " + outexec + "/chk";

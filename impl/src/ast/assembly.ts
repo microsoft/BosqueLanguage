@@ -1621,7 +1621,7 @@ class Assembly {
 
     addLiteralRegex(re: BSQRegex) {
         const ere = this.m_literalRegexs.findIndex((lre) => lre.restr === re.restr);
-        if(ere !== -1) {
+        if(ere === -1) {
             this.m_literalRegexs.push(re);
         }
     }

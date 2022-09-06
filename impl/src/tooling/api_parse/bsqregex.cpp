@@ -71,19 +71,6 @@ StateID BSQLiteralRe::compile(StateID follows, std::vector<NFAOpt*>& states) con
     return follows;
 }
 
-StateID BSQLiteralRe::compileReverse(StateID follows, std::vector<NFAOpt*>& states) const
-{
-    for(int64_t i = 0; i < this->utf8codes.size(); ++i)
-    {
-        auto thisstate = (StateID)states.size();
-        states.push_back(new NFAOptCharCode(thisstate, this->utf8codes[i], follows));
-
-        follows = thisstate;
-    }
-
-    return follows;
-}
-
 BSQCharRangeRe* BSQCharRangeRe::parse(json j)
 {
     const bool compliment = j["compliment"].get<bool>();
@@ -108,28 +95,12 @@ StateID BSQCharRangeRe::compile(StateID follows, std::vector<NFAOpt*>& states) c
     return thisstate;
 }
 
-StateID BSQCharRangeRe::compileReverse(StateID follows, std::vector<NFAOpt*>& states) const
-{
-    auto thisstate = (StateID)states.size();
-    states.push_back(new NFAOptRange(thisstate, this->compliment, this->ranges, follows));
-
-    return thisstate;
-}
-
 BSQCharClassDotRe* BSQCharClassDotRe::parse(json j)
 {
     return new BSQCharClassDotRe();
 }
 
 StateID BSQCharClassDotRe::compile(StateID follows, std::vector<NFAOpt*>& states) const
-{
-    auto thisstate = (StateID)states.size();
-    states.push_back(new NFAOptDot(thisstate, follows));
-
-    return thisstate;
-}
-
-StateID BSQCharClassDotRe::compileReverse(StateID follows, std::vector<NFAOpt*>& states) const
 {
     auto thisstate = (StateID)states.size();
     states.push_back(new NFAOptDot(thisstate, follows));
@@ -149,21 +120,13 @@ StateID BSQStarRepeatRe::compile(StateID follows, std::vector<NFAOpt*>& states) 
     auto thisstate = (StateID)states.size();
     states.push_back(nullptr); //placeholder
 
-    auto optfollows = this->opt->compile(follows, states);
+    auto optfollows = this->opt->compile(thisstate, states);
     states[thisstate] = new NFAOptStar(thisstate, optfollows, follows);
 
-    return thisstate;
-}
+    auto altstate = (StateID)states.size();
+    states.push_back(new NFAOptAlternate(altstate, { optfollows, follows }));
 
-StateID BSQStarRepeatRe::compileReverse(StateID follows, std::vector<NFAOpt*>& states) const
-{
-    auto thisstate = (StateID)states.size();
-    states.push_back(nullptr); //placeholder
-
-    auto optfollows = this->opt->compileReverse(follows, states);
-    states[thisstate] = new NFAOptStar(thisstate, optfollows, follows);
-
-    return thisstate;
+    return altstate;
 }
 
 BSQPlusRepeatRe* BSQPlusRepeatRe::parse(json j)
@@ -178,21 +141,10 @@ StateID BSQPlusRepeatRe::compile(StateID follows, std::vector<NFAOpt*>& states) 
     auto thisstate = (StateID)states.size();
     states.push_back(nullptr); //placeholder
 
-    auto optfollows = this->opt->compile(follows, states);
+    auto optfollows = this->opt->compile(thisstate, states);
     states[thisstate] = new NFAOptStar(thisstate, optfollows, follows);
 
-    return this->opt->compile(thisstate, states);
-}
-
-StateID BSQPlusRepeatRe::compileReverse(StateID follows, std::vector<NFAOpt*>& states) const
-{
-    auto thisstate = (StateID)states.size();
-    states.push_back(nullptr); //placeholder
-
-    auto optfollows = this->opt->compileReverse(follows, states);
-    states[thisstate] = new NFAOptStar(thisstate, optfollows, follows);
-
-    return this->opt->compile(thisstate, states);
+    return thisstate;
 }
 
 BSQRangeRepeatRe* BSQRangeRepeatRe::parse(json j)
@@ -225,27 +177,6 @@ StateID BSQRangeRepeatRe::compile(StateID follows, std::vector<NFAOpt*>& states)
     return follows;
 }
 
-StateID BSQRangeRepeatRe::compileReverse(StateID follows, std::vector<NFAOpt*>& states) const
-{
-    auto followfinal = follows;
-    for(int64_t i = this->high; i > this->low; --i)
-    {
-        auto followopt = this->opt->compileReverse(follows, states);
-
-        auto thisstate = (StateID)states.size();
-        states.push_back(new NFAOptAlternate(thisstate, { followopt, followfinal }));
-
-        follows = thisstate;
-    }
-
-    for(int64_t i = this->low; i > 0; --i)
-    {
-        follows = this->opt->compileReverse(follows, states);
-    }
-
-    return follows;
-}
-
 BSQOptionalRe* BSQOptionalRe::parse(json j)
 {
     auto opt = BSQRegexOpt::parse(j["opt"]);
@@ -256,16 +187,6 @@ BSQOptionalRe* BSQOptionalRe::parse(json j)
 StateID BSQOptionalRe::compile(StateID follows, std::vector<NFAOpt*>& states) const
 {
     auto followopt = this->opt->compile(follows, states);
-
-    auto thisstate = (StateID)states.size();
-    states.push_back(new NFAOptAlternate(thisstate, { followopt, follows }));
-
-    return thisstate;
-}
-
-StateID BSQOptionalRe::compileReverse(StateID follows, std::vector<NFAOpt*>& states) const
-{
-    auto followopt = this->opt->compileReverse(follows, states);
 
     auto thisstate = (StateID)states.size();
     states.push_back(new NFAOptAlternate(thisstate, { followopt, follows }));
@@ -298,20 +219,6 @@ StateID BSQAlternationRe::compile(StateID follows, std::vector<NFAOpt*>& states)
     return thisstate;
 }
 
-StateID BSQAlternationRe::compileReverse(StateID follows, std::vector<NFAOpt*>& states) const
-{
-    std::vector<StateID> followopts;
-    for(size_t i = 0; i < this->opts.size(); ++i)
-    {
-        followopts.push_back(this->opts[i]->compileReverse(follows, states));
-    }
-
-    auto thisstate = (StateID)states.size();
-    states.push_back(new NFAOptAlternate(thisstate, followopts));
-
-    return thisstate;
-}
-
 BSQSequenceRe* BSQSequenceRe::parse(json j)
 {
     std::vector<const BSQRegexOpt*> elems;
@@ -333,16 +240,6 @@ StateID BSQSequenceRe::compile(StateID follows, std::vector<NFAOpt*>& states) co
     return follows;
 }
 
-StateID BSQSequenceRe::compileReverse(StateID follows, std::vector<NFAOpt*>& states) const
-{
-    for(int64_t i = 0; i < this->opts.size(); ++i)
-    {
-        follows = this->opts[i]->compileReverse(follows, states);
-    }
-
-    return follows;
-}
-
 BSQRegex* BSQRegex::jparse(json j)
 {
     auto restr = j["restr"].get<std::string>();
@@ -351,11 +248,6 @@ BSQRegex* BSQRegex::jparse(json j)
     std::vector<NFAOpt*> nfastates = { new NFAOptAccept(0) };
     auto nfastart = bsqre->compile(0, nfastates);
 
-    std::vector<NFAOpt*> nfastates_rev = { new NFAOptAccept(0) };
-    auto nfastart_rev = bsqre->compileReverse(0, nfastates);
-
     auto nfare = new NFA(nfastart, 0, nfastates);
-    auto nfare_rev = new NFA(nfastart_rev, 0, nfastates_rev);
-
-    return new BSQRegex(restr, bsqre, nfare, nfare_rev);
+    return new BSQRegex(restr, bsqre, nfare);
 }

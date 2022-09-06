@@ -2223,6 +2223,15 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         SLPTR_STORE_CONTENTS_AS(BSQRelativeTime, resultsl, dt);
         break;
     }
+    case BSQPrimitiveImplTag::logicaltime_zero: {
+        SLPTR_STORE_CONTENTS_AS(BSQLogicalTime, resultsl, 0);
+        break;
+    }
+    case BSQPrimitiveImplTag::logicaltime_increment: {
+        auto ival = SLPTR_LOAD_CONTENTS_AS(BSQLogicalTime, params[0]) + 1;
+        SLPTR_STORE_CONTENTS_AS(BSQLogicalTime, resultsl, ival);
+        break;
+    }
     case BSQPrimitiveImplTag::isotimestamp_create: {
         BSQISOTimeStamp its = {
             (uint16_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[0]),
@@ -2337,14 +2346,14 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
     case BSQPrimitiveImplTag::s_list_reduce: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.at(invk->binds.at("T")->tid);
 
-        invk->binds.at("T")->storeValue(resultsl, params[1]); //store the initial acc in the result
+        invk->binds.at("U")->storeValue(resultsl, params[1]); //store the initial acc in the result
         BSQListOps::s_reduce_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.at("f"), params, resultsl);
         break;
     }
     case BSQPrimitiveImplTag::s_list_reduce_idx: {
         const BSQListTypeFlavor& lflavor = BSQListOps::g_flavormap.at(invk->binds.at("T")->tid);
 
-        invk->binds.at("T")->storeValue(resultsl, params[1]); //store the initial acc in the result
+        invk->binds.at("U")->storeValue(resultsl, params[1]); //store the initial acc in the result
         BSQListOps::s_reduce_idx_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), invk->pcodes.at("f"), params, resultsl);
         break;
     }

@@ -333,18 +333,6 @@ void loadAssembly(json j, Evaluator& ee)
     });
 
     ////
-    //Load Literals
-    auto ldlist = j["litdecls"];
-    std::for_each(ldlist.cbegin(), ldlist.cend(), [](json ldecl) {
-        size_t storageOffset;
-        const BSQType* gtype; 
-        std::string lval;
-
-        jsonLoadBSQLiteralDecl(ldecl, storageOffset, gtype, lval);
-        initializeLiteral(storageOffset, gtype, lval);
-    });
-
-    ////
     //Load regex info
     auto jvalidators = j["validators"];
     std::for_each(jvalidators.cbegin(), jvalidators.cend(), [](json vdecl) {
@@ -357,6 +345,18 @@ void loadAssembly(json j, Evaluator& ee)
     std::for_each(jregexes.cbegin(), jregexes.cend(), [](json redecl) {
         const BSQRegex* rr = BSQRegex::jparse(redecl);
         Evaluator::g_regexs.emplace(rr->restr, rr);
+    });
+
+    ////
+    //Load Literals
+    auto ldlist = j["litdecls"];
+    std::for_each(ldlist.cbegin(), ldlist.cend(), [](json ldecl) {
+        size_t storageOffset;
+        const BSQType* gtype; 
+        std::string lval;
+
+        jsonLoadBSQLiteralDecl(ldecl, storageOffset, gtype, lval);
+        initializeLiteral(storageOffset, gtype, lval);
     });
 
     ////

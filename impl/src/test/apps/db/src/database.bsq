@@ -82,7 +82,7 @@ entity Database provides APIType
         }
         elif(idxStatus === DBIndexStatus::filtered) {
             return index.sort(pred(a, b) => a < b).allOf(pred(i, j) => {
-                return i <= j && (i < index.lastIndex().toInt() => i < index.get(i + 1));
+                return i <= j && (i < index.lastIndex() ==> i < index.get(i + 1n));
             });
         }
         else {
@@ -102,10 +102,10 @@ entity Database provides APIType
         return -1i <= this.current_record && this.current_record < this.entries.size().toInt();
     }
 
-    function set_index_default(ref db: MDatabase, curr: Int) {
+    function set_index_default(ref db: Database, curr: Int) {
         var nindex = List<DBIndexEntry>{};
         if(!db.entries.empty()) {
-            nindex = List<Nat>::rangeNat(0, db.entities.lastIndex());
+            nindex = List<Nat>::rangeNat(0, db.entries.lastIndex());
         }
         
         db = db.{
@@ -115,9 +115,11 @@ entity Database provides APIType
             fnum = 0, 
             fval = ""
         };
+
+        return;
     }
 
-    function startCursor(ref db: MDatabase): DBRecordData? {
+    function startCursor(ref db: Database): DBRecordData? {
         if(db.entries.empty()) {
             return none;
         }
@@ -126,13 +128,13 @@ entity Database provides APIType
             db = db.{current_record = 0i};
         }
         else {
-            Database::set_index_default(db, 0i);
+            Database::set_index_default(ref db, 0i);
         }
 
         return db.entries.get(db.index.front());
     }
 
-    function endCursor(ref db: MDatabase): DBRecordData? {
+    function endCursor(ref db: Database): DBRecordData? {
         if(db.entries.empty()) {
             return none;
         }
@@ -142,13 +144,13 @@ entity Database provides APIType
             db = db.{current_record = lidx};
         }
         else {
-            Database::set_index_default(db, lidx);
+            Database::set_index_default(ref db, lidx);
         }
 
         return db.entries.get(db.index.back());
     }
 
-    function gotoCursor(ref db: MDatabase, curr: Int): Result<DBRecordData, DBError> {
+    function gotoCursor(ref db: Database, curr: Int): Result<DBRecordData, DBError> {
         validate 0i <= curr else err(DBError::invalidCursorAccess);
 
         if(db.idxStatus !== DBIndexStatus::invalid) {
@@ -157,19 +159,19 @@ entity Database provides APIType
         }
         else {
             validate curr < this.entries.size().toInt() else err(DBError::invalidCursorAccess);
-            Database::set_index_default(db, curr);
+            Database::set_index_default(ref db, curr);
         }
 
         return ok(db.entries.get(db.index.get(db.current_record.toNat())));
     }
 
-    function next(ref db: MDatabase): DBRecordData? {
+    function next(ref db: Database): DBRecordData? {
         if(db.entries.empty()) {
             return none;
         }
 
         if(db.idxStatus === DBIndexStatus::invalid) {
-            Database::set_index_default(db, 0i);
+            Database::set_index_default(ref db, 0i);
         }
 
         if(db.current_record < db.index.size().toInt()) {
@@ -184,14 +186,14 @@ entity Database provides APIType
         }
    	}
 
-	function previous(ref db: MDatabase): DBRecordData? {
+	function previous(ref db: Database): DBRecordData? {
         if(db.entries.empty()) {
             return none;
         }
 
         if(db.idxStatus === DBIndexStatus::invalid) {
             let lidx = this.entries.size().toInt() - 1i;
-            Database::set_index_default(db, lidx);
+            Database::set_index_default(ref db, lidx);
         }
       
         if(db.current_record >= 0i) {
@@ -206,7 +208,7 @@ entity Database provides APIType
         }
     }
 
-    function add(ref db: MDatabase, entry: DBRecordData) {
+    function add(ref db: Database, entry: DBRecordData) {
         db = db.{
             version = $version.increment(), 
             entries = $entries.pushBack(entry), 
@@ -216,9 +218,11 @@ entity Database provides APIType
             fnum = 0,
             fval = ""
         };
+
+        return;
     }
 
-    function modify(ref db: MDatabase, entry: DBRecordData): Bool {
+    function modify(ref db: Database, entry: DBRecordData): Bool {
         if(!db.isValidCurrentRecordPosition()) {
             return false;
         }
@@ -237,7 +241,7 @@ entity Database provides APIType
         }
     }
 
-    function remove(ref db: MDatabase): Bool {
+    function remove(ref db: Database): Bool {
         if(!db.isValidCurrentRecordPosition()) {
             return false;
         }

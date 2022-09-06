@@ -398,6 +398,8 @@ enum class BSQPrimitiveImplTag
     utcdatetime_create,
     calendardate_create,
     relativetime_create,
+    logicaltime_zero,
+    logicaltime_increment,
     isotimestamp_create,
     latlongcoordinate_create,
     regex_accepts,
