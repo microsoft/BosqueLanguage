@@ -30,7 +30,7 @@ if(process.platform === "darwin") {
 }
 else if(process.platform === "linux") {
     compiler = "g++";
-    ccflags = (mode === "debug" ? "-g3" : "-O2") + " -DBSQ_DEBUG_BUILD -Wall -std=c++20";
+    ccflags = (mode === "debug" ? "-g3" : "-O2") + " -DBSQ_DEBUG_BUILD -Wall -std=c++2a";
     includes = includeheaders.map((ih) => `-I ${ih}`).join(" ");
     outfile = "-o " + outexec + "/icpp";
 }
