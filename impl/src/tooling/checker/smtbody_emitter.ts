@@ -3940,7 +3940,7 @@ class SMTBodyEmitter {
                 //TODO: maybe make this more context aware if we use it more later
                 const havoc = this.typegen.generateHavocConstructorCall(mirrestype, new SMTConst("(as seq.empty (Seq BNat))"), new SMTConst("-1"));
 
-                return SMTFunction.create(ideclname, args, chkrestype, this.typegen.generateResultTypeConstructorSuccess(mirrestype, havoc));
+                return SMTFunction.create(ideclname, args, chkrestype, havoc);
             }
             default: {
                 assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);

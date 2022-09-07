@@ -353,21 +353,25 @@ function parseSourceInfo(si: any): SourceInfo | undefined {
         return (pp.filter === undefined || pp.filter === ".bsqapi") ? pp : undefined;
     });
 
-    if (!Array.isArray(si["testfiles"])) {
+    let testfiles: (URIPathGlob | undefined)[] = [];
+    if (si["testfiles"] !== undefined && !Array.isArray(si["testfiles"])) {
         return undefined;
     }
-    const testfiles = si["testfiles"].map((src) => {
-        const pp = parseURIPathGlob(src);
-        if (pp === undefined) {
-            return undefined;
-        }
 
-        if (pp.selection !== undefined && pp.filter === undefined) {
-            pp.filter = ".bsqtest";
-        }
+    if (si["testfiles"] !== undefined) {
+        testfiles = si["testfiles"].map((src: any) => {
+            const pp = parseURIPathGlob(src);
+            if (pp === undefined) {
+                return undefined;
+            }
 
-        return (pp.filter === undefined || pp.filter === ".bsqtest") ? pp : undefined;
-    });
+            if (pp.selection !== undefined && pp.filter === undefined) {
+                pp.filter = ".bsqtest";
+            }
+
+            return (pp.filter === undefined || pp.filter === ".bsqtest") ? pp : undefined;
+        });
+    }
 
     if (bsqsrc.includes(undefined) || entrypoints.includes(undefined) || testfiles.includes(undefined)) {
         return undefined;

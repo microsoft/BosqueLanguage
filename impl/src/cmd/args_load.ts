@@ -19,7 +19,7 @@ function help(cmd: CmdTag | undefined) {
     if(cmd === "run" || cmd === undefined) {
         process.stdout.write("Run Application:\n");
         process.stdout.write("bosque run|debug [package_path.json] [--entrypoint fname] [--config cname]\n");
-        process.stdout.write("bosque run|debug [package_path.json] [--entrypoint fname] [--config cname] --args \"[...]\"\n");
+        process.stdout.write("bosque run|debug [package_path.json] [--entrypoint fname] [--config cname] --args \"[...]\"\n\n");
     }
 
     if(cmd === "symrun" || cmd === undefined) {
@@ -38,17 +38,17 @@ function help(cmd: CmdTag | undefined) {
 
     if(cmd === "test" || cmd === undefined) {
         process.stdout.write("Unit-Test Application:\n");
-        process.stdout.write("bosque test [package_path.json] [--config cname]\n");
+        process.stdout.write("bosque test [package_path.json] [--config cname]\n\n");
     }
 
     if(cmd === "apptest" || cmd === undefined) {
         process.stdout.write("EntryPoint Test Application:\n");
-        process.stdout.write("bosque apptest [package_path.json] [--config cname]\n");
+        process.stdout.write("bosque apptest [package_path.json] [--config cname]\n\n");
     }
 
     if(cmd === "fuzz" || cmd === undefined) {
         process.stdout.write("Fuzz Application:\n");
-        process.stdout.write("bosque fuzz [package_path.json] [--config cname]\n");
+        process.stdout.write("bosque fuzz [package_path.json] [--config cname]\n\n");
     }
 
     if(cmd === "morphir-chk" || cmd === undefined) {
