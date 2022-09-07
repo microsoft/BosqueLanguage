@@ -70,6 +70,7 @@ type ConfigAppTest = {
 };
 
 type ConfigFuzz = {
+    flavors: ("solver" | "random")[], 
     dirs: URIPathGlob[] | "*"
 };
 
@@ -472,6 +473,14 @@ function parseConfigAppTest(cfg: any): ConfigAppTest | undefined {
 }
 
 function parseConfigFuzz(cfg: any): ConfigFuzz | undefined {
+    let flavors: ("solver" | "random")[] = ["solver", "random"];
+    if (cfg["flavors"] !== undefined) {
+        if (!Array.isArray(cfg["flavors"]) || cfg["flavors"].some((ff) => (ff !== "solver" && ff !== "random"))) {
+            return undefined;
+        }
+        flavors = cfg["flavors"] as ("solver" | "random")[];
+    }
+
     let dirs: URIPathGlob[] | "*" = "*";
     if (cfg["dirs"] !== undefined) {
         if (!Array.isArray(cfg["dirs"])) {
@@ -487,6 +496,7 @@ function parseConfigFuzz(cfg: any): ConfigFuzz | undefined {
     }
 
     return {
+        flavors: flavors,
         dirs: dirs
     };
 }

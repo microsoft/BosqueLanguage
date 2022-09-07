@@ -9,209 +9,113 @@ import * as readline from "readline";
 
 import * as chalk from "chalk";
 
-import { help, extractEntryPointKnownFile, isStdInArgs, extractFiles, extractArgs, loadUserSrc, tryLoadPackage, extractEntryPoint, extractConfig } from "./args_load";
-import { ConfigRun, Package, parseURIPathGlob } from "./package_load";
+import { help, isStdInArgs, extractArgs, loadUserSrc, tryLoadPackage, extractEntryPoint, extractConfig } from "./args_load";
+import { ConfigFuzz, ConfigRun, Package } from "./package_load";
 import { PackageConfig, SymbolicActionMode } from "../compiler/mir_assembly";
 import { workflowRunICPPFile } from "../tooling/icpp/transpiler/iccp_workflows";
 import { generateStandardVOpts, workflowEvaluate } from "../tooling/checker/smt_workflows";
 
 function processRunAction(args: string[]) {
-    if(args.length === 0) {
+    if (args.length === 0) {
         args.push("./package.json");
     }
 
-    if(path.extname(args[0]) === ".bsqapi") {
-        const entryfile = args[0];
-
-        const entrypoint = extractEntryPointKnownFile(args, process.cwd(), entryfile);
-        if(entrypoint === undefined) {
-            process.stderr.write(chalk.red("Could not parse 'entrypoint' option\n"));
-
-            help("run");
-            process.exit(1);
-        }
-
-        let fargs: any[] | undefined = undefined;
-        if (!isStdInArgs(args)) {
-            fargs = extractArgs(args);
-            if (fargs === undefined) {
-                process.stderr.write(chalk.red("Could not parse 'arguments' option\n"));
-
-                help("run");
-                process.exit(1);
-            }
-        }
-
-        const files = extractFiles(process.cwd(), args);
-        if(files === undefined) {
-            process.stderr.write(chalk.red("Could not parse 'files' option\n"));
-
-            help("run");
-            process.exit(1);
-        }
-
-        const entryglob = parseURIPathGlob(path.resolve(process.cwd(), entryfile));
-        if(entryglob === undefined) {
-            process.stderr.write(chalk.red("Could not parse 'entrypoint' option\n"));
-
-            help("run");
-            process.exit(1);
-        }
-
-        const srcfiles = loadUserSrc(process.cwd(), [entryglob, ...files]);
-        if(srcfiles === undefined) {
-            process.stderr.write(chalk.red("Failed when loading source files\n"));
-            process.exit(1);
-        }
-
-        const usersrcinfo = srcfiles.map((sf) => {
-            return { srcpath: sf, filename: path.basename(sf), contents: fs.readFileSync(sf).toString() };
-         });
-        const userpackage = new PackageConfig([], usersrcinfo);
-
-        if(fargs === undefined) {
-            // bosque run|debug [package_path.json] [--entrypoint fname] [--config cname]
-            
-            let rl = readline.createInterface({
-                input: process.stdin,
-                output: process.stdout
-            });
-
-            rl.question(">> ", (input) => {
-                try {
-                    const jargs = JSON.parse(input);
-        
-                    process.stdout.write(`Evaluating...\n`);
-        
-                    workflowRunICPPFile(jargs, userpackage, args[0] === "debug", "test", false, args[0] === "debug", {}, entrypoint, (result: string | undefined) => {
-                        if (result !== undefined) {
-                            process.stdout.write(`${result}\n`);
-                        }
-                        else {
-                            process.stdout.write(`failure\n`);
-                        }
-        
-                        process.exit(0);
-                    });
-                }
-                catch (ex) {
-                    process.stderr.write(`Failure ${ex}\n`);
-                    process.exit(1);
-                }
-            });
-        }
-        else {
-            // bosque run|debug [package_path.json] [--entrypoint fname] [--config cname] --args "[...]"
-            workflowRunICPPFile(fargs, userpackage, args[0] === "debug", "test", false, args[0] === "debug", {}, entrypoint, (result: string | undefined) => {
-                if (result !== undefined) {
-                    process.stdout.write(`${result}\n`);
-                }
-                else {
-                    process.stdout.write(`failure\n`);
-                }
-
-                process.exit(0);
-            });
-        }
+    let workingdir = process.cwd();
+    let pckg: Package | undefined = undefined;
+    if (path.extname(args[0]) === ".json") {
+        workingdir = path.dirname(path.resolve(args[0]));
+        pckg = tryLoadPackage(path.resolve(args[0]));
     }
     else {
-        let workingdir = process.cwd();
-        let pckg: Package | undefined = undefined;
-        if(path.extname(args[0]) === ".json") {
-            workingdir = path.dirname(path.resolve(args[0]));
-            pckg = tryLoadPackage(path.resolve(args[0]));
+        const implicitpckg = path.resolve(workingdir, "package.json");
+        if (fs.existsSync(implicitpckg)) {
+            pckg = tryLoadPackage(implicitpckg);
         }
-        else {
-            const implicitpckg = path.resolve(workingdir, "package.json");
-            if(fs.existsSync(implicitpckg)) {
-                pckg = tryLoadPackage(implicitpckg);
+    }
+
+    if (pckg === undefined) {
+        process.stderr.write(chalk.red("Could not parse 'package' option\n"));
+
+        help("run");
+        process.exit(1);
+    }
+
+    const entrypoint = extractEntryPoint(args, workingdir, pckg.src.entrypoints);
+    if (entrypoint === undefined) {
+        process.stderr.write(chalk.red("Could not parse 'entrypoint' option\n"));
+
+        help("run");
+        process.exit(1);
+    }
+
+    let fargs: any[] | undefined = undefined;
+    if (!isStdInArgs(args)) {
+        fargs = extractArgs(args);
+        if (fargs === undefined) {
+            process.stderr.write(chalk.red("Could not parse 'arguments' option\n"));
+
+            help("run");
+            process.exit(1);
+        }
+    }
+
+    const cfg = extractConfig<ConfigRun>(args, pckg, workingdir, "run");
+    if (cfg === undefined) {
+        process.stderr.write(chalk.red("Could not parse 'config' option\n"));
+
+        help("run");
+        process.exit(1);
+    }
+
+    const srcfiles = loadUserSrc(workingdir, [...pckg.src.entrypoints, ...pckg.src.bsqsource]);
+    if (srcfiles === undefined) {
+        process.stderr.write(chalk.red("Failed when loading source files\n"));
+        process.exit(1);
+    }
+
+    const usersrcinfo = srcfiles.map((sf) => {
+        return { srcpath: sf, filename: path.basename(sf), contents: fs.readFileSync(sf).toString() };
+    });
+    const userpackage = new PackageConfig([...cfg.macros, ...cfg.globalmacros], usersrcinfo);
+
+    if (fargs === undefined) {
+        // bosque run|debug [package_path.json] [--entrypoint fname] [--config cname]
+
+        let rl = readline.createInterface({
+            input: process.stdin,
+            output: process.stdout
+        });
+
+        rl.question(">> ", (input) => {
+            try {
+                const jargs = JSON.parse(input);
+
+                process.stdout.write(`Evaluating...\n`);
+
+                workflowRunICPPFile(jargs, userpackage, args[0] === "debug", cfg.buildlevel, false, args[0] === "debug", {}, entrypoint, (result: string | undefined) => {
+                    if (result !== undefined) {
+                        process.stdout.write(`${result}\n`);
+                    }
+                    else {
+                        process.stdout.write(`failure\n`);
+                    }
+
+                    process.exit(0);
+                });
             }
-        }
-        
-        if(pckg === undefined) {
-            process.stderr.write(chalk.red("Could not parse 'package' option\n"));
-
-            help("run");
-            process.exit(1);
-        }
-
-        const entrypoint = extractEntryPoint(args, workingdir, pckg.src.entrypoints);
-        if(entrypoint === undefined) {
-            process.stderr.write(chalk.red("Could not parse 'entrypoint' option\n"));
-
-            help("run");
-            process.exit(1);
-        }
-
-        let fargs: any[] | undefined = undefined;
-        if (!isStdInArgs(args)) {
-            fargs = extractArgs(args);
-            if (fargs === undefined) {
-                process.stderr.write(chalk.red("Could not parse 'arguments' option\n"));
-
-                help("run");
+            catch (ex) {
+                process.stderr.write(`Failure ${ex}\n`);
                 process.exit(1);
             }
-        }
-
-        const cfg = extractConfig<ConfigRun>(args, pckg, workingdir, "run");
-        if(cfg === undefined) {
-            process.stderr.write(chalk.red("Could not parse 'config' option\n"));
-
-            help("run");
-            process.exit(1);
-        }
-
-        const srcfiles = loadUserSrc(workingdir, [...pckg.src.entrypoints, ...pckg.src.bsqsource]);
-        if(srcfiles === undefined) {
-            process.stderr.write(chalk.red("Failed when loading source files\n"));
-            process.exit(1);
-        }
-
-        const usersrcinfo = srcfiles.map((sf) => {
-           return { srcpath: sf, filename: path.basename(sf), contents: fs.readFileSync(sf).toString() };
         });
-        const userpackage = new PackageConfig([...cfg.macros, ...cfg.globalmacros], usersrcinfo);
-        
-        if(fargs === undefined) {
-            // bosque run|debug [package_path.json] [--entrypoint fname] [--config cname]
-            
-            let rl = readline.createInterface({
-                input: process.stdin,
-                output: process.stdout
-            });
+    }
+    else {
+        // bosque run|debug [package_path.json] [--entrypoint fname] [--config cname] --args "[...]"
+        workflowRunICPPFile(fargs, userpackage, args[0] === "debug", cfg.buildlevel, false, args[0] === "debug", {}, entrypoint, (result: string | undefined) => {
+            process.stdout.write(`${result}\n`);
 
-            rl.question(">> ", (input) => {
-                try {
-                    const jargs = JSON.parse(input);
-        
-                    process.stdout.write(`Evaluating...\n`);
-        
-                    workflowRunICPPFile(jargs, userpackage, args[0] === "debug", cfg.buildlevel, false, args[0] === "debug", {}, entrypoint, (result: string | undefined) => {
-                        if (result !== undefined) {
-                            process.stdout.write(`${result}\n`);
-                        }
-                        else {
-                            process.stdout.write(`failure\n`);
-                        }
-        
-                        process.exit(0);
-                    });
-                }
-                catch (ex) {
-                    process.stderr.write(`Failure ${ex}\n`);
-                    process.exit(1);
-                }
-            });
-        }
-        else {
-            // bosque run|debug [package_path.json] [--entrypoint fname] [--config cname] --args "[...]"
-            workflowRunICPPFile(fargs, userpackage, args[0] === "debug", cfg.buildlevel, false, args[0] === "debug", {}, entrypoint, (result: string | undefined) => {
-                process.stdout.write(`${result}\n`);
-
-                process.exit(0);
-            });
-        }
+            process.exit(0);
+        });
     }
 }
 
@@ -354,6 +258,41 @@ function processRunSymbolicAction(args: string[]) {
     }
 }
 
+function processFuzzAction(args: string[]) {
+    let workingdir = process.cwd();
+    let pckg: Package | undefined = undefined;
+    if (path.extname(args[0]) === ".json") {
+        workingdir = path.dirname(path.resolve(args[0]));
+        pckg = tryLoadPackage(path.resolve(args[0]));
+    }
+    else {
+        const implicitpckg = path.resolve(workingdir, "package.json");
+        if (fs.existsSync(implicitpckg)) {
+            pckg = tryLoadPackage(implicitpckg);
+        }
+    }
+
+    if (pckg === undefined) {
+        process.stderr.write(chalk.red("Could not parse 'package' option\n"));
+
+        help("fuzz");
+        process.exit(1);
+    }
+
+    const cfg = extractConfig<ConfigFuzz>(args, pckg, workingdir, "fuzz");
+    if (cfg === undefined) {
+        process.stderr.write(chalk.red("Could not parse 'config' option\n"));
+
+        help("fuzz");
+        process.exit(1);
+    }
+
+    //bosque fuzz [package_path.json] [--config cname]
+
+    process.stderr.write(chalk.red("Fuzz running is not supported yet.\n"));
+    process.exit(1);
+}
+
 export {
-    processRunAction, processRunSymbolicAction
+    processRunAction, processRunSymbolicAction, processFuzzAction
 };

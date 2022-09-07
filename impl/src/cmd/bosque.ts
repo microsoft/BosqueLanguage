@@ -7,8 +7,8 @@
 
 import { help } from "./args_load";
 import { processBuildAction, processBuildActionMorphirToBosque } from "./process_build";
-import { processAppTestAction, processFuzzAction, processMorphirCheckAction, processTestAction } from "./process_chk";
-import { processRunAction } from "./process_exe";
+import { processAppTestAction, processMorphirCheckAction, processTestAction } from "./process_chk";
+import { processRunAction, processFuzzAction } from "./process_exe";
 
 const fullargs = process.argv;
 
