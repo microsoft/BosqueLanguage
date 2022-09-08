@@ -193,6 +193,8 @@ json workflowEvaluate(std::string smt2decl, const APIModule* apimodule, const In
     {
         SMTParseJSON jextract;
 
+        std::cout << s.get_model() << "\n";
+
         auto rootctx = SMTParseJSON::generateInitialResultContext(c);
         auto jarg = apisig->restype->textract(jextract, apimodule, rootctx, s);
 

@@ -9,6 +9,8 @@
 #include "common.h"
 #include "bsqregex.h"
 
+#include <iostream>
+
 class IType;
 class UnionType;
 class InvokeSignature;
@@ -2263,6 +2265,10 @@ public:
 
         auto choicetype = opttypes[nval.value()];
         auto uvalue = apimgr.extractUnionValue(apimodule, this, value, ctx);
+
+        std::cout << "Union Path " << uvalue.to_string() << "\n";
+
+
         auto cval = choicetype->textract(apimgr, apimodule, uvalue, ctx);
         if(!cval.has_value())
         {
