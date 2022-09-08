@@ -138,10 +138,10 @@ public:
     {
         auto intoloc = ((uint8_t*)pvinto) + sizeof(uint64_t);
         auto fromloc = ((uint8_t*)pvfrom) + (sizeof(uint64_t) + (*((uint64_t*)pvinto) * start));
-        auto bytecount = ((end - start) * entrysize);
+        auto bytecount = ((uint64_t)(end - start) * entrysize);
 
         GC_MEM_COPY(intoloc, fromloc, bytecount);
-        *((uint64_t*)pvinto) = (end - start);
+        *((uint64_t*)pvinto) = (uint64_t)(end - start);
     }
 
     inline static void packPVData(void* pvinto, void* pvfrom, std::bitset<8> mask, uint64_t entrysize)
@@ -149,20 +149,20 @@ public:
         auto intoloc = ((uint8_t*)pvinto) + sizeof(uint64_t);
         auto fromloc = ((uint8_t*)pvfrom) + sizeof(uint64_t);
         
-        uint64_t jj = 0;
-        for(size_t i = 0; i < 8; ++i)
+        int16_t jj = 0;
+        for(int16_t i = 0; i < 8; ++i)
         {
             if(mask[i])
             {
-                auto dst = intoloc + (entrysize * jj);
-                auto src = fromloc + (entrysize * i);
+                auto dst = intoloc + (entrysize * (uint64_t)jj);
+                auto src = fromloc + (entrysize * (uint64_t)i);
 
                 GC_MEM_COPY(dst, src, entrysize);
                 jj++;
             }
         }
 
-        *((uint64_t*)pvinto) = jj;
+        *((uint64_t*)pvinto) = (uint64_t)jj;
     }
 
     inline static void setPVData(void* pvinto, void* pvfrom, int16_t idx, StorageLocationPtr v, int16_t end, uint64_t entrysize)
@@ -170,15 +170,15 @@ public:
         auto intoloc = ((uint8_t*)pvinto) + sizeof(uint64_t);
         auto fromloc = ((uint8_t*)pvfrom) + sizeof(uint64_t);
         
-        for(size_t i = 0; i < end; ++i)
+        for(int16_t i = 0; i < end; ++i)
         {
-            auto dst = intoloc + (entrysize * i);
-            auto src = (i != idx) ? (fromloc + (entrysize * i)) : ((uint8_t*)v);
+            auto dst = intoloc + (entrysize * (uint64_t)i);
+            auto src = (i != idx) ? (fromloc + (entrysize * (uint64_t)i)) : ((uint8_t*)v);
 
             GC_MEM_COPY(dst, src, entrysize);
         }
 
-        *((uint64_t*)pvinto) = end;
+        *((uint64_t*)pvinto) = (uint64_t)end;
     }
 
     inline static void initializePVDataInsert(void* pvinto, void* pvfrom, int16_t ipos, StorageLocationPtr v, int16_t start, int16_t end, uint64_t entrysize)
@@ -191,7 +191,7 @@ public:
         {
             if(ii == ipos)
             {
-                auto dstv = intoloc + (entrysize * jj);
+                auto dstv = intoloc + (entrysize * (uint64_t)jj);
                 GC_MEM_COPY(dstv, v, entrysize);
 
                 jj++;
@@ -210,20 +210,20 @@ public:
         auto intoloc = ((uint8_t*)pvinto) + sizeof(uint64_t);
         auto fromloc = ((uint8_t*)pvfrom) + sizeof(uint64_t);
         
-        uint64_t jj = 0;
-        for(size_t i = 0; i < 8 && i < end; ++i)
+        int16_t jj = 0;
+        for(int16_t i = 0; i < 8 && i < end; ++i)
         {
             if(i != idx)
             {
-                auto dst = intoloc + (entrysize * jj);
-                auto src = fromloc + (entrysize * i);
+                auto dst = intoloc + (entrysize * (uint64_t)jj);
+                auto src = fromloc + (entrysize * (uint64_t)i);
 
                 GC_MEM_COPY(dst, src, entrysize);
                 jj++;
             }
         }
 
-        *((uint64_t*)pvinto) = jj;
+        *((uint64_t*)pvinto) = (uint64_t)jj;
     }
 };
 

@@ -731,7 +731,7 @@ std::optional<json> JSONParseHelper::emitRationalNumber(std::pair<std::string, u
 
 std::string emitDateTimeRaw_d(uint16_t y, uint8_t m, uint8_t d, uint8_t hh, uint8_t mm)
 {
-    struct tm dt = {0};
+    struct tm dt = tm();
     dt.tm_year = y;
     dt.tm_mon = m;
     dt.tm_mday = d;
@@ -747,7 +747,7 @@ std::string emitDateTimeRaw_d(uint16_t y, uint8_t m, uint8_t d, uint8_t hh, uint
 
 std::string emitCalendarDateRaw_d(uint16_t y, uint8_t m, uint8_t d)
 {
-    struct tm dt = {0};
+    struct tm dt = tm();
     dt.tm_year = y;
     dt.tm_mon = m;
     dt.tm_mday = d;
@@ -761,7 +761,7 @@ std::string emitCalendarDateRaw_d(uint16_t y, uint8_t m, uint8_t d)
 
 std::string emitRelativeTimeRaw_d(uint8_t hh, uint8_t mm)
 {
-    struct tm dt = {0};
+    struct tm dt = tm();
     dt.tm_hour = hh;
     dt.tm_min = mm;
 
@@ -775,7 +775,7 @@ std::string emitRelativeTimeRaw_d(uint8_t hh, uint8_t mm)
 
 std::string emitISOTimeStampRaw_d(uint16_t y, uint8_t m, uint8_t d, uint8_t hh, uint8_t mm, uint8_t ss, uint16_t millis)
 {
-    struct tm dt = {0};
+    struct tm dt = tm();
     dt.tm_year = y;
     dt.tm_mon = m;
     dt.tm_mday = d;
@@ -787,7 +787,7 @@ std::string emitISOTimeStampRaw_d(uint16_t y, uint8_t m, uint8_t d, uint8_t hh, 
     size_t dtlen = strftime(sstrt, 30, "%Y-%m-%dT%H:%M:%S", &dt);
     std::string res(sstrt, sstrt + dtlen);
 
-    char strmillis[5] = {0};
+    char strmillis[8] = {0};
     size_t mtlen = sprintf(strmillis, ".%.3u", millis);
     std::string ms(strmillis, strmillis + mtlen);
 
