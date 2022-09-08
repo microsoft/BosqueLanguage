@@ -3868,7 +3868,7 @@ std::optional<size_t> ICPPParseJSON::extractUnionChoice(const APIModule* apimodu
     return std::make_optional(tidx);
 }
 
-StorageLocationPtr ICPPParseJSON::extractUnionValue(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
+StorageLocationPtr ICPPParseJSON::extractUnionValue(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t uchoice, Evaluator& ctx)
 {
     auto bsqutypeid = MarshalEnvironment::g_typenameToIdMap.at(itype->name);
     auto bsqutype = dynamic_cast<const BSQUnionType*>(BSQType::g_typetable[bsqutypeid]);

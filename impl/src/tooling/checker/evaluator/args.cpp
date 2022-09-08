@@ -1389,7 +1389,7 @@ std::optional<size_t> SMTParseJSON::extractUnionChoice(const APIModule* apimodul
     return expIntAsUIntSmall(ctx, bef(value));
 }
 
-z3::expr SMTParseJSON::extractUnionValue(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
+z3::expr SMTParseJSON::extractUnionValue(const APIModule* apimodule, const IType* itype, z3::expr value, size_t uchoice, z3::solver& ctx)
 {
-    return value;
+    return extendContext(ctx.ctx(), value, uchoice);
 }

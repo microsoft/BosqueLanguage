@@ -8,7 +8,7 @@ import * as path from "path";
 
 import * as chalk from "chalk";
 
-import { Config, ConfigAppTest, ConfigBuild, ConfigFuzz, ConfigRun, ConfigTest, Package, parsePackage, parseURIPath, parseURIPathGlob, URIPath, URIPathGlob } from "./package_load";
+import { Config, ConfigAppTest, ConfigBuild, ConfigFuzz, ConfigRun, ConfigTest, Package, parsePackage, parseURIPath, URIPath, URIPathGlob } from "./package_load";
 import { cleanCommentsStringsFromFileContents } from "../ast/parser";
 
 type CmdTag = "run" | "symrun" | "build" | "test" | "apptest" | "fuzz" | "morphir-chk";
@@ -19,9 +19,7 @@ function help(cmd: CmdTag | undefined) {
     if(cmd === "run" || cmd === undefined) {
         process.stdout.write("Run Application:\n");
         process.stdout.write("bosque run|debug [package_path.json] [--entrypoint fname] [--config cname]\n");
-        process.stdout.write("bosque run|debug [package_path.json] [--entrypoint fname] [--config cname] --args \"[...]\"\n");
-        process.stdout.write("bosque run|debug entryfile.bsqapi [--entrypoint fname] --files ...\n");
-        process.stdout.write("bosque run|debug entryfile.bsqapi [--entrypoint fname] --files ... --args \"[...]\"\n\n");
+        process.stdout.write("bosque run|debug [package_path.json] [--entrypoint fname] [--config cname] --args \"[...]\"\n\n");
     }
 
     if(cmd === "symrun" || cmd === undefined) {
@@ -40,20 +38,17 @@ function help(cmd: CmdTag | undefined) {
 
     if(cmd === "test" || cmd === undefined) {
         process.stdout.write("Unit-Test Application:\n");
-        process.stdout.write("bosque test [package_path.json] [--config cname]\n");
-        process.stdout.write("bosque test testfile.bsqtest ... --files ... [--flavors (sym | icpp | err | chk)*]\n\n");
+        process.stdout.write("bosque test [package_path.json] [--config cname]\n\n");
     }
 
     if(cmd === "apptest" || cmd === undefined) {
         process.stdout.write("EntryPoint Test Application:\n");
-        process.stdout.write("bosque apptest [package_path.json] [--config cname]\n");
-        process.stdout.write("bosque apptest testfile.bsqtest ... --files ... [--flavors (sym | icpp | err | chk)*]\n\n");
+        process.stdout.write("bosque apptest [package_path.json] [--config cname]\n\n");
     }
 
     if(cmd === "fuzz" || cmd === undefined) {
         process.stdout.write("Fuzz Application:\n");
-        process.stdout.write("bosque fuzz [package_path.json] [--config cname]\n");
-        process.stdout.write("bosque fuzz testfile.bsqapi ... --files ...\n\n");
+        process.stdout.write("bosque fuzz [package_path.json] [--config cname]\n\n");
     }
 
     if(cmd === "morphir-chk" || cmd === undefined) {
@@ -97,6 +92,7 @@ function generateAppTestConfigDefault(): ConfigAppTest {
 
 function generateFuzzConfigDefault(): ConfigFuzz {
     return {
+        flavors: ["solver", "random"],
         dirs: "*"
     };
 }
@@ -143,30 +139,6 @@ function checkEntrypointMatch(contents: string, ns: string, fname: string): bool
     const okfname = contents.includes(`entrypoint function ${fname}(`);
 
     return okns && okfname;
-}
-
-function extractEntryPointKnownFile(args: string[], workingdir: string, appfile: string): {filename: string, name: string, fkey: string} | undefined {
-    const epidx = args.indexOf("--entrypoint");
-
-    let epname = "Main::main";
-    if(epidx !== -1) {
-        if(epidx === args.length - 1) {
-            return undefined;
-        }
-
-        epname = args[epidx] + 1;
-    }
-
-    const ccidx = epname.indexOf("::");
-    if(ccidx === -1) {
-        return undefined;
-    }
-
-    return {
-        filename: path.resolve(workingdir, appfile),
-        name: epname.slice(ccidx + 2),
-        fkey: "__i__" + epname
-    }
 }
 
 function extractEntryPointsAll(workingdir: string, appuris: URIPathGlob[]): {filename: string, names: string[], fkeys: string[]} | undefined {
@@ -337,40 +309,6 @@ function extractOutput(workingdir: string, args: string[]): URIPath | undefined 
     return parseURIPath(args[argsidx + 1]);
 }
 
-function extractFiles(workingdir: string, args: string[]): URIPathGlob[] | undefined {
-    const fidx = args.indexOf("--files");
-    if(fidx === -1) {
-        return undefined;
-    }
-
-    let ii = fidx + 1;
-    let files: string[] = [];
-    while(ii < args.length && !args[ii].startsWith("--")) {
-        if(path.extname(args[ii]) !== ".bsq") {
-            return undefined;
-        }
-
-        files.push(args[ii]);
-    } 
-
-    let urifiles: URIPathGlob[] = [];
-    for(let i = 0; i < files.length; ++i) {
-        const fullfd = path.join(workingdir, files[i]);
-        if(!fs.existsSync(fullfd)) {
-            return undefined;
-        }
-
-        const furi = parseURIPathGlob(fullfd);
-        if(furi === undefined) {
-            return undefined;
-        }
-
-        urifiles.push(furi);
-    }
-
-    return urifiles;
-}
-
 function extractConfig<T>(args: string[], pckg: Package, workingdir: string, cmd: CmdTag): Config<T> | undefined {
     const cfgidx = args.indexOf("--config");
     if(cfgidx !== -1) {
@@ -449,35 +387,6 @@ function extractConfig<T>(args: string[], pckg: Package, workingdir: string, cmd
     }
 }
 
-function extractTestFlags(args: string[], cmd: CmdTag): ("sym" | "icpp" | "err" | "chk")[] | undefined {
-    const fidx = args.indexOf("--flavors");
-    if(fidx === -1 || fidx === args.length - 1) {
-        if(cmd === "test") {
-            return ["sym", "icpp", "chk", "err"];
-        }
-        else {
-            return ["sym", "icpp", "err"];
-        }
-    }
-
-    if(fidx === args.length - 1) {
-        return undefined;
-    }
-
-    let ii = fidx + 1;
-    let flavors: ("sym" | "icpp" | "err" | "chk")[] = [];
-    while(ii < args.length && !args[ii].startsWith("--")) {
-        const flavor = args[ii];
-        if(flavor !== "sym" && flavor !== "icpp" && flavor !== "err" && flavor !== "chk") {
-            return undefined;
-        }
-
-        flavors.push(flavor);
-    } 
-
-    return flavors;
-}
-
 function loadUserSrc(workingdir: string, files: URIPathGlob[]): string[] | undefined {
     try {
         let code: string[] = [];
@@ -528,6 +437,6 @@ function loadUserSrc(workingdir: string, files: URIPathGlob[]): string[] | undef
 export {
     CmdTag,
     help,
-    tryLoadPackage, extractEntryPointKnownFile, extractEntryPointsAll, extractEntryPoint, isStdInArgs, extractArgs, extractOutput, extractFiles, extractConfig, extractTestFlags, loadUserSrc,
+    tryLoadPackage, extractEntryPointsAll, extractEntryPoint, isStdInArgs, extractArgs, extractOutput, extractConfig, loadUserSrc,
     DEFAULT_SMALL_MODEL_ONLY
 };
