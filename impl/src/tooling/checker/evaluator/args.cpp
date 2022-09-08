@@ -5,8 +5,6 @@
 
 #include "args.h"
 
-#include <iostream>
-
 static std::regex re_numberino_n("^[+]?(0|[1-9][0-9]*)$");
 static std::regex re_numberino_i("^[-+]?(0|[1-9][0-9]*)$");
 static std::regex re_numberino_f("^[-+]?([0-9]+\\.[0-9]+)([eE][-+]?[0-9]+)?$");
@@ -496,8 +494,6 @@ std::optional<std::string> evalStringAsString(z3::solver& s, const z3::expr& e)
 {
     auto nexp = s.get_model().eval(e, true);
     auto sstr = nexp.to_string();
-
-    std::cout << "eval " << e.to_string() << " = " << sstr << "\n";
 
     if(sstr.length() >= 2 && sstr[0] == '"' && sstr[sstr.length() - 1] == '"')
     {
@@ -1393,7 +1389,7 @@ std::optional<size_t> SMTParseJSON::extractUnionChoice(const APIModule* apimodul
     return expIntAsUIntSmall(ctx, bef(value));
 }
 
-z3::expr SMTParseJSON::extractUnionValue(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
+z3::expr SMTParseJSON::extractUnionValue(const APIModule* apimodule, const IType* itype, z3::expr value, size_t uchoice, z3::solver& ctx)
 {
-    return value;
+    return extendContext(ctx.ctx(), value, uchoice);
 }

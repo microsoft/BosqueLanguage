@@ -25,7 +25,7 @@ let outfile = "";
 let z3lib = "";
 if(process.platform === "darwin") {
     compiler = "g++";
-    ccflags = (mode === "debug" ? "-Og -g" : "-O2") + " -Wall -Wextra -Wuninitialized -Wno-unused-parameter -Werror -std=c++20 -arch arm64";
+    ccflags = (mode === "debug" ? "-Og -g" : "-O2") + " -Wall -Wextra -Wuninitialized -Wno-unused-parameter -Werror -std=c++2a -arch arm64";
     includes = includeheaders.map((ih) => `-I ${ih}`).join(" ");
     z3lib = path.join(includebase, "/macos/z3/bin/libz3.a")
     outfile = "-o " + outexec + "/chk";

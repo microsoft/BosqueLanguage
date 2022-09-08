@@ -24,13 +24,13 @@ let includes = " ";
 let outfile = "";
 if(process.platform === "darwin") {
     compiler = "g++";
-    ccflags = (mode === "debug" ? "-g3" : "-O2") + " -DBSQ_DEBUG_BUILD -Wall -Wuninitialized -Wno-unused-parameter -Werror -std=c++20";
+    ccflags = (mode === "debug" ? "-Og -g" : "-O2") + " -DBSQ_DEBUG_BUILD -Wall -Wuninitialized -Wno-unused-parameter -Werror -std=c++2a";
     includes = includeheaders.map((ih) => `-I ${ih}`).join(" ");
     outfile = "-o " + outexec+ "/icpp";
 }
 else if(process.platform === "linux") {
     compiler = "g++";
-    ccflags = (mode === "debug" ? "-g3" : "-O2") + " -DBSQ_DEBUG_BUILD -Wall -Wuninitialized -Wno-unused-parameter -Werror -std=c++2a";
+    ccflags = (mode === "debug" ? "-Og -g" : "-O2") + " -DBSQ_DEBUG_BUILD -Wall -Wuninitialized -Wno-unused-parameter -Werror -std=c++2a";
     includes = includeheaders.map((ih) => `-I ${ih}`).join(" ");
     outfile = "-o " + outexec + "/icpp";
 }

@@ -9,8 +9,6 @@
 #include "common.h"
 #include "bsqregex.h"
 
-#include <iostream>
-
 class IType;
 class UnionType;
 class InvokeSignature;
@@ -255,7 +253,7 @@ public:
     virtual void completeExtractContainer(const APIModule* apimodule, const IType* itype, State& ctx) = 0;
 
     virtual std::optional<size_t> extractUnionChoice(const APIModule* apimodule, const IType* itype, const std::vector<const IType*>& opttypes, ValueRepr intoloc, State& ctx) = 0;
-    virtual ValueRepr extractUnionValue(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
+    virtual ValueRepr extractUnionValue(const APIModule* apimodule, const IType* itype, ValueRepr value, size_t uchoice, State& ctx) = 0;
 };
 
 class JSONParseHelper
@@ -2264,10 +2262,7 @@ public:
         }
 
         auto choicetype = opttypes[nval.value()];
-        auto uvalue = apimgr.extractUnionValue(apimodule, this, value, ctx);
-
-        std::cout << "Union Path " << uvalue.to_string() << "\n";
-
+        auto uvalue = apimgr.extractUnionValue(apimodule, this, value, nval.value(), ctx);
 
         auto cval = choicetype->textract(apimgr, apimodule, uvalue, ctx);
         if(!cval.has_value())

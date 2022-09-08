@@ -113,5 +113,5 @@ public:
     virtual void completeExtractContainer(const APIModule* apimodule, const IType* itype, z3::solver& ctx) override final;
 
     virtual std::optional<size_t> extractUnionChoice(const APIModule* apimodule, const IType* itype, const std::vector<const IType*>& opttypes, z3::expr intoloc, z3::solver& ctx) override final;
-    virtual z3::expr extractUnionValue(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
+    virtual z3::expr extractUnionValue(const APIModule* apimodule, const IType* itype, z3::expr value, size_t uchoice, z3::solver& ctx) override final;
 };
