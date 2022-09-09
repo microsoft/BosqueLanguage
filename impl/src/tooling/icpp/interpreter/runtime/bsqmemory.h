@@ -82,7 +82,7 @@ public:
 
     //Constructor that everyone delegates to
     BSQType(BSQTypeID tid, BSQTypeLayoutKind tkind, BSQTypeSizeInfo allocinfo, GCFunctorSet gcops, std::map<BSQVirtualInvokeID, BSQInvokeID> vtable, KeyCmpFP fpkeycmp, DisplayFP fpDisplay, std::string name): 
-        allocpage(&AllocPages::g_sential_page), evacuatepage(&AllocPages::g_sential_page), tid(tid), tkind(tkind), filledpages(), allocinfo(allocinfo), gcops(gcops), fpkeycmp(fpkeycmp), vtable(vtable), fpDisplay(fpDisplay), name(name)
+        allocpage(&AllocPages::g_sential_page), evacuatepage(&AllocPages::g_sential_page), tid(tid), tkind(tkind), allocinfo(allocinfo), gcops(gcops), fpkeycmp(fpkeycmp), vtable(vtable), fpDisplay(fpDisplay), name(name)
     {
         static_assert(sizeof(PageInfo) % 8 == 0);
 
@@ -763,7 +763,7 @@ public:
     {
         GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR(*slot);
 
-        if(GC_RC_IS_PARENT(*addr) & GC_RC_GET_PARENT(*addr) == oobj)
+        if(GC_RC_IS_PARENT(*addr) & (GC_RC_GET_PARENT(*addr) == oobj))
         {
             GC_STORE_META_DATA_WORD(addr, GC_RC_SET_PARENT(*addr, nobj));
         }
@@ -773,7 +773,6 @@ public:
     {
         if(obj == *slot)
         {
-            GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR(obj);
             auto ometa = PAGE_MASK_EXTRACT_ADDR(*slot)->btype;
 
             void* nobj = Allocator::GlobalAllocator.evacuateObject(*slot, ometa, obj);

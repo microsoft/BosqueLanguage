@@ -70,6 +70,7 @@ type ConfigAppTest = {
 };
 
 type ConfigFuzz = {
+    flavors: ("solver" | "random")[], 
     dirs: URIPathGlob[] | "*"
 };
 
@@ -352,21 +353,25 @@ function parseSourceInfo(si: any): SourceInfo | undefined {
         return (pp.filter === undefined || pp.filter === ".bsqapi") ? pp : undefined;
     });
 
-    if (!Array.isArray(si["testfiles"])) {
+    let testfiles: (URIPathGlob | undefined)[] = [];
+    if (si["testfiles"] !== undefined && !Array.isArray(si["testfiles"])) {
         return undefined;
     }
-    const testfiles = si["testfiles"].map((src) => {
-        const pp = parseURIPathGlob(src);
-        if (pp === undefined) {
-            return undefined;
-        }
 
-        if (pp.selection !== undefined && pp.filter === undefined) {
-            pp.filter = ".bsqtest";
-        }
+    if (si["testfiles"] !== undefined) {
+        testfiles = si["testfiles"].map((src: any) => {
+            const pp = parseURIPathGlob(src);
+            if (pp === undefined) {
+                return undefined;
+            }
 
-        return (pp.filter === undefined || pp.filter === ".bsqtest") ? pp : undefined;
-    });
+            if (pp.selection !== undefined && pp.filter === undefined) {
+                pp.filter = ".bsqtest";
+            }
+
+            return (pp.filter === undefined || pp.filter === ".bsqtest") ? pp : undefined;
+        });
+    }
 
     if (bsqsrc.includes(undefined) || entrypoints.includes(undefined) || testfiles.includes(undefined)) {
         return undefined;
@@ -472,6 +477,14 @@ function parseConfigAppTest(cfg: any): ConfigAppTest | undefined {
 }
 
 function parseConfigFuzz(cfg: any): ConfigFuzz | undefined {
+    let flavors: ("solver" | "random")[] = ["solver", "random"];
+    if (cfg["flavors"] !== undefined) {
+        if (!Array.isArray(cfg["flavors"]) || cfg["flavors"].some((ff) => (ff !== "solver" && ff !== "random"))) {
+            return undefined;
+        }
+        flavors = cfg["flavors"] as ("solver" | "random")[];
+    }
+
     let dirs: URIPathGlob[] | "*" = "*";
     if (cfg["dirs"] !== undefined) {
         if (!Array.isArray(cfg["dirs"])) {
@@ -487,6 +500,7 @@ function parseConfigFuzz(cfg: any): ConfigFuzz | undefined {
     }
 
     return {
+        flavors: flavors,
         dirs: dirs
     };
 }

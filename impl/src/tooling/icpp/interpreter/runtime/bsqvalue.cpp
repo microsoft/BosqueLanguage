@@ -509,7 +509,7 @@ void initializeForwardIterRecProcess(int64_t pos, void* data, BSQStringForwardIt
     {
         auto tsdata = static_cast<BSQStringTreeRepr*>(data);
 
-        auto s1size = GET_TYPE_META_DATA_AS(BSQStringReprType, tsdata->srepr1)->utf8ByteCount(tsdata->srepr1);
+        auto s1size = (int64_t)GET_TYPE_META_DATA_AS(BSQStringReprType, tsdata->srepr1)->utf8ByteCount(tsdata->srepr1);
         if(pos < s1size)
         {
             initializeForwardIterRecProcess(pos, tsdata->srepr1, iter);
@@ -523,7 +523,7 @@ void initializeForwardIterRecProcess(int64_t pos, void* data, BSQStringForwardIt
 
 void BSQStringForwardIterator::initializeIteratorPosition(int64_t curr)
 {
-    if(curr == this->strmax)
+    if(curr == (int64_t)this->strmax)
     {
         this->cbuff = nullptr;
         this->maxpos = 0;
@@ -564,7 +564,7 @@ void initializeReverseIterRecProcess(int64_t pos, void* data, BSQStringReverseIt
     {
         auto tsdata = static_cast<BSQStringTreeRepr*>(data);
 
-        auto s1size = GET_TYPE_META_DATA_AS(BSQStringReprType, tsdata->srepr1)->utf8ByteCount(tsdata->srepr1);
+        auto s1size = (int64_t)GET_TYPE_META_DATA_AS(BSQStringReprType, tsdata->srepr1)->utf8ByteCount(tsdata->srepr1);
         if(pos < s1size)
         {
             initializeReverseIterRecProcess(pos, tsdata->srepr1, iter);

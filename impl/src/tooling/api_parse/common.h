@@ -54,7 +54,7 @@ public:
 
     virtual bool valid() const override final
     {
-        return this->curr != this->sstr.size();
+        return this->curr != (int64_t)this->sstr.size();
     }
 
     virtual void advance() override final

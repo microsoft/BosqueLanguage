@@ -24,22 +24,22 @@ let includes = " ";
 let outfile = "";
 let z3lib = "";
 if(process.platform === "darwin") {
-    compiler = "clang++";
-    ccflags = (mode === "debug" ? "-Og -g" : "-O2") + " -Wall -std=c++20 -arch arm64";
+    compiler = "g++";
+    ccflags = (mode === "debug" ? "-Og -g" : "-O2") + " -Wall -Wextra -Wuninitialized -Wno-unused-parameter -Werror -std=c++2a -arch arm64";
     includes = includeheaders.map((ih) => `-I ${ih}`).join(" ");
     z3lib = path.join(includebase, "/macos/z3/bin/libz3.a")
     outfile = "-o " + outexec + "/chk";
 }
 else if(process.platform === "linux") {
-    compiler = "clang++";
-    ccflags = (mode === "debug" ? "-Og -g" : "-O2") + " -Wall -std=c++2a -pthread";
+    compiler = "g++";
+    ccflags = (mode === "debug" ? "-Og -g" : "-O2") + " -Wall -Wextra -Wuninitialized -Wno-unused-parameter -Werror -std=c++2a -pthread";
     includes = includeheaders.map((ih) => `-I ${ih}`).join(" ");
     z3lib = path.join(includebase, "/linux/z3/bin/libz3.a")
     outfile = "-o " + outexec + "/chk";
 }
 else {
     compiler = "cl.exe";
-    ccflags = "/EHsc /MP " + (mode === "debug" ? "/Zi /Od" : "/O2") + " /std:c++20";  
+    ccflags = "/EHsc /MP " + (mode === "debug" ? "/Zi /Od" : "/O2") + " /Wall /WX /std:c++20";  
     includes = includeheaders.map((ih) => `/I ${ih}`).join(" ");
     z3lib = path.join(includebase, "/win/z3/bin/libz3.lib")
     outfile = "/Fo:\"" + outobj + "/\"" + " " + "/Fd:\"" + outexec + "/\"" + " " + "/Fe:\"" + outexec + "\\chk.exe\"";

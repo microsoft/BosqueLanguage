@@ -737,6 +737,8 @@ __internal entity HavocSequence provides Some {
 }
 
 internal function s_blockingfailure<T>(): T = s_blockingfailure;
+
+internal function s_reshavoc<T>(): T = s_reshavoc;
 #endif
 
 //<summary>All collections provide this concept so we can expand them with spread operators.</summary>

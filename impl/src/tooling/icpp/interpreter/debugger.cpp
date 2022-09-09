@@ -380,7 +380,7 @@ void dbg_displayLocals(Evaluator* vv)
 
 std::optional<std::pair<int64_t, std::string>> dbg_extract_accessor_numeric(std::string vexp)
 {
-    auto spos = 0;
+    size_t spos = 0;
     while(spos != vexp.size() && vexp[spos] != '.' && vexp[spos] != '[' && vexp[spos] != ']')
     {
         spos++;
@@ -399,7 +399,7 @@ std::optional<std::pair<int64_t, std::string>> dbg_extract_accessor_numeric(std:
 
 std::optional<std::pair<std::string, std::string>> dbg_extract_accessor_qstring(std::string vexp)
 {
-    auto spos = 1;
+    size_t spos = 1;
     while(spos != vexp.size() && vexp[spos] != '"')
     {
         spos++;
@@ -415,7 +415,7 @@ std::optional<std::pair<std::string, std::string>> dbg_extract_accessor_qstring(
 
 std::optional<std::pair<std::string, std::string>> dbg_extract_accessor_name(std::string vexp)
 {
-    auto spos = 0;
+    size_t spos = 0;
     while(spos != vexp.size() && vexp[spos] != '.' && vexp[spos] != '[')
     {
         spos++;
@@ -527,7 +527,7 @@ bool dbg_processNumberKey(Evaluator* vv, const BSQType*& btype, StorageLocationP
             return false;
         }
 
-        auto count = LIST_LOAD_REPR_TYPE(cpos)->getCount(LIST_LOAD_DATA(cpos));
+        auto count = (int64_t)LIST_LOAD_REPR_TYPE(cpos)->getCount(LIST_LOAD_DATA(cpos));
         if(idx >= count)
         {
             return false;
@@ -773,7 +773,7 @@ void dbg_bpList(Evaluator* vv)
 void dbg_bpAdd(Evaluator* vv, std::string bpstr)
 {
     auto spos = bpstr.find(':');
-    assert(spos != -1);
+    assert(spos != std::string::npos);
 
     std::string file = bpstr.substr(0, spos);
     std::string lstr = bpstr.substr(spos + 1);
@@ -820,7 +820,7 @@ void dbg_bpAdd(Evaluator* vv, std::string bpstr)
 void dbg_bpDelete(Evaluator* vv, std::string bpstr)
 {
     auto spos = bpstr.find(':');
-    assert(spos != -1);
+    assert(spos != std::string::npos);
 
     std::string file = bpstr.substr(0, spos);
     std::string lstr = bpstr.substr(spos + 1);

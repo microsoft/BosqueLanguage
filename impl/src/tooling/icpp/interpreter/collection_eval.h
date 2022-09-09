@@ -188,7 +188,7 @@ public:
         if(reprtype->lkind != ListReprKind::TreeElement)
         {
             auto pvtype = static_cast<const BSQPartialVectorType*>(reprtype);
-            for(size_t i = 0; i < BSQPartialVectorType::getPVCount(tn); ++i)
+            for(int16_t i = 0; i < BSQPartialVectorType::getPVCount(tn); ++i)
             {
                 ll.push_back(pvtype->get(tn, i));
             }
