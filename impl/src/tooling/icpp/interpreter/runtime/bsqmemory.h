@@ -370,6 +370,9 @@ public:
     std::set<PageInfo*> free_pages; //pages that are completely empty
     std::set<BSQType*> allocated_types; //the set of types that have a alloc page (and maybe filled pages) that are pending processing
 
+    //Sometimes the system page is larger than our block :( this keeps track of blocks that we released but that are part of a still live page
+    std::set<PageInfo*> released_pages;
+
     inline bool isAddrAllocated(void* addr, void*& realobj) const
     {
         //TODO: probably want some bitvector and/or semi-hierarchical structure here instead 
@@ -479,7 +482,7 @@ public:
 
             return pp;
 #else
-            auto pagesize = sysconf(_SC_PAGESIZE);
+            auto pagesize = (uint64_t)sysconf(_SC_PAGESIZE);
             if(pagesize == BSQ_BLOCK_ALLOCATION_SIZE)
             {
                 PageInfo* pp = (PageInfo*)mmap(nullptr, BSQ_BLOCK_ALLOCATION_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
@@ -565,14 +568,32 @@ public:
 #ifdef _WIN32
         VirtualFree(pp, 0, MEM_RELEASE);
 #else
-        auto pagesize = sysconf(_SC_PAGESIZE);
+        auto pagesize = (uint64_t)sysconf(_SC_PAGESIZE);
         if(pagesize <= BSQ_BLOCK_ALLOCATION_SIZE)
         {
             munmap(pp, BSQ_BLOCK_ALLOCATION_SIZE);
         }
         else
         {
-            xxxx; 
+            this->released_pages.insert(pp);
+            
+            uint8_t* ppstart = (uint8_t*)((uintptr_t)pp & ~(pagesize - 1));
+
+            bool allreleased = true;
+            for(uint8_t* ppcurr =  ppstart; ppcurr < (uint8_t*)ppstart + pagesize; ppcurr += sizeof(PageInfo))
+            {
+                allreleased &= this->released_pages.contains((PageInfo*)ppcurr);
+            }
+
+            if(allreleased)
+            {
+                for(uint8_t* ppcurr =  ppstart; ppcurr < (uint8_t*)ppstart + pagesize; ppcurr += sizeof(PageInfo))
+                {
+                    this->released_pages.erase((PageInfo*)ppcurr);
+                }
+
+                munmap(ppstart, pagesize);
+            }
         }
 #endif
     }
