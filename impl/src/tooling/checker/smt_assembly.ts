@@ -697,6 +697,9 @@ class SMTAssembly {
             action.push(`(assert ${mmodel.isvaluecheck.emitSMT2(undefined)})`);
             action.push(`(assert ${mmodel.isvaluefalsechk.emitSMT2(undefined)})`)
         }
+        else if(this.vopts.ActionMode === SymbolicActionMode.InputFuzzSymbolic) {
+            action.push(`(assert ${mmodel.isvaluecheck.emitSMT2(undefined)})`);
+        }
         else {
             action.push(`(assert ${mmodel.isvaluecheck.emitSMT2(undefined)})`);
         

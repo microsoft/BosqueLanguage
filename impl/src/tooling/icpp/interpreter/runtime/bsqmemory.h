@@ -479,33 +479,56 @@ public:
 
             return pp;
 #else
-            void* ppstart = (PageInfo*)mmap(nullptr, 2 * BSQ_BLOCK_ALLOCATION_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-            assert(ppstart != MAP_FAILED);
-
             auto pagesize = sysconf(_SC_PAGESIZE);
-            uint8_t* pplcurr = (uint8_t*)ppstart;
-            while((((uintptr_t)pplcurr) & PAGE_ADDR_MASK) != ((uintptr_t)pplcurr))
+            if(pagesize == BSQ_BLOCK_ALLOCATION_SIZE)
             {
-                pplcurr = pplcurr + pagesize;
+                PageInfo* pp = (PageInfo*)mmap(nullptr, BSQ_BLOCK_ALLOCATION_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+                assert(pp != MAP_FAILED);
+
+                return pp;
+
             }
-            auto ldist = std::distance((uint8_t*)ppstart, pplcurr);
-            if(ldist != 0)
+            else if(pagesize > BSQ_BLOCK_ALLOCATION_SIZE)
             {
-                auto rr = munmap(ppstart, ldist);
-                assert(rr != -1);
-            }
+                void* ppstart = mmap(nullptr, pagesize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+                assert(ppstart != MAP_FAILED);
 
-            uint8_t* pplend = pplcurr + BSQ_BLOCK_ALLOCATION_SIZE;
-            auto rdist = std::distance(pplend, (uint8_t*)ppstart + 2 * BSQ_BLOCK_ALLOCATION_SIZE);
-            if(rdist != 0)
+                uint8_t* ppcurr = (uint8_t*)ppstart + sizeof(PageInfo);
+                while(ppcurr < ((uint8_t*)ppstart + pagesize))
+                {
+                    this->free_pages.insert((PageInfo*)ppcurr);
+                    ppcurr = ppcurr + sizeof(PageInfo);
+                }
+
+                return (PageInfo*)ppstart;
+            }
+            else
             {
-                auto rr = munmap(pplend, rdist);
-                assert(rr != -1);
+                void* ppstart = mmap(nullptr, 2 * BSQ_BLOCK_ALLOCATION_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+                assert(ppstart != MAP_FAILED);
+
+                uint8_t* pplcurr = (uint8_t*)ppstart;
+                while((((uintptr_t)pplcurr) & PAGE_ADDR_MASK) != ((uintptr_t)pplcurr))
+                {
+                    pplcurr = pplcurr + pagesize;
+                }
+                auto ldist = std::distance((uint8_t*)ppstart, pplcurr);
+                if(ldist != 0)
+                {
+                    auto rr = munmap(ppstart, ldist);
+                    assert(rr != -1);
+                }
+
+                uint8_t* pplend = pplcurr + BSQ_BLOCK_ALLOCATION_SIZE;
+                auto rdist = std::distance(pplend, (uint8_t*)ppstart + 2 * BSQ_BLOCK_ALLOCATION_SIZE);
+                if(rdist != 0)
+                {
+                    auto rr = munmap(pplend, rdist);
+                    assert(rr != -1);
+                }
+
+                return (PageInfo*)pplcurr;
             }
-
-            auto pp = (PageInfo*)pplcurr;
-
-            return pp;
 #endif   
     }
 
@@ -542,7 +565,15 @@ public:
 #ifdef _WIN32
         VirtualFree(pp, 0, MEM_RELEASE);
 #else
-        munmap(pp, BSQ_BLOCK_ALLOCATION_SIZE);
+        auto pagesize = sysconf(_SC_PAGESIZE);
+        if(pagesize <= BSQ_BLOCK_ALLOCATION_SIZE)
+        {
+            munmap(pp, BSQ_BLOCK_ALLOCATION_SIZE);
+        }
+        else
+        {
+            xxxx; 
+        }
 #endif
     }
 

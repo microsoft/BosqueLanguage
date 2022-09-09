@@ -857,6 +857,7 @@ class MIRType {
 
 enum SymbolicActionMode {
     EvaluateSymbolic, //Inputs will be symbolically parsed and executed and set to extract result value -- single entrypoint assumed
+    InputFuzzSymbolic, //Inputs will be symbolically generated and extracted -- single entrypoint assumed
     ErrTestSymbolic, //Inputs will symbolically generated and executed with failures reported (NO check on output) -- single entrypoint assumed
     ChkTestSymbolic //Inputs will be symbolically generated and executed with failures reported and check for "true" return value -- single entrypoint assumed
 }

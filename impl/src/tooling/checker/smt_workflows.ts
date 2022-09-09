@@ -106,6 +106,9 @@ function runVEvaluatorAsync(cpayload: object, mode: SymbolicActionMode, cb: (res
     else if(mode === SymbolicActionMode.ChkTestSymbolic) {
         workflow = "passchk";
     }
+    else if(mode === SymbolicActionMode.InputFuzzSymbolic) {
+        workflow = "fuzz";
+    }
     else {
         workflow = "eval";
     }
@@ -237,10 +240,29 @@ function workflowEvaluate(usercode: PackageConfig, buildlevel: BuildLevel, istes
     }
 }
 
-//TODO: for a given entrypoint (1) check all possible errors, (2) check just PASS, (3) check all errors and pass
+function workflowInputFuzz(usercode: PackageConfig, buildlevel: BuildLevel, istestbuild: boolean, timeout: number, vopts: VerifierOptions, entrypoint: {filename: string, name: string, fkey: MIRResolvedTypeKey}, cb: (result: string) => void) {
+    try {
+        const { masm } = generateMASM(usercode, buildlevel, istestbuild, false, entrypoint.fkey, {filename: entrypoint.filename, names: [entrypoint.name]});
+        if(masm === undefined) {
+            cb(JSON.stringify({result: "error", info: "compile errors"}));
+        }
+        else {
+            const smtcode = generateSMTPayload(masm, istestbuild, vopts, { file: "[NO TARGET]", line: -1, pos: -1 }, entrypoint.fkey)
+            if(smtcode === undefined) {
+                cb(JSON.stringify({result: "error", info: "payload generation error"}));
+                return;
+            }
+
+            const payload = generateCheckerPayload(masm, istestbuild, smtcode, timeout, entrypoint.fkey);
+            runVEvaluatorAsync(payload, SymbolicActionMode.InputFuzzSymbolic, cb);
+        }
+    } catch(e) {
+        cb(JSON.stringify({result: "error", info: `${e}`}));
+    }
+}
 
 export {
     generateStandardVOpts,
     workflowLoadUserSrc, workflowGetErrors, workflowEmitToFile, 
-    workflowErrorCheckSingle, workflowPassCheck, workflowEvaluate
+    workflowErrorCheckSingle, workflowPassCheck, workflowEvaluate, workflowInputFuzz
 };
