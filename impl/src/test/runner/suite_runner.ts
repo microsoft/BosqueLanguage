@@ -498,7 +498,7 @@ function runtests(packageloads: {macros: string[], files: string[]}[], globalmac
                     process.stdout.write(`Symbolic test completed with ${rstr} in ${smtime}ms (${end.getTime() - start.getTime()}ms elapsed)\n`);
                     
                     if(result === "fail" || result === "passlimit") {
-                        process.stdout.write(`    Error was ${test.trgterror.msg} in ${Path.basename(test.trgterror.file)}@${test.trgterror.line} from ${test.namespace}::${test.fname} entrypoint\n`);
+                        process.stdout.write(`    Error was ${test.trgterror.msg} in ${Path.basename(test.trgterror.file)}@${test.trgterror.line} from ${test.namespace}::${test.fname} entrypoint${info !== undefined ? (" -- " + info) : ""}\n`);
                     }
                 }
             }

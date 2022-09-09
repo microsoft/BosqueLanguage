@@ -31,7 +31,8 @@ json workflowCheckError(std::string smt2decl, const APIModule* apimodule, const 
     if(res == z3::check_result::unknown)
     {
         return {
-            {"status", "timeout"},
+            {"status", "unknown"},
+            {"info", s.reason_unknown()},
             {"time", delta_ms}
         };
     }
@@ -93,7 +94,8 @@ json workflowTestPass(std::string smt2decl, const APIModule* apimodule, const In
     if(res == z3::check_result::unknown)
     {
         return {
-            {"status", "timeout"},
+            {"status", "unknown"},
+            {"info", s.reason_unknown()},
             {"time", delta_ms}
         };
     }
@@ -178,7 +180,8 @@ json workflowEvaluate(std::string smt2decl, const APIModule* apimodule, const In
     if(res == z3::check_result::unknown)
     {
         return {
-            {"status", "timeout"},
+            {"status", "unknown"},
+            {"info", s.reason_unknown()},
             {"time", delta_ms}
         };
     }
@@ -208,6 +211,70 @@ json workflowEvaluate(std::string smt2decl, const APIModule* apimodule, const In
             {"status", "output"},
             {"time", delta_ms},
             {"value", jarg.value()}
+        };
+    }
+}
+
+json workflowFuzz(std::string smt2decl, const APIModule* apimodule, const InvokeSignature* apisig, unsigned timeout)
+{
+    z3::context c;
+    z3::solver s(c);
+
+    z3::params p(c);
+    p.set(":timeout", timeout);
+
+    //TODO: it would be nice to set a more specifc logic here (than the ALL from the smtfile)
+    s.set(p);
+
+    s.from_string(smt2decl.c_str());
+
+    //check the formula
+    auto start = std::chrono::system_clock::now();
+    auto res = s.check();    
+    auto end = std::chrono::system_clock::now();
+
+    int delta_ms = (int)std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();    
+    if(res == z3::check_result::unknown)
+    {
+        return {
+            {"status", "unknown"},
+            {"info", s.reason_unknown()},
+            {"time", delta_ms}
+        };
+    }
+    else if(res == z3::check_result::unsat)
+    {
+        return {
+            {"status", "error"},
+            {"info", "No valid inputs exist!"}
+        };
+    }
+    else
+    {
+        
+        SMTParseJSON jextract;
+        json argv = json::array();
+
+        for(size_t i = 0; i < apisig->argtypes.size(); ++i)
+        {
+            auto rootctx = SMTParseJSON::generateInitialArgContext(c, i);
+            auto jarg = apisig->argtypes[i]->textract(jextract, apimodule, rootctx, s);
+
+            if(!jarg.has_value())
+            {
+                return {
+                    {"status", "error"},
+                    {"info", "Could not extract arg"}
+                };
+            }
+
+            argv.push_back(jarg.value());
+        }
+
+        return {
+            {"status", "input"},
+            {"time", delta_ms},
+            {"value", argv}
         };
     }
 }
@@ -298,6 +365,29 @@ int main(int argc, char** argv)
             const InvokeSignature* apisig = apimodule->getSigForFriendlyName(payload["mainfunc"]).value();
 
             json result = workflowEvaluate(smt2decl, apimodule, apisig, payload["jin"], timeout);
+            
+            std::cout << result << std::endl;
+            fflush(stdout);
+        }
+        catch(const std::exception& e)
+        {
+            std::cout << "{\"result\": \"error\", \"info\": \"" << e.what() << "\"}" << std::endl;
+            fflush(stdout);
+            exit(1);
+        }
+    }
+    else if(argc > argidx && std::string(argv[argidx]) == "--fuzz")
+    {
+        json payload = getPayload(argc, argv, argidx);
+
+        try
+        {
+            std::string smt2decl = payload["smt2decl"].get<std::string>();
+            unsigned timeout = payload["timeout"].get<unsigned>();
+            APIModule* apimodule = APIModule::jparse(payload["apimodule"]);
+            const InvokeSignature* apisig = apimodule->getSigForFriendlyName(payload["mainfunc"]).value();
+
+            json result = workflowFuzz(smt2decl, apimodule, apisig, timeout);
             
             std::cout << result << std::endl;
             fflush(stdout);

@@ -13,7 +13,7 @@ import { help, isStdInArgs, extractArgs, loadUserSrc, tryLoadPackage, extractEnt
 import { ConfigFuzz, ConfigRun, Package } from "./package_load";
 import { PackageConfig, SymbolicActionMode } from "../compiler/mir_assembly";
 import { workflowRunICPPFile } from "../tooling/icpp/transpiler/iccp_workflows";
-import { generateStandardVOpts, workflowEvaluate } from "../tooling/checker/smt_workflows";
+import { generateStandardVOpts, workflowEvaluate, workflowInputFuzz } from "../tooling/checker/smt_workflows";
 
 function processRunAction(args: string[]) {
     if (args.length === 0) {
@@ -207,8 +207,8 @@ function processRunSymbolicAction(args: string[]) {
                             process.stdout.write(`Generated output in ${jres["time"]} millis!\n`);
                             process.stdout.write(JSON.stringify(jres["value"], undefined, 2) + "\n");
                         }
-                        else if (jres["status"] === "timeout") {
-                            process.stdout.write(`Solver timeout :(\n`);
+                        else if (jres["status"] === "unknown") {
+                            process.stdout.write(`Solver unknown -- ${jres["info"]} -- :(\n`);
                         }
                         else {
                             process.stdout.write(`Failed with -- ${JSON.stringify(jres)}`);
@@ -241,8 +241,8 @@ function processRunSymbolicAction(args: string[]) {
                     process.stdout.write(`Generated output in ${jres["time"]} millis!\n`);
                     process.stdout.write(JSON.stringify(jres["value"], undefined, 2) + "\n");
                 }
-                else if (jres["status"] === "timeout") {
-                    process.stdout.write(`Solver timeout :(\n`);
+                else if (jres["status"] === "unknown") {
+                    process.stdout.write(`Solver unknown -- ${jres["info"]} -- :(\n`);
                 }
                 else {
                     process.stdout.write(`Failed with -- ${JSON.stringify(jres)}`);
@@ -259,6 +259,9 @@ function processRunSymbolicAction(args: string[]) {
 }
 
 function processFuzzAction(args: string[]) {
+    const timeout = 10000;
+    const sym_opts = generateStandardVOpts(SymbolicActionMode.InputFuzzSymbolic);
+
     let workingdir = process.cwd();
     let pckg: Package | undefined = undefined;
     if (path.extname(args[0]) === ".json") {
@@ -279,6 +282,14 @@ function processFuzzAction(args: string[]) {
         process.exit(1);
     }
 
+    const entrypoint = extractEntryPoint(args, workingdir, pckg.src.entrypoints);
+    if (entrypoint === undefined) {
+        process.stderr.write(chalk.red("Could not parse 'entrypoint' option\n"));
+
+        help("fuzz");
+        process.exit(1);
+    }
+
     const cfg = extractConfig<ConfigFuzz>(args, pckg, workingdir, "fuzz");
     if (cfg === undefined) {
         process.stderr.write(chalk.red("Could not parse 'config' option\n"));
@@ -287,10 +298,47 @@ function processFuzzAction(args: string[]) {
         process.exit(1);
     }
 
+    const srcfiles = loadUserSrc(workingdir, [...pckg.src.entrypoints, ...pckg.src.bsqsource]);
+    if (srcfiles === undefined) {
+        process.stderr.write(chalk.red("Failed when loading source files\n"));
+        process.exit(1);
+    }
+
+    const usersrcinfo = srcfiles.map((sf) => {
+        return { srcpath: sf, filename: path.basename(sf), contents: fs.readFileSync(sf).toString() };
+    });
+    const userpackage = new PackageConfig([...cfg.macros, ...cfg.globalmacros], usersrcinfo);
+
     //bosque fuzz [package_path.json] [--config cname]
 
-    process.stderr.write(chalk.red("Fuzz running is not supported yet.\n"));
-    process.exit(1);
+    if(cfg.params.flavors.includes("random")) {
+        //TODO: random fuzz generation
+    }
+
+    if(cfg.params.flavors.includes("solver")) {
+        workflowInputFuzz(userpackage, "debug", false, timeout, sym_opts, entrypoint, (res: string) => {
+            try {
+                const jres = JSON.parse(res);
+
+                if (jres["status"] === "input") {
+                    process.stdout.write(`Generated input in ${jres["time"]} millis!\n`);
+                    process.stdout.write(JSON.stringify(jres["value"], undefined, 2) + "\n");
+                }
+                else if (jres["status"] === "unknown") {
+                    process.stdout.write(`Solver unknown -- ${jres["info"]} -- :(\n`);
+                }
+                else {
+                    process.stdout.write(`Failed with -- ${JSON.stringify(jres)}`);
+                }
+
+                process.exit(0);
+            }
+            catch (ex) {
+                process.stderr.write(`Failure ${ex}\n`);
+                process.exit(1);
+            }
+        });
+    }
 }
 
 export {
