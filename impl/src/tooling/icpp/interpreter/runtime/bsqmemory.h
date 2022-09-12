@@ -497,6 +497,7 @@ public:
             assert(ppstart != MAP_FAILED);
 
             pp = (PageInfo*)ppstart;
+            
             uint8_t* ppcurr = ppstart + BSQ_BLOCK_ALLOCATION_SIZE;
             while(ppcurr < (ppstart + pagesize))
             {
@@ -517,6 +518,8 @@ public:
             {
                 pplcurr = pplcurr + pagesize;
             }
+
+            pp = (PageInfo*)pplcurr;
 
             auto ldist = std::distance(ppstart, pplcurr);
             if(ldist != 0)
