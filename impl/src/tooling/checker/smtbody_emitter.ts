@@ -1738,7 +1738,9 @@ class SMTBodyEmitter {
         else {
             assert(constype instanceof MIRPrimitiveMapEntityTypeDecl);
             
-            const v1type = this.assembly.typeMap.get(`Vector1<[${constype.getTypeK().typeID}, ${constype.getTypeV().typeID}]>`) as MIRType;
+            const cmaptype = constype as MIRPrimitiveMapEntityTypeDecl;
+
+            const v1type = this.assembly.typeMap.get(`Vector1<[${cmaptype.getTypeK().typeID}, ${cmaptype.getTypeV().typeID}]>`) as MIRType;
             const consexp = this.typegen.coerceContainerAtomIntoTermRepresentation(new SMTCallSimple(this.typegen.getSMTConstructorName(v1type).cons, [arg]), v1type);
       
             return new SMTLet(this.varToSMTName(op.trgt).vname, consexp, continuation);

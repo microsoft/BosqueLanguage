@@ -11,7 +11,7 @@ import * as chalk from "chalk";
 import { Config, ConfigAppTest, ConfigBuild, ConfigFuzz, ConfigRun, ConfigTest, Package, parsePackage, parseURIPath, URIPath, URIPathGlob } from "./package_load";
 import { cleanCommentsStringsFromFileContents } from "../ast/parser";
 
-type CmdTag = "run" | "symrun" | "build" | "test" | "apptest" | "fuzz" | "morphir-chk";
+type CmdTag = "run" | "symrun" | "build" | "test" | "apptest" | "fuzz";
 
 const DEFAULT_SMALL_MODEL_ONLY = false;
 
@@ -49,11 +49,6 @@ function help(cmd: CmdTag | undefined) {
     if(cmd === "fuzz" || cmd === undefined) {
         process.stdout.write("Fuzz Application:\n");
         process.stdout.write("bosque fuzz [package_path.json] [--config cname]\n\n");
-    }
-
-    if(cmd === "morphir-chk" || cmd === undefined) {
-        process.stdout.write("Check a Morphir (elm) Application:\n");
-        process.stdout.write("bosque morphir-chk [morphir.json]\n\n");
     }
 }
 
