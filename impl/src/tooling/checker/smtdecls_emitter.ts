@@ -968,7 +968,7 @@ class SMTEmitter {
 
         const restype = this.temitter.getMIRType(mirep.resultType);
         let rarg:  { vname: string, vtype: SMTTypeInfo, vchk: SMTExp | undefined, vinit: SMTExp, callexp: SMTExp } | undefined = undefined;
-        if (this.vopts.ActionMode === SymbolicActionMode.EvaluateSymbolic) {
+        if (this.vopts.ActionMode === SymbolicActionMode.EvaluateSymbolic || this.vopts.ActionMode === SymbolicActionMode.InputFuzzSymbolic) {
             let ufuncs: SMTFunctionUninterpreted[] = [];
             this.walkAndGenerateHavocType(restype, this.assembly.havocfuncs, ufuncs);
             ufuncs.forEach((uf) => {

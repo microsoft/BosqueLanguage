@@ -3937,10 +3937,9 @@ class SMTBodyEmitter {
                 return SMTFunction.create(ideclname, args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));
             }
             case "s_reshavoc": {
-                //TODO: maybe make this more context aware if we use it more later
-                const havoc = this.typegen.generateHavocConstructorCall(mirrestype, new SMTConst("(as seq.empty (Seq BNat))"), new SMTConst("-1"));
-
-                return SMTFunction.create(ideclname, args, chkrestype, havoc);
+                //TODO: only works for fuzz context
+                const ufc = this.typegen.generateResultTypeConstructorSuccess(mirrestype, new SMTConst(this.generateUFConstantForType(mirrestype)));
+                return SMTFunction.create(ideclname, args, chkrestype, ufc);
             }
             default: {
                 assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
