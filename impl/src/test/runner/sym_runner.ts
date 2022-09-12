@@ -18,14 +18,14 @@ function runSymTest(exepath: string, verbose: boolean, test: SymTest, cpayload: 
 
         const proc = exec(cmd, (err, stdout) => {
             const end = new Date();
-            let status: "error" | "timeout" | "pass" | "unreachable" | "witness";
+            let status: "error" | "unknown" | "pass" | "unreachable" | "witness";
             let info: string = "";
             let witness: any = undefined;
             let smttime: number = -1;
 
             try {
                 const robj = JSON.parse(stdout.toString().trim());
-                status = robj["status"] as "error" | "timeout" | "pass" | "unreachable" | "witness";
+                status = robj["status"] as "error" | "unknown" | "pass" | "unreachable" | "witness";
                 info = robj["info"] || "No Msg";
                 witness = robj["witness"];
                 smttime = robj["time"] || 0;
@@ -47,8 +47,8 @@ function runSymTest(exepath: string, verbose: boolean, test: SymTest, cpayload: 
                         cb("fail", test, start, end, smttime, JSON.stringify(witness));
                     }
                     else {
-                        if(status === "timeout") {
-                            cb("passlimit", test, start, end, smttime);
+                        if(status === "unknown") {
+                            cb("passlimit", test, start, end, smttime, info);
                         }
                         else {
                             cb("error", test, start, end, smttime, info);
@@ -63,8 +63,8 @@ function runSymTest(exepath: string, verbose: boolean, test: SymTest, cpayload: 
                         cb("fail", test, start, end, smttime, JSON.stringify(witness));
                     }
                     else {
-                        if(status === "timeout") {
-                            cb("passlimit", test, start, end, smttime);
+                        if(status === "unknown") {
+                            cb("passlimit", test, start, end, smttime, info);
                         }
                         else {
                             cb("error", test, start, end, smttime, info);
@@ -96,14 +96,14 @@ function runSymTestShouldFail(exepath: string, verbose: boolean, test: SymTestIn
 
         const proc = exec(cmd, (err, stdout) => {
             const end = new Date();
-            let status: "error" | "timeout" | "pass" | "witness";
+            let status: "error" | "unknown" | "pass" | "witness";
             let info: string = "";
             let witness: any = undefined;
             let smttime: number = -1;
 
             try {
                 const robj = JSON.parse(stdout.toString().trim());
-                status = robj["status"] as "error" | "timeout" | "pass" | "witness";
+                status = robj["status"] as "error" | "unknown" | "pass" | "witness";
                 info = robj["info"] || "No Msg";
                 witness = robj["witness"];
                 smttime = robj["time"] || 0;
@@ -124,7 +124,7 @@ function runSymTestShouldFail(exepath: string, verbose: boolean, test: SymTestIn
                     cb("pass", test, start, end, smttime, JSON.stringify(witness));
                 }
                 else {
-                    cb("error", test, start, end, smttime, (status === "timeout" ? "[TIMEOUT]" : "") + info);
+                    cb("error", test, start, end, smttime, (status === "unknown" ? "[UNKNOWN]" : "") + info);
                 }
             }
         });

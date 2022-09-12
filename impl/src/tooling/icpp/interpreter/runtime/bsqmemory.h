@@ -370,6 +370,9 @@ public:
     std::set<PageInfo*> free_pages; //pages that are completely empty
     std::set<BSQType*> allocated_types; //the set of types that have a alloc page (and maybe filled pages) that are pending processing
 
+    //Sometimes the system page is larger than our block :( this keeps track of blocks that we released but that are part of a still live page
+    std::set<PageInfo*> released_pages;
+
     inline bool isAddrAllocated(void* addr, void*& realobj) const
     {
         //TODO: probably want some bitvector and/or semi-hierarchical structure here instead 
@@ -452,6 +455,9 @@ public:
 
     void initializeFreshPageForType(PageInfo* p, BSQType* btype)
     {
+        p->slots = (GC_META_DATA_WORD*)((uint8_t*)p + sizeof(PageInfo));
+        p->data = (GC_META_DATA_WORD*)((uint8_t*)p + sizeof(PageInfo) + btype->tableEntryCount * sizeof(GC_META_DATA_WORD));
+
         p->alloc_entry_size = btype->tableEntrySize;
         p->alloc_entry_count = btype->tableEntryCount;
         
@@ -472,23 +478,50 @@ public:
 
     PageInfo* allocateFreePageMemOp()
     {
-#ifdef _WIN32
-            //https://docs.microsoft.com/en-us/windows/win32/memory/reserving-and-committing-memory
-            auto pp = (PageInfo*)VirtualAlloc(nullptr, BSQ_BLOCK_ALLOCATION_SIZE, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
-            assert(pp != nullptr);
+        PageInfo* pp = nullptr;
 
-            return pp;
+#ifdef _WIN32
+        //https://docs.microsoft.com/en-us/windows/win32/memory/reserving-and-committing-memory
+        pp = (PageInfo*)VirtualAlloc(nullptr, BSQ_BLOCK_ALLOCATION_SIZE, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+        assert(pp != nullptr);
 #else
-            void* ppstart = (PageInfo*)mmap(nullptr, 2 * BSQ_BLOCK_ALLOCATION_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+        auto pagesize = (uint64_t)sysconf(_SC_PAGESIZE);
+        if(pagesize == BSQ_BLOCK_ALLOCATION_SIZE)
+        {
+            pp = (PageInfo*)mmap(nullptr, BSQ_BLOCK_ALLOCATION_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+            assert(pp != MAP_FAILED);
+        }
+        else if(pagesize > BSQ_BLOCK_ALLOCATION_SIZE)
+        {
+            uint8_t* ppstart = (uint8_t*)mmap(nullptr, pagesize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
             assert(ppstart != MAP_FAILED);
 
-            auto pagesize = sysconf(_SC_PAGESIZE);
-            uint8_t* pplcurr = (uint8_t*)ppstart;
+            pp = (PageInfo*)ppstart;
+            
+            uint8_t* ppcurr = ppstart + BSQ_BLOCK_ALLOCATION_SIZE;
+            while(ppcurr < (ppstart + pagesize))
+            {
+                this->page_set.insert((PageInfo*)ppcurr);
+                assert(((uintptr_t)ppcurr) < MAX_ALLOCATED_ADDRESS);
+
+                this->free_pages.insert((PageInfo*)ppcurr);
+                ppcurr = ppcurr + BSQ_BLOCK_ALLOCATION_SIZE;
+            }
+        }
+        else
+        {
+            uint8_t* ppstart = (uint8_t*)mmap(nullptr, 2 * BSQ_BLOCK_ALLOCATION_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+            assert(ppstart != MAP_FAILED);
+
+            uint8_t* pplcurr = ppstart;
             while((((uintptr_t)pplcurr) & PAGE_ADDR_MASK) != ((uintptr_t)pplcurr))
             {
                 pplcurr = pplcurr + pagesize;
             }
-            auto ldist = std::distance((uint8_t*)ppstart, pplcurr);
+
+            pp = (PageInfo*)pplcurr;
+
+            auto ldist = std::distance(ppstart, pplcurr);
             if(ldist != 0)
             {
                 auto rr = munmap(ppstart, ldist);
@@ -496,17 +529,20 @@ public:
             }
 
             uint8_t* pplend = pplcurr + BSQ_BLOCK_ALLOCATION_SIZE;
-            auto rdist = std::distance(pplend, (uint8_t*)ppstart + 2 * BSQ_BLOCK_ALLOCATION_SIZE);
+            auto rdist = std::distance(pplend, ppstart + 2 * BSQ_BLOCK_ALLOCATION_SIZE);
             if(rdist != 0)
             {
                 auto rr = munmap(pplend, rdist);
                 assert(rr != -1);
             }
-
-            auto pp = (PageInfo*)pplcurr;
-
-            return pp;
+        }
 #endif   
+        this->page_set.insert(pp);
+
+        assert(MIN_ALLOCATED_ADDRESS < ((uintptr_t)pp));
+        assert(((uintptr_t)pp) < MAX_ALLOCATED_ADDRESS);
+
+        return pp;
     }
 
     PageInfo* allocateFreePage(BSQType* btype)
@@ -522,13 +558,6 @@ public:
         else
         {
             pp = this->allocateFreePageMemOp();
-            pp->slots = (GC_META_DATA_WORD*)((uint8_t*)pp + sizeof(PageInfo));
-            pp->data = (GC_META_DATA_WORD*)((uint8_t*)pp + sizeof(PageInfo) + btype->tableEntryCount * sizeof(GC_META_DATA_WORD));
-
-            this->page_set.insert(pp);
-
-            assert(MIN_ALLOCATED_ADDRESS < ((uintptr_t)pp));
-            assert(((uintptr_t)pp) < MAX_ALLOCATED_ADDRESS);
         }
 
         this->initializeFreshPageForType(pp, btype);
@@ -542,7 +571,35 @@ public:
 #ifdef _WIN32
         VirtualFree(pp, 0, MEM_RELEASE);
 #else
-        munmap(pp, BSQ_BLOCK_ALLOCATION_SIZE);
+        auto pagesize = (uint64_t)sysconf(_SC_PAGESIZE);
+        if(pagesize <= BSQ_BLOCK_ALLOCATION_SIZE)
+        {
+            auto rr = munmap(pp, BSQ_BLOCK_ALLOCATION_SIZE);
+            assert(rr == 0);
+        }
+        else
+        {
+            this->released_pages.insert(pp);
+            
+            uint8_t* ppstart = (uint8_t*)((uintptr_t)pp & ~(pagesize - 1));
+
+            bool allreleased = true;
+            for(uint8_t* ppcurr =  ppstart; ppcurr < ppstart + pagesize; ppcurr += BSQ_BLOCK_ALLOCATION_SIZE)
+            {
+                allreleased &= this->released_pages.contains((PageInfo*)ppcurr);
+            }
+
+            if(allreleased)
+            {
+                for(uint8_t* ppcurr = ppstart; ppcurr < ppstart + pagesize; ppcurr += BSQ_BLOCK_ALLOCATION_SIZE)
+                {
+                    this->released_pages.erase((PageInfo*)ppcurr);
+                }
+
+                auto rr = munmap(ppstart, pagesize);
+                assert(rr == 0);
+            }
+        }
 #endif
     }
 
