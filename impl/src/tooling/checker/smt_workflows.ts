@@ -124,10 +124,15 @@ function runVEvaluatorAsync(cpayload: object, mode: SymbolicActionMode, cb: (res
             }
         });
 
-        proc.stdin.setDefaultEncoding('utf-8');
-        proc.stdin.write(JSON.stringify(cpayload, undefined, 2));
-        proc.stdin.write("\n");
-        proc.stdin.end();
+        if(proc.stdin === null) {
+            proc.kill();
+        }
+        else {
+            proc.stdin.setDefaultEncoding('utf-8');
+            proc.stdin.write(JSON.stringify(cpayload, undefined, 2));
+            proc.stdin.write("\n");
+            proc.stdin.end();
+        }
     }
     catch(ex) {
         cb(JSON.stringify({result: "error", info: `${ex}`}));
