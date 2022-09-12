@@ -69,10 +69,15 @@ function runICPPTest(exepath: string, verbose: boolean, test: ICPPTest, icppjson
             }
         });
 
-        proc.stdin.setDefaultEncoding('utf-8');
-        proc.stdin.write(JSON.stringify(icppjson, undefined, 2));
-        proc.stdin.write("\n");
-        proc.stdin.end()
+        if(proc.stdin === null) {
+            proc.kill();
+        }
+        else {
+            proc.stdin.setDefaultEncoding('utf-8');
+            proc.stdin.write(JSON.stringify(icppjson, undefined, 2));
+            proc.stdin.write("\n");
+            proc.stdin.end();
+        }
     }
     catch(ex: any) {
         const end = new Date();

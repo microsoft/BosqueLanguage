@@ -103,10 +103,15 @@ function runICPPFile(icppjson: {code: object, args: any[], main: string}, debug:
            cb(stdout.toString().trim());
         });
 
-        proc.stdin.setDefaultEncoding('utf-8');
-        proc.stdin.write(JSON.stringify(icppjson, undefined, 2));
-        proc.stdin.write("\n");
-        proc.stdin.end()
+        if(proc.stdin === null) {
+            proc.kill();
+        }
+        else {
+            proc.stdin.setDefaultEncoding('utf-8');
+            proc.stdin.write(JSON.stringify(icppjson, undefined, 2));
+            proc.stdin.write("\n");
+            proc.stdin.end();
+        }
     }
     catch(ex) {
         cb(undefined);
