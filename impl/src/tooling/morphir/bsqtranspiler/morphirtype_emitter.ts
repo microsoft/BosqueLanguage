@@ -243,6 +243,8 @@ class MorphirTypeEmitter {
                 }
                 else {
                     assert(false, "Unknown primitive internal entity");
+
+                    return (undefined as any) as MorphirTypeInfo;
                 }
             }
             else if (entity instanceof MIRStringOfInternalEntityTypeDecl) {

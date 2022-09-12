@@ -226,7 +226,11 @@ class SMTTypeEmitter {
                     else if (entity.name === "SeqMap") {
                         return new SMTTypeInfo(this.lookupTypeName(entity.tkey), `TypeTag_${this.lookupTypeName(entity.tkey)}`, entity.tkey);
                     }
-                    assert(false, "Unknown primitive internal entity");
+                    else {
+                        assert(false, "Unknown primitive internal entity");
+
+                        return (undefined as any) as SMTTypeInfo;
+                    }
                 }
             }
             else if (entity instanceof MIRHavocEntityTypeDecl) {
