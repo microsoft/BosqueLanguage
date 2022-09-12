@@ -477,6 +477,7 @@ class MorphirBodyEmitter {
         else {
             //TODO: here or course
             assert(false);
+            return (undefined as any) as MorphirFunction;
         }
     }
 

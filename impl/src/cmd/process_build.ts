@@ -14,9 +14,7 @@ import { ConfigBuild, Package } from "./package_load";
 import { PackageConfig, SymbolicActionMode } from "../compiler/mir_assembly";
 import { workflowEmitICPPFile } from "../tooling/icpp/transpiler/iccp_workflows";
 import { generateStandardVOpts, workflowEmitToFile } from "../tooling/checker/smt_workflows";
-import { execSync } from "child_process";
 
-import { transpile } from "../tooling/morphir/converter/walker";
 import { workflowEmitMorphirElmFile } from "../tooling/morphir/bsqtranspiler/morphir_workflows";
 
 function processBuildActionBytecode(args: string[]) {
@@ -295,110 +293,6 @@ function processBuildActionBosqueToMorphir(args: string[]) {
     workflowEmitMorphirElmFile(path.join(output.path, cfg.name + ".elm"), userpackage, cfg.buildlevel, false, entrypoints);
 }
 
-function processBuildActionMorphirToBosque(args: string[]) {
-    let workingdir = process.cwd();
-    let pckg: string | undefined = undefined;
-    if (path.extname(args[1]) === ".json") {
-        workingdir = path.dirname(path.resolve(args[1]));
-        pckg = path.resolve(args[1]);
-    }
-    else {
-        pckg = path.resolve(workingdir, "morphir.json");
-    }
-
-    if (pckg === undefined) {
-        process.stderr.write(chalk.red("Could not parse 'package' option\n"));
-
-        help("build");
-        process.exit(1);
-    }
-
-    if(!fs.existsSync(pckg)) {
-        process.stderr.write(chalk.red(`Directory "${workingdir}" does not contain a morphir package\n`));
-        process.exit(1);
-    }
-
-    const output = extractOutput(workingdir, args);
-    if (output === undefined) {
-        process.stderr.write(chalk.red("Could not parse 'output' option\n"));
-
-        help("build");
-        process.exit(1);
-    }
-
-    try {
-        fsextra.ensureDirSync(output.path);
-    }
-    catch (ex) {
-        process.stderr.write(chalk.red("Could not create 'output' directory\n"));
-
-        help("build");
-        process.exit(1);
-    }
-
-    const morphir_cmd = path.join(__dirname, "../../", "node_modules/.bin/morphir-elm");
-    try {
-        const mv = execSync(`${morphir_cmd} -v`).toString().trim();
-        if(mv !== "2.49.0") {
-            process.stderr.write(`Unsupported version of "morphir-elm" compiler -- please install with "npm install -g morphir-elm@2.49.0"\n`);
-            process.exit(1);
-        }
-    }
-    catch(ex) {
-        process.stderr.write(`Missing "morphir-elm" compiler -- please install with "npm install -g morphir-elm@2.49.0"\n`);
-        process.exit(1);
-    }
-
-    try {
-        process.stdout.write(`Converting Elm source in ${workingdir}...\n`);
-        execSync(`${morphir_cmd} make`, { cwd: workingdir });
-    }
-    catch(ex) {
-        process.stderr.write(`Failed to convert elm source to MorphirIR -- ${ex}\n`);
-        process.exit(1);
-    }
-
-    const srcfile = path.join(workingdir, "morphir-ir.json");
-    const dstdir = path.join(path.parse(srcfile).dir, "bsqproj");
-    const dstsrc = path.join(dstdir, "app.bsqapi");
-    const dstpckg = path.join(dstdir, "package.json");
-
-    process.stdout.write(`Transpiling MorphirIR in ${srcfile}...\n`);
-    try {
-        const source_ir = fs.readFileSync(srcfile).toString();
-        const bsqcode = transpile(JSON.parse(source_ir));
-
-        process.stdout.write(`Writing Bosque source to ${dstdir}...\n`);
-        if(!fs.existsSync(dstdir)) {
-            fs.mkdirSync(dstdir);
-        }
-
-        fs.writeFileSync(dstsrc, bsqcode);
-    
-        fs.writeFileSync(dstpckg, JSON.stringify(
-        {
-            "name": `transpiled-${path.basename(srcfile, ".json")}`,
-            "version": "0.0.0.0",
-            "description": "Transpiled code for testing/analysis",
-            "license": "MIT",
-            "src": {
-                "bsqsource": [
-                ],
-                "entrypoints": [
-                    `./app.bsqapi`
-                ],
-                "testfiles": [
-                ]
-            }
-        },
-        undefined, 2
-    ));
-    }
-    catch (ex) {
-        process.stderr.write(`Failed to transpile --- ${ex}`);
-    }
-}
-
 function processBuildAction(args: string[]) {
     if(args.length === 1) {
         if(args[0] === "morphir") {
@@ -430,5 +324,5 @@ function processBuildAction(args: string[]) {
 }
 
 export {
-    processBuildAction, processBuildActionMorphirToBosque
+    processBuildAction
 };

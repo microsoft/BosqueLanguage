@@ -8,7 +8,7 @@ import * as path from "path";
 
 import * as chalk from "chalk";
 
-import { DEFAULT_SMALL_MODEL_ONLY, extractConfig, extractOutput, help, loadUserSrc, tryLoadPackage } from "./args_load";
+import { DEFAULT_SMALL_MODEL_ONLY, extractConfig, help, loadUserSrc, tryLoadPackage } from "./args_load";
 import { ConfigAppTest, ConfigTest, Package } from "./package_load";
 import { runtests } from "../test/runner/suite_runner";
 
@@ -114,28 +114,6 @@ function processAppTestAction(args: string[]) {
     runtests(userpackage, [], pckg.src.entrypoints.map((ef) => path.resolve(workingdir, ef.path)), cfg.buildlevel, true, DEFAULT_SMALL_MODEL_ONLY, {}, "extra", cfg.params.flavors, dirs);
 }
 
-function processMorphirCheckAction(args: string[]) {
-    let workingdir = process.cwd();
-    if (path.extname(args[0]) === ".json") {
-        workingdir = path.dirname(path.resolve(args[0]));
-    }
-
-    const output = extractOutput(workingdir, args);
-    if (output === undefined) {
-        process.stderr.write(chalk.red("Could not parse 'output' option\n"));
-
-        help("morphir-chk");
-        process.exit(1);
-    }
-
-    const srcfile = path.join(workingdir, "morphir-ir.json");
-    const dstdir = path.join(path.parse(srcfile).dir, "bsqproj");
-    const dstpckg = path.join(dstdir, "package.json");
-
-    process.stdout.write(`Running Bosque checker...\n`);
-    processAppTestAction([dstpckg]);
-}
-
 export {
-    processTestAction, processAppTestAction, processMorphirCheckAction
+    processTestAction, processAppTestAction
 };
