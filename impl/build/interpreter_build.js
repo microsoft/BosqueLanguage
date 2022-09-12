@@ -36,7 +36,7 @@ else if(process.platform === "linux") {
 }
 else {
     compiler = "cl.exe";
-    ccflags = "/EHsc /MP " + (mode === "debug" ? "/Zi /Od" : "/O2") + " /Wall /WX /D \"BSQ_DEBUG_BUILD\" /std:c++20";  
+    ccflags = "/EHsc /MP " + (mode === "debug" ? "/Zi /Od" : "/O2") + " /D \"BSQ_DEBUG_BUILD\" /std:c++20";  
     includes = includeheaders.map((ih) => `/I ${ih}`).join(" ");
     outfile = "/Fo:\"" + outobj + "/\"" + " " + "/Fd:\"" + outexec + "/\"" + " " + "/Fe:\"" + outexec + "\\icpp.exe\"";
 }

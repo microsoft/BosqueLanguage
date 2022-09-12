@@ -39,7 +39,7 @@ else if(process.platform === "linux") {
 }
 else {
     compiler = "cl.exe";
-    ccflags = "/EHsc /MP " + (mode === "debug" ? "/Zi /Od" : "/O2") + " /Wall /WX /std:c++20";  
+    ccflags = "/EHsc /MP " + (mode === "debug" ? "/Zi /Od" : "/O2") + " /std:c++20";  
     includes = includeheaders.map((ih) => `/I ${ih}`).join(" ");
     z3lib = path.join(includebase, "/win/z3/bin/libz3.lib")
     outfile = "/Fo:\"" + outobj + "/\"" + " " + "/Fd:\"" + outexec + "/\"" + " " + "/Fe:\"" + outexec + "\\chk.exe\"";
