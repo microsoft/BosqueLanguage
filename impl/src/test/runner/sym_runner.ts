@@ -74,10 +74,15 @@ function runSymTest(exepath: string, verbose: boolean, test: SymTest, cpayload: 
             }
         });
 
-        proc.stdin.setDefaultEncoding('utf-8');
-        proc.stdin.write(JSON.stringify(cpayload, undefined, 2));
-        proc.stdin.write("\n");
-        proc.stdin.end()
+        if(proc.stdin === null) {
+            proc.kill();
+        }
+        else {
+            proc.stdin.setDefaultEncoding('utf-8');
+            proc.stdin.write(JSON.stringify(cpayload, undefined, 2));
+            proc.stdin.write("\n");
+            proc.stdin.end();
+        }
     }
     catch(ex: any) {
         const end = new Date();
@@ -129,10 +134,15 @@ function runSymTestShouldFail(exepath: string, verbose: boolean, test: SymTestIn
             }
         });
 
-        proc.stdin.setDefaultEncoding('utf-8');
-        proc.stdin.write(JSON.stringify(cpayload, undefined, 2));
-        proc.stdin.write("\n");
-        proc.stdin.end()
+        if(proc.stdin === null) {
+            proc.kill();
+        }
+        else {
+            proc.stdin.setDefaultEncoding('utf-8');
+            proc.stdin.write(JSON.stringify(cpayload, undefined, 2));
+            proc.stdin.write("\n");
+            proc.stdin.end();
+        }
     }
     catch(ex: any) {
         const end = new Date();
