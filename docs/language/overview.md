@@ -5,6 +5,7 @@ The Bosque language is a hybrid of functional programming language semantics and
 # Table of Contents
 
 [Type System](#Type-System)
+  0. [Primitive Types](#Primitive-Types)
   1. [Nominal Types](#Nominal-Types)
       - [entity](#Entity)
       - [concept](#Concept)
@@ -19,6 +20,7 @@ The Bosque language is a hybrid of functional programming language semantics and
   3. [Code Block Types](#Parameter-Code-Block-Types)
   4. [Combination Types](#Combination-Types)
   5. [Ephemeral Lists](#Ephemeral-Lists)
+  6. [Special Types](#Special-Types)
 
 [Type Checking and Inference](#Type-Checking-and-Inference)
 
@@ -71,3 +73,62 @@ The Bosque language is a hybrid of functional programming language semantics and
   - [6.8 Switch](#6.8-Switch)
   - [6.9 Block](#6.9-Block)
   - [6.9 Statement Calls](#6.9-Statement-Calls)
+
+
+# <a name="Type-System"></a>Type System
+
+The Bosque language supports a simple and non-opinionated type system that allows developers to use a range of structural, nominal, and combination types to best convey their intent and flexibly encode the relevant features of the problem domain. All type names **must** start with a capital letter - `MyType` is a valid type name while `myType` is not.
+
+## <a name="Primitive-Types"></a>Primitive Types
+
+Bosque provides a range of primitive types, numerics, strings, times, etc. as part of the core implementation.
+
+**None:**
+
+The type `None` is the special primitive _none-able_ type that has the single (unique) `none` value.
+
+**Nothing:** 
+
+The type `Nothing` special primitive _nothing_ `Option` type that has the single (unique) `nothing` value.
+
+**Bool:** 
+
+The type `Bool` is contains the special `true` and `false` values.
+
+**Nat & Int:**
+
+The `Nat` and `Int` types represent unsigned and signed (respectively) 64 bit numbers. Overflows, underflows, and div-by-0 all raise fatal errors.
+
+**BigNat & BigInt:** 
+
+The `BigNat` and `BigInt` types represent unsigned and signed (respectively) unbounded integral numbers. Underflows and div-by-0 raise fatal errors while overflows are either limited to an implementation defined max (at least 256 bits or Out-of-Memory) and saturating operations `++`, `--`, `**` are provided (TODO).
+
+
+## <a name="Nominal-Types"></a>Nominal Types
+
+The nominal type system is a mostly standard _object-oriented_ design with parametric polymorphism provided by generics. Bosque also supports type aliasing `typedef` and wrapping of primitive types with `typedecl`.
+
+## <a name="Entity"></a>Entity
+
+
+- [entity](#Entity)
+      - [concept](#Concept)
+      - [enum](#Enum)
+      - [StringOf/DataString](#Typed-Strings)
+      - [typedef](#Typedef)
+      - [typedecl](#Typedecl)
+      - [datatype](#Datatype)
+
+Users can define abstract types with `concept` declarations, which allow both abstract definitions and inheritable implementations for `const` members ([TODO]()), `function` members, `field` members, and (virtual) `method` members. Bosque `concept` types are fully abstract and can never be instantiated concretely. The `entity` types can provide concepts as well as override definitions in them and can be instantiated concretely but can never be further inherited from.
+
+Developers can alias types or create special types ([TODO]()) using `typedef`, `enum`, and `identifier` constructs ([TODO]()).
+
+The Bosque core library defines several unique concepts/entities. The `Any` type is an uber type which all others are a subtype of, the `None` and `Some` types are for distinguishing around the unique `none` value, and `Tuple`, `Record`, etc. exist to unify with the structural type system ([section 2](#2-Core-Types)). The language has primitives for `Bool`, `Int`, `String`, etc. as well as the expected set of parametric collection types such as `List<T>` `Map<K, V>` ([section 3](#2-Collections)).
+
+Examples of nominal types include:
+
+```none
+MyType       //user declared concept or entity
+Some         //core library declared concept
+List<Int>    //core collection with generic parameter Int
+```
