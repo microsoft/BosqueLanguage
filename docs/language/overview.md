@@ -4,16 +4,14 @@ The Bosque language is a hybrid of functional programming language semantics and
 
 # Table of Contents
 
-[Type System](#Type-System)
+[**Type System**](#Type-System)
+
   0. [Primitive Types](#Primitive-Types)
   1. [Nominal Types](#Nominal-Types)
       - [entity](#Entity)
       - [concept](#Concept)
-      - [enum](#Enum)
-      - [StringOf/DataString](#Typed-Strings)
       - [typedef](#Typedef)
       - [typedecl](#Typedecl)
-      - [datatype](#Datatype)
   2. [Structural Types](#Structural-Types)
       - [Tuples](#Tuples)
       - [Records](#Records)
@@ -22,9 +20,10 @@ The Bosque language is a hybrid of functional programming language semantics and
   5. [Ephemeral Lists](#Ephemeral-Lists)
   6. [Special Types](#Special-Types)
 
-[Type Checking and Inference](#Type-Checking-and-Inference)
+[**Type Checking and Inference**](#Type-Checking-and-Inference)
 
-[Declarations](#Declarations)
+[**Declarations**](#Declarations)
+
   1. [Namespaces](#Namespaces)
       - [Constants](#Constants)
       - [Functions](#Functions)
@@ -33,7 +32,8 @@ The Bosque language is a hybrid of functional programming language semantics and
   2. [Type Members](#Type-Members)
       - [MORE](#MORE)
 
-[Expressions](#Expressions)
+[**Expressions**](#Expressions)
+
   - [5.1 Arguments](#5.1-Arguments)
   - [5.2 Constants](#5.2-Constants)
   - [5.3 Variable and Scoped Access](#5.3-Variable-and-Scoped-Access)
@@ -77,7 +77,7 @@ The Bosque language is a hybrid of functional programming language semantics and
 
 # <a name="Type-System"></a>Type System
 
-The Bosque language supports a simple and non-opinionated type system that allows developers to use a range of structural, nominal, and combination types to best convey their intent and flexibly encode the relevant features of the problem domain. All type names **must** start with a capital letter - `MyType` is a valid type name while `myType` is not.
+The Bosque language supports a simple and non-opinionated type system that allows developers to use a range of structural, nominal, and combination types to best convey their intent and flexibly encode the relevant features of the problem domain. All type names **must** start with a capital letter - `MyType` is a valid type name while `myType` is not. Template type names are single capital letters -- `T`, `V`, etc.
 
 ## <a name="Primitive-Types"></a>Primitive Types
 
@@ -93,27 +93,38 @@ Bosque provides a range of standard primitive types, numerics, strings, times, e
 - **String:** The `String` type in Bosque is a utf-8 unicode string. Notably this string type does not support arbitrary indexing (which is undefined for utf-8 multibyte characters). Instead operations must use regex based slicing, extraction, etc.
 - **ASCIIString:** (TODO) The `ASCIIString` type is a ASCII char based string that can be meainingfully processed using integral index operations.
 - **ByteBuffer:** The `ByteBuffer` type is a 0 indexed array of uninterpreted 8 bit values.
+- **Regex:** the `Regex` type is the type assigned to all regex literals in the program.
 
 In addition to the basic types enumerated above, Bosque also provides a range of commonly useful types for dealing with time, locations, events, and identity.
 
 - **DateTime:** The `DateTime` type represents a _human scale_ time with minute precision (so no leap second issues). The representation is TimeZone based and does not allow naive comparision for ordering or computation of offsets as these are ill defined and non-deterministic operations (e.g. when the times are in the future a TZ meaning may change).
-
-The 
+- **UTCDateTime:** The `UTCDateTime` type is a specialized version of `DateTime` that is fixed at UTC for the timezone. This allows us to do direct ordering and arithmatic on the dates.
+- **CalendarDate:** The `CalendarDate` type is a _date only_ value, month, day, year, so it is free of TZ related complications and can be directly ordered and used for offset date computation.
+- **TickTime:** the `TickTime` type is a 54 bit, nano-second interval, epoch based time [TAI derived](https://www.nist.gov/pml/time-and-frequency-division/nist-time-frequently-asked-questions-faq). This time is monotone and corresponds to real elapsed time.
+- **LogicalTime:** the `LogicalTime` type is a logical tick based time useful for causal ordering events in a system. 
+- **ISOTimeStamp:** the `ISOTimeStamp` type is a ISO 8061 timestamp with milliseconds and a timezone. It is intended to be used for legacy interop and for _human friendly_ timestamps in logs or other records. Historical values are stable but future values may be unstable as time-zone changes or leap-seconds are added.
+- **UUID4 & UUID7:** the UUID types for `UUID4` and `UUID7` are natively supported in Bosque. 
+- **SHAContentHash:** the `SHAContentHash` type is a SHA3 512 bit hash code. Bosque has support (TODO) for computing SHA hashes of any value and can produce a result of type `SHAContentHash` or `SHAContentHashOf<T>`.
+- **LatLongCoordinate:**: the `LatLongCoordinate` is a decimal degree encoding (6 decimal digits) of a latitude and longitude value.
 
 ## <a name="Nominal-Types"></a>Nominal Types
 
 The nominal type system is a mostly standard _object-oriented_ design with parametric polymorphism provided by generics. Bosque also supports type aliasing `typedef` and wrapping of primitive types with `typedecl`.
 
 ## <a name="Entity"></a>Entity
+Entities are concrete types that can be created. An entity will never have another type that is a strict subtype of it! Entities are always subtypes of the special `Some` and `Any` concepts and user defined entities are always subtypes of the special `Object` concept. Entities can be declared as polymorphic with template parameters. In Bosque templates are not parametric in their instantiated types -- e.g. `List<Int>` is not a subtype of `List<Any>`.
 
+Entity type references are simply the (scoped) name of the type such as `Foo` for a locally scoped type or `Bar::Foo`, `Bar::Baz::Foo` for a type `Baz` declared in the given scope (namespace or type scope). Entity types may also be parametric, such as `List<Int>` or `Foo<Bool, Map<Int, Int>>`.
+
+There are several special entity types in Bosque:
+- 
 
 - [entity](#Entity)
       - [concept](#Concept)
-      - [enum](#Enum)
-      - [StringOf/DataString](#Typed-Strings)
+
       - [typedef](#Typedef)
       - [typedecl](#Typedecl)
-      - [datatype](#Datatype)
+     
 
 Users can define abstract types with `concept` declarations, which allow both abstract definitions and inheritable implementations for `const` members ([TODO]()), `function` members, `field` members, and (virtual) `method` members. Bosque `concept` types are fully abstract and can never be instantiated concretely. The `entity` types can provide concepts as well as override definitions in them and can be instantiated concretely but can never be further inherited from.
 
