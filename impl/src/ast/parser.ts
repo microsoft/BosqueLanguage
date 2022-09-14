@@ -4325,9 +4325,6 @@ class Parser {
             else if(ttname === "CalendarDate") {
                 //TODO: what operations do we want to forward by default (or config)
             }
-            else if(ttname === "RelativeTime") {
-                //TODO: what operations do we want to forward by default (or config)
-            }
             else if(ttname === "TickTime") {
                 //TODO: what operations do we want to forward by default (or config)
             }

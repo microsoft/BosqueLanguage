@@ -2787,10 +2787,6 @@ class SMTBodyEmitter {
                 const dd = new SMTCallSimple("BCalendarDate@cons", args.map((arg) => new SMTVar(arg.vname)));
                 return SMTFunction.create(ideclname, args, chkrestype, dd);
             }
-            case "relativetime_create": {
-                const dd = new SMTCallSimple("BRelativeTime@cons", args.map((arg) => new SMTVar(arg.vname)));
-                return SMTFunction.create(ideclname, args, chkrestype, dd);
-            }
             case "logicaltime_zero": {
                 return SMTFunction.create(ideclname, args, chkrestype, new SMTConst("0"));
             }

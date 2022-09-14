@@ -335,15 +335,14 @@ typedef uint32_t BSQConstantID;
 #define BSQ_TYPE_ID_DATETIME 12
 #define BSQ_TYPE_ID_UTC_DATETIME 13
 #define BSQ_TYPE_ID_CALENDAR_DATE 14
-#define BSQ_TYPE_ID_RELATIVE_TIME 15
-#define BSQ_TYPE_ID_TICKTIME 16
-#define BSQ_TYPE_ID_LOGICALTIME 17
-#define BSQ_TYPE_ID_ISO_TIMESTAMP 18
-#define BSQ_TYPE_ID_UUID4 19
-#define BSQ_TYPE_ID_UUID7 20
-#define BSQ_TYPE_ID_SHA_CONTENT_HASH 21
-#define BSQ_TYPE_ID_LAT_LONG_COORDINATE 22
-#define BSQ_TYPE_ID_REGEX 23
+#define BSQ_TYPE_ID_TICKTIME 15
+#define BSQ_TYPE_ID_LOGICALTIME 16
+#define BSQ_TYPE_ID_ISO_TIMESTAMP 17
+#define BSQ_TYPE_ID_UUID4 18
+#define BSQ_TYPE_ID_UUID7 19
+#define BSQ_TYPE_ID_SHA_CONTENT_HASH 20
+#define BSQ_TYPE_ID_LAT_LONG_COORDINATE 21
+#define BSQ_TYPE_ID_REGEX 22
 
 #define BSQ_TYPE_ID_INTERNAL ((BSQTypeID)UINT32_MAX)
 
@@ -397,7 +396,6 @@ enum class BSQPrimitiveImplTag
     datetime_create,
     utcdatetime_create,
     calendardate_create,
-    relativetime_create,
     logicaltime_zero,
     logicaltime_increment,
     isotimestamp_create,

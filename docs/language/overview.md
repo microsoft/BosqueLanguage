@@ -81,28 +81,24 @@ The Bosque language supports a simple and non-opinionated type system that allow
 
 ## <a name="Primitive-Types"></a>Primitive Types
 
-Bosque provides a range of primitive types, numerics, strings, times, etc. as part of the core implementation.
+Bosque provides a range of standard primitive types, numerics, strings, times, etc. as part of the core implementation.
 
-**None:**
+- **None:** The type `None` is the special primitive _none-able_ type that has the single (unique) `none` value.
+- **Nothing:** The type `Nothing` special primitive _nothing_ `Option` type that has the single (unique) `nothing` value.
+- **Bool:** The type `Bool` is contains the special `true` and `false` values.
+- **Nat & Int:** The `Nat` and `Int` types represent unsigned and signed (respectively) 64 bit numbers. Overflows, underflows, and div-by-0 all raise fatal errors.
+- **BigNat & BigInt:** The `BigNat` and `BigInt` types represent unsigned and signed (respectively) unbounded integral numbers. Underflows and div-by-0 raise fatal errors while overflows are either limited to an implementation defined max (at least 256 bits or Out-of-Memory) and saturating operations `++`, `--`, `**` are provided (TODO).
+- **Float & Decimal:** The `Float` type is a 64 bit IEEE-754 floating point number. The `Decimal` type is a 64 bit decimal floating point number.
+- **Rational:** The `Rational` type is a rational representation of a number with a `BigInt` valued numerator and a `Nat` valued (non-zero) denominator. Overflow in the denominator is handled by rounding to the nearest representable value.
+- **String:** The `String` type in Bosque is a utf-8 unicode string. Notably this string type does not support arbitrary indexing (which is undefined for utf-8 multibyte characters). Instead operations must use regex based slicing, extraction, etc.
+- **ASCIIString:** (TODO) The `ASCIIString` type is a ASCII char based string that can be meainingfully processed using integral index operations.
+- **ByteBuffer:** The `ByteBuffer` type is a 0 indexed array of uninterpreted 8 bit values.
 
-The type `None` is the special primitive _none-able_ type that has the single (unique) `none` value.
+In addition to the basic types enumerated above, Bosque also provides a range of commonly useful types for dealing with time, locations, events, and identity.
 
-**Nothing:** 
+- **DateTime:** The `DateTime` type represents a _human scale_ time with minute precision (so no leap second issues). The representation is TimeZone based and does not allow naive comparision for ordering or computation of offsets as these are ill defined and non-deterministic operations (e.g. when the times are in the future a TZ meaning may change).
 
-The type `Nothing` special primitive _nothing_ `Option` type that has the single (unique) `nothing` value.
-
-**Bool:** 
-
-The type `Bool` is contains the special `true` and `false` values.
-
-**Nat & Int:**
-
-The `Nat` and `Int` types represent unsigned and signed (respectively) 64 bit numbers. Overflows, underflows, and div-by-0 all raise fatal errors.
-
-**BigNat & BigInt:** 
-
-The `BigNat` and `BigInt` types represent unsigned and signed (respectively) unbounded integral numbers. Underflows and div-by-0 raise fatal errors while overflows are either limited to an implementation defined max (at least 256 bits or Out-of-Memory) and saturating operations `++`, `--`, `**` are provided (TODO).
-
+The 
 
 ## <a name="Nominal-Types"></a>Nominal Types
 
