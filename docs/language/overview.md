@@ -10,15 +10,13 @@ The Bosque language is a hybrid of functional programming language semantics and
   1. [Nominal Types](#Nominal-Types)
       - [entity](#Entity)
       - [concept](#Concept)
-      - [typedef](#Typedef)
-      - [typedecl](#Typedecl)
   2. [Structural Types](#Structural-Types)
       - [Tuples](#Tuples)
       - [Records](#Records)
   3. [Code Block Types](#Parameter-Code-Block-Types)
   4. [Combination Types](#Combination-Types)
   5. [Ephemeral Lists](#Ephemeral-Lists)
-  6. [Special Types](#Special-Types)
+  6. [Containers](#Containers)
 
 [**Type Checking and Inference**](#Type-Checking-and-Inference)
 
@@ -84,7 +82,7 @@ The Bosque language supports a simple and non-opinionated type system that allow
 Bosque provides a range of standard primitive types, numerics, strings, times, etc. as part of the core implementation.
 
 - **None:** The type `None` is the special primitive _none-able_ type that has the single (unique) `none` value.
-- **Nothing:** The type `Nothing` special primitive _nothing_ `Option` type that has the single (unique) `nothing` value.
+- **Nothing:** The type `Nothing` special primitive _nothing_ `Option<T>` type that has the single (unique) `nothing` value.
 - **Bool:** The type `Bool` is contains the special `true` and `false` values.
 - **Nat & Int:** The `Nat` and `Int` types represent unsigned and signed (respectively) 64 bit numbers. Overflows, underflows, and div-by-0 all raise fatal errors.
 - **BigNat & BigInt:** The `BigNat` and `BigInt` types represent unsigned and signed (respectively) unbounded integral numbers. Underflows and div-by-0 raise fatal errors while overflows are either limited to an implementation defined max (at least 256 bits or Out-of-Memory) and saturating operations `++`, `--`, `**` are provided (TODO).
@@ -112,30 +110,22 @@ In addition to the basic types enumerated above, Bosque also provides a range of
 The nominal type system is a mostly standard _object-oriented_ design with parametric polymorphism provided by generics. Bosque also supports type aliasing `typedef` and wrapping of primitive types with `typedecl`.
 
 ## <a name="Entity"></a>Entity
-Entities are concrete types that can be created. An entity will never have another type that is a strict subtype of it! Entities are always subtypes of the special `Some` and `Any` concepts and user defined entities are always subtypes of the special `Object` concept. Entities can be declared as polymorphic with template parameters. In Bosque templates are not parametric in their instantiated types -- e.g. `List<Int>` is not a subtype of `List<Any>`.
+Entities are concrete object-oriented style (member fields, methods, etc.) types that can be created. An entity will never have another type that is a strict subtype of it! Entities are always subtypes of the special `Some` and `Any` concepts and user defined entities are always subtypes of the special `Object` concept. Entities can be declared as polymorphic with template parameters. In Bosque templates are not parametric in their instantiated types -- e.g. `List<Int>` is not a subtype of `List<Any>`.
 
 Entity type references are simply the (scoped) name of the type such as `Foo` for a locally scoped type or `Bar::Foo`, `Bar::Baz::Foo` for a type `Baz` declared in the given scope (namespace or type scope). Entity types may also be parametric, such as `List<Int>` or `Foo<Bool, Map<Int, Int>>`.
 
+In Bosque the `typedef` declaration can be used to create a nominal alias for any type. This alias is not a _distinct_ type and, in type checking and execution, is replaced by the underlying aliased type (see also `typedecl` below).
+
 There are several special entity types in Bosque:
-- 
+- **Enum:** Bosque supports `enum` types as nominal types. The underlying values can be any _typedeclable_ type but the enum type is always a distinct type in the program.
+- **typedecl:** To create a new and distnct nominal type for any _typedeclable_ type the `typedecl` keyword can be used to create a new type that is has an identical value representation (accessable via the `value` method) to the underlying type but is a distinct type in the program.
+- **StringOf&lt;T&gt; & DataString&lt;T&gt:** The `StringOf<T>` and `DataString<T>` types in the program (also `ASCIIStringOf<T>` and `ASCIIDataString<T>` types) are dsistinct string types. The StringOf flavors are parameterized by Validator regexes (the underlying string is in the specified language) while the DataString flavors are parameterized by types that provide the `Parsable` concept (i.e. they have an `accepts` function).
+- **DataBuffer&lt;T&gt;:** The `DataBuffer<T>` type is similar to the `DataString<T>` type except the underlying value is a `ByteBuffer`.
+- **Something&lt;T&gt;:** is the subtype of `Option<T>` that represents a value (as opposed to the special `Nothing` subtype). There is a special constructor operator `something` that can be used as a type infering constructor in addition to explict construction. 
+- **Result&lt;T, E&gt;::Ok & Result&lt;T, E&gt;::Err:** Bosque provides a standard `Result<T, E>` concept with `Ok` and `Err` entities. If omitted from the type the error `E` type is assumed to be `None`. As with `Something<T>` there are special (shorthand) type infering keywords `ok` and `err` for constructing these types. 
 
-- [entity](#Entity)
-      - [concept](#Concept)
+## <a name="Concept"></a>Concept
 
-      - [typedef](#Typedef)
-      - [typedecl](#Typedecl)
-     
+Bosque concept types are fully abstract and can never be instantiated concretely. The entity types can provide concepts as well as override definitions in them and can be instantiated concretely but can never be further inherited from.
 
-Users can define abstract types with `concept` declarations, which allow both abstract definitions and inheritable implementations for `const` members ([TODO]()), `function` members, `field` members, and (virtual) `method` members. Bosque `concept` types are fully abstract and can never be instantiated concretely. The `entity` types can provide concepts as well as override definitions in them and can be instantiated concretely but can never be further inherited from.
-
-Developers can alias types or create special types ([TODO]()) using `typedef`, `enum`, and `identifier` constructs ([TODO]()).
-
-The Bosque core library defines several unique concepts/entities. The `Any` type is an uber type which all others are a subtype of, the `None` and `Some` types are for distinguishing around the unique `none` value, and `Tuple`, `Record`, etc. exist to unify with the structural type system ([section 2](#2-Core-Types)). The language has primitives for `Bool`, `Int`, `String`, etc. as well as the expected set of parametric collection types such as `List<T>` `Map<K, V>` ([section 3](#2-Collections)).
-
-Examples of nominal types include:
-
-```none
-MyType       //user declared concept or entity
-Some         //core library declared concept
-List<Int>    //core collection with generic parameter Int
-```
+xxxx;
