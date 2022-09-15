@@ -32,8 +32,16 @@ The Bosque language is a hybrid of functional programming language semantics and
 
 [**Expressions**](#Expressions)
 
-  - [5.1 Arguments](#5.1-Arguments)
-  - [5.2 Constants](#5.2-Constants)
+  0. [Dispatch & Invoke](#Dispatch-Invoke)
+  1. [Literals](#Literals)
+  2. [Variables](#Variables)
+  3. [Scoped Access](#Scoped-Access)
+  4. [Logical Operators](#Logical-Operators)
+  5. [Numeric Operators](#Numeric-Operators)
+  6. [Numeric Comparison](#Numeric-Comparison)
+  7. [K-Comparison](#K-Comparison)
+
+
   - [5.3 Variable and Scoped Access](#5.3-Variable-and-Scoped-Access)
   - [5.4 Tuple and Record Constructors](#5.4-Tuple-and-Record-Constructors)
   - [5.5 Entity Constructors](#5.5-Entity-Constructors)
@@ -72,6 +80,9 @@ The Bosque language is a hybrid of functional programming language semantics and
   - [6.9 Block](#6.9-Block)
   - [6.9 Statement Calls](#6.9-Statement-Calls)
 
+[**KeyType**](#KeyType)
+
+[**APIType & TestableType**](#APIType-TestableType)
 
 # <a name="Type-System"></a>Type System
 
@@ -124,8 +135,42 @@ There are several special entity types in Bosque:
 - **Something&lt;T&gt;:** is the subtype of `Option<T>` that represents a value (as opposed to the special `Nothing` subtype). There is a special constructor operator `something` that can be used as a type infering constructor in addition to explict construction. 
 - **Result&lt;T, E&gt;::Ok & Result&lt;T, E&gt;::Err:** Bosque provides a standard `Result<T, E>` concept with `Ok` and `Err` entities. If omitted from the type the error `E` type is assumed to be `None`. As with `Something<T>` there are special (shorthand) type infering keywords `ok` and `err` for constructing these types. 
 
+Bosque also provides a range of built-in container types `List<T>`, `Stack<T>`, `Queue<T>`, `Set<T>`, and `Map<K, V>` which are described in more detail in the [libraries](../libraries/overview.md) document.
+
 ## <a name="Concept"></a>Concept
 
-Bosque concept types are fully abstract and can never be instantiated concretely. The entity types can provide concepts as well as override definitions in them and can be instantiated concretely but can never be further inherited from.
+Bosque concept types are fully abstract and can never be instantiated concretely. Concepts can be _provided_ by concrete entities in the program. Concept types can define virtual or concrete methods, fields, and constants. Concepts are referenced by names (just like entities) such as `Some`, `Result<Int>`, etc. 
 
-xxxx;
+There are several special concept types in Bosque:
+- **Any:** The `Any` type is an ur concept that every type in Bosque is a subtype of.
+- **Some:** The `Some` type is a concept type that every non-none type is a subtype of.
+- **KeyType:** The `KeyType` concept is a critical type in Bosque. The `===` and `!==` operator are defined to work only on such types and keys in `Set<T>` and `Map<K, V>` must be subtypes of `KeyType`. The list of keytypes and mor information on their behavior is included in the [KeyType section](#KeyType).
+- **APIType:** The special `APIType` concept is used to identify which types can/are exposed in `entrypoint` functions. These types are ensured to be 1) convertable to work in polyglot environments and 2) are amenable to structured generation for fuzzing and testing. See the [APIType & TestableType section](#APIType-TestableType) for more detail.
+- **TestableType:** The special `TestableType` concept is used to identify which types can/are exposed in _unit-test_ functions. This issimilar to the `APIType` concept but used for types that are not intended to be publically exposed (just visible for testing purposes). See the [APIType & TestableType section](#APIType-TestableType) for more detail.
+- **Option<T>:** Bosque supports a familiar `Option<T>` concept for convinient use of sential missing values (`nothing`).
+- **Result<T, E>:** Bosque supports a standard `Result<T, E>` type for convineient result value management. When not explicitly provided the error (`E`) type defaults to `None`.
+- **Object:** All user defined entities implicitly provide the `Object` concept.
+
+Concept types can be stacked, via the `&` combinator, to indicate a value/variable should provide multiple concepts. So, the type reference `KeyType & APIType` indicates that the type provide _both_ the `KeyType` concept and the `APIType` concept.
+
+# <a name="KeyType"></a>KeyType
+
+# <a name="APIType-TestableType"></a>APIType & TestableType
+
+# <a name="Expressions"></a>Expressions
+
+## <a name="Dispatch-Invoke"></a>Dispatch & Invoke
+
+## <a name="Literals"></a>Literals
+
+## <a name="Variables"></a>Variables
+
+## <a name="Scoped-Access"></a>Scoped Access
+
+## <a name="Logical-Operators"></a>Logical Operators
+
+## <a name="Numeric-Operators"></a>Numeric Operators
+
+## <a name="Numeric Comparison"></a>Numeric-Comparison
+
+## <a name="K-Comparison"></a>K-Comparison
