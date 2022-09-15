@@ -160,14 +160,61 @@ Concept types can be stacked, via the `&` combinator, to indicate a value/variab
 # <a name="Expressions"></a>Expressions
 
 ## <a name="Dispatch-Invoke"></a>Dispatch & Invoke
+XXXX
 
 ## <a name="Literals"></a>Literals
+XXXX
 
 ## <a name="Variables"></a>Variables
+XXXX
 
 ## <a name="Scoped-Access"></a>Scoped Access
+XXXX
 
 ## <a name="Logical-Operators"></a>Logical Operators
+
+Bosque supports a standard set of logical operations on `Bool` typed values:
+
+- `!` is a _negation_ of a `Bool` value.
+- `&&` is a short circuiting logical _and_ of two `Bool` values.
+- `||` is a short circuiting logical _or_ of two `Bool` values.
+- `==>` is a short circuiting logical _implies_ of `Bool` values -- note that `&&` and `||` bind tighter tha `==>` when parsing logical expressions.
+
+```none
+!true   //false
+!false  //true
+!0      //type error
+
+true && false            //false
+true && true             //true
+false && (1n / 0n) == 1n //false -- short circuit is safe
+
+true || false           //true
+false || false          //false
+true || (1n / 0n) == 1n //true -- short circuit is safe
+
+true ==> false            //false
+true ==> true             //true
+false ==> true            //true (antecedent is false)
+false ==> (1n / 0n) == 1n //true -- short circuit is safe
+
+```
+
+In some cases (i.e. to avoid branching or for clairity) it is desireable to use non-short-circuiting logical operations. Thus, Bosque also provides an:
+
+- `/\(...)` is a logical _and_ of all arguments (semantically evaluated simultaneously).
+- `\/(...)` is a logical _or_ of all arguments (semantically evaluated simultaneously).
+
+
+```none
+/\(true, false, true)      //false
+/\(true, true)             //true
+/\(false, (1n / 0n) == 1n) //runtime error -- no short circuit
+
+\/(true, false, true)     //true
+\/(false, false)          //false
+\/(true, (1n / 0n) == 1n) //runtime error -- no short circuit
+```
 
 ## <a name="Numeric-Operators"></a>Numeric Operators
 
