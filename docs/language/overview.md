@@ -23,9 +23,9 @@ The Bosque language is a hybrid of functional programming language semantics and
 [**Declarations**](#Declarations)
 
   1. [Namespaces](#Namespaces)
-      - [Constants](#Constants)
-      - [Functions](#Functions)
-      - [Operators](#Operators)
+      - [Constants](#Namespace-Constants)
+      - [Functions](#Namespace-Functions)
+      - [Operators](#Namespace-Operators)
       - [Types](#Types)
   2. [Type Members](#Type-Members)
       - [MORE](#MORE)
@@ -41,6 +41,9 @@ The Bosque language is a hybrid of functional programming language semantics and
   6. [Numeric Operators](#Numeric-Operators)
   7. [K-Comparison](#K-Comparison)
 
+
+  10. [Static Operator Invoke](#Static-Operator-Invoke)
+  10. [Dynamic Operator Invoke](#Dynamic-Operator-Invoke)
 
   - [5.3 Variable and Scoped Access](#5.3-Variable-and-Scoped-Access)
   - [5.4 Tuple and Record Constructors](#5.4-Tuple-and-Record-Constructors)
@@ -229,6 +232,29 @@ Bosque supports a range of comparisoin operators, `==`, `!=`,`<`, `>`, `<=`, and
 
 10_ItemCount >= 0_ItemCount //true
 ```
+
+The (numeric) comparison operators in Bosque are implemented as [static operators](#Namespace-Operators) and so can be extended by user defined types as well.
+
+```
+entity Complex {
+    field r: Float;
+    field i: Float;
+}
+
+infix operator ==(a: Complex, b: Complex): Bool {
+    return a.r == b.r && a.i == b.i;
+}
+
+infix operator !=(a: Complex, b: Complex): Bool {
+    return a.r != b.r || a.i != b.i;
+}
+...
+
+Complex{1.0f, 0.0f} != Complex{1.0f, 1.0f} //true
+
+```
+
+Then calls where the LHS and RHS arguments resolve to `Complex` types will resolve to this implementation transparently.
 
 ## <a name="Numeric-Operators"></a>Numeric Operators
 
