@@ -76,8 +76,11 @@ function runSymTest(exepath: string, verbose: boolean, test: SymTest, cpayload: 
 
         if(proc.stdin === null) {
             proc.kill();
+            cb("error", test, start, new Date(), -1, "Killed process!!!");
         }
         else {
+            proc.stdin.on("error", (err: Error) => { cb("error", test, start, new Date(), -1, `Write to stdin error -- ${err}`); });
+            
             proc.stdin.setDefaultEncoding('utf-8');
             proc.stdin.write(JSON.stringify(cpayload, undefined, 2));
             proc.stdin.write("\n");
@@ -134,10 +137,13 @@ function runSymTestShouldFail(exepath: string, verbose: boolean, test: SymTestIn
             }
         });
 
-        if(proc.stdin === null) {
+        if(proc.stdin === null || proc.stdin === undefined) {
             proc.kill();
+            cb("error", test, start, new Date(), -1, "Killed process!!!");
         }
         else {
+            proc.stdin.on("error", (err: Error) => { cb("error", test, start, new Date(), -1, `Write to stdin error -- ${err}`); });
+
             proc.stdin.setDefaultEncoding('utf-8');
             proc.stdin.write(JSON.stringify(cpayload, undefined, 2));
             proc.stdin.write("\n");

@@ -69,10 +69,13 @@ function runICPPTest(exepath: string, verbose: boolean, test: ICPPTest, icppjson
             }
         });
 
-        if(proc.stdin === null) {
+        if(proc.stdin === null || proc.stdin === undefined) {
             proc.kill();
+            cb("error", test, start, new Date(), -1, "Killed process!!!");
         }
         else {
+            proc.stdin.on("error", (err: Error) => { cb("error", test, start, new Date(), -1, `Write to stdin error ${err}`); });
+
             proc.stdin.setDefaultEncoding('utf-8');
             proc.stdin.write(JSON.stringify(icppjson, undefined, 2));
             proc.stdin.write("\n");

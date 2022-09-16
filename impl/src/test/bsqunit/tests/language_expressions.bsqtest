@@ -186,7 +186,7 @@ chktest function compare_eq_decimal_true(): Bool {
 chktest function compare_eq_decimal_false(): Bool {
     return !(1.0d == 3.0d);
 }
-/*
+
 chktest function compare_neq_decimal_true(): Bool {
     return (5.0d != 3.0d);  
 }
@@ -194,7 +194,7 @@ chktest function compare_neq_decimal_true(): Bool {
 chktest function compare_neq_decimal_false(): Bool {
     return !(3.0d != 3.0d);  
 }
-*/
+
 /*
 TODO: enable once rationals are implemented
 chktest function compare_eq_rational_true(): Bool {
