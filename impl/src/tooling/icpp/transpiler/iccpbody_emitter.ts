@@ -1653,7 +1653,7 @@ class ICPPBodyEmitter {
             case "__i__Core::===infix=(Float, Float)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, ssrc, OpCodeTag.EqFloatOp, trgt, oftype, args[0], args[1]);
             }
-            case "__i__Core::===infix=(Decimal, Decmial)": {
+            case "__i__Core::===infix=(Decimal, Decimal)": {
                 return ICPPOpEmitter.genCmpOp(sinfo, ssrc, OpCodeTag.EqDecimalOp, trgt, oftype, args[0], args[1]);
             }
             //op infix !=

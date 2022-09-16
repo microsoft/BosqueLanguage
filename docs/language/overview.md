@@ -37,8 +37,8 @@ The Bosque language is a hybrid of functional programming language semantics and
   2. [Variables](#Variables)
   3. [Scoped Access](#Scoped-Access)
   4. [Logical Operators](#Logical-Operators)
-  5. [Numeric Operators](#Numeric-Operators)
-  6. [Numeric Comparison](#Numeric-Comparison)
+  5. [Numeric Comparison](#Numeric-Comparison)
+  6. [Numeric Operators](#Numeric-Operators)
   7. [K-Comparison](#K-Comparison)
 
 
@@ -216,8 +216,20 @@ In some cases (i.e. to avoid branching or for clairity) it is desireable to use 
 \/(true, (1n / 0n) == 1n) //runtime error -- no short circuit
 ```
 
-## <a name="Numeric-Operators"></a>Numeric Operators
-
 ## <a name="Numeric Comparison"></a>Numeric-Comparison
+
+Bosque supports a range of comparisoin operators, `==`, `!=`,`<`, `>`, `<=`, and `>=` which can be applied to numeric values -- `Nat`, `Int`, `BigNat`, `BigInt`, `Float`, `Decimal`, and `Rational` values as well as `orderable typedecl` based types (e.g. `orderable typedecl ItemCount = Int;`) based on them.
+
+```none
+0i == 1i                    //false
+1i == 1i                    //true
+
+0n < 5n                     //true
+0n < 5i                     //type error not same types
+
+10_ItemCount >= 0_ItemCount //true
+```
+
+## <a name="Numeric-Operators"></a>Numeric Operators
 
 ## <a name="K-Comparison"></a>K-Comparison

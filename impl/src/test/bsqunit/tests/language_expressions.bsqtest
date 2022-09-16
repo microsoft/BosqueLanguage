@@ -5,7 +5,6 @@
 
 namespace Expressions;
 
-
 ////
 //Logical Operators
 
@@ -95,6 +94,129 @@ chktest function logical_lor_tft(): Bool {
 chktest function logical_lor_fff(): Bool {
     return !(\/(false, false, false)); 
 }
+
+////
+//Numeric Comparison
+
+//Equal
+chktest function compare_eq_nat_true(): Bool {
+    return (3n == 3n); 
+}
+
+chktest function compare_eq_nat_false(): Bool {
+    return !(1n == 3n);
+}
+
+chktest function compare_neq_nat_true(): Bool {
+    return (5n != 3n);  
+}
+
+chktest function compare_neq_nat_false(): Bool {
+    return !(3n != 3n);  
+}
+
+chktest function compare_eq_int_true(): Bool {
+    return (3i == 3i); 
+}
+
+chktest function compare_eq_int_false(): Bool {
+    return !(1i == 3i);
+}
+
+chktest function compare_neq_int_true(): Bool {
+    return (5i != 3i);  
+}
+
+chktest function compare_neq_int_false(): Bool {
+    return !(3i != 3i);  
+}
+
+chktest function compare_eq_bignat_true(): Bool {
+    return (3N == 3N); 
+}
+
+chktest function compare_eq_bignat_false(): Bool {
+    return !(1N == 3N);
+}
+
+chktest function compare_neq_bitnat_true(): Bool {
+    return (5N != 3N);  
+}
+
+chktest function compare_neq_bignat_false(): Bool {
+    return !(3N != 3N);  
+}
+
+chktest function compare_eq_bigint_true(): Bool {
+    return (3I == 3I); 
+}
+
+chktest function compare_eq_bigint_false(): Bool {
+    return !(1I == 3I);
+}
+
+chktest function compare_neq_bitint_true(): Bool {
+    return (5I != 3I);  
+}
+
+chktest function compare_neq_bigint_false(): Bool {
+    return !(3I != 3I);  
+}
+
+chktest function compare_eq_float_true(): Bool {
+    return (3.0f == 3.0f); 
+}
+
+chktest function compare_eq_float_false(): Bool {
+    return !(1.0f == 3.0f);
+}
+
+chktest function compare_neq_float_true(): Bool {
+    return (5.0f != 3.0f);  
+}
+
+chktest function compare_neq_float_false(): Bool {
+    return !(3.0f != 3.0f);  
+}
+
+chktest function compare_eq_decimal_true(): Bool {
+    return (3.0d == 3.0d); 
+}
+
+chktest function compare_eq_decimal_false(): Bool {
+    return !(1.0d == 3.0d);
+}
+/*
+chktest function compare_neq_decimal_true(): Bool {
+    return (5.0d != 3.0d);  
+}
+
+chktest function compare_neq_decimal_false(): Bool {
+    return !(3.0d != 3.0d);  
+}
+*/
+/*
+TODO: enable once rationals are implemented
+chktest function compare_eq_rational_true(): Bool {
+    return (6/2R == 6/2R); 
+}
+
+chktest function compare_eq_rational_false(): Bool {
+    return !(1/1R == 6/2R);
+}
+
+chktest function compare_neq_rational_true(): Bool {
+    return (10/2R != 6/2R);  
+}
+
+chktest function compare_neq_rational_false(): Bool {
+    return !(6/2R != 6/2R);  
+}
+*/
+
+
+
+
 
 ////
 //Static Namespace Operators
