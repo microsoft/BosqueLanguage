@@ -368,6 +368,160 @@ chktest function compare_greater_decimal_false_eq(): Bool {
 TODO: enable once rationals are implemented
 */
 
+//Less or Equal
+chktest function compare_less_eq_nat_true(): Bool {
+    return (1n <= 3n); 
+}
+
+chktest function compare_less_eq_nat_false(): Bool {
+    return !(3n <= 1n);
+}
+
+chktest function compare_less_eq_nat_true_eq(): Bool {
+    return (3n <= 3n);
+}
+
+chktest function compare_less_eq_int_true(): Bool {
+    return (-3i <= 1i); 
+}
+
+chktest function compare_less_eq_int_false(): Bool {
+    return !(3i <= 1i);
+}
+
+chktest function compare_less_eq_int_true_eq(): Bool {
+    return (3i <= 3i);
+}
+
+chktest function compare_less_eq_bignat_true(): Bool {
+    return (0N <= 3N); 
+}
+
+chktest function compare_less_eq_bignat_false(): Bool {
+    return !(2N <= 0N);
+}
+
+chktest function compare_less_eq_bignat_true_eq(): Bool {
+    return (0N <= 0N);
+}
+
+chktest function compare_less_eq_bigint_true(): Bool {
+    return (-3I <= 0I); 
+}
+
+chktest function compare_less_eq_bigint_false(): Bool {
+    return !(-1I <= -3I);
+}
+
+chktest function compare_less_eq_bigint_true_eq(): Bool {
+    return (-1I <= -1I);
+}
+
+chktest function compare_less_eq_float_true(): Bool {
+    return (1.0f <= 3.0f); 
+}
+
+chktest function compare_less_eq_float_false(): Bool {
+    return !(3.0f <= -1.0f);
+}
+
+chktest function compare_less_eq_float_true_eq(): Bool {
+    return (1.0f <= 1.0f);
+}
+
+chktest function compare_less_eq_decimal_true(): Bool {
+    return (-5.0d <= -3.0d); 
+}
+
+chktest function compare_less_eq_decimal_false(): Bool {
+    return !(-3.0d <= -5.0d);
+}
+
+chktest function compare_less_eq_decimal_true_eq(): Bool {
+    return (3.0d <= 3.0d);
+}
+
+/*
+TODO: enable once rationals are implemented
+*/
+
+//Greater
+chktest function compare_greater_eq_nat_true(): Bool {
+    return (3n >= 1n); 
+}
+
+chktest function compare_greater_eq_nat_false(): Bool {
+    return !(1n >= 3n);
+}
+
+chktest function compare_greater_eq_nat_true_eq(): Bool {
+    return (3n >= 3n);
+}
+
+chktest function compare_greater_eq_int_true(): Bool {
+    return (1i >= -3i); 
+}
+
+chktest function compare_greater_eq_int_false(): Bool {
+    return !(1i >= 3i);
+}
+
+chktest function compare_greater_eq_int_true_eq(): Bool {
+    return (3i >= 3i);
+}
+
+chktest function compare_greater_eq_bignat_true(): Bool {
+    return (3N >= 0N); 
+}
+
+chktest function compare_greater_eq_bignat_false(): Bool {
+    return !(0N >= 2N);
+}
+
+chktest function compare_greater_eq_bignat_true_eq(): Bool {
+    return (0N >= 0N);
+}
+
+chktest function compare_greater_eq_bigint_true(): Bool {
+    return (0I >= -3I); 
+}
+
+chktest function compare_greater_eq_bigint_false(): Bool {
+    return !(-3I >= -1I);
+}
+
+chktest function compare_greater_eq_bigint_true_eq(): Bool {
+    return (-1I >= -1I);
+}
+
+chktest function compare_greater_eq_float_true(): Bool {
+    return (3.0f >= 1.0f); 
+}
+
+chktest function compare_greater_eq_float_false(): Bool {
+    return !(-1.0f >= 3.0f);
+}
+
+chktest function compare_greater_eq_float_true_eq(): Bool {
+    return (1.0f >= 1.0f);
+}
+
+chktest function compare_greater_eq_decimal_true(): Bool {
+    return (-3.0d >= -5.0d); 
+}
+
+chktest function compare_greater_eq_decimal_false(): Bool {
+    return !(-5.0d >= -3.0d);
+}
+
+chktest function compare_greater_eq_decimal_true_eq(): Bool {
+    return (3.0d >= 3.0d);
+}
+
+/*
+TODO: enable once rationals are implemented
+*/
+
 ////
 //Static Namespace Operators
 

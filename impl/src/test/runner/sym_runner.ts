@@ -75,8 +75,8 @@ function runSymTest(exepath: string, verbose: boolean, test: SymTest, cpayload: 
         });
 
         if(proc.stdin === null) {
-            proc.kill();
             cb("error", test, start, new Date(), -1, "Killed process!!!");
+            proc.kill();
         }
         else {
             proc.stdin.on("error", (err: Error) => { cb("error", test, start, new Date(), -1, `Write to stdin error -- ${err}`); });
