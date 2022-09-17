@@ -192,9 +192,6 @@ class SMTTypeEmitter {
                 else if(this.isType(tt, "CalendarDate")) {
                     return new SMTTypeInfo("BCalendarDate", "TypeTag_CalendarDate", entity.tkey);
                 }
-                else if(this.isType(tt, "RelativeTime")) {
-                    return new SMTTypeInfo("BRelativeTime", "TypeTag_RelativeTime", entity.tkey);
-                }
                 else if(this.isType(tt, "TickTime")) {
                     return new SMTTypeInfo("BTickTime", "TypeTag_TickTime", entity.tkey);
                 }
@@ -342,10 +339,6 @@ class SMTTypeEmitter {
                 oftypetag = smtfrom.smttypetag;
                 objval = new SMTCallSimple("bsqkey_calendardate@box", [exp]);
             }
-            else if(this.isType(from, "RelativeTime")) {
-                oftypetag = smtfrom.smttypetag;
-                objval = new SMTCallSimple("bsqkey_relativetimetime@box", [exp]);
-            }
             else if(this.isType(from, "TickTime")) {
                 oftypetag = smtfrom.smttypetag;
                 objval = new SMTCallSimple("bsqkey_ticktime@box", [exp]);
@@ -487,9 +480,6 @@ class SMTTypeEmitter {
             }
             else if(this.isType(into, "CalendarDate")) {
                 return new SMTCallSimple("bsqkey_calendardate_value", [oexp]);
-            }
-            else if(this.isType(into, "RelativeTime")) {
-                return new SMTCallSimple("bsqkey_relativetime_value", [oexp]);
             }
             else if(this.isType(into, "TickTime")) {
                 return new SMTCallSimple("bsqkey_ticktime_value", [oexp]);

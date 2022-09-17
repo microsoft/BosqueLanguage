@@ -141,16 +141,6 @@ bcalendardate_cons : Int -> Int -> Int -> BCalendarDate
 bcalendardate_cons yy mm dd = 
     {year = yy, month = mm, day = dd}
 
-type alias BRelativeTime = 
-    {
-        hour: Int,
-        min: Int
-    }
-
-brelativetime_cons : Int -> Int -> BRelativeTime
-brelativetime_cons h m = 
-    {hour = h, min = m}
-
 type alias BISOTimeStamp = 
     {
         year: Int,
@@ -294,12 +284,6 @@ bcalendardate_less k1 k2 =
             k1.month < k2.month else
             k1.day < k2.day
 
-brelativetime_less : BRelativeTime -> BRelativeTime -> Bool
-brelativetime_less k1 k2 = 
-    if k1.hour /= k2.hour then
-        k1.hour < k2.hour else
-        k1.min < k2.min
-
 bticktime_less : BTickTime -> BTickTime -> Bool
 bticktime_less k1 k2 = 
     k1 < k2
@@ -433,13 +417,6 @@ bsqbcalendardate_default =
         day = 0
     }
 
-bsqbrelativetime_default : BRelativeTime
-bsqbrelativetime_default = 
-    {
-        hour = 0,
-        min = 0
-    }
-
 bsqbisotimestamp_default : BISOTimeStamp
 bsqbisotimestamp_default = 
     {
@@ -470,7 +447,6 @@ type BKeyObject =
     | BKeyBString_box BString
     | BKeyBUTCDateTime_box BUTCDateTime
     | BKeyBCalendarDate_box BCalendarDate
-    | BKeyBRelativeTime_box BRelativeTime
     | BKeyBTickTime_box BTickTime
     | BKeyBLogicalTime_box BLogicalTime
     | BKeyBISOTimeStamp_box BISOTimeStamp
@@ -543,14 +519,6 @@ unbox_BKeyBCalendarDate k =
             t
         _ -> 
             bsqbcalendardate_default
-
-unbox_BKeyBRelativeTime : BKeyObject -> BRelativeTime
-unbox_BKeyBRelativeTime k =
-    case k of 
-        BKeyBRelativeTime_box t -> 
-            t
-        _ -> 
-            bsqbrelativetime_default
 
 unbox_BKeyBTickTime : BKeyObject -> BTickTime
 unbox_BKeyBTickTime k =
@@ -675,12 +643,6 @@ bkey_less k1 k2 =
                 case obj2 of 
                     BKeyBCalendarDate_box d2 -> 
                         bcalendardate_less d1 d2
-                    _ -> 
-                        False
-            BKeyBRelativeTime_box t1 -> 
-                case obj2 of 
-                    BKeyBRelativeTime_box t2 -> 
-                        brelativetime_less t1 t2
                     _ -> 
                         False
             BKeyBTickTime_box t1 -> 

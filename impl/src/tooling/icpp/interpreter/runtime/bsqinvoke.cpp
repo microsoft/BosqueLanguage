@@ -297,8 +297,6 @@ const BSQType* jsonLoadDeclOfType(json v)
         return CONS_BSQ_UTC_DATE_TIME_TYPE(ttype, tname);
     case BSQ_TYPE_ID_CALENDAR_DATE:
         return CONS_BSQ_CALENDAR_DATE_TYPE(ttype, tname);
-    case BSQ_TYPE_ID_RELATIVE_TIME:
-        return CONS_BSQ_RELATIVE_TIME_TYPE(ttype, tname);
     case BSQ_TYPE_ID_TICKTIME:
         return CONS_BSQ_TICK_TIME_TYPE(ttype, tname);
     case BSQ_TYPE_ID_LOGICALTIME:

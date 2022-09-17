@@ -15,7 +15,7 @@ import * as assert from "assert";
 
 const SMALL_INLINEABLE_TYPES = [
     "None", "Nothing", "Bool", "Int", "Nat", "BigInt", "BigNat", "Float", "Decimal", "Rational", "String", 
-    "DateTime", "UTCDateTime", "CalendarDate", "RelativeTime", "TickTime", "LogicalTime", "ISOTimeStamp", 
+    "DateTime", "UTCDateTime", "CalendarDate", "TickTime", "LogicalTime", "ISOTimeStamp", 
     "UUID4", "UUID7", "LatLongCoordinate", "Regex"
 ];
 
@@ -239,9 +239,6 @@ class ICPPTypeEmitter {
             return {layout: ICPPLayoutCategory.Inline, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "1"};
         }
         else if (this.isType(tt, "CalendarDate")) {
-            return {layout: ICPPLayoutCategory.Inline, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "1"};
-        }
-        else if (this.isType(tt, "RelativeTime")) {
             return {layout: ICPPLayoutCategory.Inline, size: ICPP_WORD_SIZE, asize: ICPP_WORD_SIZE, mask: "1"};
         }
         else if (this.isType(tt, "TickTime")) {
@@ -576,9 +573,6 @@ class ICPPTypeEmitter {
                     return ICPPLayoutInfoFixed.createByRegisterLayout(entity.tkey, inlineinfo.size, inlineinfo.asize, inlineinfo.mask);
                 }
                 else if(this.isType(tt, "CalendarDate")) {
-                    return ICPPLayoutInfoFixed.createByRegisterLayout(entity.tkey, inlineinfo.size, inlineinfo.asize, inlineinfo.mask);
-                }
-                else if(this.isType(tt, "RelativeTime")) {
                     return ICPPLayoutInfoFixed.createByRegisterLayout(entity.tkey, inlineinfo.size, inlineinfo.asize, inlineinfo.mask);
                 }
                 else if(this.isType(tt, "TickTime")) {

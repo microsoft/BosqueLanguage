@@ -314,36 +314,6 @@ bool parseToCalendarDateRaw(json j, uint16_t& y, uint8_t& m, uint8_t& d)
     return true;
 }
 
-bool parseToRelativeTimeRaw(json j, uint8_t& hh, uint8_t& mm)
-{
-    if(!j.is_string())
-    {
-        return false;
-    }
-
-    std::string sstr = j.get<std::string>();
-    bool istime = std::regex_match(sstr, re_apitime);
-
-    if(!istime)
-    {
-        return false;
-    }
-
-    hh = std::strtol(&sstr[0], nullptr, 10);
-    if(hh > 23)
-    {
-        return false;
-    }
-
-    mm = std::strtol(&sstr[3], nullptr, 10);
-    if(mm > 59)
-    {
-        return false;
-    }
-    
-    return true;
-}
-
 bool parseToISOTimeStampRaw(json j, uint16_t& y, uint8_t& m, uint8_t& d, uint8_t& hh, uint8_t& mm, uint8_t& ss, uint16_t& millis)
 {
     if(!j.is_string())
@@ -479,22 +449,6 @@ std::optional<APICalendarDate> JSONParseHelper::parseToCalendarDate(json j)
     
     APICalendarDate tinfo = {0, 0, 0};
     auto ok = parseToCalendarDateRaw(j, tinfo.year, tinfo.month, tinfo.day);
-    if(!ok)
-    {
-        return std::nullopt;
-    }
-
-    return std::make_optional(tinfo);
-}
-
-std::optional<APIRelativeTime> JSONParseHelper::parseToRelativeTime(json j)
-{
-    if(!j.is_string()) {
-        return std::nullopt;
-    }
-    
-    APIRelativeTime tinfo = {0, 0};
-    auto ok = parseToRelativeTimeRaw(j, tinfo.hour, tinfo.min);
     if(!ok)
     {
         return std::nullopt;
@@ -759,20 +713,6 @@ std::string emitCalendarDateRaw_d(uint16_t y, uint8_t m, uint8_t d)
     return res;
 }
 
-std::string emitRelativeTimeRaw_d(uint8_t hh, uint8_t mm)
-{
-    struct tm dt = tm();
-    dt.tm_hour = hh;
-    dt.tm_min = mm;
-
-    char sstrt[20] = {0};
-    size_t dtlen = strftime(sstrt, 20, "%H:%M", &dt);
-    std::string res(sstrt, sstrt + dtlen);
-
-    return res;
-}
-
-
 std::string emitISOTimeStampRaw_d(uint16_t y, uint8_t m, uint8_t d, uint8_t hh, uint8_t mm, uint8_t ss, uint16_t millis)
 {
     struct tm dt = tm();
@@ -818,12 +758,6 @@ std::optional<json> JSONParseHelper::emitUTCDateTime(APIUTCDateTime t)
 std::optional<json> JSONParseHelper::emitCalendarDate(APICalendarDate t)
 {
     auto tstr = emitCalendarDateRaw_d(t.year, t.month, t.day); 
-    return std::make_optional(tstr);
-}
-
-std::optional<json> JSONParseHelper::emitRelativeTime(APIRelativeTime t)
-{
-    auto tstr = emitRelativeTimeRaw_d(t.hour, t.min); 
     return std::make_optional(tstr);
 }
 
@@ -1049,8 +983,6 @@ IType* IType::jparse(json j)
             return UTCDateTimeType::jparse(j);
         case TypeTag::CalendarDateTag:
             return CalendarDateType::jparse(j);
-        case TypeTag::RelativeTimeTag:
-            return RelativeTimeType::jparse(j);
         case TypeTag::TickTimeTag:
             return TickTimeType::jparse(j);
         case TypeTag::LogicalTimeTag:

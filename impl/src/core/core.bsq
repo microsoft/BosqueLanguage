@@ -444,6 +444,10 @@ __internal __constructable __typedeclable entity DataString<T unique Parsable> p
     }
 }
 
+//
+//TODO: ASCIIString and of flavors 
+//
+
 enum BufferFormat {
     utf8,
     binary,
@@ -509,7 +513,7 @@ __internal __typedeclable __typebase entity UTCDateTime provides Some, APIType, 
 }
 
 __internal __typedeclable __typebase entity CalendarDate provides Some, APIType, KeyType {
-    __assume_safe internal function s_create(year: Nat, month: Nat, day: Nat, hour: Nat, min: Nat): CalendarDate = calendardate_create;
+    __assume_safe internal function s_create(year: Nat, month: Nat, day: Nat): CalendarDate = calendardate_create;
 
     function create(year: Nat, month?: Nat=0n, day?: Nat=1n): CalendarDate
         requires 1900n <= year && year <= 2200n;
@@ -517,17 +521,6 @@ __internal __typedeclable __typebase entity CalendarDate provides Some, APIType,
         requires DateOps::s_check_DayInMonth(day, month, year);
     {
         return CalendarDate::s_create(year, month, day);
-    }
-}
-
-__internal __typedeclable __typebase entity RelativeTime provides Some, APIType, KeyType {
-    __assume_safe internal function s_create(hour: Nat, min: Nat): RelativeTime = relativetime_create;
-
-    function create(year: Nat, month?: Nat=0n, day?: Nat=1n): RelativeTime
-        requires hour < 24n;
-        requires min < 60n;
-    {
-        return RelativeTime::s_create(hour, min);
     }
 }
 

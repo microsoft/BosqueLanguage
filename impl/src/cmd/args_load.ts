@@ -150,31 +150,19 @@ function extractEntryPointsAll(workingdir: string, appuris: URIPathGlob[]): {fil
                 const contents = cleanCommentsStringsFromFileContents(fs.readFileSync(fullpath).toString());
 
                 const namespacere = /namespace([ \t]+)(?<nsstr>(([A-Z][_a-zA-Z0-9]+)::)*([A-Z][_a-zA-Z0-9]+));/;
-                const entryre = /(entrypoint|chktest|errtest|__chktest)(\s+)function(\s+)(?<fname>([_a-z]|([_a-z][_a-zA-Z0-9]*[a-zA-Z0-9])))(\s*)\(/g;
-
                 const ns = namespacere.exec(contents);
                 if (ns === null || ns.groups === undefined || ns.groups.nsstr === undefined) {
                     return undefined;
                 }
                 const nsstr = ns.groups.nsstr;
 
+                const entries: string[] = contents.split(/entrypoint\s+function\s+/)
                 let names: string[] = [];
-                let mm: RegExpExecArray | null = null;
-                entryre.lastIndex = 0;
-                mm = entryre.exec(contents);
-                while (mm !== null) {
-                    if (mm.groups === undefined || mm.groups.fname === undefined) {
-                        return undefined;
-                    }
-
-                    if (mm[0].startsWith("entrypoint")) {
-                        names.push(mm.groups.fname);
-                    }
-
-                    entryre.lastIndex += mm[0].length;
-                    mm = entryre.exec(contents);
+                for(let i = 1; i < entries.length; ++i) {
+                    const entry = entries[i].slice(0, entries[i].indexOf("(")).trim();
+                    names.push(entry);
                 }
-
+                
                 return {
                     filename: fullpath,
                     names: names,

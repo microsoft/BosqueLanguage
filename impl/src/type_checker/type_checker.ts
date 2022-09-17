@@ -4338,7 +4338,7 @@ class TypeChecker {
         }
         else {
             if (lhs.every((ee) => ee.getExpressionResult().truthval === FlowTypeTruthValue.False)) {
-                this.m_emitter.emitLoadConstBool(exp.sinfo, false, trgt);
+                this.m_emitter.emitLoadConstBool(exp.sinfo, true, trgt);
                 return lhs.map((eev) => eev.setBoolResultExpression(this.m_assembly.getSpecialBoolType(), FlowTypeTruthValue.True));
             }
             else {

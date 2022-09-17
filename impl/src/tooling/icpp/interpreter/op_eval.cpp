@@ -2213,16 +2213,6 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         SLPTR_STORE_CONTENTS_AS(BSQCalendarDate, resultsl, dt);
         break;
     }
-    case BSQPrimitiveImplTag::relativetime_create: {
-        BSQRelativeTime dt = {
-            (uint8_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[0]),
-            (uint8_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, params[1]),
-            0
-        };
-
-        SLPTR_STORE_CONTENTS_AS(BSQRelativeTime, resultsl, dt);
-        break;
-    }
     case BSQPrimitiveImplTag::logicaltime_zero: {
         SLPTR_STORE_CONTENTS_AS(BSQLogicalTime, resultsl, 0);
         break;
@@ -3016,17 +3006,6 @@ bool ICPPParseJSON::parseCalendarDateImpl(const APIModule* apimodule, const ITyp
     return true;
 }
 
-bool ICPPParseJSON::parseRelativeTimeImpl(const APIModule* apimodule, const IType* itype, APIRelativeTime t, StorageLocationPtr value, Evaluator& ctx)
-{
-    BSQRelativeTime dt = {0};
-   
-    dt.hour = t.hour;
-    dt.min = t.min;
-
-    SLPTR_STORE_CONTENTS_AS(BSQRelativeTime, value, dt);
-    return true;
-}
-
 bool ICPPParseJSON::parseTickTimeImpl(const APIModule* apimodule, const IType* itype, uint64_t t, StorageLocationPtr value, Evaluator& ctx)
 {
     SLPTR_STORE_CONTENTS_AS(BSQTickTime, value, (BSQTickTime)t);
@@ -3615,18 +3594,6 @@ std::optional<APICalendarDate> ICPPParseJSON::extractCalendarDateImpl(const APIM
 
     return std::make_optional(dt);
 }
-
-std::optional<APIRelativeTime> ICPPParseJSON::extractRelativeTimeImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
-{
-    BSQRelativeTime t = SLPTR_LOAD_CONTENTS_AS(BSQRelativeTime, value);
-
-    APIRelativeTime dt;
-    dt.hour = t.hour;
-    dt.min = t.min;
-
-    return std::make_optional(dt);
-}
-    
 
 std::optional<uint64_t> ICPPParseJSON::extractTickTimeImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
 {

@@ -6,9 +6,9 @@
 import {MIRFunctionParameter, MIRType, SymbolicActionMode} from "../../compiler/mir_assembly";
 import { VerifierOptions } from "../../tooling/checker/smt_exp";
 
-//EPIPE error on win with parallel runs
-const PARALLEL_COUNT_ICPP = process.platform !== "win32" ? 4 : 1;
-const PARALLEL_COUNT_SMT = process.platform !== "win32" ? 4 : 1;
+//EPIPE error with parallel runs -- ugh
+const PARALLEL_COUNT_ICPP = 1;
+const PARALLEL_COUNT_SMT = 1;
 
 const SMT_TIMEOUT = 10000;
 

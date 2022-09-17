@@ -1496,7 +1496,6 @@ class Assembly {
     getSpecialDateTimeType(): ResolvedType { return this.internSpecialObjectType(["DateTime"]); }
     getSpecialUTCDateTimeType(): ResolvedType { return this.internSpecialObjectType(["UTCDateTime"]); }
     getSpecialCalendarDateType(): ResolvedType { return this.internSpecialObjectType(["CalendarDate"]); }
-    getSpecialRelativeTimeType(): ResolvedType { return this.internSpecialObjectType(["RelativeTime"]); }
     getSpecialTickTimeType(): ResolvedType { return this.internSpecialObjectType(["TickTime"]); }
     getSpecialLogicalTimeType(): ResolvedType { return this.internSpecialObjectType(["LogicalTime"]); }
     getSpecialISOTimeStampType(): ResolvedType { return this.internSpecialObjectType(["ISOTimeStamp"]); }
