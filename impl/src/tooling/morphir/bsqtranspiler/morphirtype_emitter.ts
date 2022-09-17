@@ -214,9 +214,6 @@ class MorphirTypeEmitter {
                 else if(this.isType(tt, "CalendarDate")) {
                     return new MorphirTypeInfo("BCalendarDate", "TypeTag_CalendarDate", entity.tkey);
                 }
-                else if(this.isType(tt, "RelativeTime")) {
-                    return new MorphirTypeInfo("BRelativeTime", "TypeTag_RelativeTime", entity.tkey);
-                }
                 else if(this.isType(tt, "TickTime")) {
                     return new MorphirTypeInfo("BTickTime", "TypeTag_TickTime", entity.tkey);
                 }
@@ -349,10 +346,6 @@ class MorphirTypeEmitter {
             else if(this.isType(from, "CalendarDate")) {
                 oftypetag = smtfrom.morphirtypetag;
                 objval = new MorphirCallSimple("BKeyBCalendarDate_box", [exp]);
-            }
-            else if(this.isType(from, "RelativeTime")) {
-                oftypetag = smtfrom.morphirtypetag;
-                objval = new MorphirCallSimple("BKeyBRelativeTime_box", [exp]);
             }
             else if(this.isType(from, "TickTime")) {
                 oftypetag = smtfrom.morphirtypetag;
@@ -495,9 +488,6 @@ class MorphirTypeEmitter {
             }
             else if(this.isType(into, "CalendarDate")) {
                 return new MorphirCallSimple("unbox_BKeyBCalendarDate", [oexp]);
-            }
-            else if(this.isType(into, "RelativeTime")) {
-                return new MorphirCallSimple("unbox_BKeyBRelativeTime", [oexp]);
             }
             else if(this.isType(into, "TickTime")) {
                 return new MorphirCallSimple("unbox_BKeyBTickTime", [oexp]);

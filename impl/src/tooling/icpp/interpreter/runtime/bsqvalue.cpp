@@ -35,7 +35,6 @@ const BSQType* BSQWellKnownType::g_typeByteBuffer = CONS_BSQ_BYTE_BUFFER_TYPE(BS
 const BSQType* BSQWellKnownType::g_typeDateTime = CONS_BSQ_DATE_TIME_TYPE(BSQ_TYPE_ID_DATETIME, "DateTime");
 const BSQType* BSQWellKnownType::g_typeUTCDateTime = CONS_BSQ_UTC_DATE_TIME_TYPE(BSQ_TYPE_ID_UTC_DATETIME, "UTCDateTime");
 const BSQType* BSQWellKnownType::g_typeCalendarDate = CONS_BSQ_CALENDAR_DATE_TYPE(BSQ_TYPE_ID_CALENDAR_DATE, "CalendarDate");
-const BSQType* BSQWellKnownType::g_typeRelativeTime = CONS_BSQ_RELATIVE_TIME_TYPE(BSQ_TYPE_ID_RELATIVE_TIME, "RelativeTime");
 const BSQType* BSQWellKnownType::g_typeTickTime = CONS_BSQ_TICK_TIME_TYPE(BSQ_TYPE_ID_TICKTIME, "TickTime");
 const BSQType* BSQWellKnownType::g_typeLogicalTime = CONS_BSQ_LOGICAL_TIME_TYPE(BSQ_TYPE_ID_LOGICALTIME, "LogicalTime");
 const BSQType* BSQWellKnownType::g_typeISOTimeStamp = CONS_BSQ_ISO_TIME_STAMP_TYPE(BSQ_TYPE_ID_ISO_TIMESTAMP, "ISOTimeStamp");
@@ -1008,43 +1007,6 @@ int entityCalendarDateKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1
             {
                 return 0;
             }
-        }
-    }
-}
-
-std::string entityRelativeTimeDisplay_impl(const BSQType* btype, StorageLocationPtr data, DisplayMode mode)
-{
-    BSQRelativeTime rt = SLPTR_LOAD_CONTENTS_AS(BSQRelativeTime, data);
-
-    struct tm dt = {0};
-    dt.tm_hour = rt.hour;
-    dt.tm_min = rt.min;
-
-    char sstrt[20] = {0};
-    size_t dtlen = strftime(sstrt, 20, "%H:%M", &dt);
-    std::string res(sstrt, sstrt + dtlen);
-
-    return res;
-}
-
-int entityRelativeTimeKeyCmp_impl(const BSQType* btype, StorageLocationPtr data1, StorageLocationPtr data2)
-{
-    BSQRelativeTime t1 = SLPTR_LOAD_CONTENTS_AS(BSQRelativeTime, data1);
-    BSQRelativeTime t2 = SLPTR_LOAD_CONTENTS_AS(BSQRelativeTime, data2);
-
-    if(t1.hour != t2.hour)
-    {
-        return (t1.hour < t2.hour) ? -1 : 1;
-    }
-    else
-    {
-        if(t1.min != t2.min)
-        {
-            return (t1.min < t2.min) ? -1 : 1;
-        }
-        else
-        {
-            return 0;
         }
     }
 }

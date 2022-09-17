@@ -6,6 +6,96 @@
 namespace Expressions;
 
 ////
+//Logical Operators
+
+const lfalse: Bool = false;
+const ltrue: Bool = true;
+
+chktest function logical_negation_false_sc_lit(): Bool {
+    return (!false);
+}
+
+chktest function logical_negation_true_list(): Bool {
+    return !(!true);
+}
+
+chktest function logical_negation_false(): Bool {
+    return (!Expressions::lfalse);
+}
+
+chktest function logical_negation_true(): Bool {
+    return !(!Expressions::ltrue);
+}
+
+chktest function logical_and_true_sc_lt(): Bool {
+    return !(false && true);
+}
+
+chktest function logical_and_tf(): Bool {
+    return !(Expressions::ltrue && Expressions::lfalse);
+}
+
+chktest function logical_and_tt(): Bool {
+    return (Expressions::ltrue && Expressions::ltrue);
+}
+
+chktest function logical_and_sc(): Bool {
+    return !(Expressions::lfalse && (1n / 0n == 1n));
+}
+
+chktest function logical_or_false_sc_lit(): Bool {
+    return (false || true);
+}
+
+chktest function logical_or_tf(): Bool {
+    return (Expressions::ltrue || Expressions::lfalse);
+}
+
+chktest function logical_or_ff(): Bool {
+    return !(Expressions::lfalse || Expressions::lfalse);
+}
+
+chktest function logical_or_sc(): Bool {
+    return (Expressions::ltrue || (1n / 0n == 1n));
+}
+
+chktest function logical_implies_false_lit(): Bool {
+    return (false ==> true);
+}
+
+chktest function logical_implies_tf(): Bool {
+    return !(Expressions::ltrue ==> Expressions::lfalse);
+}
+
+chktest function logical_impliestt(): Bool {
+    return (Expressions::ltrue ==> Expressions::ltrue);
+}
+
+chktest function logical_implies_ft(): Bool {
+    return (Expressions::lfalse ==> Expressions::ltrue);
+}
+
+chktest function logical_implies_sc(): Bool {
+    return (Expressions::lfalse ==> (1n / 0n == 1n));
+}
+
+chktest function logical_land_tft(): Bool {
+    return !(/\(true, false, true)); 
+}
+
+chktest function logical_land_ttt(): Bool {
+    return /\(true, true, true); 
+}
+
+chktest function logical_lor_tft(): Bool {
+    return \/(true, false, true); 
+}
+
+chktest function logical_lor_fff(): Bool {
+    return !(\/(false, false, false)); 
+}
+
+////
 //Static Namespace Operators
 
 abstract operator %ns_operator%(a: Any, b: Any): Any;

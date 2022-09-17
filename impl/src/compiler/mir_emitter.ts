@@ -1417,7 +1417,6 @@ class MIREmitter {
         emitter.registerResolvedTypeReference(assembly.getSpecialDateTimeType());
         emitter.registerResolvedTypeReference(assembly.getSpecialUTCDateTimeType());
         emitter.registerResolvedTypeReference(assembly.getSpecialCalendarDateType());
-        emitter.registerResolvedTypeReference(assembly.getSpecialRelativeTimeType());
         emitter.registerResolvedTypeReference(assembly.getSpecialTickTimeType());
         emitter.registerResolvedTypeReference(assembly.getSpecialLogicalTimeType());
         emitter.registerResolvedTypeReference(assembly.getSpecialISOTimeStampType());

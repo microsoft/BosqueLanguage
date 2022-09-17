@@ -728,17 +728,6 @@ bool SMTParseJSON::parseCalendarDateImpl(const APIModule* apimodule, const IType
     return true;
 }
 
-bool SMTParseJSON::parseRelativeTimeImpl(const APIModule* apimodule, const IType* itype, APIRelativeTime t, z3::expr value, z3::solver& ctx)
-{
-    auto bhourf = getArgContextConstructor(ctx.ctx(), "BDateHour@UFCons_API", ctx.ctx().int_sort());
-    ctx.add(bhourf(value) == ctx.ctx().int_val(t.hour));
-
-    auto bminutef = getArgContextConstructor(ctx.ctx(), "BDateMinute@UFCons_API", ctx.ctx().int_sort());
-    ctx.add(bminutef(value) == ctx.ctx().int_val(t.min));
-
-    return true;
-}
-
 bool SMTParseJSON::parseTickTimeImpl(const APIModule* apimodule, const IType* itype, uint64_t t, z3::expr value, z3::solver& ctx)
 {
     auto bef = getArgContextConstructor(ctx.ctx(), "BTickTime@UFCons_API", ctx.ctx().int_sort());
@@ -1155,27 +1144,6 @@ std::optional<APICalendarDate> SMTParseJSON::extractCalendarDateImpl(const APIMo
     dt.month = (uint8_t)m.value();
     dt.day = (uint8_t)d.value();
 
-
-    return std::make_optional(dt);
-}
-
-std::optional<APIRelativeTime> SMTParseJSON::extractRelativeTimeImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
-{
-    APIRelativeTime dt;
-
-    auto bhourf = getArgContextConstructor(ctx.ctx(), "BDateHour@UFCons_API", ctx.ctx().int_sort());
-    auto h = expIntAsUIntSmall(ctx, bhourf(value));
-
-    auto bminutef = getArgContextConstructor(ctx.ctx(), "BDateMinute@UFCons_API", ctx.ctx().int_sort());
-    auto mm = expIntAsUIntSmall(ctx, bminutef(value));
-        
-    if(!h.has_value() || !mm.has_value())
-    {
-        return std::nullopt;
-    }
-
-    dt.hour = (uint8_t)h.value();
-    dt.min = (uint8_t)mm.value();
 
     return std::make_optional(dt);
 }

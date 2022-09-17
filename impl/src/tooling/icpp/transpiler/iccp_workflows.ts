@@ -105,8 +105,11 @@ function runICPPFile(icppjson: {code: object, args: any[], main: string}, debug:
 
         if(proc.stdin === null) {
             proc.kill();
+            cb("Killed process!!!");
         }
         else {
+            proc.stdin.on("error", (err: Error) => { cb(`Write to stdin error -- ${err}`); });
+
             proc.stdin.setDefaultEncoding('utf-8');
             proc.stdin.write(JSON.stringify(icppjson, undefined, 2));
             proc.stdin.write("\n");

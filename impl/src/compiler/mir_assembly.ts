@@ -29,7 +29,6 @@ enum APIEmitTypeTag
     DateTimeTag,
     UTCDateTimeTag,
     CalendarDateTag,
-    RelativeTimeTag,
     TickTimeTag,
     LogicalTimeTag,
     ISOTimeStampTag,
@@ -1140,9 +1139,6 @@ class MIRAssembly {
                 }
                 else if(tt.typeID === "CalendarDate") {
                     return {tag: APIEmitTypeTag.CalendarDateTag};
-                }
-                else if(tt.typeID === "RelativeTime") {
-                    return {tag: APIEmitTypeTag.RelativeTimeTag};
                 }
                 else if(tt.typeID === "TickTime") {
                     return {tag: APIEmitTypeTag.TickTimeTag};

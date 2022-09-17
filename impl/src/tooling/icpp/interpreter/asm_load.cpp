@@ -88,7 +88,6 @@ void initialize(size_t cbuffsize, const RefMask cmask)
     MarshalEnvironment::g_typenameToIdMap["DateTime"] = BSQ_TYPE_ID_DATETIME;
     MarshalEnvironment::g_typenameToIdMap["UTCDateTime"] = BSQ_TYPE_ID_UTC_DATETIME;
     MarshalEnvironment::g_typenameToIdMap["CalendarDate"] = BSQ_TYPE_ID_CALENDAR_DATE;
-    MarshalEnvironment::g_typenameToIdMap["RelativeTime"] = BSQ_TYPE_ID_RELATIVE_TIME;
     MarshalEnvironment::g_typenameToIdMap["TickTime"] = BSQ_TYPE_ID_TICKTIME;
     MarshalEnvironment::g_typenameToIdMap["LogicalTime"] = BSQ_TYPE_ID_LOGICALTIME;
     MarshalEnvironment::g_typenameToIdMap["ISOTimeStamp"] = BSQ_TYPE_ID_ISO_TIMESTAMP;
@@ -292,7 +291,6 @@ void loadAssembly(json j, Evaluator& ee)
     BSQType::g_typetable[BSQ_TYPE_ID_DATETIME] = BSQWellKnownType::g_typeDateTime;
     BSQType::g_typetable[BSQ_TYPE_ID_UTC_DATETIME] = BSQWellKnownType::g_typeUTCDateTime;
     BSQType::g_typetable[BSQ_TYPE_ID_CALENDAR_DATE] = BSQWellKnownType::g_typeCalendarDate;
-    BSQType::g_typetable[BSQ_TYPE_ID_RELATIVE_TIME] = BSQWellKnownType::g_typeRelativeTime;
     BSQType::g_typetable[BSQ_TYPE_ID_TICKTIME] = BSQWellKnownType::g_typeTickTime;
     BSQType::g_typetable[BSQ_TYPE_ID_LOGICALTIME] = BSQWellKnownType::g_typeLogicalTime;
     BSQType::g_typetable[BSQ_TYPE_ID_ISO_TIMESTAMP] = BSQWellKnownType::g_typeISOTimeStamp;

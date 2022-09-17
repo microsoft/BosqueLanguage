@@ -103,7 +103,6 @@ enum class TypeTag
     DateTimeTag,
     UTCDateTimeTag,
     CalendarDateTag,
-    RelativeTimeTag,
     TickTimeTag,
     LogicalTimeTag,
     ISOTimeStampTag,
@@ -148,12 +147,6 @@ struct APICalendarDate
     uint8_t day;     // 1-31
 };
 
-struct APIRelativeTime
-{
-    uint8_t hour;    // 0-23
-    uint8_t min;     // 0-59
-};
-
 struct APIISOTimeStamp
 {
     uint16_t year;   // Year since 1900
@@ -189,7 +182,6 @@ public:
     virtual bool parseDateTimeImpl(const APIModule* apimodule, const IType* itype, APIDateTime t, ValueRepr value, State& ctx) = 0;
     virtual bool parseUTCDateTimeImpl(const APIModule* apimodule, const IType* itype, APIUTCDateTime t, ValueRepr value, State& ctx) = 0;
     virtual bool parseCalendarDateImpl(const APIModule* apimodule, const IType* itype, APICalendarDate t, ValueRepr value, State& ctx) = 0;
-    virtual bool parseRelativeTimeImpl(const APIModule* apimodule, const IType* itype, APIRelativeTime t, ValueRepr value, State& ctx) = 0;
     virtual bool parseTickTimeImpl(const APIModule* apimodule, const IType* itype, uint64_t t, ValueRepr value, State& ctx) = 0;
     virtual bool parseLogicalTimeImpl(const APIModule* apimodule, const IType* itype, uint64_t j, ValueRepr value, State& ctx) = 0;
     virtual bool parseISOTimeStampImpl(const APIModule* apimodule, const IType* itype, APIISOTimeStamp t, ValueRepr value, State& ctx) = 0;
@@ -233,7 +225,6 @@ public:
     virtual std::optional<APIDateTime> extractDateTimeImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
     virtual std::optional<APIUTCDateTime> extractUTCDateTimeImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
     virtual std::optional<APICalendarDate> extractCalendarDateImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
-    virtual std::optional<APIRelativeTime> extractRelativeTimeImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
     virtual std::optional<uint64_t> extractTickTimeImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
     virtual std::optional<uint64_t> extractLogicalTimeImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
     virtual std::optional<APIISOTimeStamp> extractISOTimeStampImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
@@ -269,7 +260,6 @@ public:
     static std::optional<APIDateTime> parseToDateTime(json j);
     static std::optional<APIUTCDateTime> parseToUTCDateTime(json j);
     static std::optional<APICalendarDate> parseToCalendarDate(json j);
-    static std::optional<APIRelativeTime> parseToRelativeTime(json j);
     static std::optional<uint64_t> parseToTickTime(json j);
     static std::optional<uint64_t> parseToLogicalTime(json j);
     static std::optional<APIISOTimeStamp> parseToISOTimeStamp(json j);
@@ -288,7 +278,6 @@ public:
     static std::optional<json> emitDateTime(APIDateTime t);
     static std::optional<json> emitUTCDateTime(APIUTCDateTime t);
     static std::optional<json> emitCalendarDate(APICalendarDate t);
-    static std::optional<json> emitRelativeTime(APIRelativeTime t);
     static std::optional<json> emitTickTime(uint64_t t);
     static std::optional<json> emitLogicalTime(uint64_t t);
     static std::optional<json> emitISOTimeStamp(APIISOTimeStamp t);
@@ -1135,54 +1124,6 @@ public:
         }
 
         return JSONParseHelper::emitCalendarDate(tval.value());
-    }
-};
-
-class RelativeTimeType : public IGroundedType
-{
-public:
-    RelativeTimeType() : IGroundedType(TypeTag::RelativeTimeTag, "RelativeTime") {;}
-    virtual ~RelativeTimeType() {;}
-
-    static RelativeTimeType* jparse(json j)
-    {
-        return new RelativeTimeType();
-    }
-
-    virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final
-    {
-        std::time_t tval = std::time(nullptr);
-
-        auto utctime = std::gmtime(&tval);
-        char utcstr[20] = {0};
-        size_t utcsize = strftime(utcstr, 20, "%H:%MZ", utctime);
-        std::string utcres(utcstr, utcstr + utcsize);
-        
-        return utcres;
-    }
-
-    template <typename ValueRepr, typename State>
-    bool parse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, json j, ValueRepr value, State& ctx) const
-    {
-        auto t = JSONParseHelper::parseToRelativeTime(j);
-        if(!t.has_value())
-        {
-            return false;
-        }
-
-        return apimgr.parseRelativeTimeImpl(apimodule, this, t.value(), value, ctx);
-    }
-
-    template <typename ValueRepr, typename State>
-    std::optional<json> extract(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
-    {
-        auto tval = apimgr.extractRelativeTimeImpl(apimodule, this, value, ctx);
-        if(!tval.has_value())
-        {
-            return std::nullopt;
-        }
-
-        return JSONParseHelper::emitRelativeTime(tval.value());
     }
 };
 
@@ -2327,8 +2268,6 @@ bool IType::tparse(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* ap
             return dynamic_cast<const UTCDateTimeType*>(this)->parse(apimgr, apimodule, j, value, ctx);
         case TypeTag::CalendarDateTag:
             return dynamic_cast<const CalendarDateType*>(this)->parse(apimgr, apimodule, j, value, ctx);
-        case TypeTag::RelativeTimeTag:
-            return dynamic_cast<const RelativeTimeType*>(this)->parse(apimgr, apimodule, j, value, ctx);
         case TypeTag::TickTimeTag:
             return dynamic_cast<const TickTimeType*>(this)->parse(apimgr, apimodule, j, value, ctx);
         case TypeTag::LogicalTimeTag:
@@ -2408,8 +2347,6 @@ std::optional<json> IType::textract(ApiManagerJSON<ValueRepr, State>& apimgr, co
             return dynamic_cast<const UTCDateTimeType*>(this)->extract(apimgr, apimodule, value, ctx);
         case TypeTag::CalendarDateTag:
             return dynamic_cast<const CalendarDateType*>(this)->extract(apimgr, apimodule, value, ctx);
-        case TypeTag::RelativeTimeTag:
-            return dynamic_cast<const RelativeTimeType*>(this)->extract(apimgr, apimodule, value, ctx);
         case TypeTag::TickTimeTag:
             return dynamic_cast<const TickTimeType*>(this)->extract(apimgr, apimodule, value, ctx);
         case TypeTag::LogicalTimeTag:
