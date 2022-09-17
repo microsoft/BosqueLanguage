@@ -394,8 +394,6 @@ function loadEntryPointInfo(files: string[], istestbuild: boolean): {filename: s
             const contents = cleanCommentsStringsFromFileContents(FS.readFileSync(files[i]).toString());
 
             const namespacere = /namespace([ \t]+)(?<nsstr>(([A-Z][_a-zA-Z0-9]+)::)*([A-Z][_a-zA-Z0-9]+));/;
-            const entryre = /(?<fname>([_a-zA-Z0-9]+))(\s+)\(/;
-            
             const ns = namespacere.exec(contents);
             if(ns === null || ns.groups === undefined || ns.groups.nsstr === undefined) {
                 return undefined;
@@ -404,24 +402,18 @@ function loadEntryPointInfo(files: string[], istestbuild: boolean): {filename: s
 
             let entries: string[] = [];
             if(istestbuild) {
-                entries = contents.split(/(chktest|errtest|__chktest)(\s+)function(\s+)/);
+                entries = contents.split(/(?:chktest|errtest|__chktest)\s+function\s+/);
             }
             else {
-                entries = contents.split(/entrypoint(\s+)function(\s+)/)
+                entries = contents.split(/entrypoint\s+function\s+/)
             }
 
             let names: string[] = [];
             for(let i = 1; i < entries.length; ++i) {
-                const ns = entryre.exec(contents);
-                if (ns === null || ns.groups === undefined || ns.groups.nsstr === undefined) {
-                    return undefined;
-                }
-                const fname = ns.groups.nsstr;
-                names.push(fname);
+                const entry = entries[i].slice(0, entries[i].indexOf("(")).trim();
+                names.push(entry);
             }
-
-            console.log(names);
-
+            
             epi.push({filename: files[i], namespace: nsstr, names: names});
         }
 
