@@ -103,14 +103,14 @@ Bosque provides a range of standard primitive types, numerics, strings, times, e
 - **Float & Decimal:** The `Float` type is a 64 bit IEEE-754 floating point number. The `Decimal` type is a 64 bit decimal floating point number.
 - **Rational:** The `Rational` type is a rational representation of a number with a `BigInt` valued numerator and a `Nat` valued (non-zero) denominator. Overflow in the denominator is handled by rounding to the nearest representable value.
 - **String:** The `String` type in Bosque is a utf-8 unicode string. Notably this string type does not support arbitrary indexing (which is undefined for utf-8 multibyte characters). Instead operations must use regex based slicing, extraction, etc.
-- **ASCIIString:** (TODO) The `ASCIIString` type is a ASCII char based string that can be meainingfully processed using integral index operations.
+- **ASCIIString:** (TODO) The `ASCIIString` type is a ASCII char based string that can be meaningfully processed using integral index operations.
 - **ByteBuffer:** The `ByteBuffer` type is a 0 indexed array of uninterpreted 8 bit values.
 - **Regex:** the `Regex` type is the type assigned to all regex literals in the program.
 
 In addition to the basic types enumerated above, Bosque also provides a range of commonly useful types for dealing with time, locations, events, and identity.
 
 - **DateTime:** The `DateTime` type represents a _human scale_ time with minute precision (so no leap second issues). The representation is TimeZone based and does not allow naive comparision for ordering or computation of offsets as these are ill defined and non-deterministic operations (e.g. when the times are in the future a TZ meaning may change).
-- **UTCDateTime:** The `UTCDateTime` type is a specialized version of `DateTime` that is fixed at UTC for the timezone. This allows us to do direct ordering and arithmatic on the dates.
+- **UTCDateTime:** The `UTCDateTime` type is a specialized version of `DateTime` that is fixed at UTC for the timezone. This allows us to do direct ordering and arithmetic on the dates.
 - **CalendarDate:** The `CalendarDate` type is a _date only_ value, month, day, year, so it is free of TZ related complications and can be directly ordered and used for offset date computation.
 - **TickTime:** the `TickTime` type is a 54 bit, nano-second interval, epoch based time [TAI derived](https://www.nist.gov/pml/time-and-frequency-division/nist-time-frequently-asked-questions-faq). This time is monotone and corresponds to real elapsed time.
 - **LogicalTime:** the `LogicalTime` type is a logical tick based time useful for causal ordering events in a system. 
@@ -135,8 +135,8 @@ There are several special entity types in Bosque:
 - **typedecl:** To create a new and distnct nominal type for any _typedeclable_ type the `typedecl` keyword can be used to create a new type that is has an identical value representation (accessable via the `value` method) to the underlying type but is a distinct type in the program.
 - **StringOf&lt;T&gt; & DataString&lt;T&gt:** The `StringOf<T>` and `DataString<T>` types in the program (also `ASCIIStringOf<T>` and `ASCIIDataString<T>` types) are dsistinct string types. The StringOf flavors are parameterized by Validator regexes (the underlying string is in the specified language) while the DataString flavors are parameterized by types that provide the `Parsable` concept (i.e. they have an `accepts` function).
 - **DataBuffer&lt;T&gt;:** The `DataBuffer<T>` type is similar to the `DataString<T>` type except the underlying value is a `ByteBuffer`.
-- **Something&lt;T&gt;:** is the subtype of `Option<T>` that represents a value (as opposed to the special `Nothing` subtype). There is a special constructor operator `something` that can be used as a type infering constructor in addition to explict construction. 
-- **Result&lt;T, E&gt;::Ok & Result&lt;T, E&gt;::Err:** Bosque provides a standard `Result<T, E>` concept with `Ok` and `Err` entities. If omitted from the type the error `E` type is assumed to be `None`. As with `Something<T>` there are special (shorthand) type infering keywords `ok` and `err` for constructing these types. 
+- **Something&lt;T&gt;:** is the subtype of `Option<T>` that represents a value (as opposed to the special `Nothing` subtype). There is a special constructor operator `something` that can be used as a type infering constructor in addition to explicit construction. 
+- **Result&lt;T, E&gt;::Ok & Result&lt;T, E&gt;::Err:** Bosque provides a standard `Result<T, E>` concept with `Ok` and `Err` entities. If omitted from the type the error `E` type is assumed to be `None`. As with `Something<T>` there are special (shorthand) type inferring keywords `ok` and `err` for constructing these types. 
 
 Bosque also provides a range of built-in container types `List<T>`, `Stack<T>`, `Queue<T>`, `Set<T>`, and `Map<K, V>` which are described in more detail in the [libraries](../libraries/overview.md) document.
 
@@ -148,10 +148,10 @@ There are several special concept types in Bosque:
 - **Any:** The `Any` type is an ur concept that every type in Bosque is a subtype of.
 - **Some:** The `Some` type is a concept type that every non-none type is a subtype of.
 - **KeyType:** The `KeyType` concept is a critical type in Bosque. The `===` and `!==` operator are defined to work only on such types and keys in `Set<T>` and `Map<K, V>` must be subtypes of `KeyType`. The list of keytypes and mor information on their behavior is included in the [KeyType section](#KeyType).
-- **APIType:** The special `APIType` concept is used to identify which types can/are exposed in `entrypoint` functions. These types are ensured to be 1) convertable to work in polyglot environments and 2) are amenable to structured generation for fuzzing and testing. See the [APIType & TestableType section](#APIType-TestableType) for more detail.
-- **TestableType:** The special `TestableType` concept is used to identify which types can/are exposed in _unit-test_ functions. This issimilar to the `APIType` concept but used for types that are not intended to be publically exposed (just visible for testing purposes). See the [APIType & TestableType section](#APIType-TestableType) for more detail.
-- **Option<T>:** Bosque supports a familiar `Option<T>` concept for convinient use of sential missing values (`nothing`).
-- **Result<T, E>:** Bosque supports a standard `Result<T, E>` type for convineient result value management. When not explicitly provided the error (`E`) type defaults to `None`.
+- **APIType:** The special `APIType` concept is used to identify which types can/are exposed in `entrypoint` functions. These types are ensured to be 1) convertible to work in polyglot environments and 2) are amenable to structured generation for fuzzing and testing. See the [APIType & TestableType section](#APIType-TestableType) for more detail.
+- **TestableType:** The special `TestableType` concept is used to identify which types can/are exposed in _unit-test_ functions. This is similar to the `APIType` concept but used for types that are not intended to be publicly exposed (just visible for testing purposes). See the [APIType & TestableType section](#APIType-TestableType) for more detail.
+- **Option<T>:** Bosque supports a familiar `Option<T>` concept for convenient use of sentinel missing values (`nothing`).
+- **Result<T, E>:** Bosque supports a standard `Result<T, E>` type for convenient result value management. When not explicitly provided the error (`E`) type defaults to `None`.
 - **Object:** All user defined entities implicitly provide the `Object` concept.
 
 Concept types can be stacked, via the `&` combinator, to indicate a value/variable should provide multiple concepts. So, the type reference `KeyType & APIType` indicates that the type provide _both_ the `KeyType` concept and the `APIType` concept.
@@ -203,7 +203,7 @@ false ==> (1n / 0n) == 1n //true -- short circuit is safe
 
 ```
 
-In some cases (i.e. to avoid branching or for clairity) it is desireable to use non-short-circuiting logical operations. Thus, Bosque also provides an:
+In some cases (i.e. to avoid branching or for clarity) it is desireable to use non-short-circuiting logical operations. Thus, Bosque also provides an:
 
 - `/\(...)` is a logical _and_ of all arguments (semantically evaluated simultaneously).
 - `\/(...)` is a logical _or_ of all arguments (semantically evaluated simultaneously).
@@ -221,7 +221,7 @@ In some cases (i.e. to avoid branching or for clairity) it is desireable to use 
 
 ## <a name="Numeric Comparison"></a>Numeric-Comparison
 
-Bosque supports a range of comparisoin operators, `==`, `!=`,`<`, `>`, `<=`, and `>=` which can be applied to numeric values -- `Nat`, `Int`, `BigNat`, `BigInt`, `Float`, `Decimal`, and `Rational` values as well as `orderable typedecl` based types (e.g. `orderable typedecl ItemCount = Int;`) based on them.
+Bosque supports a range of comparison operators, `==`, `!=`,`<`, `>`, `<=`, and `>=` which can be applied to numeric values -- `Nat`, `Int`, `BigNat`, `BigInt`, `Float`, `Decimal`, and `Rational` values as well as `orderable typedecl` based types (e.g. `orderable typedecl ItemCount = Int;`) based on them.
 
 ```none
 0i == 1i                    //false
@@ -257,5 +257,47 @@ Complex{1.0f, 0.0f} != Complex{1.0f, 1.0f} //true
 Then calls where the LHS and RHS arguments resolve to `Complex` types will resolve to this implementation transparently.
 
 ## <a name="Numeric-Operators"></a>Numeric Operators
+
+Bosque supports a range of numeric arithmetic operators, `+`, `-`,`*`, `/`, `<=`  which can be applied to numeric values -- `Nat`, `Int`, `BigNat`, `BigInt`, `Float`, `Decimal`, and `Rational` values as well as `algebraic typedecl` based types (e.g. `algebraic typedecl ItemCount = Int;`) based on them. The signed types also support unary negation `-x`.
+
+```none
+0i + 1i                    //1i
+1i - 1i                    //0i
+3n * 5n                    //15n
+3n / 2n                    //1n
+3.0f / 2.0f                //1.5f
+
+0n + 5i                    //type error not same types
+
+10_ItemCount + 1_ItemCount //11_ItemCount
+```
+
+In xxxx;
+
+The (numeric) comparison operators in Bosque are implemented as [static operators](#Namespace-Operators) and so can be extended by user defined types as well.
+
+```
+entity Complex {
+    field r: Float;
+    field i: Float;
+}
+
+infix operator +(a: Complex, b: Complex): Complex {
+    return Complex{a.r + b.r, a.i + b.i};
+}
+
+infix operator *(a: Complex, b: Complex): Complex {
+    let rpart = a.r * b.r - a.i * b.i;
+    let ipart = a.r * b.i + a.i * b.r;
+
+    return Complex{rpart, ipart};
+}
+...
+
+Complex{1.0f, 0.0f} + Complex{0.0f, 1.0f} //Complex{1.0f, 1.0f}
+
+```
+
+Then calls where the LHS and RHS arguments resolve to `Complex` types will resolve to this implementation transparently.
 
 ## <a name="K-Comparison"></a>K-Comparison

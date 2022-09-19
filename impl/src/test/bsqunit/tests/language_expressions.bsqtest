@@ -256,6 +256,23 @@ chktest function compare_greater_actioncount_nat_true_eq(): Bool {
     return (ActionCount{3} >= ActionCount{3});
 }
 
+entity Complex {
+    field r: Float;
+    field i: Float;
+}
+
+infix operator ==(a: Complex, b: Complex): Bool {
+    return a.r == b.r && a.i == b.i;
+}
+
+infix operator !=(a: Complex, b: Complex): Bool {
+    return a.r != b.r || a.i != b.i;
+}
+
+chktest function compare_neq_complex(): Bool {
+    return Complex{1.0f, 0.0f} != Complex{1.0f, 1.0f};
+}
+
 ////
 //Static Namespace Operators
 
