@@ -96,6 +96,75 @@ chktest function logical_lor_fff(): Bool {
 }
 
 ////
+//Compare operator overloads
+
+orderable typedecl ItemCount = Int;
+
+chktest function compare_eq_itemcount_true(): Bool {
+    return (3_ItemCount == 3_ItemCount); 
+}
+
+chktest function compare_eq_itemcount_false(): Bool {
+    return !(3_ItemCount == 5_ItemCount); 
+}
+
+chktest function compare_neq_itemcount_true(): Bool {
+    return (3_ItemCount != 5_ItemCount); 
+}
+
+chktest function compare_neq_itemcount_false(): Bool {
+    return !(3_ItemCount != 3_ItemCount); 
+}
+
+chktest function compare_less_itemcount_true(): Bool {
+    return (1_ItemCount < 3_ItemCount); 
+}
+
+chktest function compare_less_itemcount_false(): Bool {
+    return !(3_ItemCount < 1_ItemCount);
+}
+
+chktest function compare_less_itemcount_false_eq(): Bool {
+    return !(3_ItemCount < 3_ItemCount);
+}
+
+chktest function compare_greater_itemcount_true(): Bool {
+    return (3_ItemCount > 1_ItemCount); 
+}
+
+chktest function compare_greater_itemcount_false(): Bool {
+    return !(1_ItemCount > 3_ItemCount);
+}
+
+chktest function compare_greater_itemcount_false_eq(): Bool {
+    return !(3_ItemCount > 3_ItemCount);
+}
+
+chktest function compare_less_eq_itemcount_true(): Bool {
+    return (1_ItemCount <= 3_ItemCount); 
+}
+
+chktest function compare_less_eq_itemcount_false(): Bool {
+    return !(3_ItemCount <= 1_ItemCount);
+}
+
+chktest function compare_less_eq_itemcount_true_eq(): Bool {
+    return (3_ItemCount <= 3_ItemCount);
+}
+
+chktest function compare_greater_itemcount_nat_true(): Bool {
+    return (3_ItemCount >= 1_ItemCount); 
+}
+
+chktest function compare_greater_itemcount_nat_false(): Bool {
+    return !(1_ItemCount >= 3_ItemCount);
+}
+
+chktest function compare_greater_itemcount_nat_true_eq(): Bool {
+    return (3_ItemCount >= 3_ItemCount);
+}
+
+////
 //Static Namespace Operators
 
 abstract operator %ns_operator%(a: Any, b: Any): Any;
