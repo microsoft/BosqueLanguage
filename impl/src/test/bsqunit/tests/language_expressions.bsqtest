@@ -164,6 +164,98 @@ chktest function compare_greater_itemcount_nat_true_eq(): Bool {
     return (3_ItemCount >= 3_ItemCount);
 }
 
+entity ActionCount {
+    field count: Int;
+}
+
+infix operator ==(a: ActionCount, b: ActionCount): Bool {
+    return a.count == b.count;
+}
+
+infix operator !=(a: ActionCount, b: ActionCount): Bool {
+    return a.count != b.count;
+}
+
+infix operator <(a: ActionCount, b: ActionCount): Bool {
+    return a.count < b.count;
+}
+
+infix operator >(a: ActionCount, b: ActionCount): Bool {
+    return a.count > b.count;
+}
+
+infix operator <=(a: ActionCount, b: ActionCount): Bool {
+    return a.count <= b.count;
+}
+
+infix operator >=(a: ActionCount, b: ActionCount): Bool {
+    return a.count >= b.count;
+}
+
+chktest function compare_eq_actioncount_true(): Bool {
+    return (ActionCount{3} == ActionCount{3}); 
+}
+
+chktest function compare_eq_actioncount_false(): Bool {
+    return !(ActionCount{3} == ActionCount{5}); 
+}
+
+chktest function compare_neq_actioncount_true(): Bool {
+    return (ActionCount{3} != ActionCount{5}); 
+}
+
+chktest function compare_neq_actioncount_false(): Bool {
+    return !(ActionCount{3} != ActionCount{3}); 
+}
+
+chktest function compare_less_actioncount_true(): Bool {
+    return (ActionCount{1} < ActionCount{3}); 
+}
+
+chktest function compare_less_actioncount_false(): Bool {
+    return !(ActionCount{3} < ActionCount{1});
+}
+
+chktest function compare_less_actioncount_false_eq(): Bool {
+    return !(ActionCount{3} < ActionCount{3});
+}
+
+chktest function compare_greater_actioncount_true(): Bool {
+    return (ActionCount{3} > ActionCount{1}); 
+}
+
+chktest function compare_greater_actioncount_false(): Bool {
+    return !(ActionCount{1} > ActionCount{3});
+}
+
+chktest function compare_greater_actioncount_false_eq(): Bool {
+    return !(ActionCount{3} > ActionCount{3});
+}
+
+chktest function compare_less_eq_actioncount_true(): Bool {
+    return (ActionCount{1} <= ActionCount{3}); 
+}
+
+chktest function compare_less_eq_actioncount_false(): Bool {
+    return !(ActionCount{3} <= ActionCount{1});
+}
+
+chktest function compare_less_eq_actioncount_true_eq(): Bool {
+    return (ActionCount{3} <= ActionCount{3});
+}
+
+chktest function compare_greater_actioncount_nat_true(): Bool {
+    return (ActionCount{3} >= ActionCount{1}); 
+}
+
+chktest function compare_greater_actioncount_nat_false(): Bool {
+    return !(ActionCount{1} >= ActionCount{3});
+}
+
+chktest function compare_greater_actioncount_nat_true_eq(): Bool {
+    return (ActionCount{3} >= ActionCount{3});
+}
+
 ////
 //Static Namespace Operators
 
