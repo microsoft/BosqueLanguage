@@ -96,6 +96,400 @@ chktest function logical_lor_fff(): Bool {
 }
 
 ////
+//Types for operator and compare tests
+algebraic orderable typedecl ItemCount = Int;
+
+entity ActionCount provides APIType {
+    field count: Int;
+}
+
+infix operator ==(a: ActionCount, b: ActionCount): Bool {
+    return a.count == b.count;
+}
+
+infix operator !=(a: ActionCount, b: ActionCount): Bool {
+    return a.count != b.count;
+}
+
+infix operator <(a: ActionCount, b: ActionCount): Bool {
+    return a.count < b.count;
+}
+
+infix operator >(a: ActionCount, b: ActionCount): Bool {
+    return a.count > b.count;
+}
+
+infix operator <=(a: ActionCount, b: ActionCount): Bool {
+    return a.count <= b.count;
+}
+
+infix operator >=(a: ActionCount, b: ActionCount): Bool {
+    return a.count >= b.count;
+}
+
+prefix operator -(a: ActionCount): ActionCount {
+    return ActionCount{-a.count};
+}
+
+infix operator +(a: ActionCount, b: ActionCount): ActionCount {
+    return ActionCount{a.count + b.count};
+}
+
+infix operator *(a: ActionCount, b: Int): ActionCount {
+    return ActionCount{a.count * b};
+}
+
+infix operator *(a: Int, b: ActionCount): ActionCount {
+    return ActionCount{a * b.count};
+}
+
+entity Complex provides APIType {
+    field r: Float;
+    field i: Float;
+}
+
+infix operator ==(a: Complex, b: Complex): Bool {
+    return a.r == b.r && a.i == b.i;
+}
+
+infix operator !=(a: Complex, b: Complex): Bool {
+    return a.r != b.r || a.i != b.i;
+}
+
+prefix operator -(a: Complex): Complex {
+    return Complex{-a.r, -a.i};
+}
+
+infix operator +(a: Complex, b: Complex): Complex {
+    return Complex{a.r + b.r, a.i + b.i};
+}
+
+infix operator *(a: Complex, b: Float): Complex {
+    return Complex{a.r * b, a.i * b};
+}
+
+infix operator *(a: Float, b: Complex): Complex {
+    return Complex{a * b.r, a * b.i};
+}
+
+infix operator *(a: Complex, b: Complex): Complex {
+    let rpart = a.r * b.r - a.i * b.i;
+    let ipart = a.r * b.i + a.i * b.r;
+
+    return Complex{rpart, ipart};
+}
+
+////
+//Compare operator overloads
+
+chktest function compare_eq_itemcount_true(): Bool {
+    return (3_ItemCount == 3_ItemCount); 
+}
+
+chktest function compare_eq_itemcount_false(): Bool {
+    return !(3_ItemCount == 5_ItemCount); 
+}
+
+chktest function compare_neq_itemcount_true(): Bool {
+    return (3_ItemCount != 5_ItemCount); 
+}
+
+chktest function compare_neq_itemcount_false(): Bool {
+    return !(3_ItemCount != 3_ItemCount); 
+}
+
+chktest function compare_less_itemcount_true(): Bool {
+    return (1_ItemCount < 3_ItemCount); 
+}
+
+chktest function compare_less_itemcount_false(): Bool {
+    return !(3_ItemCount < 1_ItemCount);
+}
+
+chktest function compare_less_itemcount_false_eq(): Bool {
+    return !(3_ItemCount < 3_ItemCount);
+}
+
+chktest function compare_greater_itemcount_true(): Bool {
+    return (3_ItemCount > 1_ItemCount); 
+}
+
+chktest function compare_greater_itemcount_false(): Bool {
+    return !(1_ItemCount > 3_ItemCount);
+}
+
+chktest function compare_greater_itemcount_false_eq(): Bool {
+    return !(3_ItemCount > 3_ItemCount);
+}
+
+chktest function compare_less_eq_itemcount_true(): Bool {
+    return (1_ItemCount <= 3_ItemCount); 
+}
+
+chktest function compare_less_eq_itemcount_false(): Bool {
+    return !(3_ItemCount <= 1_ItemCount);
+}
+
+chktest function compare_less_eq_itemcount_true_eq(): Bool {
+    return (3_ItemCount <= 3_ItemCount);
+}
+
+chktest function compare_greater_itemcount_nat_true(): Bool {
+    return (3_ItemCount >= 1_ItemCount); 
+}
+
+chktest function compare_greater_itemcount_nat_false(): Bool {
+    return !(1_ItemCount >= 3_ItemCount);
+}
+
+chktest function compare_greater_itemcount_nat_true_eq(): Bool {
+    return (3_ItemCount >= 3_ItemCount);
+}
+
+chktest function compare_eq_actioncount_true(): Bool {
+    return (ActionCount{3} == ActionCount{3}); 
+}
+
+chktest function compare_eq_actioncount_false(): Bool {
+    return !(ActionCount{3} == ActionCount{5}); 
+}
+
+chktest function compare_neq_actioncount_true(): Bool {
+    return (ActionCount{3} != ActionCount{5}); 
+}
+
+chktest function compare_neq_actioncount_false(): Bool {
+    return !(ActionCount{3} != ActionCount{3}); 
+}
+
+chktest function compare_less_actioncount_true(): Bool {
+    return (ActionCount{1} < ActionCount{3}); 
+}
+
+chktest function compare_less_actioncount_false(): Bool {
+    return !(ActionCount{3} < ActionCount{1});
+}
+
+chktest function compare_less_actioncount_false_eq(): Bool {
+    return !(ActionCount{3} < ActionCount{3});
+}
+
+chktest function compare_greater_actioncount_true(): Bool {
+    return (ActionCount{3} > ActionCount{1}); 
+}
+
+chktest function compare_greater_actioncount_false(): Bool {
+    return !(ActionCount{1} > ActionCount{3});
+}
+
+chktest function compare_greater_actioncount_false_eq(): Bool {
+    return !(ActionCount{3} > ActionCount{3});
+}
+
+chktest function compare_less_eq_actioncount_true(): Bool {
+    return (ActionCount{1} <= ActionCount{3}); 
+}
+
+chktest function compare_less_eq_actioncount_false(): Bool {
+    return !(ActionCount{3} <= ActionCount{1});
+}
+
+chktest function compare_less_eq_actioncount_true_eq(): Bool {
+    return (ActionCount{3} <= ActionCount{3});
+}
+
+chktest function compare_greater_actioncount_nat_true(): Bool {
+    return (ActionCount{3} >= ActionCount{1}); 
+}
+
+chktest function compare_greater_actioncount_nat_false(): Bool {
+    return !(ActionCount{1} >= ActionCount{3});
+}
+
+chktest function compare_greater_actioncount_nat_true_eq(): Bool {
+    return (ActionCount{3} >= ActionCount{3});
+}
+
+chktest function compare_neq_complex(): Bool {
+    return Complex{1.0f, 0.0f} != Complex{1.0f, 1.0f};
+}
+
+////
+//Algebraic operator overloads
+
+chktest function ops_negate_itemcount(): Bool {
+    return -(1_ItemCount) == -1_ItemCount;
+}
+
+chktest function ops_negate_itemcount_identity(x: ItemCount): Bool {
+    return -(-x) == x;
+}
+
+chktest function ops_plus_itemcount(): Bool {
+    return +(-1_ItemCount) == +-1_ItemCount;
+}
+
+chktest function ops_plus_itemcount_identity(x: ItemCount): Bool {
+    return +x == x;
+}
+
+chktest function ops_add_itemcount(): Bool {
+    return (-1_ItemCount + 3_ItemCount) == 2_ItemCount;
+}
+
+chktest function ops_add_itemcount_identity(x: ItemCount): Bool {
+    return (0_ItemCount + x) == x;
+}
+
+chktest function ops_add_itemcount_inverse(x: ItemCount): Bool {
+    return (x + -x) == 0_ItemCount;
+}
+
+__chktest function ops_add_itemcount_inverse_find(x: ItemCount): Bool {
+    return (5_ItemCount + x) == 0_ItemCount;
+}
+
+chktest function ops_sub_itemcount(): Bool {
+    return (1_ItemCount - 3_ItemCount) == -2_ItemCount;
+}
+
+chktest function ops_sub_itemcount_identity(x: ItemCount): Bool {
+    return (x - x) == 0_ItemCount;
+}
+
+chktest function ops_sub_itemcount_inverse(x: ItemCount): Bool {
+    return (x + -x) == 0_ItemCount;
+}
+
+__chktest function ops_sub_itemcount_inverse_find(x: ItemCount): Bool {
+    return (x - x) == x;
+}
+
+chktest function ops_mult_itemcount(): Bool {
+    return (2i * 3_ItemCount) == 6_ItemCount;
+}
+
+chktest function ops_mult_itemcountx(): Bool {
+    return (0i * 3_ItemCount) == 0_ItemCount;
+}
+
+chktest function ops_mult_itemcount_zero(x: ItemCount): Bool {
+    return (x * 0i) == 0_ItemCount;
+}
+
+chktest function ops_mult_itemcount_one(x: ItemCount): Bool {
+    return (x * 1i) == x;
+}
+
+chktest function ops_mult_itemcount_negone(x: ItemCount): Bool {
+    return (x * -1i) == -x;
+}
+
+chktest function ops_div_itemcount(): Bool {
+    return (4_ItemCount / 2i) == 2_ItemCount;
+}
+
+chktest function ops_div_itemcount_ii(): Bool {
+    return (4_ItemCount / 2_ItemCount) == 2i;
+}
+
+chktest function ops_div_itemcountx(): Bool {
+    return (0_ItemCount / 2i) == 0_ItemCount;
+}
+
+chktest function ops_div_int_one(x: ItemCount): Bool {
+    return (x / 1i) == x;
+}
+
+chktest function ops_negate_actioncount(): Bool {
+    return -(ActionCount{1i}) == ActionCount{-1i};
+}
+
+chktest function ops_negate_actioncount_identity(x: ActionCount): Bool {
+    return -(-x) == x;
+}
+
+chktest function ops_add_actioncount(): Bool {
+    return (ActionCount{-1i} + ActionCount{3i}) == ActionCount{2i};
+}
+
+chktest function ops_add_actioncount_identity(x: ActionCount): Bool {
+    return (ActionCount{0i} + x) == x;
+}
+
+chktest function ops_add_actioncount_inverse(x: ActionCount): Bool {
+    return (x + -x) == ActionCount{0i};
+}
+
+__chktest function ops_add_actioncount_inverse_find(x: ActionCount): Bool {
+    return (ActionCount{5i} + x) == ActionCount{0i};
+}
+
+chktest function ops_mult_actioncount(): Bool {
+    return (2i * ActionCount{3i}) == ActionCount{6i};
+}
+
+chktest function ops_mult_actioncountx(): Bool {
+    return (0i * ActionCount{3i}) == ActionCount{0i};
+}
+
+chktest function ops_mult_actioncount_zero(x: ActionCount): Bool {
+    return (x * 0i) == ActionCount{0i};
+}
+
+chktest function ops_mult_actioncount_one(x: ActionCount): Bool {
+    return (x * 1i) == x;
+}
+
+chktest function ops_mult_actioncount_negone(x: ActionCount): Bool {
+    return (x * -1i) == -x;
+}
+
+chktest function ops_negate_complex(): Bool {
+    return -(Complex{1.0f, 2.0f}) == Complex{-1.0f, -2.0f};
+}
+
+chktest function ops_negate_complex_identity(x: Complex): Bool {
+    return -(-x) == x;
+}
+
+chktest function ops_add_complex(): Bool {
+    return (Complex{1.0f, 2.0f} + Complex{1.0f, 1.0f}) == Complex{2.0f, 3.0f};
+}
+
+chktest function ops_add_complex_identity(x: Complex): Bool {
+    return (Complex{0.0f, 0.0f} + x) == x;
+}
+
+chktest function ops_add_complex_inverse(x: Complex): Bool {
+    return (x + -x) == Complex{0.0f, 0.0f};
+}
+
+__chktest function ops_add_complex_inverse_find(x: Complex): Bool {
+    return (Complex{-3.0f, 5.0f} + x) == Complex{0.0f, 0.0f};
+}
+
+chktest function ops_mult_complex(): Bool {
+    return (2.0f * Complex{1.0f, 2.0f}) == Complex{2.0f, 4.0f};
+}
+
+chktest function ops_mult_complexx(): Bool {
+    return (Complex{1.0f, 2.0f} * Complex{3.0f, 1.0f}) == Complex{1.0f, 7.0f};
+}
+
+chktest function ops_mult_complex_zero(x: Complex): Bool {
+    return (x * 0.0f) == Complex{0.0f, 0.0f};
+}
+
+chktest function ops_mult_complex_zerocc(x: Complex): Bool {
+    return (x * Complex{0.0f, 0.0f}) == Complex{0.0f, 0.0f};
+}
+
+chktest function ops_mult_complex_one(x: Complex): Bool {
+    return (1.0f * x) == x;
+}
+
+////
 //Static Namespace Operators
 
 abstract operator %ns_operator%(a: Any, b: Any): Any;
