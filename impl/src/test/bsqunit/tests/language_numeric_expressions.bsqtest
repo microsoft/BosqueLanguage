@@ -431,3 +431,460 @@ chktest function compare_greater_eq_decimal_true_eq(): Bool {
 /*
 TODO: enable once rationals are implemented
 */
+
+////
+//Numeric Ops
+
+//negate
+chktest function ops_negate_int(): Bool {
+    return -(1i) == -1i;
+}
+
+chktest function ops_negate_int_identity(x: Int): Bool {
+    return -(-x) == x;
+}
+
+chktest function ops_negate_bigint(): Bool {
+    return -(1I) == -1I;
+}
+
+chktest function ops_negate_bigint_identity(x: BigInt): Bool {
+    return -(-x) == x;
+}
+
+chktest function ops_negate_float(): Bool {
+    return -(1.0f) == -1.0f;
+}
+
+chktest function ops_negate_float_identity(x: Float): Bool {
+    return -(-x) == x;
+}
+
+chktest function ops_negate_decimal(): Bool {
+    return -(1.0d) == -1.0d;
+}
+
+chktest function ops_negate_decimal_identity(x: Decimal): Bool {
+    return -(-x) == x;
+}
+
+/*
+TODO: Rational
+*/
+
+//plus
+chktest function ops_plus_nat(): Bool {
+    return +(1n) == +1n;
+}
+
+chktest function ops_plus_nat_identity(x: Nat): Bool {
+    return +x == x;
+}
+
+chktest function ops_plus_int(): Bool {
+    return +(-1i) == +-1i;
+}
+
+chktest function ops_plus_int_identity(x: Int): Bool {
+    return +x == x;
+}
+
+chktest function ops_plus_bignat(): Bool {
+    return +(1N) == +1N;
+}
+
+chktest function ops_plus_bignat_identity(x: BigInt): Bool {
+    return +x == x;
+}
+
+chktest function ops_plus_bigint(): Bool {
+    return +(-1I) == -1I;
+}
+
+chktest function ops_plus_bigint_identity(x: BigInt): Bool {
+    return +x == x;
+}
+
+chktest function ops_plus_float(): Bool {
+    return +(-1.0f) == -1.0f;
+}
+
+chktest function ops_plus_float_identity(x: Float): Bool {
+    return +x == x;
+}
+
+chktest function ops_plus_decimal(): Bool {
+    return +(1.0d) == 1.0d;
+}
+
+chktest function ops_plus_decimal_identity(x: Decimal): Bool {
+    return +x == x;
+}
+
+/*
+TODO: Rational
+*/
+
+//add
+chktest function ops_add_nat(): Bool {
+    return (1n + 3n) == 4n;
+}
+
+chktest function ops_add_nat_identity(x: Nat): Bool {
+    return (0n + x) == x;
+}
+
+chktest function ops_add_int(): Bool {
+    return (-1i + 3i) == 2i;
+}
+
+chktest function ops_add_int_identity(x: Int): Bool {
+    return (0i + x) == x;
+}
+
+chktest function ops_add_int_inverse(x: Int): Bool {
+    return (x + -x) == 0i;
+}
+
+__chktest function ops_add_int_inverse_find(x: Int): Bool {
+    return (5i + x) == 0i;
+}
+
+chktest function ops_add_bignat(): Bool {
+    return (1N + 3N) == 4N;
+}
+
+chktest function ops_add_bignat_identity(x: BigNat): Bool {
+    return (0N + x) == x;
+}
+
+chktest function ops_add_bigint(): Bool {
+    return (-1I + 3I) == 2I;
+}
+
+chktest function ops_add_bigint_identity(x: BigInt): Bool {
+    return (0I + x) == x;
+}
+
+chktest function ops_add_bigint_inverse(x: BigInt): Bool {
+    return (x + -x) == 0I;
+}
+
+__chktest function ops_add_bigint_inverse_find(x: BigInt): Bool {
+    return (5I + x) == 7I;
+}
+
+chktest function ops_add_float(): Bool {
+    return (-1.0f + 3.0f) == 2.0f;
+}
+
+chktest function ops_add_float_identity(x: Float): Bool {
+    return (0.0f + x) == x;
+}
+
+chktest function ops_add_float_inverse(x: Float): Bool {
+    return (x + -x) == 0.0f;
+}
+
+__chktest function ops_add_float_inverse_find(x: Float): Bool {
+    return (3.5f + x) == 0.0f;
+}
+
+chktest function ops_add_decimal(): Bool {
+    return (-1.0d + 3.0d) == 2.0d;
+}
+
+chktest function ops_add_decimal_identity(x: Decimal): Bool {
+    return (0.0d + x) == x;
+}
+
+chktest function ops_add_decimal_inverse(x: Decimal): Bool {
+    return (x + -x) == 0.0d;
+}
+
+__chktest function ops_add_decimal_inverse_find(x: Decimal): Bool {
+    return (5.0d + x) == x + x;
+}
+
+/*
+TODO: Rational
+*/
+
+//sub
+chktest function ops_sub_nat(): Bool {
+    return (3n - 1n) == 2n;
+}
+
+chktest function ops_sub_nat_inverse(x: Nat): Bool {
+    return (x - x) == 0n;
+}
+
+__chktest function ops_sub_nat_inverse_find(x: Nat): Bool {
+    return (5n - x) == 0n;
+}
+
+chktest function ops_sub_int(): Bool {
+    return (1i - 3i) == -2i;
+}
+
+chktest function ops_sub_int_identity(x: Int): Bool {
+    return (x - x) == 0i;
+}
+
+chktest function ops_sub_int_inverse(x: Int): Bool {
+    return (x + -x) == 0i;
+}
+
+__chktest function ops_sub_int_inverse_find(x: Int): Bool {
+    return (x - x) == x;
+}
+
+chktest function ops_sub_bignat(): Bool {
+    return (3N + 0N) == 3N;
+}
+
+chktest function ops_sub_bignat_identity(x: BigNat): Bool {
+    return (x - x) == 0N;
+}
+
+__chktest function ops_sub_bignat_inverse_find(x: BigNat): Bool {
+    return (5N - x) == 2N;
+}
+
+chktest function ops_sub_bigint(): Bool {
+    return (-1I - 3I) == -4I;
+}
+
+chktest function ops_sub_bigint_identity(x: BigInt): Bool {
+    return (x - 0I) == x;
+}
+
+chktest function ops_sub_bigint_inverse(x: BigInt): Bool {
+    return (x - -x) == x + x;
+}
+
+chktest function ops_sub_float(): Bool {
+    return (3.0f - 3.0f) == 0.0f;
+}
+
+chktest function ops_sub_float_identity(x: Float): Bool {
+    return (x - x) == 0.0f;
+}
+
+chktest function ops_sub_float_inverse(x: Float): Bool {
+    return (x - 0.0f) == x;
+}
+
+chktest function ops_sub_decimal(): Bool {
+    return (4.0d - 3.0d) == 1.0d;
+}
+
+chktest function ops_sub_decimal_identity(x: Decimal): Bool {
+    return (0.0d - x) == -x;
+}
+
+chktest function ops_sub_decimal_inverse(x: Decimal): Bool {
+    return (x - 0.0d) == x;
+}
+
+/*
+TODO: Rational
+*/
+
+//mult
+chktest function ops_mult_nat(): Bool {
+    return (3n * 2n) == 6n;
+}
+
+chktest function ops_mult_natx(): Bool {
+    return (3n * 0n) == 0n;
+}
+
+chktest function ops_mult_nat_zero(x: Nat): Bool {
+    return (x * 0n) == 0n;
+}
+
+chktest function ops_mult_nat_one(x: Nat): Bool {
+    return (x * 1n) == x;
+}
+
+chktest function ops_mult_int(): Bool {
+    return (-1i * 3i) == -3i;
+}
+
+chktest function ops_mult_intx(): Bool {
+    return (0i * 3i) == 0i;
+}
+
+chktest function ops_mult_int_zero(x: Int): Bool {
+    return (x * 0i) == 0i;
+}
+
+chktest function ops_mult_int_one(x: Int): Bool {
+    return (x * 1i) == x;
+}
+
+chktest function ops_mult_int_negone(x: Int): Bool {
+    return (x * -1i) == -x;
+}
+
+chktest function ops_mult_bignat(): Bool {
+    return (3N * 2N) == 6N;
+}
+
+chktest function ops_mult_bignatx(): Bool {
+    return (3N * 0N) == 0N;
+}
+
+chktest function ops_mult_bignat_zero(x: BigNat): Bool {
+    return (x * 0N) == 0N;
+}
+
+chktest function ops_mult_bignat_one(x: BigNat): Bool {
+    return (x * 1N) == x;
+}
+
+chktest function ops_mult_bigint(): Bool {
+    return (-1I * 3I) == -3I;
+}
+
+chktest function ops_mult_bigintx(): Bool {
+    return (0I * 3I) == 0I;
+}
+
+chktest function ops_mult_bigint_zero(x: BigInt): Bool {
+    return (x * 0I) == 0I;
+}
+
+chktest function ops_mult_bigint_one(x: BigInt): Bool {
+    return (x * 1I) == x;
+}
+
+chktest function ops_mult_bigint_negone(x: BigInt): Bool {
+    return (x * -1I) == -x;
+}
+
+chktest function ops_mult_float(): Bool {
+    return (-1.0f * 3.0f) == -3.0f;
+}
+
+chktest function ops_mult_floatx(): Bool {
+    return (0.0f * 3.0f) == 0.0f;
+}
+
+chktest function ops_mult_float_zero(x: Float): Bool {
+    return (x * 0.0f) == 0.0f;
+}
+
+chktest function ops_mult_float_one(x: Float): Bool {
+    return (x * 1.0f) == x;
+}
+
+chktest function ops_mult_float_negone(x: Float): Bool {
+    return (x * -1.0f) == -x;
+}
+
+chktest function ops_mult_decimal(): Bool {
+    return (-1.0d * 3.0d) == -3.0d;
+}
+
+chktest function ops_mult_decimalx(): Bool {
+    return (0.0d * 3.0d) == 0.0d;
+}
+
+chktest function ops_mult_decimal_zero(x: Decimal): Bool {
+    return (x * 0.0d) == 0.0d;
+}
+
+chktest function ops_mult_decimal_one(x: Decimal): Bool {
+    return (x * 1.0d) == x;
+}
+
+chktest function ops_mult_decimal_negone(x: Decimal): Bool {
+    return (x * -1.0d) == -x;
+}
+
+/*
+TODO: Rational
+*/
+
+//div
+chktest function ops_div_nat(): Bool {
+    return (3n / 2n) == 1n;
+}
+
+chktest function ops_div_natx(): Bool {
+    return (6n / 2n) == 3n;
+}
+
+chktest function ops_div_nat_one(x: Nat): Bool {
+    return (x / 1n) == x;
+}
+
+/*
+TODO: issue #515
+
+chktest function ops_div_int(): Bool {
+    return (-3i / 2i) == -1i;
+}
+*/
+
+chktest function ops_div_intx(): Bool {
+    return (0i / 2i) == 0i;
+}
+
+chktest function ops_div_int_one(x: Int): Bool {
+    return (x / 1i) == x;
+}
+
+chktest function ops_div_bignat(): Bool {
+    return (3N / 2N) == 1N;
+}
+
+chktest function ops_div_bignatx(): Bool {
+    return (6N / 2N) == 3N;
+}
+
+chktest function ops_div_bignat_one(x: BigNat): Bool {
+    return (x / 1N) == x;
+}
+
+chktest function ops_div_bigint(): Bool {
+    return (3I / -2I) == -1I;
+}
+
+chktest function ops_div_bigintx(): Bool {
+    return (-6I / -3I) == 2I;
+}
+
+chktest function ops_div_bigint_one(x: BigInt): Bool {
+    return (x / 1I) == x;
+}
+
+chktest function ops_div_float(): Bool {
+    return (-3.0f / 2.0f) == -1.5f;
+}
+
+chktest function ops_div_floatx(): Bool {
+    return (4.0f / 2.0f) == 2.0f;
+}
+
+chktest function ops_div_float_one(x: Float): Bool {
+    return (x / 1.0f) == x;
+}
+
+chktest function ops_div_decimal(): Bool {
+    return (-3.0d / 2.0d) == -1.5d;
+}
+
+chktest function ops_div_decimalx(): Bool {
+    return (0.0d / 3.0d) == 0.0d;
+}
+
+chktest function ops_div_decimal_one(x: Decimal): Bool {
+    return (x / 1.0d) == x;
+}
+
+/*
+TODO: Rational
+*/
