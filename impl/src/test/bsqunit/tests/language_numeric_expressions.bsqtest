@@ -821,9 +821,13 @@ chktest function ops_div_nat_one(x: Nat): Bool {
     return (x / 1n) == x;
 }
 
+/*
+TODO: issue #515
+
 chktest function ops_div_int(): Bool {
     return (-3i / 2i) == -1i;
 }
+*/
 
 chktest function ops_div_intx(): Bool {
     return (0i / 2i) == 0i;

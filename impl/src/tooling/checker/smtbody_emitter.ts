@@ -2276,25 +2276,25 @@ class SMTBodyEmitter {
             //op infix /
             case "__i__Core::/=infix=(Int, Int)": {
                 rtype = this.typegen.getMIRType("Int");
-                smte = this.processGenerateResultWithZeroArgCheck(sinfo, new SMTConst("BInt@zero"), args[1], rtype, new SMTCallSimple("/", args));
+                smte = this.processGenerateResultWithZeroArgCheck(sinfo, new SMTConst("BInt@zero"), args[1], rtype, new SMTCallSimple("div", args));
                 erropt = true;
                 break;
             }
             case "__i__Core::/=infix=(Nat, Nat)": {
                 rtype = this.typegen.getMIRType("Nat");
-                smte = this.processGenerateResultWithZeroArgCheck(sinfo, new SMTConst("BNat@zero"), args[1], rtype, new SMTCallSimple("/", args));
+                smte = this.processGenerateResultWithZeroArgCheck(sinfo, new SMTConst("BNat@zero"), args[1], rtype, new SMTCallSimple("div", args));
                 erropt = true;
                 break;
             }
             case "__i__Core::/=infix=(BigInt, BigInt)": {
                 rtype = this.typegen.getMIRType("BigInt");
-                smte = this.processGenerateResultWithZeroArgCheck(sinfo, new SMTConst("BBigInt@zero"), args[1], rtype, new SMTCallSimple("/", args));
+                smte = this.processGenerateResultWithZeroArgCheck(sinfo, new SMTConst("BBigInt@zero"), args[1], rtype, new SMTCallSimple("div", args));
                 erropt = true;
                 break;
             }
             case "__i__Core::/=infix=(BigNat, BigNat)": {
                 rtype = this.typegen.getMIRType("BigNat");
-                smte = this.processGenerateResultWithZeroArgCheck(sinfo, new SMTConst("BBigNat@zero"), args[1], rtype, new SMTCallSimple("/", args));
+                smte = this.processGenerateResultWithZeroArgCheck(sinfo, new SMTConst("BBigNat@zero"), args[1], rtype, new SMTCallSimple("div", args));
                 erropt = true;
                 break
             }

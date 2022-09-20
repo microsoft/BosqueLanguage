@@ -270,6 +270,8 @@ Bosque supports a range of numeric arithmetic operators, `+`, `-`,`*`, `/`, `<=`
 0n + 5i                    //type error not same types
 
 10_ItemCount + 1_ItemCount //11_ItemCount
+10_ItemCount * 2i          //20_ItemCount
+10_ItemCount / 5_ItemCount //2i
 ```
 
 In xxxx;
