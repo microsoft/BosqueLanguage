@@ -276,7 +276,7 @@ Bosque supports a range of numeric arithmetic operators, `+`, `-`,`*`, `/`, `<=`
 
 In xxxx;
 
-The (numeric) comparison operators in Bosque are implemented as [static operators](#Namespace-Operators) and so can be extended by user defined types as well.
+The (numeric) comparison operators in Bosque are implemented as [static operators](#Namespace-Operators) and so can be extended by user defined types as well (TODO: see issue for dynamic vs. static operator).
 
 ```
 entity Complex {
@@ -288,6 +288,10 @@ infix operator +(a: Complex, b: Complex): Complex {
     return Complex{a.r + b.r, a.i + b.i};
 }
 
+infix operator *(a: Complex, b: Float): Complex {
+    return Complex{a.r * b, a.i + b};
+}
+
 infix operator *(a: Complex, b: Complex): Complex {
     let rpart = a.r * b.r - a.i * b.i;
     let ipart = a.r * b.i + a.i * b.r;
@@ -296,6 +300,7 @@ infix operator *(a: Complex, b: Complex): Complex {
 }
 ...
 
+Complex{1.0f, 0.0f} + 2.0f                //Complex{2.0f, 0.0f}
 Complex{1.0f, 0.0f} + Complex{0.0f, 1.0f} //Complex{1.0f, 1.0f}
 
 ```
