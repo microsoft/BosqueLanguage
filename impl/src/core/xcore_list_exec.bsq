@@ -8,8 +8,8 @@ namespace Core;
 
 #if EXEC_LIBS
 internal entity ListOps provides Some {
-    __safe internal function s_list_index_int(start: Int, end: Int, len: Int): List<Int> = s_list_range;
-    __safe internal function s_list_index_nat(start: Nat, end: Nat, len: Nat): List<Nat> = s_list_range;
+    __safe internal function s_list_index_int(start: Int, end: Int, len: Int): List<Int> = s_list_range_int;
+    __safe internal function s_list_index_nat(start: Nat, end: Nat, len: Nat): List<Nat> = s_list_range_nat;
 
     __safe internal function s_list_empty<T>(l: List<T>): Bool = s_list_empty; 
     __safe internal function s_list_size<T>(l: List<T>): Nat = s_list_size; 

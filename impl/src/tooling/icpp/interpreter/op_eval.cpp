@@ -2363,8 +2363,12 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         BSQListOps::s_transduce_idx_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), uflavor, envtype, invk->pcodes.at("op"), params, dynamic_cast<const BSQEphemeralListType*>(invk->resultType), resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_range: {
-        BSQListOps::s_range_ne(invk->binds.at("T"), params[0], params[1], params[3], resultsl);
+    case BSQPrimitiveImplTag::s_list_range_int: {
+        BSQListOps::s_range_ne(BSQWellKnownType::g_typeInt, params[0], params[1], params[2], resultsl);
+        break;
+    }
+    case BSQPrimitiveImplTag::s_list_range_nat: {
+        BSQListOps::s_range_ne(BSQWellKnownType::g_typeNat, params[0], params[1], params[2], resultsl);
         break;
     }
     case BSQPrimitiveImplTag::s_list_fill: {
