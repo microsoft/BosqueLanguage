@@ -2903,7 +2903,8 @@ class MorphirBodyEmitter {
     s_map_remap,
     s_map_add,
     s_map_set,
-    s_map_remove
+    s_map_remove,
+    s_while
             */
             default: {
                 assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);

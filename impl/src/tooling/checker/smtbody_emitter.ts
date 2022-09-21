@@ -19,6 +19,8 @@ function NOT_IMPLEMENTED(msg: string): SMTExp {
 
 const REC_FUN_GAS_LIMIT = 2;
 
+const WHILE_FUN_GAS_LIMIT = 5;
+
 class RecFunGas {
     readonly declGas: number | undefined;
     readonly calleeGas: number | undefined;
@@ -3781,7 +3783,7 @@ class SMTBodyEmitter {
                 else {
                     const mirresult_V = (this.typegen.assembly.entityDecls.get(mirrestype.typeID) as MIRPrimitiveInternalEntityTypeDecl).terms.get("V") as MIRType;
 
-                    const trgterr =this.typegen.generateResultTypeConstructorError(mirresult_V, new SMTConst("ErrorID_Target"));
+                    const trgterr = this.typegen.generateResultTypeConstructorError(mirresult_V, new SMTConst("ErrorID_Target"));
                     const trgtresulterr = this.typegen.generateResultTypeConstructorError(mirrestype, new SMTConst("ErrorID_Target"));
                     const othererr = this.typegen.generateResultTypeConstructorError(mirresult_V, new SMTConst("ErrorID_AssumeCheck"));
                     const otherresulterr = this.typegen.generateResultTypeConstructorError(mirrestype, new SMTConst("ErrorID_AssumeCheck"));
@@ -3930,6 +3932,72 @@ class SMTBodyEmitter {
                 );
 
                 return SMTFunction.create(ideclname, args, chkrestype, cbody);
+            }
+            case "s_while": {
+                let cbody = this.typegen.generateErrorResultAssert(mirrestype);
+
+                const pc = idecl.pcodes.get("f") as MIRPCode;
+                const pcfn = this.lookupFunctionNameStd(pc.code);
+                const pccaptured = pc.cargs.map((carg) => carg.cname);
+                
+                const opc = idecl.pcodes.get("f") as MIRPCode;
+                const oppcfn = this.lookupFunctionNameStd(opc.code);
+                const opcaptured = opc.cargs.map((carg) => carg.cname);
+                
+                const implicitlambdas = [pcfn, oppcfn];
+
+                for(let i = WHILE_FUN_GAS_LIMIT; i >= 0; --i) {
+                    const statevarprev = i === 0 ? new SMTVar("istate") : new SMTVar(`s${i - 1}`);;
+                    const statevar = new SMTVar(`s${i}`);
+                    const pcall: SMTExp = new SMTCallGeneral(pcfn, [statevar, ...pccaptured.map((cc) => new SMTVar(cc))]);
+                    const opcall: SMTExp = new SMTCallGeneral(oppcfn, [statevarprev, ...opcaptured.map((cc) => new SMTVar(cc))]);
+
+                    let tbody: SMTExp = new SMTConst("UNDEF");
+                    if (this.isSafeInvoke(pc.code)) {
+                        tbody = new SMTIf(SMTCallSimple.makeNot(pcall), statevar, cbody);
+                    }
+                    else {
+                        const pctv = new SMTVar(`t_pc${i}`);
+                        tbody = new SMTLet(pctv.vname, pcall, 
+                            new SMTIf(
+                                this.typegen.generateResultIsErrorTest(this.typegen.getMIRType("Bool"), pctv),
+                                this.typegen.generateResultTypeConstructorError(mirrestype, this.typegen.generateResultGetError(mirrestype, pctv)),
+                                cbody
+                            )
+                        );
+                    }
+
+                    if (this.isSafeInvoke(opc.code)) {
+                        cbody = new SMTLet(statevar.vname, opcall, tbody);
+                    }
+                    else {
+                        const octv = new SMTVar(`t_oopc${i}`);
+                        cbody = new SMTLet(octv.vname, opcall, 
+                            new SMTIf(
+                                this.typegen.generateResultIsErrorTest(mirrestype, octv),
+                                octv,
+                                new SMTLet(statevar.vname, this.typegen.generateResultGetSuccess(mirrestype, octv), tbody)
+                            )
+                        );
+                    }
+                }
+
+                const ipcall: SMTExp = new SMTCallGeneral(pcfn, [new SMTVar("istate"), ...pccaptured.map((cc) => new SMTVar(cc))]);
+                if (this.isSafeInvoke(pc.code)) {
+                    cbody = new SMTIf(SMTCallSimple.makeNot(ipcall), new SMTVar("istate"), cbody);
+                }
+                else {
+                    const pctv = new SMTVar("t_pc_ii");
+                    cbody = new SMTLet(pctv.vname, ipcall, 
+                        new SMTIf(
+                            this.typegen.generateResultIsErrorTest(this.typegen.getMIRType("Bool"), pctv),
+                            this.typegen.generateResultTypeConstructorError(mirrestype, this.typegen.generateResultGetError(mirrestype, pctv)),
+                            cbody
+                        )
+                    );
+                }
+
+                return SMTFunction.createWithImplicitLambdas(ideclname, args, chkrestype, cbody, implicitlambdas);
             }
             case "s_blockingfailure": {
                 return SMTFunction.create(ideclname, args, chkrestype, this.typegen.generateErrorResultAssert(mirrestype));

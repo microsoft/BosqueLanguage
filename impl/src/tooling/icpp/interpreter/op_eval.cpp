@@ -2646,6 +2646,54 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         MAP_STORE_RESULT_REPR(rr, resultsl);
         break;
     }
+    case BSQPrimitiveImplTag::s_while: {
+        auto stype = invk->binds.at("S");
+
+        auto fn = invk->pcodes.at("f");
+        auto p = invk->pcodes.at("p");
+
+        const BSQInvokeBodyDecl* icall = dynamic_cast<const BSQInvokeBodyDecl*>(BSQInvokeDecl::g_invokes[fn->code]);
+        const BSQInvokeBodyDecl* pcall = dynamic_cast<const BSQInvokeBodyDecl*>(BSQInvokeDecl::g_invokes[p->code]);
+
+        void** tmpl = (void**)GCStack::allocFrame(2 * stype->allocinfo.inlinedatasize);
+        uint8_t* csl = ((uint8_t*)tmpl);
+        uint8_t* rsl = ((uint8_t*)tmpl + stype->allocinfo.inlinedatasize);
+        BSQBool tc = BSQFALSE;
+
+        std::vector<StorageLocationPtr> plparams = {csl};
+        std::transform(p->cargpos.cbegin(), p->cargpos.cend(), std::back_inserter(plparams), [&params](uint32_t pos) {
+            return params[pos];
+        });
+
+        stype->storeValue(csl, params[0]);
+        eethunk.invoke(pcall, plparams, &tc);
+        if(tc == BSQFALSE)
+        {
+            stype->storeValue(resultsl, params[0]);
+        }
+        else
+        {
+            std::vector<StorageLocationPtr> ilparams = {csl};
+            std::transform(fn->cargpos.cbegin(), fn->cargpos.cend(), std::back_inserter(ilparams), [&params](uint32_t pos) {
+                return params[pos];
+            });
+
+            while(tc == BSQTRUE)
+            {
+                eethunk.invoke(icall, ilparams, rsl);
+
+                stype->storeValue(csl, rsl);
+                stype->clearValue(rsl);
+
+                eethunk.invoke(pcall, plparams, &tc);
+            }
+
+            stype->storeValue(resultsl, csl);
+        }
+
+        GCStack::popFrame(2 * stype->allocinfo.inlinedatasize);
+        break;
+    }
     default: {
         assert(false);
         break;

@@ -129,7 +129,8 @@ std::map<std::string, BSQPrimitiveImplTag> MarshalEnvironment::g_primitiveinvoke
     {"s_map_remap", BSQPrimitiveImplTag::s_map_remap},
     {"s_map_add", BSQPrimitiveImplTag::s_map_add},
     {"s_map_set", BSQPrimitiveImplTag::s_map_set},
-    {"s_map_remove", BSQPrimitiveImplTag::s_map_remove}
+    {"s_map_remove", BSQPrimitiveImplTag::s_map_remove},
+    {"s_while", BSQPrimitiveImplTag::s_while}
 };
 
 Argument jsonParse_Argument(json j)
