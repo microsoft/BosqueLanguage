@@ -2142,12 +2142,12 @@ class SMTBodyEmitter {
             //op unary -
             case "__i__Core::-=prefix=(Int)": {
                 rtype = this.typegen.getMIRType("Int");
-                smte = new SMTCallSimple("*", [args[0], new SMTConst("-1")]);
+                smte = new SMTCallSimple("-", args);
                 break;
             }
             case "__i__Core::-=prefix=(BigInt)": {
                 rtype = this.typegen.getMIRType("BigInt");
-                smte = new SMTCallSimple("*", [args[0], new SMTConst("-1")]);
+                smte = new SMTCallSimple("-", args);
                 break;
             }
             case "__i__Core::-=prefix=(Rational)": {
@@ -2278,25 +2278,25 @@ class SMTBodyEmitter {
             //op infix /
             case "__i__Core::/=infix=(Int, Int)": {
                 rtype = this.typegen.getMIRType("Int");
-                smte = this.processGenerateResultWithZeroArgCheck(sinfo, new SMTConst("BInt@zero"), args[1], rtype, new SMTCallSimple("div", args));
+                smte = this.processGenerateResultWithZeroArgCheck(sinfo, new SMTConst("BInt@zero"), args[1], rtype, new SMTCallSimple("_@@bsq_div", args));
                 erropt = true;
                 break;
             }
             case "__i__Core::/=infix=(Nat, Nat)": {
                 rtype = this.typegen.getMIRType("Nat");
-                smte = this.processGenerateResultWithZeroArgCheck(sinfo, new SMTConst("BNat@zero"), args[1], rtype, new SMTCallSimple("div", args));
+                smte = this.processGenerateResultWithZeroArgCheck(sinfo, new SMTConst("BNat@zero"), args[1], rtype, new SMTCallSimple("_@@bsq_div", args));
                 erropt = true;
                 break;
             }
             case "__i__Core::/=infix=(BigInt, BigInt)": {
                 rtype = this.typegen.getMIRType("BigInt");
-                smte = this.processGenerateResultWithZeroArgCheck(sinfo, new SMTConst("BBigInt@zero"), args[1], rtype, new SMTCallSimple("div", args));
+                smte = this.processGenerateResultWithZeroArgCheck(sinfo, new SMTConst("BBigInt@zero"), args[1], rtype, new SMTCallSimple("_@@bsq_div", args));
                 erropt = true;
                 break;
             }
             case "__i__Core::/=infix=(BigNat, BigNat)": {
                 rtype = this.typegen.getMIRType("BigNat");
-                smte = this.processGenerateResultWithZeroArgCheck(sinfo, new SMTConst("BBigNat@zero"), args[1], rtype, new SMTCallSimple("div", args));
+                smte = this.processGenerateResultWithZeroArgCheck(sinfo, new SMTConst("BBigNat@zero"), args[1], rtype, new SMTCallSimple("_@@bsq_div", args));
                 erropt = true;
                 break
             }

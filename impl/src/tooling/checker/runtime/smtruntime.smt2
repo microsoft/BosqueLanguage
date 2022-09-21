@@ -133,6 +133,19 @@
 
 (define-sort HavocSequence () (Seq Int))
 
+(define-fun _@@bsq_div ((m Int) (n Int)) Int
+    (ite (and (>= m 0) (>= n 0))
+        (div m n)
+        (ite (and (< m 0) (< n 0))
+            (div (- m) (- n))
+            (ite (< m 0)
+                (- (div (- m) n))
+                (- (div m (- n)))
+            )
+        )
+    )
+)
+
 ;;
 ;; Primitive datatypes 
 ;;
