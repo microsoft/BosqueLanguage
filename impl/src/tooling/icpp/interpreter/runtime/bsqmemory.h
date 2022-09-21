@@ -29,6 +29,37 @@
 #define FREE_PAGE_MIN 256
 #define FREE_PAGE_RATIO 0.2f
 
+//
+//TEMP DEBUG!!!!
+//
+#define GC_TRACE
+
+#ifdef GC_TRACE
+#define GC_TRACE_DISPLAY_CHECK
+#include <iostream>
+
+#define EMIT_ID(O) ((void*)O)
+#define EMIT_TYPE_NAME(TYPE) (" (" + TYPE->name + ") ")
+#define EMIT_MARK_INFO(W) (!GC_IS_MARKED(W) ? " new mark" : "")
+
+#define TRACE_ALLOC(O, TYPE) std::cout << "Alloc -- " << EMIT_ID(O) << EMIT_TYPE_NAME(TYPE) << std::endl
+#define TRACE_MARK_ROOT(O, W, TYPE) std::cout << "Mark Root -- " << EMIT_ID(O) << EMIT_TYPE_NAME(TYPE) << EMIT_MARK_INFO(W) << std::endl
+#define TRACE_PROCESS_HEAP_OBJ(O, TYPE) std::cout << "Process Obj -- " << EMIT_ID(O) << EMIT_TYPE_NAME(TYPE) << ":" << std::endl
+#define TRACE_PROCESS_HEAP_OBJ_SLOT_HEAP_FWD(VAL, FWD) std::cout << "  Fwd Ptr -- " << EMIT_ID(VAL) << " -> " << EMIT_ID(FWD) << std::endl
+#define TRACE_PROCESS_HEAP_OBJ_SLOT_HEAP_RC(VAL, W) std::cout << "  Inc RC -- " << (!GC_IS_YOUNG(W) ? "old " : "") << (GC_IS_MARKED(w) ? "mark " : "") << EMIT_ID(VAL) << std::endl
+#define TRACE_PROCESS_HEAP_OBJ_HEAP_EVAC_FROM(VAL) std::cout << "  Evacuate -- " << EMIT_ID(VAL)
+#define TRACE_PROCESS_HEAP_OBJ_HEAP_EVAC_INTO(VAL, ISLEAF) std::cout << " -> " << EMIT_ID(VAL) << (ISLEAF ? " and enqueue" : "") << std::endl
+#else
+
+#define TRACE_ALLOC(O, TYPE) 
+#define TRACE_MARK_ROOT(O, META, TYPE)
+#define TRACE_PROCESS_HEAP_OBJ(O, TYPE)
+#define TRACE_PROCESS_HEAP_OBJ_SLOT_HEAP_FWD(VAL, FWD)
+#define TRACE_PROCESS_HEAP_OBJ_SLOT_HEAP_RC(VAL, W)
+#define TRACE_PROCESS_HEAP_OBJ_HEAP_EVAC_FROM(VAL)
+#define TRACE_PROCESS_HEAP_OBJ_HEAP_EVAC_INTO(VAL, ISLEAF)
+#endif
+
 ////
 //Alloc page grouping
 class AllocPages
@@ -385,9 +416,9 @@ public:
         else
         {
             auto ooidx = GC_PAGE_INDEX_FOR_ADDR(addr, *pageiter);
-            auto meta = GC_LOAD_META_DATA_WORD(GC_GET_META_DATA_ADDR_AND_PAGE(addr, *pageiter));
-
             realobj = GC_GET_OBJ_AT_INDEX(*pageiter, ooidx); //if this was an interior pointer get the enclosing object
+
+            auto meta = GC_LOAD_META_DATA_WORD(GC_GET_META_DATA_ADDR_AND_PAGE(realobj, *pageiter));
             return GC_IS_ALLOCATED(meta);
         }
     }
@@ -773,6 +804,8 @@ public:
             GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR(resolvedobj);
             GC_META_DATA_WORD w = GC_LOAD_META_DATA_WORD(addr);
             
+            TRACE_MARK_ROOT(resolvedobj, w, GET_TYPE_META_DATA(resolvedobj));
+
             if(!GC_IS_MARKED(w))
             {
                 GC_STORE_META_DATA_WORD(addr, GC_SET_MARK_BIT(w));
@@ -843,9 +876,11 @@ public:
     {
         GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR(*slot);
         GC_META_DATA_WORD w = GC_LOAD_META_DATA_WORD(addr);
-        
+
         if(GC_IS_FWD_PTR(w))
         {
+            TRACE_PROCESS_HEAP_OBJ_SLOT_HEAP_FWD(*slot, GC_GET_FWD_PTR(w));
+
             *slot = GC_GET_FWD_PTR(w);
             addr = GC_GET_META_DATA_ADDR(*slot);
             w = GC_LOAD_META_DATA_WORD(addr);
@@ -856,6 +891,8 @@ public:
         {
             if(GC_IS_MARKED(w) | !GC_IS_YOUNG(w))
             {
+                TRACE_PROCESS_HEAP_OBJ_SLOT_HEAP_RC(*slot, w);
+
                 Allocator::GlobalAllocator.processIncHeapRC(addr, w, fromObj);
             }
             else
@@ -863,12 +900,16 @@ public:
                 PageInfo* pp = PAGE_MASK_EXTRACT_ADDR(*slot);
                 auto ometa = pp->btype;
 
+                TRACE_PROCESS_HEAP_OBJ_HEAP_EVAC_FROM(*slot);
+
                 *slot = Allocator::GlobalAllocator.evacuateObject(*slot, ometa, fromObj);
                 GC_STORE_META_DATA_WORD(addr, GC_SET_FWD_PTR(*slot));
 
+                TRACE_PROCESS_HEAP_OBJ_HEAP_EVAC_INTO(*slot, ometa->isLeaf());
+
                 if (!ometa->isLeaf())
                 {
-                    Allocator::GlobalAllocator.worklist.enque(*slot);
+                   Allocator::GlobalAllocator.worklist.enque(*slot);
                 }
             }
         }
@@ -1264,6 +1305,8 @@ private:
             const BSQType* umeta = PAGE_MASK_EXTRACT_ADDR(obj)->btype;
             assert(umeta->allocinfo.heapmask != nullptr);
 
+            TRACE_PROCESS_HEAP_OBJ(obj, umeta);
+
             Allocator::gcProcessSlotsWithMask((void**)obj, obj, umeta->allocinfo.heapmask);
         }
     }
@@ -1481,6 +1524,8 @@ private:
             this->processBlocks(*iter);
         }
         this->blockalloc.allocated_types.clear();
+
+        this->current_allocated_bytes = 0;
     }
 
     PageInfo* allocate_slow(BSQType* mdata)
@@ -1506,16 +1551,18 @@ private:
             }
         }
 
-        if(!docollect)
+        if(docollect)
+        {
+            this->collect();
+        }
+        else
         {
             this->processPendingDecs(credits);
         }
 
-        mdata->allocpage = this->blockalloc.processAndGetNewPageForAllocation(mdata);
-
-        if(docollect)
+        if(mdata->allocpage->freelist == nullptr)
         {
-            this->collect();
+            mdata->allocpage = this->blockalloc.processAndGetNewPageForAllocation(mdata);    
         }
 
         return mdata->allocpage;
@@ -1547,6 +1594,8 @@ public:
         pp->freelist = *((void**)pp->freelist);
         pp->freelist_count--;
 
+        TRACE_ALLOC(alloc, mdata);
+
         return alloc;
     }
 
@@ -1574,6 +1623,13 @@ public:
 
         this->collect();
     }
+
+#ifdef GC_TRACE_DISPLAY_CHECK
+    void __display_force_gc__()
+    {
+        this->collect();
+    }
+#endif
 };
 
 void gcProcessHeapOperator_nopImpl(const BSQType* btype, void** data, void* fromObj);

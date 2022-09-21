@@ -117,6 +117,11 @@ void Evaluator::evalDebugOp(const DebugOp* op)
     }
     else
     {
+
+#ifdef GC_TRACE_DISPLAY_CHECK
+        printf("---Display---\n");
+#endif
+
         auto sl = this->evalArgument(op->arg);
         auto oftype = SLPTR_LOAD_UNION_INLINE_TYPE(sl);
 
@@ -124,6 +129,22 @@ void Evaluator::evalDebugOp(const DebugOp* op)
 
         printf("%s\n", dval.c_str());
         fflush(stdout);
+
+#ifdef GC_TRACE_DISPLAY_CHECK
+        printf("---GC Run---\n");
+        Allocator::GlobalAllocator.__display_force_gc__();
+
+        printf("---Post GC Display---\n");
+        auto gcsl = this->evalArgument(op->arg);
+        auto gcoftype = SLPTR_LOAD_UNION_INLINE_TYPE(gcsl);
+
+        auto gcdval = gcoftype->fpDisplay(gcoftype, SLPTR_LOAD_UNION_INLINE_DATAPTR(gcsl), DisplayMode::Standard);
+
+        printf("%s\n", gcdval.c_str());
+        fflush(stdout);
+        printf("----\n");
+#endif
+
     }
 }
 
