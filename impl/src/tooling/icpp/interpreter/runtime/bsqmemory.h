@@ -1242,7 +1242,14 @@ public:
                 }
             }
 
-            if(!GC_IS_ALLOCATED(*metacurr))
+            if(GC_IS_ALLOCATED(*metacurr))
+            {
+                if(GC_IS_YOUNG(*metacurr))
+                {
+                    *metacurr = (*metacurr) & (~GC_YOUNG_BIT);
+                }
+            }
+            else
             {
                 *((void**)datacurr) = pp->freelist;
                 *((void**)datacurr + 1) = metacurr;
