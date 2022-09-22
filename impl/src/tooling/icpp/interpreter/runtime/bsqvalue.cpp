@@ -1144,7 +1144,7 @@ std::string entityUUIDDisplay_impl(const BSQType* btype, StorageLocationPtr data
     bb6 = bb6 >> 16u;
     
     char sstrt[64] = {0};
-    sprintf(sstrt, "%06x-%04x-%04x-%04x-%08lx", bb4, bb2_1, bb2_2, bb2_3, bb6);
+    sprintf(sstrt, "%06x-%04x-%04x-%04x-%08lx", (unsigned int)bb4, (unsigned int)bb2_1, (unsigned int)bb2_2, (unsigned int)bb2_3, (unsigned long)bb6);
     std::string res(sstrt, sstrt + 64);
 
     return res;
