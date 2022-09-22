@@ -32,9 +32,14 @@
 //
 //TEMP DEBUG!!!!
 //
-#define GC_TRACE
+#define GC_TRACE_ENABLED
+#define GC_OBJ_TRACE_ENABLED
+//
+//TEMP DEBUG!!!!
+//
 
-#ifdef GC_TRACE
+
+#ifdef GC_TRACE_ENABLED
 #define GC_TRACE_DISPLAY_CHECK
 #include <iostream>
 
@@ -43,14 +48,23 @@
 #define EMIT_MARK_INFO(W) (!GC_IS_MARKED(W) ? "+ marked obj" : "")
 #define EMIT_RC_INFO(W) (GC_RC_IS_PARENT(W) ? (" set parent") : (" set count=" + std::to_string((GC_EXTRACT_RC(W) >> GC_RC_PTR_SHIFT))))
 
+#define GC_TRACE_PAGE_ALLOC(KIND, PAGE, TYPE) std::cout << "Acquire " << KIND << " Page --" << EMIT_TYPE_NAME(TYPE) << EMIT_ID(PAGE) << std::endl;
+#define GC_TRACE_PAGE_RELEASE(KIND, PAGE, TYPE) std::cout << "Release " << KIND << " Page --" << EMIT_TYPE_NAME(TYPE) << EMIT_ID(PAGE) << std::endl;
+#define GC_TRACE_PAGE_MOVE_FROM_HIGH(PAGE) std::cout << "Move From High Utilization --" << EMIT_ID(PAGE) << std::endl;
+
+#ifdef GC_OBJ_TRACE_ENABLED
 #define TRACE_ALLOC(O, TYPE) std::cout << "Alloc -- " << EMIT_ID(O) << EMIT_TYPE_NAME(TYPE) << std::endl
 #define TRACE_MARK_ROOT(O, W, TYPE) std::cout << "Visit Root -- " << EMIT_ID(O) << EMIT_TYPE_NAME(TYPE) << EMIT_MARK_INFO(W) << std::endl
-#define TRACE_PROCESS_HEAP_OBJ(O, TYPE) std::cout << "Process Obj -- " << EMIT_ID(O) << EMIT_TYPE_NAME(TYPE) << ":" << std::endl
+#define TRACE_PROCESS_HEAP_OBJ(O, TYPE) std::cout << "Process Obj -- " << EMIT_ID(O) << EMIT_TYPE_NAME(TYPE) << std::endl
 #define TRACE_PROCESS_HEAP_OBJ_SLOT_HEAP_FWD(VAL, FWD) std::cout << "  Fwd Ptr -- " << EMIT_ID(VAL) << " -> " << EMIT_ID(FWD) << std::endl
 #define TRACE_PROCESS_HEAP_OBJ_SLOT_HEAP_RC(VAL, W) std::cout << "  Update RC -- " << (!GC_IS_YOUNG(W) ? "old " : "") << (GC_IS_MARKED(W) ? "marked " : "") << EMIT_ID(VAL) << EMIT_RC_INFO(W) << std::endl
 #define TRACE_PROCESS_HEAP_OBJ_HEAP_EVAC_FROM(VAL) std::cout << "  Evacuate -- " << EMIT_ID(VAL)
 #define TRACE_PROCESS_HEAP_OBJ_HEAP_EVAC_INTO(VAL, ISLEAF) std::cout << " -> " << EMIT_ID(VAL) << (ISLEAF ? " and enqueue" : "") << std::endl
+#define TRACE_PROCESS_MAYBE_ZERO_UNREACHABLE(O) std::cout << "Maybe Zero (Unreachable) -- " << EMIT_ID(O) << std::endl;
+#endif
 #else
+#define GC_TRACE_PAGE_ALLOC(KIND, PAGE, TYPE)
+#define GC_TRACE_PAGE_RELEASE(KIND, PAGE, TYPE)
 
 #define TRACE_ALLOC(O, TYPE) 
 #define TRACE_MARK_ROOT(O, META, TYPE)
@@ -59,6 +73,7 @@
 #define TRACE_PROCESS_HEAP_OBJ_SLOT_HEAP_RC(VAL, W)
 #define TRACE_PROCESS_HEAP_OBJ_HEAP_EVAC_FROM(VAL)
 #define TRACE_PROCESS_HEAP_OBJ_HEAP_EVAC_INTO(VAL, ISLEAF)
+#define TRACE_PROCESS_MAYBE_ZERO_UNREACHABLE(O)
 #endif
 
 ////
@@ -671,6 +686,8 @@ public:
         if(btype->allocpage == &AllocPages::g_sential_page)
         {
             btype->allocpage = this->allocateFreePage(btype);
+
+            GC_TRACE_PAGE_ALLOC("Free", btype->allocpage, btype);
         }
         else
         {
@@ -681,15 +698,21 @@ public:
             {
                 btype->allocpage = *(btype->allocatedPages.low_utilization.begin());
                 btype->allocatedPages.low_utilization.erase(btype->evacuatepage);
+
+                GC_TRACE_PAGE_ALLOC("Low Utilization", btype->allocpage, btype);
             }
             else if(!btype->allocatedPages.mid_utilization.empty())
             {
                 btype->allocpage = btype->allocatedPages.mid_utilization.front();
                 btype->allocatedPages.mid_utilization.pop_front();
+
+                GC_TRACE_PAGE_ALLOC("Mid Utilization", btype->allocpage, btype);
             }
             else
             {
                 btype->allocpage = this->allocateFreePage(btype);
+
+                GC_TRACE_PAGE_ALLOC("Free", btype->allocpage, btype);
             }
         }
         btype->allocpage->allocinfo = AllocPageInfo_Alloc;
@@ -1181,29 +1204,39 @@ public:
         }
 
         if(pp->freelist_count == pp->alloc_entry_count)
-        {            
+        {           
+            GC_TRACE_PAGE_RELEASE("Free", pp, pp->btype);
+
             this->blockalloc.unlinkPageFromType(pp);
             this->blockalloc.free_pages.insert(pp);
         }
-        
-        auto utilization = (1.0f - (float)pp->freelist_count) / (float)pp->alloc_entry_count;
-        pp->allocinfo = 0x0;
-
-        if(utilization > OCCUPANCY_MID_HIGH_BREAK)
-        {
-            pp->btype->allocatedPages.high_utilization.insert(pp);
-        }
-        else if(utilization > OCCUPANCY_LOW_MID_BREAK)
-        {
-            auto ipos = std::find_if(pp->btype->allocatedPages.mid_utilization.begin(), pp->btype->allocatedPages.mid_utilization.end(), [pp](PageInfo* p) {
-                return p->freelist_count >= pp->freelist_count;
-            });
-
-            pp->btype->allocatedPages.mid_utilization.insert(ipos, pp);
-        }
         else
         {
-            pp->btype->allocatedPages.low_utilization.insert(pp);
+            auto utilization = (1.0f - (float)pp->freelist_count) / (float)pp->alloc_entry_count;
+            pp->allocinfo = 0x0;
+
+            if(utilization > OCCUPANCY_MID_HIGH_BREAK)
+            {
+                GC_TRACE_PAGE_RELEASE("High Utilization", pp, pp->btype);
+
+                pp->btype->allocatedPages.high_utilization.insert(pp);
+            }
+            else if(utilization > OCCUPANCY_LOW_MID_BREAK)
+            {
+                GC_TRACE_PAGE_RELEASE("Mid Utilization", pp, pp->btype);
+
+                auto ipos = std::find_if(pp->btype->allocatedPages.mid_utilization.begin(), pp->btype->allocatedPages.mid_utilization.end(), [pp](PageInfo* p) {
+                    return p->freelist_count >= pp->freelist_count;
+                });
+
+                pp->btype->allocatedPages.mid_utilization.insert(ipos, pp);
+            }
+            else
+            {
+                GC_TRACE_PAGE_RELEASE("Low Utilization", pp, pp->btype);
+
+                pp->btype->allocatedPages.low_utilization.insert(pp);
+            }
         }
     }
 
@@ -1211,6 +1244,8 @@ public:
     {
         GC_META_DATA_WORD* metacurr = pp->slots;
         uint8_t* datacurr = (uint8_t*)(pp->data);
+
+        xxxx;
 
         //rebuild the freelist
         pp->freelist = nullptr;
@@ -1328,6 +1363,8 @@ private:
 
             if (GC_IS_UNREACHABLE(w))
             {
+                TRACE_PROCESS_MAYBE_ZERO_UNREACHABLE(*iter);
+
                 GC_STORE_META_DATA_WORD(addr, GC_SET_DEC_LIST(this->pendingdecs));
                 this->pendingdecs = *iter;
             }
@@ -1369,7 +1406,9 @@ private:
                 auto muiter = std::find(pp->btype->allocatedPages.mid_utilization.begin(), pp->btype->allocatedPages.mid_utilization.end(), pp);
                 pp->btype->allocatedPages.mid_utilization.erase(muiter);
             }
-                        
+
+            GC_TRACE_PAGE_RELEASE("Free", pp, pp->btype);
+
             this->blockalloc.unlinkPageFromType(pp);
             this->blockalloc.free_pages.insert(pp);
         }
@@ -1379,6 +1418,8 @@ private:
             //it is a filled page so just let it get taken care of when we sweep it
             if(pp->btype->allocatedPages.high_utilization.find(pp) != pp->btype->allocatedPages.high_utilization.cend())
             {
+                GC_TRACE_PAGE_MOVE_FROM_HIGH(pp);
+
                 assert(pp->btype->allocatedPages.low_utilization.find(pp) == pp->btype->allocatedPages.low_utilization.cend());
 
                 pp->btype->allocatedPages.high_utilization.erase(pp);
@@ -1434,6 +1475,8 @@ private:
             for(size_t j = 0; j < this->dec_ops_count && this->pendingdecs != nullptr; ++i)
             {
                 void* decobj = this->pendingdecs;
+
+                xxx;
 
 #ifdef ALLOC_DEBUG_CANARY
                 BlockAllocator::checkCanary(decobj);
