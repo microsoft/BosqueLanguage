@@ -40,13 +40,14 @@
 
 #define EMIT_ID(O) ((void*)O)
 #define EMIT_TYPE_NAME(TYPE) (" (" + TYPE->name + ") ")
-#define EMIT_MARK_INFO(W) (!GC_IS_MARKED(W) ? " new mark" : "")
+#define EMIT_MARK_INFO(W) (!GC_IS_MARKED(W) ? "+ marked obj" : "")
+#define EMIT_RC_INFO(W) (GC_RC_IS_PARENT(W) ? (" set parent") : (" set count=" + std::to_string((GC_EXTRACT_RC(W) >> GC_RC_PTR_SHIFT))))
 
 #define TRACE_ALLOC(O, TYPE) std::cout << "Alloc -- " << EMIT_ID(O) << EMIT_TYPE_NAME(TYPE) << std::endl
-#define TRACE_MARK_ROOT(O, W, TYPE) std::cout << "Mark Root -- " << EMIT_ID(O) << EMIT_TYPE_NAME(TYPE) << EMIT_MARK_INFO(W) << std::endl
+#define TRACE_MARK_ROOT(O, W, TYPE) std::cout << "Visit Root -- " << EMIT_ID(O) << EMIT_TYPE_NAME(TYPE) << EMIT_MARK_INFO(W) << std::endl
 #define TRACE_PROCESS_HEAP_OBJ(O, TYPE) std::cout << "Process Obj -- " << EMIT_ID(O) << EMIT_TYPE_NAME(TYPE) << ":" << std::endl
 #define TRACE_PROCESS_HEAP_OBJ_SLOT_HEAP_FWD(VAL, FWD) std::cout << "  Fwd Ptr -- " << EMIT_ID(VAL) << " -> " << EMIT_ID(FWD) << std::endl
-#define TRACE_PROCESS_HEAP_OBJ_SLOT_HEAP_RC(VAL, W) std::cout << "  Inc RC -- " << (!GC_IS_YOUNG(W) ? "old " : "") << (GC_IS_MARKED(w) ? "mark " : "") << EMIT_ID(VAL) << std::endl
+#define TRACE_PROCESS_HEAP_OBJ_SLOT_HEAP_RC(VAL, W) std::cout << "  Update RC -- " << (!GC_IS_YOUNG(W) ? "old " : "") << (GC_IS_MARKED(W) ? "marked " : "") << EMIT_ID(VAL) << EMIT_RC_INFO(W) << std::endl
 #define TRACE_PROCESS_HEAP_OBJ_HEAP_EVAC_FROM(VAL) std::cout << "  Evacuate -- " << EMIT_ID(VAL)
 #define TRACE_PROCESS_HEAP_OBJ_HEAP_EVAC_INTO(VAL, ISLEAF) std::cout << " -> " << EMIT_ID(VAL) << (ISLEAF ? " and enqueue" : "") << std::endl
 #else
@@ -399,7 +400,7 @@ public:
     std::set<PageInfo*> page_set;
 
     std::set<PageInfo*> free_pages; //pages that are completely empty
-    std::set<BSQType*> allocated_types; //the set of types that have a alloc page (and maybe filled pages) that are pending processing
+    std::set<const BSQType*> allocated_types; //the set of types that have a alloc page (and maybe filled pages) that are pending processing
 
     //Sometimes the system page is larger than our block :( this keeps track of blocks that we released but that are part of a still live page
     std::set<PageInfo*> released_pages;
@@ -762,7 +763,7 @@ public:
         }
         else
         {
-            GC_STORE_META_DATA_WORD(addr, GC_RC_SET_PARENT(meta, nullptr));
+            GC_STORE_META_DATA_WORD(addr, GC_RC_CLEAR_PARENT(meta));
         }
     }
 
@@ -891,9 +892,9 @@ public:
         {
             if(GC_IS_MARKED(w) | !GC_IS_YOUNG(w))
             {
-                TRACE_PROCESS_HEAP_OBJ_SLOT_HEAP_RC(*slot, w);
-
                 Allocator::GlobalAllocator.processIncHeapRC(addr, w, fromObj);
+
+                TRACE_PROCESS_HEAP_OBJ_SLOT_HEAP_RC(*slot, GC_LOAD_META_DATA_WORD(addr));
             }
             else
             {
@@ -1528,7 +1529,7 @@ private:
 
         for(auto iter = this->blockalloc.allocated_types.begin(); iter != this->blockalloc.allocated_types.end(); ++iter)
         {
-            this->processBlocks(*iter);
+            this->processBlocks(const_cast<BSQType*>(*iter));
         }
         this->blockalloc.allocated_types.clear();
 
@@ -1616,17 +1617,20 @@ public:
         this->activeiters.erase(iter);
     }
 
-    void setGlobalsMemory(const BSQType* global_type)
+    void setGlobalsMemory(const BSQType* globaltype)
     {
-        GCStack::global_memory = this->blockalloc.allocateFreePage(const_cast<BSQType*>(global_type));
-        GCStack::global_type = const_cast<BSQType*>(global_type);
+        GCStack::global_memory = this->blockalloc.allocateFreePage(const_cast<BSQType*>(globaltype));
+        GCStack::global_type = const_cast<BSQType*>(globaltype);
         GCStack::global_init_complete = false;
     }
 
-    void completeGlobalInitialization()
+    void completeGlobalInitialization(const BSQType* globaltype)
     {
         GC_INIT_YOUNG_ALLOC(GCStack::global_memory->slots);
         GCStack::global_init_complete = true;
+
+        this->blockalloc.allocated_types.insert(globaltype);
+        const_cast<BSQType*>(globaltype)->filledpages.insert(GCStack::global_memory);
 
         this->collect();
     }
