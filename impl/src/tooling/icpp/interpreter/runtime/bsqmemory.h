@@ -813,7 +813,7 @@ public:
                 this->roots.enque(resolvedobj);
 
                 auto ometa = GET_TYPE_META_DATA(resolvedobj);
-                if(!ometa->isLeaf())
+                if(!ometa->isLeaf() & GC_IS_YOUNG(w))
                 {
                     this->worklist.enque(resolvedobj);
                 }
