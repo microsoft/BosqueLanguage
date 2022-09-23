@@ -48,9 +48,10 @@
 #define EMIT_MARK_INFO(W) (!GC_IS_MARKED(W) ? "+ marked obj" : "")
 #define EMIT_RC_INFO(W) (GC_RC_IS_PARENT(W) ? (" set parent") : (" set count=" + std::to_string((GC_EXTRACT_RC(W) >> GC_RC_PTR_SHIFT))))
 
-#define GC_TRACE_PAGE_ALLOC(KIND, PAGE, TYPE) std::cout << "Acquire " << KIND << " Page --" << EMIT_TYPE_NAME(TYPE) << EMIT_ID(PAGE) << std::endl;
-#define GC_TRACE_PAGE_RELEASE(KIND, PAGE, TYPE) std::cout << "Release " << KIND << " Page --" << EMIT_TYPE_NAME(TYPE) << EMIT_ID(PAGE) << std::endl;
-#define GC_TRACE_PAGE_MOVE_FROM_HIGH(PAGE) std::cout << "Move From High Utilization --" << EMIT_ID(PAGE) << std::endl;
+#define GC_TRACE_PAGE_ALLOC(KIND, PAGE, TYPE) std::cout << "Acquire " << KIND << " Page --" << EMIT_TYPE_NAME(TYPE) << EMIT_ID(PAGE) << std::endl
+#define GC_TRACE_PAGE_RELEASE(KIND, PAGE, TYPE) std::cout << "Release " << KIND << " Page --" << EMIT_TYPE_NAME(TYPE) << EMIT_ID(PAGE) << std::endl
+#define GC_TRACE_PAGE_MOVE_FROM_HIGH(PAGE) std::cout << "Move From High Utilization --" << EMIT_ID(PAGE) << std::endl
+#define GC_TRACE_PROCESS_PAGE(PAGE, TYPE) std::cout << "Sweeping Page --" << EMIT_ID(PAGE) << EMIT_TYPE_NAME(TYPE)
 
 #ifdef GC_OBJ_TRACE_ENABLED
 #define TRACE_ALLOC(O, TYPE) std::cout << "Alloc -- " << EMIT_ID(O) << EMIT_TYPE_NAME(TYPE) << std::endl
@@ -60,11 +61,13 @@
 #define TRACE_PROCESS_HEAP_OBJ_SLOT_HEAP_RC(VAL, W) std::cout << "  Update RC -- " << (!GC_IS_YOUNG(W) ? "old " : "") << (GC_IS_MARKED(W) ? "marked " : "") << EMIT_ID(VAL) << EMIT_RC_INFO(W) << std::endl
 #define TRACE_PROCESS_HEAP_OBJ_HEAP_EVAC_FROM(VAL) std::cout << "  Evacuate -- " << EMIT_ID(VAL)
 #define TRACE_PROCESS_HEAP_OBJ_HEAP_EVAC_INTO(VAL, ISLEAF) std::cout << " -> " << EMIT_ID(VAL) << (ISLEAF ? " and enqueue" : "") << std::endl
-#define TRACE_PROCESS_MAYBE_ZERO_UNREACHABLE(O) std::cout << "Maybe Zero (Unreachable) -- " << EMIT_ID(O) << std::endl;
+#define TRACE_PROCESS_MAYBE_ZERO_UNREACHABLE(O) std::cout << "Maybe Zero (Unreachable) -- " << EMIT_ID(O) << std::endl
 #endif
 #else
 #define GC_TRACE_PAGE_ALLOC(KIND, PAGE, TYPE)
 #define GC_TRACE_PAGE_RELEASE(KIND, PAGE, TYPE)
+#define GC_TRACE_PAGE_MOVE_FROM_HIGH(PAGE)
+#define GC_TRACE_PROCESS_PAGE(PAGE, TYPE)
 
 #define TRACE_ALLOC(O, TYPE) 
 #define TRACE_MARK_ROOT(O, META, TYPE)
@@ -803,6 +806,8 @@ public:
         GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR(obj);
         Allocator::processDecHeapRC(addr, GC_LOAD_META_DATA_WORD(addr));
 
+    xxxx;
+
         if(GC_IS_UNREACHABLE(GC_LOAD_META_DATA_WORD(addr)))
         {
             this->processDecHeapRC_Slow(obj);
@@ -888,6 +893,8 @@ public:
         if(obj == *slot)
         {
             auto ometa = PAGE_MASK_EXTRACT_ADDR(*slot)->btype;
+
+        xxxx;
 
             void* nobj = Allocator::GlobalAllocator.evacuateObject(*slot, ometa, obj);
             ometa->gcops.fpProcessEvacuateUpdateChildren(ometa, (void**)nobj, *slot, obj);
@@ -1245,7 +1252,7 @@ public:
         GC_META_DATA_WORD* metacurr = pp->slots;
         uint8_t* datacurr = (uint8_t*)(pp->data);
 
-        xxxx;
+        GC_TRACE_PROCESS_PAGE(pp, btype);
 
         //rebuild the freelist
         pp->freelist = nullptr;
@@ -1475,8 +1482,6 @@ private:
             for(size_t j = 0; j < this->dec_ops_count && this->pendingdecs != nullptr; ++i)
             {
                 void* decobj = this->pendingdecs;
-
-                xxx;
 
 #ifdef ALLOC_DEBUG_CANARY
                 BlockAllocator::checkCanary(decobj);
