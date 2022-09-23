@@ -29,14 +29,18 @@
 #define FREE_PAGE_MIN 256
 #define FREE_PAGE_RATIO 0.2f
 
+////
+//GC ALGORITHM BEHAVIOR FLAGS
 //
-//TEMP DEBUG!!!!
+//#define GC_DISABLE_SWEEP_EVACUATE
+//#define GC_DISABLE_MARK_EVACUATE
+
+////
+//GC ALGORITHM TRACING FLAGS
 //
-#define GC_TRACE_ENABLED
-#define GC_OBJ_TRACE_ENABLED
-//
-//TEMP DEBUG!!!!
-//
+//#define GC_TRACE_ENABLED
+//#define GC_OBJ_TRACE_ENABLED
+
 
 
 #ifdef GC_TRACE_ENABLED
@@ -51,7 +55,8 @@
 #define GC_TRACE_PAGE_ALLOC(KIND, PAGE, TYPE) std::cout << "Acquire " << KIND << " Page --" << EMIT_TYPE_NAME(TYPE) << EMIT_ID(PAGE) << std::endl
 #define GC_TRACE_PAGE_RELEASE(KIND, PAGE, TYPE) std::cout << "Release " << KIND << " Page --" << EMIT_TYPE_NAME(TYPE) << EMIT_ID(PAGE) << std::endl
 #define GC_TRACE_PAGE_MOVE_FROM_HIGH(PAGE) std::cout << "Move From High Utilization --" << EMIT_ID(PAGE) << std::endl
-#define GC_TRACE_PROCESS_PAGE(PAGE, TYPE) std::cout << "Sweeping Page --" << EMIT_ID(PAGE) << EMIT_TYPE_NAME(TYPE) << std::endl
+#define GC_TRACE_PROCESS_PAGE_PRE(PAGE, TYPE) std::cout << "Sweeping Page -- " << EMIT_ID(PAGE) << EMIT_TYPE_NAME(TYPE) << "free=" << PAGE->freelist_count << std::endl
+#define GC_TRACE_PROCESS_PAGE_POST(PAGE) std::cout << "Done -- " << EMIT_ID(PAGE) << "free=" << PAGE->freelist_count << std::endl
 
 #ifdef GC_OBJ_TRACE_ENABLED
 #define TRACE_ALLOC(O, TYPE) std::cout << "Alloc -- " << EMIT_ID(O) << EMIT_TYPE_NAME(TYPE) << std::endl
@@ -60,9 +65,9 @@
 #define TRACE_PROCESS_HEAP_OBJ_SLOT_HEAP_FWD(VAL, FWD) std::cout << "  Fwd Ptr -- " << EMIT_ID(VAL) << " -> " << EMIT_ID(FWD) << std::endl
 #define TRACE_PROCESS_HEAP_OBJ_SLOT_HEAP_RC(VAL, W) std::cout << "  Update RC -- " << (!GC_IS_YOUNG(W) ? "old " : "") << (GC_IS_MARKED(W) ? "marked " : "") << EMIT_ID(VAL) << EMIT_RC_INFO(W) << std::endl
 #define TRACE_PROCESS_HEAP_OBJ_HEAP_EVAC_FROM(VAL) std::cout << "  Evacuate -- " << EMIT_ID(VAL)
-#define TRACE_PROCESS_HEAP_OBJ_HEAP_EVAC_INTO(VAL, ISLEAF) std::cout << " -> " << EMIT_ID(VAL) << (ISLEAF ? " and enqueue" : "") << std::endl
+#define TRACE_PROCESS_HEAP_OBJ_HEAP_EVAC_INTO(VAL, ISLEAF) std::cout << " -> " << EMIT_ID(VAL) << (!(ISLEAF) ? " and enqueue" : "") << std::endl
 #define TRACE_PROCESS_MAYBE_ZERO_UNREACHABLE(O) std::cout << "Maybe Zero (Unreachable) -- " << EMIT_ID(O) << std::endl
-#define TRACE_DEC_RC(O, ADDR) std::cout << "Decrement RC -- " << EMIT_ID(0) << (GC_IS_UNREACHABLE(GC_LOAD_META_DATA_WORD(ADDR)) ? " release" : std::to_string((GC_EXTRACT_RC(GC_LOAD_META_DATA_WORD(ADDR)) >> GC_RC_PTR_SHIFT))) << std::endl
+#define TRACE_DEC_RC(O, ADDR) std::cout << "Decrement RC -- " << EMIT_ID(0) << std::to_string((GC_EXTRACT_RC(GC_LOAD_META_DATA_WORD(ADDR)) >> GC_RC_PTR_SHIFT)) << std::endl
 #define TRACE_SWEEP_EVACUATE_PRE(O, TYPE) std::cout << "    Evacuate -- " << EMIT_ID(0) << EMIT_TYPE_NAME(TYPE)
 #define TRACE_SWEEP_EVACUATE_POST(O) std::cout << " -> " << EMIT_ID(O) << std::endl
 
@@ -71,7 +76,8 @@
 #define GC_TRACE_PAGE_ALLOC(KIND, PAGE, TYPE)
 #define GC_TRACE_PAGE_RELEASE(KIND, PAGE, TYPE)
 #define GC_TRACE_PAGE_MOVE_FROM_HIGH(PAGE)
-#define GC_TRACE_PROCESS_PAGE(PAGE, TYPE)
+#define GC_TRACE_PROCESS_PAGE_PRE(PAGE, TYPE)
+#define GC_TRACE_PROCESS_PAGE_POST(PAGE) 
 
 #define TRACE_ALLOC(O, TYPE) 
 #define TRACE_MARK_ROOT(O, META, TYPE)
@@ -917,6 +923,11 @@ public:
         GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR(*slot);
         GC_META_DATA_WORD w = GC_LOAD_META_DATA_WORD(addr);
 
+#ifdef GC_DISABLE_MARK_EVACUATE
+        Allocator::GlobalAllocator.processIncHeapRC(addr, w, fromObj);
+
+        TRACE_PROCESS_HEAP_OBJ_SLOT_HEAP_RC(*slot, GC_LOAD_META_DATA_WORD(addr));
+#else
         if(GC_IS_FWD_PTR(w))
         {
             TRACE_PROCESS_HEAP_OBJ_SLOT_HEAP_FWD(*slot, GC_GET_FWD_PTR(w));
@@ -953,6 +964,7 @@ public:
                 }
             }
         }
+#endif
     }
 
     inline static void gcProcessSlotWithString(void** slot, void* fromObj)
@@ -1261,7 +1273,7 @@ public:
         GC_META_DATA_WORD* metacurr = pp->slots;
         uint8_t* datacurr = (uint8_t*)(pp->data);
 
-        GC_TRACE_PROCESS_PAGE(pp, btype);
+        GC_TRACE_PROCESS_PAGE_PRE(pp, btype);
 
         //rebuild the freelist
         pp->freelist = nullptr;
@@ -1270,6 +1282,13 @@ public:
         for(uint64_t i = 0; i < pp->alloc_entry_count; ++i)
         {
             GC_META_DATA_WORD w = *metacurr;
+
+#ifdef GC_DISABLE_SWEEP_EVACUATE
+            if(GC_IS_FWD_PTR(w) | GC_IS_UNREACHABLE(w))
+            {
+                *metacurr = 0x0;
+            }
+#else 
             if(GC_IS_FWD_PTR(w))
             {
                 *metacurr = 0x0;
@@ -1293,6 +1312,7 @@ public:
                     }
                 }
             }
+#endif
 
             if(GC_IS_ALLOCATED(*metacurr))
             {
@@ -1313,6 +1333,8 @@ public:
             metacurr++;
             datacurr += pp->alloc_entry_size;
         }
+
+        GC_TRACE_PROCESS_PAGE_POST(pp);
 
         this->postsweep_processing(pp);
     }
