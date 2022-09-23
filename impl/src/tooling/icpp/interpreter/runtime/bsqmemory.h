@@ -42,7 +42,6 @@
 //#define GC_OBJ_TRACE_ENABLED
 
 
-
 #ifdef GC_TRACE_ENABLED
 #define GC_TRACE_DISPLAY_CHECK
 #include <iostream>
@@ -56,7 +55,7 @@
 #define GC_TRACE_PAGE_RELEASE(KIND, PAGE, TYPE) std::cout << "Release " << KIND << " Page --" << EMIT_TYPE_NAME(TYPE) << EMIT_ID(PAGE) << std::endl
 #define GC_TRACE_PAGE_MOVE_FROM_HIGH(PAGE) std::cout << "Move From High Utilization --" << EMIT_ID(PAGE) << std::endl
 #define GC_TRACE_PROCESS_PAGE_PRE(PAGE, TYPE) std::cout << "Sweeping Page -- " << EMIT_ID(PAGE) << EMIT_TYPE_NAME(TYPE) << "free=" << PAGE->freelist_count << std::endl
-#define GC_TRACE_PROCESS_PAGE_POST(PAGE) std::cout << "Done -- " << EMIT_ID(PAGE) << "free=" << PAGE->freelist_count << std::endl
+#define GC_TRACE_PROCESS_PAGE_POST(PAGE) std::cout << "Done -- " << EMIT_ID(PAGE) << " free=" << PAGE->freelist_count << std::endl
 
 #ifdef GC_OBJ_TRACE_ENABLED
 #define TRACE_ALLOC(O, TYPE) std::cout << "Alloc -- " << EMIT_ID(O) << EMIT_TYPE_NAME(TYPE) << std::endl
