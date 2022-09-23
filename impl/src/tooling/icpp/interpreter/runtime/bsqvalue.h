@@ -8,6 +8,8 @@
 #include "../common.h"
 #include "bsqmemory.h"
 
+#define BSQ_STRING_K_CONS_COUNT 5
+
 class BSQField
 {
 public:
@@ -1001,7 +1003,7 @@ public:
 
     inline static const BSQStringKReprTypeAbstract* selectKReprForSize(size_t k)
     {
-        auto stp = std::find_if(BSQWellKnownType::g_typeStringKCons, BSQWellKnownType::g_typeStringKCons + sizeof(BSQWellKnownType::g_typeStringKCons), [&k](const std::pair<size_t, const BSQType*>& cc) {
+        auto stp = std::find_if(BSQWellKnownType::g_typeStringKCons, BSQWellKnownType::g_typeStringKCons + BSQ_STRING_K_CONS_COUNT, [&k](const std::pair<size_t, const BSQType*>& cc) {
             return cc.first > k;
         });
     

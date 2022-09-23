@@ -173,7 +173,7 @@ struct PageInfo
 
 #define GC_IS_ALLOCATED(W) ((W & GC_ALLOCATED_BIT) != 0x0ul)
 
-#define GC_EXTRACT_RC(W) (W & GC_RC_COUNT_MASK)
+#define GC_EXTRACT_RC(W) (W & GC_RC_DATA_MASK)
 #define GC_RC_ZERO 0x0ul
 #define GC_RC_ONE 0x4ul
 #define GC_RC_TWO 0x8ul
@@ -193,6 +193,7 @@ struct PageInfo
 #define GC_RC_IS_PARENT(W) ((W & GC_RC_KIND_MASK) == 0x0)
 #define GC_RC_GET_PARENT(W) ((void*)((W & GC_RC_DATA_MASK) >> GC_RC_PTR_SHIFT))
 #define GC_RC_SET_PARENT(W, P) (GC_ALLOCATED_BIT | (((uintptr_t)P) << GC_RC_PTR_SHIFT) | (W & GC_MARK_BIT))
+#define GC_RC_CLEAR_PARENT(W) (GC_ALLOCATED_BIT | (W & GC_MARK_BIT))
 
 #define GC_GET_DEC_LIST(W) ((void*)((W & GC_RC_DATA_MASK) >> GC_RC_PTR_SHIFT))
 #define GC_SET_DEC_LIST(DL) (GC_DEC_PENDING_BIT | (((uintptr_t)DL) << GC_RC_PTR_SHIFT))
@@ -417,7 +418,8 @@ enum class BSQPrimitiveImplTag
     s_list_reduce_idx,
     s_list_transduce,
     s_list_transduce_idx,
-    s_list_range,
+    s_list_range_int,
+    s_list_range_nat,
     s_list_fill,
     s_list_reverse,
     s_list_append,
@@ -459,5 +461,6 @@ enum class BSQPrimitiveImplTag
     s_map_remap,
     s_map_add,
     s_map_set,
-    s_map_remove
+    s_map_remove,
+    s_while
 };

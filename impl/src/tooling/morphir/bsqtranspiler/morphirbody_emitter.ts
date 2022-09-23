@@ -2697,7 +2697,11 @@ class MorphirBodyEmitter {
                 assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);
                 return undefined;
             }
-            case "s_list_range": {
+            case "s_list_range_int": {
+                const dd = new MorphirCallSimple("List.range", [new MorphirVar(args[0].vname), new MorphirVar(args[1].vname)]);
+                return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);
+            }
+            case "s_list_range_nat": {
                 const dd = new MorphirCallSimple("List.range", [new MorphirVar(args[0].vname), new MorphirVar(args[1].vname)]);
                 return MorphirFunction.create(this.typegen.lookupFunctionName(idecl.ikey), args, chkrestype, dd);
             }
@@ -2903,7 +2907,8 @@ class MorphirBodyEmitter {
     s_map_remap,
     s_map_add,
     s_map_set,
-    s_map_remove
+    s_map_remove,
+    s_while
             */
             default: {
                 assert(false, `[NOT IMPLEMENTED -- ${idecl.implkey}]`);

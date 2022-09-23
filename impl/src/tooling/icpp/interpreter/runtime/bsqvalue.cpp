@@ -23,7 +23,7 @@ const BSQType* BSQWellKnownType::g_typeStringKRepr32 = new BSQStringKReprType<32
 const BSQType* BSQWellKnownType::g_typeStringKRepr64 = new BSQStringKReprType<64>();
 const BSQType* BSQWellKnownType::g_typeStringKRepr96 = new BSQStringKReprType<96>();
 const BSQType* BSQWellKnownType::g_typeStringKRepr128 = new BSQStringKReprType<128>();
-const std::pair<size_t, const BSQType*> BSQWellKnownType::g_typeStringKCons[5] = {std::make_pair((size_t)16, BSQWellKnownType::g_typeStringKRepr16), std::make_pair((size_t)32, BSQWellKnownType::g_typeStringKRepr32), std::make_pair((size_t)64, BSQWellKnownType::g_typeStringKRepr64), std::make_pair((size_t)96, BSQWellKnownType::g_typeStringKRepr96), std::make_pair((size_t)128, BSQWellKnownType::g_typeStringKRepr128) };
+const std::pair<size_t, const BSQType*> BSQWellKnownType::g_typeStringKCons[BSQ_STRING_K_CONS_COUNT] = {std::make_pair((size_t)16, BSQWellKnownType::g_typeStringKRepr16), std::make_pair((size_t)32, BSQWellKnownType::g_typeStringKRepr32), std::make_pair((size_t)64, BSQWellKnownType::g_typeStringKRepr64), std::make_pair((size_t)96, BSQWellKnownType::g_typeStringKRepr96), std::make_pair((size_t)128, BSQWellKnownType::g_typeStringKRepr128) };
 
 const BSQType* BSQWellKnownType::g_typeStringTreeRepr = new BSQStringTreeReprType();
 
@@ -1134,14 +1134,17 @@ std::string entityUUIDDisplay_impl(const BSQType* btype, StorageLocationPtr data
 {
     auto uuid = SLPTR_LOAD_CONTENTS_AS(BSQUUID, data);
 
-    unsigned int bb4 = *reinterpret_cast<const uint32_t*>(uuid.bytes);
-    unsigned int bb2_1 = *reinterpret_cast<const uint16_t*>(uuid.bytes + 4);
-    unsigned int bb2_2 = *reinterpret_cast<const uint16_t*>(uuid.bytes + 6);
-    unsigned int bb2_3 = *reinterpret_cast<const uint16_t*>(uuid.bytes + 8);
-    unsigned int bb6 = *reinterpret_cast<const uint64_t*>(uuid.bytes + 10) & 0xFFFFFFFFFFFF;
+    uint32_t bb4 = *reinterpret_cast<const uint32_t*>(uuid.bytes);
+    uint16_t bb2_1 = *reinterpret_cast<const uint16_t*>(uuid.bytes + 4);
+    uint16_t bb2_2 = *reinterpret_cast<const uint16_t*>(uuid.bytes + 6);
+    uint16_t bb2_3 = *reinterpret_cast<const uint16_t*>(uuid.bytes + 8);
+    
+    uint64_t bb6 = 0;
+    GC_MEM_COPY((uint8_t*)(&bb6), uuid.bytes + 10, 6);
+    bb6 = bb6 >> 16u;
     
     char sstrt[64] = {0};
-    sprintf(sstrt, "%06x-%04x-%04x-%04x-%08x", bb4, bb2_1, bb2_2, bb2_3, bb6);
+    sprintf(sstrt, "%06x-%04x-%04x-%04x-%08lx", (unsigned int)bb4, (unsigned int)bb2_1, (unsigned int)bb2_2, (unsigned int)bb2_3, (unsigned long)bb6);
     std::string res(sstrt, sstrt + 64);
 
     return res;

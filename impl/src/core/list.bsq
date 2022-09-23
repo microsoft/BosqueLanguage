@@ -2020,6 +2020,44 @@ __internal entity List<T> provides Some, Expandoable<T>, APIType when T grounded
         }
     }
 
+    recursive? method splitWhen(p: recursive? pred(_: T) -> Bool): (|List<T>, List<T>|) {
+        if(ListOps::s_list_empty<T>(this)) {
+            return (|List<T>{}, List<T>{}|); 
+        }
+        else {
+            let idx = ListOps::s_list_find_pred<T>[recursive?](this, p);
+
+            if(idx == 0i) {
+                return (|List<T>{}, this|);
+            }
+            elif(idx == -1i) {
+                return (|this, List<T>{}|);
+            }
+            else {
+                return (|ListOps::s_list_slice_end<T>(this, NumericOps::s_intToNat(idx)), ListOps::s_list_slice_start<T>(this, NumericOps::s_intToNat(idx))|);
+            }
+        }
+    }
+
+    recursive? method splitWhen(p: recursive? pred(_: T, _: Nat) -> Bool): List<T> {
+        if(ListOps::s_list_empty<T>(this)) {
+            return (|List<T>{}, List<T>{}|); 
+        }
+        else {
+            let idx = ListOps::s_list_find_pred_idx<T>[recursive?](this, p);
+
+            if(idx == 0i) {
+                return (|List<T>{}, this|);
+            }
+            elif(idx == -1i) {
+                return (|this, List<T>{}|);
+            }
+            else {
+                return (|ListOps::s_list_slice_end<T>(this, NumericOps::s_intToNat(idx)), ListOps::s_list_slice_start<T>(this, NumericOps::s_intToNat(idx))|);
+            }
+        }
+    }
+
     recursive? method map<U=?>(f: recursive? fn(_: T) -> U): List<U> {
         if(ListOps::s_list_empty<T>(this)) {
             return List<U>{}; 
