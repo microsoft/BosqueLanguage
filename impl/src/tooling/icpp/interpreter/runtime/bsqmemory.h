@@ -51,7 +51,7 @@
 #define GC_TRACE_PAGE_ALLOC(KIND, PAGE, TYPE) std::cout << "Acquire " << KIND << " Page --" << EMIT_TYPE_NAME(TYPE) << EMIT_ID(PAGE) << std::endl
 #define GC_TRACE_PAGE_RELEASE(KIND, PAGE, TYPE) std::cout << "Release " << KIND << " Page --" << EMIT_TYPE_NAME(TYPE) << EMIT_ID(PAGE) << std::endl
 #define GC_TRACE_PAGE_MOVE_FROM_HIGH(PAGE) std::cout << "Move From High Utilization --" << EMIT_ID(PAGE) << std::endl
-#define GC_TRACE_PROCESS_PAGE(PAGE, TYPE) std::cout << "Sweeping Page --" << EMIT_ID(PAGE) << EMIT_TYPE_NAME(TYPE)
+#define GC_TRACE_PROCESS_PAGE(PAGE, TYPE) std::cout << "Sweeping Page --" << EMIT_ID(PAGE) << EMIT_TYPE_NAME(TYPE) << std::endl
 
 #ifdef GC_OBJ_TRACE_ENABLED
 #define TRACE_ALLOC(O, TYPE) std::cout << "Alloc -- " << EMIT_ID(O) << EMIT_TYPE_NAME(TYPE) << std::endl
@@ -62,6 +62,10 @@
 #define TRACE_PROCESS_HEAP_OBJ_HEAP_EVAC_FROM(VAL) std::cout << "  Evacuate -- " << EMIT_ID(VAL)
 #define TRACE_PROCESS_HEAP_OBJ_HEAP_EVAC_INTO(VAL, ISLEAF) std::cout << " -> " << EMIT_ID(VAL) << (ISLEAF ? " and enqueue" : "") << std::endl
 #define TRACE_PROCESS_MAYBE_ZERO_UNREACHABLE(O) std::cout << "Maybe Zero (Unreachable) -- " << EMIT_ID(O) << std::endl
+#define TRACE_DEC_RC(O, ADDR) std::cout << "Decrement RC -- " << EMIT_ID(0) << (GC_IS_UNREACHABLE(GC_LOAD_META_DATA_WORD(ADDR)) ? " release" : std::to_string((GC_EXTRACT_RC(GC_LOAD_META_DATA_WORD(ADDR)) >> GC_RC_PTR_SHIFT))) << std::endl
+#define TRACE_SWEEP_EVACUATE_PRE(O, TYPE) std::cout << "    Evacuate -- " << EMIT_ID(0) << EMIT_TYPE_NAME(TYPE)
+#define TRACE_SWEEP_EVACUATE_POST(O) std::cout << " -> " << EMIT_ID(O) << std::endl
+
 #endif
 #else
 #define GC_TRACE_PAGE_ALLOC(KIND, PAGE, TYPE)
@@ -77,6 +81,9 @@
 #define TRACE_PROCESS_HEAP_OBJ_HEAP_EVAC_FROM(VAL)
 #define TRACE_PROCESS_HEAP_OBJ_HEAP_EVAC_INTO(VAL, ISLEAF)
 #define TRACE_PROCESS_MAYBE_ZERO_UNREACHABLE(O)
+#define TRACE_DEC_RC(O, ADDR)
+#define TRACE_SWEEP_EVACUATE_PRE(O, TYPE)
+#define TRACE_SWEEP_EVACUATE_POST(O)
 #endif
 
 ////
@@ -806,7 +813,7 @@ public:
         GC_META_DATA_WORD* addr = GC_GET_META_DATA_ADDR(obj);
         Allocator::processDecHeapRC(addr, GC_LOAD_META_DATA_WORD(addr));
 
-    xxxx;
+        TRACE_DEC_RC(obj, addr);
 
         if(GC_IS_UNREACHABLE(GC_LOAD_META_DATA_WORD(addr)))
         {
@@ -894,10 +901,12 @@ public:
         {
             auto ometa = PAGE_MASK_EXTRACT_ADDR(*slot)->btype;
 
-        xxxx;
+            TRACE_SWEEP_EVACUATE_PRE(obj, ometa);
 
             void* nobj = Allocator::GlobalAllocator.evacuateObject(*slot, ometa, obj);
             ometa->gcops.fpProcessEvacuateUpdateChildren(ometa, (void**)nobj, *slot, obj);
+
+            TRACE_SWEEP_EVACUATE_POST(nobj);
 
             *slot = nobj;
         }
