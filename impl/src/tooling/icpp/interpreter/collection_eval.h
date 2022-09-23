@@ -201,7 +201,7 @@ public:
     }
 
     template <typename T>
-    static void* s_range_ne_rec(const BSQListTypeFlavor& lflavor, T start, BSQNat count)
+    static void* s_range_ne_rec(const BSQListTypeFlavor& lflavor, T start, T count)
     {
         void* res = nullptr;
         if(count <= 4)

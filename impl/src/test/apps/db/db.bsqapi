@@ -48,6 +48,8 @@ function createDefault3DB(): Database {
 }
 
 entrypoint function main(): Bool {
-    let dd = createDefault3DB();
-    return dd.numRecords() == 3n;
+    var dd = createDefault3DB();
+
+    let ee = Database::startCursor(ref dd);
+    return ee !== none && ee.getOrNone(1) === "Bob";
 }

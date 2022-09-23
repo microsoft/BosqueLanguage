@@ -87,7 +87,8 @@ std::map<std::string, BSQPrimitiveImplTag> MarshalEnvironment::g_primitiveinvoke
     {"s_list_reduce_idx", BSQPrimitiveImplTag::s_list_reduce_idx},
     {"s_list_transduce", BSQPrimitiveImplTag::s_list_transduce},
     {"s_list_transduce_idx", BSQPrimitiveImplTag::s_list_transduce_idx},
-    {"s_list_range", BSQPrimitiveImplTag::s_list_range},
+    {"s_list_range_int", BSQPrimitiveImplTag::s_list_range_int},
+    {"s_list_range_nat", BSQPrimitiveImplTag::s_list_range_nat},
     {"s_list_fill", BSQPrimitiveImplTag::s_list_fill},
     {"s_list_reverse", BSQPrimitiveImplTag::s_list_reverse},
     {"s_list_append", BSQPrimitiveImplTag::s_list_append},
@@ -129,7 +130,8 @@ std::map<std::string, BSQPrimitiveImplTag> MarshalEnvironment::g_primitiveinvoke
     {"s_map_remap", BSQPrimitiveImplTag::s_map_remap},
     {"s_map_add", BSQPrimitiveImplTag::s_map_add},
     {"s_map_set", BSQPrimitiveImplTag::s_map_set},
-    {"s_map_remove", BSQPrimitiveImplTag::s_map_remove}
+    {"s_map_remove", BSQPrimitiveImplTag::s_map_remove},
+    {"s_while", BSQPrimitiveImplTag::s_while}
 };
 
 Argument jsonParse_Argument(json j)

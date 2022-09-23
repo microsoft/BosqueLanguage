@@ -1,0 +1,16 @@
+//-------------------------------------------------------------------------------------------------------
+// Copyright (C) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
+//-------------------------------------------------------------------------------------------------------
+
+//TODO: should this go in a non-core package. We don't want to overly encourage using it but it should be available.
+
+namespace Core;
+
+entity FlowOp provides Some {
+    internal recursive? function s_while<S>(istate: S, p: recursive? pred(_: S) -> Bool, op: recursive? fn(_: S) -> S): S = s_while;
+    
+    recursive? function while<S>(istate: S, p: recursive? pred(_: S) -> Bool, op: recursive? fn(_: S) -> S): S {
+        return FlowOp::s_while<S>[recursive?](istate, p, op);
+    }
+}

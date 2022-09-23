@@ -71,7 +71,7 @@ BSQMapTypeFlavor jsonLoadMapFlavor(json v)
     return BSQMapTypeFlavor{mtype, keytype, valuetype, treetype};   
 }
 
-void initialize(size_t cbuffsize, const RefMask cmask)
+const BSQType* initialize(size_t cbuffsize, const RefMask cmask)
 {
     MarshalEnvironment::g_typenameToIdMap["None"] = BSQ_TYPE_ID_NONE;
     MarshalEnvironment::g_typenameToIdMap["Nothing"] = BSQ_TYPE_ID_NOTHING;
@@ -97,17 +97,19 @@ void initialize(size_t cbuffsize, const RefMask cmask)
     MarshalEnvironment::g_typenameToIdMap["LatLongCoordinate"] = BSQ_TYPE_ID_LAT_LONG_COORDINATE;
     MarshalEnvironment::g_typenameToIdMap["Regex"] = BSQ_TYPE_ID_REGEX;
 
+    assert(cbuffsize < BSQ_BLOCK_ALLOCATION_SIZE / 2); //Should not overflow our block -- need to implement large block support later
     std::string globalname = "[GlobalObject]";
     const BSQType* globaltype = new BSQGlobalObjectType(cbuffsize, cmask, globalname);
 
     Allocator::GlobalAllocator.setGlobalsMemory(globaltype);
-
     Evaluator::g_constantbuffer = (uint8_t*)GCStack::global_memory->data;
+
+    return globaltype;
 }
 
-void completeLoad()
+void completeLoad(const BSQType* globaltype)
 {
-    Allocator::GlobalAllocator.completeGlobalInitialization();
+    Allocator::GlobalAllocator.completeGlobalInitialization(globaltype);
 }
 
 void initializeLiteral(size_t storageOffset, const BSQType* gtype, std::string& lval)
@@ -226,7 +228,7 @@ void loadAssembly(json j, Evaluator& ee)
     gmask[gmaskstr.size()] = '\0';
 
     auto cbuffsize = j["cbuffsize"].get<size_t>();
-    initialize(cbuffsize, gmask);
+    auto globaltype = initialize(cbuffsize, gmask);
     
     ////
     //Get all of our name to map ids setup
@@ -369,5 +371,5 @@ void loadAssembly(json j, Evaluator& ee)
         initializeConst(ee, storageOffset, ikey, gtype);
     });
 
-    completeLoad();
+    completeLoad(globaltype);
 }

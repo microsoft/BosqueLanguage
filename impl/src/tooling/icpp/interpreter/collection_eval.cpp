@@ -307,7 +307,7 @@ void BSQListOps::s_range_ne(const BSQType* oftype, StorageLocationPtr start, Sto
     if(oftype->tid == BSQ_TYPE_ID_INT)
     {
         auto ll = BSQListOps::s_range_ne_rec<BSQInt>(BSQListOps::g_flavormap.find(BSQ_TYPE_ID_INT)->second, SLPTR_LOAD_CONTENTS_AS(BSQInt, start), SLPTR_LOAD_CONTENTS_AS(BSQInt, count));
-        LIST_STORE_RESULT_REPR(res, ll);
+        SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(res, ll);
     }
     else
     {

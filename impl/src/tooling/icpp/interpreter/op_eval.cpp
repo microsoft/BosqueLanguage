@@ -117,6 +117,11 @@ void Evaluator::evalDebugOp(const DebugOp* op)
     }
     else
     {
+
+#ifdef GC_TRACE_DISPLAY_CHECK
+        printf("---Display---\n");
+#endif
+
         auto sl = this->evalArgument(op->arg);
         auto oftype = SLPTR_LOAD_UNION_INLINE_TYPE(sl);
 
@@ -124,6 +129,22 @@ void Evaluator::evalDebugOp(const DebugOp* op)
 
         printf("%s\n", dval.c_str());
         fflush(stdout);
+
+#ifdef GC_TRACE_DISPLAY_CHECK
+        printf("---GC Run---\n");
+        Allocator::GlobalAllocator.__display_force_gc__();
+
+        printf("---Post GC Display---\n");
+        auto gcsl = this->evalArgument(op->arg);
+        auto gcoftype = SLPTR_LOAD_UNION_INLINE_TYPE(gcsl);
+
+        auto gcdval = gcoftype->fpDisplay(gcoftype, SLPTR_LOAD_UNION_INLINE_DATAPTR(gcsl), DisplayMode::Standard);
+
+        printf("%s\n", gcdval.c_str());
+        fflush(stdout);
+        printf("----\n");
+#endif
+
     }
 }
 
@@ -2363,8 +2384,12 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
         BSQListOps::s_transduce_idx_ne(lflavor, eethunk, LIST_LOAD_DATA(params[0]), LIST_LOAD_REPR_TYPE(params[0]), uflavor, envtype, invk->pcodes.at("op"), params, dynamic_cast<const BSQEphemeralListType*>(invk->resultType), resultsl);
         break;
     }
-    case BSQPrimitiveImplTag::s_list_range: {
-        BSQListOps::s_range_ne(invk->binds.at("T"), params[0], params[1], params[3], resultsl);
+    case BSQPrimitiveImplTag::s_list_range_int: {
+        BSQListOps::s_range_ne(BSQWellKnownType::g_typeInt, params[0], params[1], params[2], resultsl);
+        break;
+    }
+    case BSQPrimitiveImplTag::s_list_range_nat: {
+        BSQListOps::s_range_ne(BSQWellKnownType::g_typeNat, params[0], params[1], params[2], resultsl);
         break;
     }
     case BSQPrimitiveImplTag::s_list_fill: {
@@ -2644,6 +2669,54 @@ void Evaluator::evaluatePrimitiveBody(const BSQInvokePrimitiveDecl* invk, const 
 
         auto rr = BSQMapOps::s_remove_ne(mflavor, MAP_LOAD_DATA(params[0]), MAP_LOAD_REPR_TYPE(params[0]), params[1]);
         MAP_STORE_RESULT_REPR(rr, resultsl);
+        break;
+    }
+    case BSQPrimitiveImplTag::s_while: {
+        auto stype = invk->binds.at("S");
+
+        auto fn = invk->pcodes.at("f");
+        auto p = invk->pcodes.at("p");
+
+        const BSQInvokeBodyDecl* icall = dynamic_cast<const BSQInvokeBodyDecl*>(BSQInvokeDecl::g_invokes[fn->code]);
+        const BSQInvokeBodyDecl* pcall = dynamic_cast<const BSQInvokeBodyDecl*>(BSQInvokeDecl::g_invokes[p->code]);
+
+        void** tmpl = (void**)GCStack::allocFrame(2 * stype->allocinfo.inlinedatasize);
+        uint8_t* csl = ((uint8_t*)tmpl);
+        uint8_t* rsl = ((uint8_t*)tmpl + stype->allocinfo.inlinedatasize);
+        BSQBool tc = BSQFALSE;
+
+        std::vector<StorageLocationPtr> plparams = {csl};
+        std::transform(p->cargpos.cbegin(), p->cargpos.cend(), std::back_inserter(plparams), [&params](uint32_t pos) {
+            return params[pos];
+        });
+
+        stype->storeValue(csl, params[0]);
+        eethunk.invoke(pcall, plparams, &tc);
+        if(tc == BSQFALSE)
+        {
+            stype->storeValue(resultsl, params[0]);
+        }
+        else
+        {
+            std::vector<StorageLocationPtr> ilparams = {csl};
+            std::transform(fn->cargpos.cbegin(), fn->cargpos.cend(), std::back_inserter(ilparams), [&params](uint32_t pos) {
+                return params[pos];
+            });
+
+            while(tc == BSQTRUE)
+            {
+                eethunk.invoke(icall, ilparams, rsl);
+
+                stype->storeValue(csl, rsl);
+                stype->clearValue(rsl);
+
+                eethunk.invoke(pcall, plparams, &tc);
+            }
+
+            stype->storeValue(resultsl, csl);
+        }
+
+        GCStack::popFrame(2 * stype->allocinfo.inlinedatasize);
         break;
     }
     default: {
