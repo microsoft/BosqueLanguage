@@ -158,31 +158,36 @@ function processResultBlock(emitter: MIREmitter, invid: string, masm: MIRAssembl
     const vtypes = computeVarTypes(b.body, params, masm, "Bool");
 
     const tailvars = [...(lv.get("returnassign") as BlockLiveSet).liveEntry].sort((a, b) => a[0].localeCompare(b[0]));
-    const nparams = tailvars.map((lvn) => new MIRFunctionParameter(lvn[0] !== "$__ir_ret__" ? "$__irret__" : lvn[0], (vtypes.get(lvn[0]) as MIRType).typeID));
+    const nparams = tailvars.map((lvn) => new MIRFunctionParameter(lvn[0] === "$__ir_ret__" ? "$__irret__" : lvn[0], (vtypes.get(lvn[0]) as MIRType).typeID));
 
     const ninvid = generateTargetFunctionName(invid, "returnassign");
 
     const cblocks = [
-        new MIRBasicBlock("entry", [new MIRJump(sinfo_undef, "returnassign")]), 
-        new MIRBasicBlock("returnassign", [
-            new MIRRegisterAssign(sinfo_undef, new MIRRegisterArgument("$__ir_ret__"), new MIRRegisterArgument("$$return"), rtype, undefined),
-            new MIRJump(sinfo_undef, "exit")
-        ]),
+        new MIRBasicBlock("entry", [
+            new MIRRegisterAssign(sinfo_undef, new MIRRegisterArgument("$__irret__"), new MIRRegisterArgument("$__ir_ret__"), (nparams.find((pp) => pp.name === "$__irret__") as MIRFunctionParameter).type, undefined),
+            new MIRJump(sinfo_undef, "returnassign")
+        ]), 
+        b.body.get("returnassign") as MIRBasicBlock,
         new MIRBasicBlock("exit", [])
     ];
 
-    b.body = new Map<string, MIRBasicBlock>();
-    [
+    let fenv = new FunctionalizeEnv(emitter, rtype, ninvid, tailvars.map((lvn) => lvn[1]), "returnassign");
+    const nbb = replaceJumpsWithCalls([...b.body].map((bb) => bb[1]), fenv);
+
+    const rblocks = [
+        ...nbb.map((bb) => [bb.label, bb] as [string, MIRBasicBlock]),
         ...b.body,
         [
             "returnassign",
             new MIRBasicBlock("returnassign", [
-                new MIRInvokeFixedFunction(sinfo_undef, rtype, ninvid, tailvars.map((argp) => argp[0] !== "$__ir_ret__" ? new MIRRegisterArgument("$__irret__") : argp[1]), undefined, new MIRRegisterArgument("__ir_ret__"), undefined),
                 new MIRRegisterAssign(sinfo_undef, new MIRRegisterArgument("$__ir_ret__"), new MIRRegisterArgument("$$return"), rtype, undefined),
                 new MIRJump(sinfo_undef, "exit")
             ])
         ] as [string, MIRBasicBlock]
-    ].forEach((bb) => b.body.set(bb[0], bb[1]));
+    ];
+
+    b.body = new Map<string, MIRBasicBlock>();
+    rblocks.forEach((bb) => b.body.set(bb[0], bb[1]));
 
     return {nname: ninvid, nparams: nparams, nblocks: cblocks};
 }
