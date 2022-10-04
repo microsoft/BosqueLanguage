@@ -155,10 +155,10 @@ function computeBodySplits(jidx: number, bo: MIRBasicBlock[], struct: Map<string
 
 function processResultBlock(emitter: MIREmitter, invid: string, masm: MIRAssembly, b: MIRBody, params: MIRFunctionParameter[], rtype: MIRResolvedTypeKey): NBodyInfo {
     const lv = computeBlockLiveVars(b.body);
-    const vtypes = computeVarTypes(b.body, params, masm, "Bool");
+    const vtypes = computeVarTypes(b.body, params, masm, masm.typeMap.get("Bool") as MIRType);
 
     const tailvars = [...(lv.get("returnassign") as BlockLiveSet).liveEntry].sort((a, b) => a[0].localeCompare(b[0]));
-    const nparams = tailvars.map((lvn) => new MIRFunctionParameter(lvn[0] === "$__ir_ret__" ? "$__irret__" : lvn[0], (vtypes.get(lvn[0]) as MIRType).typeID));
+    const nparams = tailvars.map((lvn) => new MIRFunctionParameter(lvn[0] === "$__ir_ret__" ? "$__irret__" : lvn[0], ((vtypes.get("returnassign") as Map<string, MIRType>).get(lvn[0]) as MIRType).typeID));
 
     const ninvid = generateTargetFunctionName(invid, "returnassign");
 
@@ -196,7 +196,7 @@ function processBody(emitter: MIREmitter, invid: string, masm: MIRAssembly, b: M
     const links = computeBlockLinks(b.body);
     const bo = topologicalOrder(b.body);
     const lv = computeBlockLiveVars(b.body);
-    const vtypes = computeVarTypes(b.body, params, masm, "Bool");
+    const vtypes = computeVarTypes(b.body, params, masm, masm.typeMap.get("Bool") as MIRType);
 
     if(bo.find((bb) => (links.get(bb.label) as FlowLink).preds.size > 1 && bb.label !== "returnassign") === undefined) {
         return undefined;
@@ -207,7 +207,7 @@ function processBody(emitter: MIREmitter, invid: string, masm: MIRAssembly, b: M
     
     let {rblocks, cblocks} = computeBodySplits(jidx, bo, links);
     const tailvars = [...(lv.get(bo[jidx].label) as BlockLiveSet).liveEntry].sort((a, b) => a[0].localeCompare(b[0]));
-    const nparams = tailvars.map((lvn) => new MIRFunctionParameter(lvn[0], (vtypes.get(lvn[0]) as MIRType).typeID));
+    const nparams = tailvars.map((lvn) => new MIRFunctionParameter(lvn[0], ((vtypes.get(bo[jidx].label) as Map<string, MIRType>).get(lvn[0]) as MIRType).typeID));
 
     const ninvid = generateTargetFunctionName(invid, jlabel);
 

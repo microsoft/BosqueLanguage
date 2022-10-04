@@ -7,8 +7,9 @@
 //Some handy helpers for computing IR info
 //
 
+import { assert } from "console";
 import { MIRAssembly, MIRFunctionParameter, MIRType } from "./mir_assembly";
-import { MIRBasicBlock, MIROpTag, MIRJump, MIRJumpCond, MIRJumpNone, MIROp, MIRRegisterArgument, MIRPhi, MIRLoadUnintVariableValue, MIRConvertValue, MIRLoadConst, MIRTupleHasIndex, MIRRecordHasProperty, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadField, MIRTupleProjectToEphemeral, MIRRecordProjectToEphemeral, MIREntityProjectToEphemeral, MIRTupleUpdate, MIRRecordUpdate, MIREntityUpdate, MIRLoadFromEpehmeralList, MIRMultiLoadFromEpehmeralList, MIRSliceEpehmeralList, MIRInvokeFixedFunction, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConstructorRecord, MIRReturnAssignOfCons, MIRReturnAssign, MIRIsTypeOf, MIRPrefixNotOp, MIRBinKeyLess, MIRBinKeyEq, MIRConstructorPrimaryCollectionOneElement, MIRConstructorPrimaryCollectionSingletons, MIRConstructorPrimaryCollectionEmpty, MIREphemeralListExtend, MIRConstructorEphemeralList, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRConstructorRecordFromEphemeralList, MIRResolvedTypeKey, MIRArgGuard, MIRRegisterAssign, MIRInject, MIRGuardedOptionInject, MIRExtract, MIRLogicAction, MIRConstructorEntityDirect } from "./mir_ops";
+import { MIRBasicBlock, MIROpTag, MIRJump, MIRJumpCond, MIRJumpNone, MIROp, MIRRegisterArgument, MIRLoadUnintVariableValue, MIRConvertValue, MIRLoadConst, MIRTupleHasIndex, MIRRecordHasProperty, MIRLoadTupleIndex, MIRLoadTupleIndexSetGuard, MIRLoadRecordProperty, MIRLoadRecordPropertySetGuard, MIRLoadField, MIRTupleProjectToEphemeral, MIRRecordProjectToEphemeral, MIREntityProjectToEphemeral, MIRTupleUpdate, MIRRecordUpdate, MIREntityUpdate, MIRLoadFromEpehmeralList, MIRMultiLoadFromEpehmeralList, MIRSliceEpehmeralList, MIRInvokeFixedFunction, MIRInvokeVirtualFunction, MIRInvokeVirtualOperator, MIRConstructorTuple, MIRConstructorTupleFromEphemeralList, MIRConstructorRecord, MIRReturnAssignOfCons, MIRReturnAssign, MIRIsTypeOf, MIRPrefixNotOp, MIRBinKeyLess, MIRBinKeyEq, MIRConstructorPrimaryCollectionOneElement, MIRConstructorPrimaryCollectionSingletons, MIRConstructorPrimaryCollectionEmpty, MIREphemeralListExtend, MIRConstructorEphemeralList, MIRStructuredAppendTuple, MIRStructuredJoinRecord, MIRConstructorRecordFromEphemeralList, MIRResolvedTypeKey, MIRArgGuard, MIRRegisterAssign, MIRInject, MIRGuardedOptionInject, MIRExtract, MIRLogicAction, MIRConstructorEntityDirect } from "./mir_ops";
 
 type FlowLink = {
     label: string,
@@ -184,11 +185,44 @@ function computeBlockLiveVars(blocks: Map<string, MIRBasicBlock>): Map<string, B
     return liveInfo;
 }
 
-function computeVarTypes(blocks: Map<string, MIRBasicBlock>, params: MIRFunctionParameter[], masm: MIRAssembly, booltype: MIRResolvedTypeKey): Map<string, MIRType> {
-    let vinfo = new Map<string, string>();
-    params.forEach((p) => vinfo.set(p.name, p.type));
+function computeVarTypes(blocks: Map<string, MIRBasicBlock>, params: MIRFunctionParameter[], masm: MIRAssembly, booltype: MIRType): Map<string, Map<string, MIRType>> {
+    let vinfo = new Map<string, Map<string, MIRType>>();
+    let bexit = new Map<string, Map<string, MIRType>>();
 
-    blocks.forEach((bb) => {
+    function tresolve(tt: MIRResolvedTypeKey): MIRType {
+        return masm.typeMap.get(tt) as MIRType;
+    }
+
+    let entrytypes = new Map<string, MIRType>();
+    params.forEach((p) => entrytypes.set(p.name, masm.typeMap.get(p.type) as MIRType));
+    vinfo.set("entry", entrytypes);
+
+    const links = computeBlockLinks(blocks);
+    const liveinfo = computeBlockLiveVars(blocks);
+    const ordered = topologicalOrder(blocks);
+    for(let i = 0; i < ordered.length; ++i) {
+        const bb = ordered[i];
+
+        let ctypes = new Map<string, MIRType>();
+        if(bb.label === "entry") {
+            [...entrytypes].forEach((eti) => ctypes.set(eti[0], eti[1]));
+        }
+        else {
+            [...(liveinfo.get(bb.label) as BlockLiveSet).liveEntry]
+                .map((eti) => eti[0])
+                .forEach((ev) => {
+                    const rtl = [...(links.get(bb.label) as FlowLink).preds].map((pred) => ((bexit.get(pred) as Map<string, MIRType>).get(ev) as MIRType));
+                    assert(rtl.length !== 0 && rtl.every((tt) => rtl.every((ott) => tt.typeID === ott.typeID)), "Should all be same type at join points!");
+
+                    ctypes.set(ev, rtl[0]);
+                });
+
+            let bentrytypes = new Map<string, MIRType>();
+            [...ctypes].forEach((ee) => bentrytypes.set(ee[0], ee[1]));
+                
+            vinfo.set(bb.label, ctypes)
+        }
+
         bb.ops.forEach((op) => {
             switch (op.tag) {
                 case MIROpTag.MIRNop: 
@@ -204,224 +238,224 @@ function computeVarTypes(blocks: Map<string, MIRBasicBlock>, params: MIRFunction
                 }
                 case MIROpTag.MIRLoadUnintVariableValue: {
                     const luv = op as MIRLoadUnintVariableValue;
-                    vinfo.set(luv.trgt.nameID, luv.oftype);
+                    ctypes.set(luv.trgt.nameID, tresolve(luv.oftype));
                     break;
                 }
                 case MIROpTag.MIRConvertValue: {
                     const conv = op as MIRConvertValue;
-                    vinfo.set(conv.trgt.nameID, conv.intotype);
+                    ctypes.set(conv.trgt.nameID, tresolve(conv.intotype));
                     break;
                 }
                 case MIROpTag.MIRInject: {
                     const inj = op as MIRInject;
-                    vinfo.set(inj.trgt.nameID, inj.intotype);
+                    ctypes.set(inj.trgt.nameID, tresolve(inj.intotype));
                     break;
                 }
                 case MIROpTag.MIRGuardedOptionInject: {
                     const inj = op as MIRGuardedOptionInject;
-                    vinfo.set(inj.trgt.nameID, inj.optiontype);
+                    ctypes.set(inj.trgt.nameID, tresolve(inj.optiontype));
                     break;
                 }
                 case MIROpTag.MIRExtract: {
                     const ext = op as MIRExtract;
-                    vinfo.set(ext.trgt.nameID, ext.intotype);
+                    ctypes.set(ext.trgt.nameID, tresolve(ext.intotype));
                     break;
                 }
                 case MIROpTag.MIRLoadConst: {
                     const lc = op as MIRLoadConst;
-                    vinfo.set(lc.trgt.nameID, lc.consttype);
+                    ctypes.set(lc.trgt.nameID, tresolve(lc.consttype));
                     break;
                 }
                 case MIROpTag.MIRTupleHasIndex: {
                     const thi = op as MIRTupleHasIndex;
-                    vinfo.set(thi.trgt.nameID, booltype);
+                    ctypes.set(thi.trgt.nameID, booltype);
                     break;
                 }
                 case MIROpTag.MIRRecordHasProperty: {
                     const rhi = op as MIRRecordHasProperty;
-                    vinfo.set(rhi.trgt.nameID, booltype);
+                    ctypes.set(rhi.trgt.nameID, booltype);
                     break;
                 }
                 case MIROpTag.MIRLoadTupleIndex: {
                     const lti = op as MIRLoadTupleIndex;
-                    vinfo.set(lti.trgt.nameID, lti.resulttype);
+                    ctypes.set(lti.trgt.nameID, tresolve(lti.resulttype));
                     break;
                 }
                 case MIROpTag.MIRLoadTupleIndexSetGuard: {
                     const ltig = op as MIRLoadTupleIndexSetGuard;
-                    vinfo.set(ltig.trgt.nameID, ltig.resulttype);
+                    ctypes.set(ltig.trgt.nameID, tresolve(ltig.resulttype));
                     if(ltig.guard instanceof MIRArgGuard) {
                         if (ltig.guard.greg instanceof MIRRegisterArgument) {
-                            vinfo.set(ltig.guard.greg.nameID, booltype);
+                            ctypes.set(ltig.guard.greg.nameID, booltype);
                         }
                     }
                     break;
                 }
                 case MIROpTag.MIRLoadRecordProperty: {
                     const lrp = op as MIRLoadRecordProperty;
-                    vinfo.set(lrp.trgt.nameID, lrp.resulttype);
+                    ctypes.set(lrp.trgt.nameID, tresolve(lrp.resulttype));
                     break;
                 }
                 case MIROpTag.MIRLoadRecordPropertySetGuard: {
                     const lrpg = op as MIRLoadRecordPropertySetGuard;
-                    vinfo.set(lrpg.trgt.nameID, lrpg.resulttype);
+                    ctypes.set(lrpg.trgt.nameID, tresolve(lrpg.resulttype));
                     if(lrpg.guard instanceof MIRArgGuard) {
                         if (lrpg.guard.greg instanceof MIRRegisterArgument) {
-                            vinfo.set(lrpg.guard.greg.nameID, booltype);
+                            ctypes.set(lrpg.guard.greg.nameID, booltype);
                         }
                     }
                     break;
                 }
                 case MIROpTag.MIRLoadField: {
                     const lmf = op as MIRLoadField;
-                    vinfo.set(lmf.trgt.nameID, lmf.resulttype);
+                    ctypes.set(lmf.trgt.nameID, tresolve(lmf.resulttype));
                     break;
                 }
                 case MIROpTag.MIRTupleProjectToEphemeral: {
                     const pte = op as MIRTupleProjectToEphemeral;
-                    vinfo.set(pte.trgt.nameID, pte.epht);
+                    ctypes.set(pte.trgt.nameID, tresolve(pte.epht));
                     break;
                 }
                 case MIROpTag.MIRRecordProjectToEphemeral: {
                     const pre = op as MIRRecordProjectToEphemeral;
-                    vinfo.set(pre.trgt.nameID, pre.epht);
+                    ctypes.set(pre.trgt.nameID, tresolve(pre.epht));
                     break;
                 }
                 case MIROpTag.MIREntityProjectToEphemeral: {
                     const pee = op as MIREntityProjectToEphemeral;
-                    vinfo.set(pee.trgt.nameID, pee.epht);
+                    ctypes.set(pee.trgt.nameID, tresolve(pee.epht));
                     break;
                 }
                 case MIROpTag.MIRTupleUpdate: {
                     const mi = op as MIRTupleUpdate;
-                    vinfo.set(mi.trgt.nameID, mi.argflowtype);
+                    ctypes.set(mi.trgt.nameID, tresolve(mi.argflowtype));
                     break;
                 }
                 case MIROpTag.MIRRecordUpdate: {
                     const mp = op as MIRRecordUpdate;
-                    vinfo.set(mp.trgt.nameID, mp.argflowtype);
+                    ctypes.set(mp.trgt.nameID, tresolve(mp.argflowtype));
                     break;
                 }
                 case MIROpTag.MIREntityUpdate: {
                     const mf = op as MIREntityUpdate;
-                    vinfo.set(mf.trgt.nameID, mf.argflowtype);
+                    ctypes.set(mf.trgt.nameID, tresolve(mf.argflowtype));
                     break;
                 }
                 case MIROpTag.MIRLoadFromEpehmeralList: {
                     const mle = op as MIRLoadFromEpehmeralList;
-                    vinfo.set(mle.trgt.nameID, mle.resulttype);
+                    ctypes.set(mle.trgt.nameID, tresolve(mle.resulttype));
                     break;
                 }
                 case MIROpTag.MIRMultiLoadFromEpehmeralList: {
                     const mle = op as MIRMultiLoadFromEpehmeralList;
                     mle.trgts.forEach((trgt) => {
-                        vinfo.set(trgt.into.nameID, trgt.oftype);
+                        ctypes.set(trgt.into.nameID, tresolve(trgt.oftype));
                     });
                     break;
                 }
                 case MIROpTag.MIRSliceEpehmeralList: {
                     const mle = op as MIRSliceEpehmeralList;
-                    vinfo.set(mle.trgt.nameID, mle.sltype);
+                    ctypes.set(mle.trgt.nameID, tresolve(mle.sltype));
                     break;
                 }
                 case MIROpTag.MIRInvokeFixedFunction: {
                     const invk = op as MIRInvokeFixedFunction;
-                    vinfo.set(invk.trgt.nameID, invk.resultType);
+                    ctypes.set(invk.trgt.nameID, tresolve(invk.resultType));
                     break;
                 }
                 case MIROpTag.MIRInvokeVirtualFunction: {
                     const invk = op as MIRInvokeVirtualFunction;
-                    vinfo.set(invk.trgt.nameID, invk.resultType);
+                    ctypes.set(invk.trgt.nameID, tresolve(invk.resultType));
                     break;
                 }
                 case MIROpTag.MIRInvokeVirtualOperator: {
                     const invk = op as MIRInvokeVirtualOperator;
-                    vinfo.set(invk.trgt.nameID, invk.resultType);
+                    ctypes.set(invk.trgt.nameID, tresolve(invk.resultType));
                     break;
                 }
                 case MIROpTag.MIRConstructorTuple: {
                     const tc = op as MIRConstructorTuple;
-                    vinfo.set(tc.trgt.nameID, tc.resultTupleType);
+                    ctypes.set(tc.trgt.nameID, tresolve(tc.resultTupleType));
                     break;
                 }
                 case MIROpTag.MIRConstructorTupleFromEphemeralList: {
                     const tc = op as MIRConstructorTupleFromEphemeralList;
-                    vinfo.set(tc.trgt.nameID, tc.resultTupleType);
+                    ctypes.set(tc.trgt.nameID, tresolve(tc.resultTupleType));
                     break;
                 }
                 case MIROpTag.MIRConstructorRecord: {
                     const tc = op as MIRConstructorRecord;
-                    vinfo.set(tc.trgt.nameID, tc.resultRecordType);
+                    ctypes.set(tc.trgt.nameID, tresolve(tc.resultRecordType));
                     break;
                 }
                 case MIROpTag.MIRConstructorRecordFromEphemeralList: {
                     const tc = op as MIRConstructorRecordFromEphemeralList;
-                    vinfo.set(tc.trgt.nameID, tc.resultRecordType);
+                    ctypes.set(tc.trgt.nameID, tresolve(tc.resultRecordType));
                     break;
                 }
                 case MIROpTag.MIRStructuredAppendTuple: {
                     const at = op as MIRStructuredAppendTuple;
-                    vinfo.set(at.trgt.nameID, at.resultTupleType);
+                    ctypes.set(at.trgt.nameID, tresolve(at.resultTupleType));
                     break;
                 }
                 case MIROpTag.MIRStructuredJoinRecord: {
                     const sj = op as MIRStructuredJoinRecord;
-                    vinfo.set(sj.trgt.nameID, sj.resultRecordType);
+                    ctypes.set(sj.trgt.nameID, tresolve(sj.resultRecordType));
                     break;
                 }
                 case MIROpTag.MIRConstructorEphemeralList: {
                     const tc = op as MIRConstructorEphemeralList;
-                    vinfo.set(tc.trgt.nameID, tc.resultEphemeralListType);
+                    ctypes.set(tc.trgt.nameID, tresolve(tc.resultEphemeralListType));
                     break;
                 }
                 case MIROpTag.MIRConstructorEntityDirect: {
                     const tc = op as MIRConstructorEntityDirect;
-                    vinfo.set(tc.trgt.nameID, tc.entityType);
+                    ctypes.set(tc.trgt.nameID, tresolve(tc.entityType));
                     break;
                 }
                 case MIROpTag.MIREphemeralListExtend: {
                     const pse = op as MIREphemeralListExtend;
-                    vinfo.set(pse.trgt.nameID, pse.resultType);
+                    ctypes.set(pse.trgt.nameID, tresolve(pse.resultType));
                     break;
                 }
                 case MIROpTag.MIRConstructorPrimaryCollectionEmpty: {
                     const cc = op as MIRConstructorPrimaryCollectionEmpty;
-                    vinfo.set(cc.trgt.nameID, cc.tkey);
+                    ctypes.set(cc.trgt.nameID, tresolve(cc.tkey));
                     break;
                 }
                 case MIROpTag.MIRConstructorPrimaryCollectionOneElement: {
                     const cc = op as MIRConstructorPrimaryCollectionOneElement;
-                    vinfo.set(cc.trgt.nameID, cc.tkey);
+                    ctypes.set(cc.trgt.nameID, tresolve(cc.tkey));
                     break;
                 }
                 case MIROpTag.MIRConstructorPrimaryCollectionSingletons: {
                     const cc = op as MIRConstructorPrimaryCollectionSingletons;
-                    vinfo.set(cc.trgt.nameID, cc.tkey);
+                    ctypes.set(cc.trgt.nameID, tresolve(cc.tkey));
                     break;
                 }
                 case MIROpTag.MIRBinKeyEq: {
                     const beq = op as MIRBinKeyEq;
-                    vinfo.set(beq.trgt.nameID, booltype);
+                    ctypes.set(beq.trgt.nameID, booltype);
                     break;
                 }
                 case MIROpTag.MIRBinKeyLess: {
                     const bl = op as MIRBinKeyLess;
-                    vinfo.set(bl.trgt.nameID, booltype);
+                    ctypes.set(bl.trgt.nameID, booltype);
                     break;
                 }
                 case MIROpTag.MIRPrefixNotOp: {
                     const pfx = op as MIRPrefixNotOp;
-                    vinfo.set(pfx.trgt.nameID, booltype);
+                    ctypes.set(pfx.trgt.nameID, booltype);
                     break;
                 }
                 case MIROpTag.MIRLogicAction: {
                     const it = op as MIRLogicAction;
-                    vinfo.set(it.trgt.nameID, booltype);
+                    ctypes.set(it.trgt.nameID, booltype);
                     break;
                 }
                 case MIROpTag.MIRIsTypeOf: {
                     const it = op as MIRIsTypeOf;
-                    vinfo.set(it.trgt.nameID, booltype);
+                    ctypes.set(it.trgt.nameID, booltype);
                     break;
                 }
                 case MIROpTag.MIRJump: 
@@ -431,32 +465,30 @@ function computeVarTypes(blocks: Map<string, MIRBasicBlock>, params: MIRFunction
                 }
                 case MIROpTag.MIRRegisterAssign: {
                     const regop = op as MIRRegisterAssign;
-                    vinfo.set(regop.trgt.nameID, regop.layouttype);
+                    ctypes.set(regop.trgt.nameID, tresolve(regop.layouttype));
                     break;
                 }
                 case MIROpTag.MIRReturnAssign: {
                     const ra = op as MIRReturnAssign;
-                    vinfo.set(ra.name.nameID, ra.oftype);
+                    ctypes.set(ra.name.nameID, tresolve(ra.oftype));
                     break;
                 }
                 case MIROpTag.MIRReturnAssignOfCons: {
                     const ra = op as MIRReturnAssignOfCons;
-                    vinfo.set(ra.name.nameID, ra.oftype);
+                    ctypes.set(ra.name.nameID, tresolve(ra.oftype));
                     break;
                 }
                 default: {
-                    const po = op as MIRPhi;
-                    vinfo.set(po.trgt.nameID, po.layouttype);
+                    assert(false, "Shouldn't be phi nodes yet!!!");
                     break;
                 }
             }
         });
-    });
 
-    let vresinfo = new Map<string, MIRType>();
-    vinfo.forEach((v, k) => vresinfo.set(k, masm.typeMap.get(v) as MIRType));
+        bexit.set(bb.label, ctypes);
+    }
 
-    return vresinfo;
+    return vinfo;
 }
 
 export { FlowLink, BlockLiveSet, computeDominators, topologicalOrder, computeBlockLinks, computeBlockLiveVars, computeVarTypes };
