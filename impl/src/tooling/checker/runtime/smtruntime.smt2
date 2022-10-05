@@ -656,6 +656,8 @@
   )
 )
 
+(declare-fun @@CreateSortedSeq (Int Int) (Seq Int))
+
 (declare-fun Real@Pow@UF (Real Real) Real)
 
 (define-fun Float@Pow ((x BFloat) (y BFloat)) $Result_BFloat
