@@ -335,7 +335,7 @@ class ICPPBodyEmitter {
         });
 
         const rt = this.getStackInfoForTargetVar("$$return", this.typegen.getICPPLayoutInfo(this.typegen.getMIRType(geninfo.resulttype.typeID)));
-        ops.push(ICPPOpEmitter.genInvokeFixedFunctionOp(sinfo, "[GENERATED UPDATE ENTITY]", rt, geninfo.resulttype.typeID, edecl.consfunc, pargs, -1, ICPPOpEmitter.genNoStatmentGuard()));
+        ops.push(ICPPOpEmitter.genInvokeFixedFunctionOp(sinfo, "[GENERATED UPDATE ENTITY]", rt, geninfo.resulttype.typeID, edecl.conswithallfields, pargs, -1, ICPPOpEmitter.genNoStatmentGuard()));
         ops.push(ICPPOpEmitter.genJumpOp(sinfo, "[GENERATED UPDATE ENTITY]", 1, "exit")); //dummy final jump block
         
         return new ICPPInvokeBodyDecl(geninfo.inv, geninfo.inv, "[GENERATED]", sinfo, sinfo, false, params, paraminfo, geninfo.resulttype.typeID, this.getStackInfoForArgVar("$$return"), this.stackSize, 0, ops, 0);
@@ -959,6 +959,7 @@ class ICPPBodyEmitter {
         }
         else {
             const entity = this.assembly.entityDecls.get(op.argflowtype) as MIRObjectEntityTypeDecl;
+
             if(!entity.hasconsinvariants) {
                 const icpplayout = this.typegen.getICPPLayoutInfo(this.typegen.getMIRType(op.argflowtype)) as ICPPEntityLayoutInfo;
                 const updates = op.updates.map((upd) => {
