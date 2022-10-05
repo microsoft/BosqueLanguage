@@ -3485,9 +3485,9 @@ void ICPPParseJSON::completeParseEntity(const APIModule* apimodule, const IType*
         bytes = ootype->allocinfo.heapsize;
     }
 
-    if(etype->consfunc.has_value())
+    if(etype->consfuncopt.has_value())
     {
-        auto consid = MarshalEnvironment::g_invokeToIdMap.at(etype->consfunc.value());
+        auto consid = MarshalEnvironment::g_invokeToIdMap.at(etype->consfuncopt.value());
         auto conscall = dynamic_cast<const BSQInvokeBodyDecl*>(BSQInvokeDecl::g_invokes[consid]);
 
         std::string pfile = "[INPUT PARSE]";
@@ -3495,22 +3495,11 @@ void ICPPParseJSON::completeParseEntity(const APIModule* apimodule, const IType*
     }
     else
     {
-        void* trgt = nullptr;
-        uint64_t bytes = 0;
-        if(ootype->tkind == BSQTypeLayoutKind::Struct)
-        {
-            trgt = (void*)value;
-            bytes = ootype->allocinfo.inlinedatasize;
-        }
-        else
-        {
-            trgt = Allocator::GlobalAllocator.allocateDynamic(ootype);
-            bytes = ootype->allocinfo.heapsize;
+        auto consid = MarshalEnvironment::g_invokeToIdMap.at(etype->consfuncall);
+        auto conscall = dynamic_cast<const BSQInvokeBodyDecl*>(BSQInvokeDecl::g_invokes[consid]);
 
-            SLPTR_STORE_CONTENTS_AS_GENERIC_HEAPOBJ(value, trgt);
-        }
-
-        GC_MEM_COPY(trgt, oomem, bytes);
+        std::string pfile = "[INPUT PARSE]";
+        ctx.cinvoke(conscall, cargs, nullptr, value);
     }
 
     xfree(mask);

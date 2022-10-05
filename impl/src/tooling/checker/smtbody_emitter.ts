@@ -656,17 +656,17 @@ class SMTBodyEmitter {
             }
             
             let action: SMTExp = new SMTConst("[NOT SET]"); 
-            if (this.isSafeConstructorInvoke(mtt) && geninfo.allsafe) {
+            if (this.isSafeDirectConstructorInvoke(mtt) && geninfo.allsafe) {
                 const ccall = new SMTCallSimple(this.typegen.getSMTConstructorName(mtt).cons, cargs);
                 action = this.typegen.coerce(ccall, mtt, geninfo.resulttype);
             }
             else {
-                if(this.isSafeConstructorInvoke(mtt)) {
+                if(this.isSafeDirectConstructorInvoke(mtt)) {
                     const ccall = new SMTCallSimple(this.typegen.getSMTConstructorName(mtt).cons, cargs);
                     action = this.typegen.generateResultTypeConstructorSuccess(geninfo.resulttype, this.typegen.coerce(ccall, mtt, geninfo.resulttype));
                 }
                 else {
-                    const consfunc = (this.assembly.entityDecls.get(tt.tkey) as MIRObjectEntityTypeDecl).consfunc;
+                    const consfunc = (this.assembly.entityDecls.get(tt.tkey) as MIRObjectEntityTypeDecl).conswithallfields;
                     const ccall = new SMTCallGeneral(this.lookupFunctionNameDirect(consfunc as MIRInvokeKey), cargs);
                     if(mtt.typeID === geninfo.resulttype.typeID) {
                         action = ccall;
@@ -930,26 +930,26 @@ class SMTBodyEmitter {
         });
     }
 
-    isSafeConstructorInvoke(oftype: MIRType): boolean {
+    isSafeDirectConstructorInvoke(oftype: MIRType): boolean {
         const edecl = this.assembly.entityDecls.get(oftype.typeID) as MIREntityTypeDecl;
         if(edecl instanceof MIRConstructableEntityTypeDecl) {
             const cname = edecl.usingcons as MIRInvokeKey;
             return this.isSafeInvoke(cname);
         }
         else {
-            const cname = (edecl as MIRObjectEntityTypeDecl).consfunc as MIRInvokeKey;
+            const cname = (edecl as MIRObjectEntityTypeDecl).conswithallfields as MIRInvokeKey;
             return this.isSafeInvoke(cname);
         }
     }
 
-    isSafeVirtualConstructorInvoke(oftypes: MIRType): boolean {
+    isSafeDirectVirtualConstructorInvoke(oftypes: MIRType): boolean {
         return [...this.assembly.entityDecls]
         .filter((tt) => {
             const mtt = this.typegen.getMIRType(tt[1].tkey);
             return this.typegen.isUniqueEntityType(mtt) && this.assembly.subtypeOf(mtt, oftypes);
         })
         .every((edcl) => {
-            return this.isSafeConstructorInvoke(this.typegen.getMIRType(edcl[0]));
+            return this.isSafeDirectConstructorInvoke(this.typegen.getMIRType(edcl[0]));
         });
     }
 
@@ -1485,7 +1485,7 @@ class SMTBodyEmitter {
         const resulttype = this.typegen.getMIRType(op.argflowtype);
 
         if (op.isvirtual) {
-            const allsafe = this.isSafeVirtualConstructorInvoke(argflowtype);
+            const allsafe = this.isSafeDirectVirtualConstructorInvoke(argflowtype);
             const icall = this.generateUpdateVirtualEntityInvName(this.typegen.getMIRType(op.argflowtype), op.updates.map((upd) => [upd[0], upd[2]]), resulttype);
 
             if (this.requiredUpdateVirtualEntity.findIndex((vv) => vv.inv === icall) === -1) {
@@ -1504,7 +1504,7 @@ class SMTBodyEmitter {
         else {
             const ttype = argflowtype.options[0] as MIREntityType;
             const ttdecl = this.assembly.entityDecls.get(ttype.typeID) as MIRObjectEntityTypeDecl;
-            const consfunc = ttdecl.consfunc;
+            const consfunc = ttdecl.conswithallfields;
             const consfields = ttdecl.consfuncfields.map((ccf) => this.assembly.fieldDecls.get(ccf.cfkey) as MIRFieldDecl);
 
             const argpp = this.typegen.coerce(this.argToSMT(op.arg), arglayouttype, argflowtype);
@@ -1519,7 +1519,7 @@ class SMTBodyEmitter {
                 }
             }
 
-            if (this.isSafeConstructorInvoke(argflowtype)) {
+            if (this.isSafeDirectConstructorInvoke(argflowtype)) {
                 const ccall = new SMTCallSimple(this.typegen.getSMTConstructorName(argflowtype).cons, cargs);
                 return new SMTLet(this.varToSMTName(op.trgt).vname, ccall, continuation);
             }

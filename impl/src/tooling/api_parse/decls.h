@@ -1960,9 +1960,10 @@ public:
     const std::vector<std::pair<std::string, bool>> ttypes;
 
     const std::optional<std::string> validatefunc; //key
-    const std::optional<std::string> consfunc; //key
+    const std::optional<std::string> consfuncopt; //key
+    std::string consfuncall; //key
 
-    EntityType(std::string name, std::vector<std::pair<std::string, std::string>> consfields, std::vector<std::pair<std::string, bool>> ttypes, std::optional<std::string> validatefunc, std::optional<std::string> consfunc) : IGroundedType(TypeTag::EntityTag, name), consfields(consfields), ttypes(ttypes), validatefunc(validatefunc), consfunc(consfunc) {;}
+    EntityType(std::string name, std::vector<std::pair<std::string, std::string>> consfields, std::vector<std::pair<std::string, bool>> ttypes, std::optional<std::string> validatefunc, std::optional<std::string> consfuncopt, std::string consfuncall) : IGroundedType(TypeTag::EntityTag, name), consfields(consfields), ttypes(ttypes), validatefunc(validatefunc), consfuncopt(consfuncopt), consfuncall(consfuncall) {;}
     virtual ~EntityType() {;}
 
     static EntityType* jparse(json j)
@@ -1982,9 +1983,10 @@ public:
         });
 
         auto validatefunc = (j["validatefunc"] != nullptr ? std::make_optional(j["validatefunc"].get<std::string>()) : std::nullopt);
-        auto consfunc = (j["consfunc"] != nullptr ? std::make_optional(j["consfunc"].get<std::string>()) : std::nullopt);
+        auto consfuncopt = (j["consfuncopt"] != nullptr ? std::make_optional(j["consfuncopt"].get<std::string>()) : std::nullopt);
+        auto consfuncall = j["consfuncall"].get<std::string>();
 
-        return new EntityType(name, consfields, ttypes, validatefunc, consfunc);
+        return new EntityType(name, consfields, ttypes, validatefunc, consfuncopt, consfuncall);
     }
 
     virtual json jfuzz(const APIModule* apimodule, RandGenerator& rnd) const override final

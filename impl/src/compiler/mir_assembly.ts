@@ -345,29 +345,32 @@ abstract class MIREntityTypeDecl extends MIROOTypeDecl {
 class MIRObjectEntityTypeDecl extends MIREntityTypeDecl {
     readonly hasconsinvariants: boolean;
     readonly validatefunc: MIRInvokeKey | undefined;
-    readonly consfunc: MIRInvokeKey;
+    readonly conswithoptfields: MIRInvokeKey | undefined;
+    readonly conswithallfields: MIRInvokeKey;
+
     readonly consfuncfields: {cfkey: MIRFieldKey, isoptional: boolean}[];
 
     readonly fields: MIRFieldDecl[];
     readonly vcallMap: Map<MIRVirtualMethodKey, MIRInvokeKey> = new Map<string, MIRInvokeKey>();
 
-    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], hasconsinvariants: boolean, validatefunc: MIRInvokeKey | undefined, consfunc: MIRInvokeKey, consfuncfields: {cfkey: MIRFieldKey, isoptional: boolean}[], fields: MIRFieldDecl[]) {
+    constructor(srcInfo: SourceInfo, srcFile: string, tkey: MIRResolvedTypeKey, attributes: string[], ns: string, name: string, terms: Map<string, MIRType>, provides: MIRResolvedTypeKey[], hasconsinvariants: boolean, validatefunc: MIRInvokeKey | undefined, conswithoptfields: MIRInvokeKey | undefined, conswithallfields: MIRInvokeKey, consfuncfields: {cfkey: MIRFieldKey, isoptional: boolean}[], fields: MIRFieldDecl[]) {
         super(srcInfo, srcFile, tkey, attributes, ns, name, terms, provides);
 
         this.hasconsinvariants = hasconsinvariants;
         this.validatefunc = validatefunc;
-        this.consfunc = consfunc;
+        this.conswithoptfields = conswithoptfields;
+        this.conswithallfields = conswithallfields;
 
         this.consfuncfields = consfuncfields;
         this.fields = fields;
     }
 
     jemit(): object {
-        return { tag: "std", ...this.jemitbase(), hasconsinvariants: this.hasconsinvariants, validatefunc: this.validatefunc, consfunc: this.consfunc, consfuncfields: this.consfuncfields, fields: this.fields.map((f) => f.jemit()), vcallMap: [...this.vcallMap] };
+        return { tag: "std", ...this.jemitbase(), hasconsinvariants: this.hasconsinvariants, validatefunc: this.validatefunc, conswithoptfields: this.conswithoptfields, conswithallfields: this.conswithallfields, consfuncfields: this.consfuncfields, fields: this.fields.map((f) => f.jemit()), vcallMap: [...this.vcallMap] };
     }
 
     static jparse(jobj: any): MIRConceptTypeDecl {
-        let entity = new MIRObjectEntityTypeDecl(...MIROOTypeDecl.jparsebase(jobj), jobj.hasconsinvariants, jobj.validatefunc || undefined, jobj.consfunc, jobj.consfuncfields, jobj.fields.map((jf: any) => MIRFieldDecl.jparse(jf)));
+        let entity = new MIRObjectEntityTypeDecl(...MIROOTypeDecl.jparsebase(jobj), jobj.hasconsinvariants, jobj.validatefunc || undefined, jobj.conswithoptfields, jobj.conswithallfields, jobj.consfuncfields, jobj.fields.map((jf: any) => MIRFieldDecl.jparse(jf)));
         
         jobj.vcallMap.forEach((vc: any) => entity.vcallMap.set(vc[0], vc[1]));
         return entity;
@@ -1225,7 +1228,7 @@ class MIRAssembly {
                 ttypes.push({declaredType: mirff.declaredType, isOptional: ff.isoptional});
             }
 
-            return {tag: APIEmitTypeTag.EntityTag, name: tt.typeID, consfields: consfields, ttypes: ttypes, validatefunc: oentity.validatefunc || null, consfunc: oentity.consfunc || null};
+            return {tag: APIEmitTypeTag.EntityTag, name: tt.typeID, consfields: consfields, ttypes: ttypes, validatefunc: oentity.validatefunc || null, consfuncopt: oentity.conswithoptfields || null, consfuncall: oentity.conswithallfields };
         }
     }
 
