@@ -293,7 +293,7 @@ class SMTEmitter {
         const optidx = tdecl.consfuncfields.findIndex((param) => param.isoptional);
         let cvalidate: SMTExp = new SMTConst("true");
         let ccons: SMTExp = new SMTConst("[UNDEF]");
-        if (optidx === -1) {
+        if (optidx === -1 || this.vopts.ActionMode !== SymbolicActionMode.EvaluateSymbolic) {
             if(tdecl.validatefunc !== undefined) {
                 if((this.callsafety.get(tdecl.validatefunc) as {safe: boolean, trgt: boolean}).safe) {
                     cvalidate = new SMTCallGeneral(this.temitter.lookupFunctionMangledName(tdecl.validatefunc as MIRInvokeKey), ctors.map((arg) => arg.access));
@@ -303,25 +303,18 @@ class SMTEmitter {
                 }
             }
 
-            if((this.callsafety.get(tdecl.consfunc) as {safe: boolean, trgt: boolean}).safe) {
-                ccons = this.temitter.generateResultTypeConstructorSuccess(tt, new SMTCallGeneral(this.temitter.lookupFunctionMangledName(tdecl.consfunc as MIRInvokeKey), ctors.map((arg) => arg.access)));
+            if((this.callsafety.get(tdecl.conswithallfields) as {safe: boolean, trgt: boolean}).safe) {
+                ccons = this.temitter.generateResultTypeConstructorSuccess(tt, new SMTCallGeneral(this.temitter.lookupFunctionMangledName(tdecl.conswithallfields as MIRInvokeKey), ctors.map((arg) => arg.access)));
             }
             else {
-                ccons = new SMTCallGeneral(this.temitter.lookupFunctionMangledName(tdecl.consfunc as MIRInvokeKey), ctors.map((arg) => arg.access));
+                ccons = new SMTCallGeneral(this.temitter.lookupFunctionMangledName(tdecl.conswithallfields as MIRInvokeKey), ctors.map((arg) => arg.access));
             }
         }
         else {
             const mask = new SMTMaskConstruct("InputOutputMask");
-            if (this.vopts.ActionMode === SymbolicActionMode.EvaluateSymbolic) {
-                for(let ii = optidx; ii < tdecl.consfuncfields.length; ++ii) {
-                    const idiff = ii - optidx;
-                    mask.entries.push(new SMTCallSimple("BBool@UFCons_API", [this.temitter.generateHavocConstructorPathExtend(maskpath, new SMTVar(idiff.toString()))]));
-                }
-            }
-            else {
-                for(let ii = optidx; ii < tdecl.consfuncfields.length; ++ii) {
-                    mask.entries.push(new SMTConst("true"));
-                }
+            for(let ii = optidx; ii < tdecl.consfuncfields.length; ++ii) {
+                const idiff = ii - optidx;
+                mask.entries.push(new SMTCallSimple("BBool@UFCons_API", [this.temitter.generateHavocConstructorPathExtend(maskpath, new SMTVar(idiff.toString()))]));
             }
 
             if(tdecl.validatefunc !== undefined) {
@@ -333,11 +326,11 @@ class SMTEmitter {
                 }
             }
 
-            if((this.callsafety.get(tdecl.consfunc) as {safe: boolean, trgt: boolean}).safe) {
-                ccons = this.temitter.generateResultTypeConstructorSuccess(tt, new SMTCallGeneralWOptMask(this.temitter.lookupFunctionMangledName(tdecl.consfunc as MIRInvokeKey), ctors.map((arg) => arg.access), mask));
+            if((this.callsafety.get(tdecl.conswithoptfields as MIRInvokeKey) as {safe: boolean, trgt: boolean}).safe) {
+                ccons = this.temitter.generateResultTypeConstructorSuccess(tt, new SMTCallGeneralWOptMask(this.temitter.lookupFunctionMangledName(tdecl.conswithoptfields as MIRInvokeKey), ctors.map((arg) => arg.access), mask));
             }
             else {
-                ccons = new SMTCallGeneralWOptMask(this.temitter.lookupFunctionMangledName(tdecl.consfunc as MIRInvokeKey), ctors.map((arg) => arg.access), mask);
+                ccons = new SMTCallGeneralWOptMask(this.temitter.lookupFunctionMangledName(tdecl.conswithoptfields as MIRInvokeKey), ctors.map((arg) => arg.access), mask);
             }
         }
         

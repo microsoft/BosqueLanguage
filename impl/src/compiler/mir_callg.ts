@@ -57,8 +57,10 @@ function computeCalleesInBlocks(blocks: Map<string, MIRBasicBlock>, invokeNode: 
                     const rcvrtype = assembly.typeMap.get((op as MIREntityUpdate).argflowtype) as MIRType;
                     const trgts: MIRInvokeKey[] = [];
                     assembly.entityDecls.forEach((edcl) => {
+                        const eedcl = edcl as MIRObjectEntityTypeDecl;
+
                         if(assembly.subtypeOf(assembly.typeMap.get(edcl.tkey) as MIRType, rcvrtype)) {
-                            trgts.push(`__i__${edcl.tkey}::@@constructor`);
+                            trgts.push(eedcl.conswithallfields);
                         }
                     });
                     trgts.forEach((trgt) => invokeNode.callees.add(trgt));
@@ -145,8 +147,13 @@ function constructCallGraphInfo(entryPoints: MIRInvokeKey[], assembly: MIRAssemb
                     topoVisit(invokes.get(ee.validatefunc) as CallGNode, [], tordered, invokes);
                 }
 
-                roots.push(invokes.get(ee.consfunc as MIRInvokeKey) as CallGNode);
-                topoVisit(invokes.get(ee.consfunc as MIRInvokeKey) as CallGNode, [], tordered, invokes);
+                if(ee.conswithoptfields !== undefined) {
+                    roots.push(invokes.get(ee.conswithoptfields as MIRInvokeKey) as CallGNode);
+                    topoVisit(invokes.get(ee.conswithoptfields as MIRInvokeKey) as CallGNode, [], tordered, invokes);
+                }
+
+                roots.push(invokes.get(ee.conswithallfields as MIRInvokeKey) as CallGNode);
+                topoVisit(invokes.get(ee.conswithallfields as MIRInvokeKey) as CallGNode, [], tordered, invokes);
             }
             else if (ee instanceof MIRConstructableEntityTypeDecl) {
                 if(ee.validatefunc !== undefined) {
