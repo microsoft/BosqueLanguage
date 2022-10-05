@@ -153,12 +153,50 @@ function computeBodySplits(jidx: number, bo: MIRBasicBlock[], struct: Map<string
     return { rblocks: rblocks, cblocks: continuationblocks.slice(1) };
 }
 
-function processBody(emitter: MIREmitter, invid: string, masm: MIRAssembly, b: MIRBody, params: MIRFunctionParameter[]): NBodyInfo | undefined {
+function processResultBlock(emitter: MIREmitter, invid: string, masm: MIRAssembly, b: MIRBody, params: MIRFunctionParameter[], rtype: MIRResolvedTypeKey): NBodyInfo {
+    const lv = computeBlockLiveVars(b.body);
+    const vtypes = computeVarTypes(b.body, params, masm, masm.typeMap.get("Bool") as MIRType);
+
+    const tailvars = [...(lv.get("returnassign") as BlockLiveSet).liveEntry].sort((a, b) => a[0].localeCompare(b[0]));
+    const nparams = tailvars.map((lvn) => new MIRFunctionParameter(lvn[0] === "$__ir_ret__" ? "$__irret__" : lvn[0], ((vtypes.get("returnassign") as Map<string, MIRType>).get(lvn[0]) as MIRType).typeID));
+
+    const ninvid = generateTargetFunctionName(invid, "returnassign");
+
+    const cblocks = [
+        new MIRBasicBlock("entry", [
+            new MIRRegisterAssign(sinfo_undef, new MIRRegisterArgument("$__irret__"), new MIRRegisterArgument("$__ir_ret__"), (nparams.find((pp) => pp.name === "$__irret__") as MIRFunctionParameter).type, undefined),
+            new MIRJump(sinfo_undef, "returnassign")
+        ]), 
+        b.body.get("returnassign") as MIRBasicBlock,
+        new MIRBasicBlock("exit", [])
+    ];
+
+    let fenv = new FunctionalizeEnv(emitter, rtype, ninvid, tailvars.map((lvn) => lvn[1]), "returnassign");
+    const nbb = replaceJumpsWithCalls([...b.body].map((bb) => bb[1]), fenv);
+
+    const rblocks = [
+        ...nbb.map((bb) => [bb.label, bb] as [string, MIRBasicBlock]),
+        ...b.body,
+        [
+            "returnassign",
+            new MIRBasicBlock("returnassign", [
+                new MIRRegisterAssign(sinfo_undef, new MIRRegisterArgument("$__ir_ret__"), new MIRRegisterArgument("$$return"), rtype, undefined),
+                new MIRJump(sinfo_undef, "exit")
+            ])
+        ] as [string, MIRBasicBlock]
+    ];
+
+    b.body = new Map<string, MIRBasicBlock>();
+    rblocks.forEach((bb) => b.body.set(bb[0], bb[1]));
+
+    return {nname: ninvid, nparams: nparams, nblocks: cblocks};
+}
+
+function processBody(emitter: MIREmitter, invid: string, masm: MIRAssembly, b: MIRBody, params: MIRFunctionParameter[], rtype: MIRResolvedTypeKey): NBodyInfo | undefined {
     const links = computeBlockLinks(b.body);
     const bo = topologicalOrder(b.body);
     const lv = computeBlockLiveVars(b.body);
-    const vtypes = computeVarTypes(b.body, params, masm, "Bool");
-    const rtype = vtypes.get("$__ir_ret__") as MIRType;
+    const vtypes = computeVarTypes(b.body, params, masm, masm.typeMap.get("Bool") as MIRType);
 
     if(bo.find((bb) => (links.get(bb.label) as FlowLink).preds.size > 1 && bb.label !== "returnassign") === undefined) {
         return undefined;
@@ -169,18 +207,18 @@ function processBody(emitter: MIREmitter, invid: string, masm: MIRAssembly, b: M
     
     let {rblocks, cblocks} = computeBodySplits(jidx, bo, links);
     const tailvars = [...(lv.get(bo[jidx].label) as BlockLiveSet).liveEntry].sort((a, b) => a[0].localeCompare(b[0]));
-    const nparams = tailvars.map((lvn) => new MIRFunctionParameter(lvn[0], (vtypes.get(lvn[0]) as MIRType).typeID));
+    const nparams = tailvars.map((lvn) => new MIRFunctionParameter(lvn[0], ((vtypes.get(bo[jidx].label) as Map<string, MIRType>).get(lvn[0]) as MIRType).typeID));
 
     const ninvid = generateTargetFunctionName(invid, jlabel);
 
-    let fenv = new FunctionalizeEnv(emitter, rtype.typeID, ninvid, tailvars.map((lvn) => lvn[1]), jlabel);
+    let fenv = new FunctionalizeEnv(emitter, rtype, ninvid, tailvars.map((lvn) => lvn[1]), jlabel);
     const nbb = replaceJumpsWithCalls(rblocks, fenv);
 
     cblocks = [
         new MIRBasicBlock("entry", [...bo[jidx].ops]), 
         ...cblocks,
         new MIRBasicBlock("returnassign", [
-            new MIRRegisterAssign(sinfo_undef, new MIRRegisterArgument("$__ir_ret__"), new MIRRegisterArgument("$$return"), rtype.typeID, undefined),
+            new MIRRegisterAssign(sinfo_undef, new MIRRegisterArgument("$__ir_ret__"), new MIRRegisterArgument("$$return"), rtype, undefined),
             new MIRJump(sinfo_undef, "exit")
         ]),
         new MIRBasicBlock("exit", [])
@@ -193,25 +231,40 @@ function processBody(emitter: MIREmitter, invid: string, masm: MIRAssembly, b: M
 }
 
 function processInvoke(emitter: MIREmitter, inv: MIRInvokeBodyDecl, masm: MIRAssembly): MIRInvokeBodyDecl[] {
-    const f1 = processBody(emitter, inv.ikey, masm, inv.body, inv.params);
-    if(f1 === undefined) {
+    const links = computeBlockLinks(inv.body.body);
+    const bo = topologicalOrder(inv.body.body);
+    
+    if(bo.find((bb) => (links.get(bb.label) as FlowLink).preds.size > 1 && bb.label !== "returnassign") === undefined) {
         return [];
     }
 
     let rbl: MIRInvokeBodyDecl[] = [];
-    let wl = [{ nbi: f1, post: inv.postconditions }];
-    while (wl.length !== 0) {
-        const item = wl.shift() as { nbi: NBodyInfo, post: MIRInvokeKey[] | undefined };
-        const bproc = item.nbi;
+    const rrblock = inv.body.body.get("returnassign") as MIRBasicBlock;
+    if(rrblock.ops.length > 2) {
+        const ccproc = processResultBlock(emitter, inv.ikey, masm, inv.body, inv.params, inv.resultType);
 
         const bmap = new Map<string, MIRBasicBlock>();
-        bproc.nblocks.map((bb) => bmap.set(bb.label, bb));
-        const ninv = new MIRInvokeBodyDecl(inv.enclosingDecl, inv.bodyID, bproc.nname, bproc.nname, [...inv.attributes], inv.recursive, inv.sinfoStart, inv.sinfoEnd, inv.srcFile, bproc.nparams, 0, inv.resultType, undefined, item.post, inv.isUserCode, new MIRBody(inv.srcFile, inv.sinfoStart, bmap));
-        rbl.push(ninv);
+        ccproc.nblocks.map((bb) => bmap.set(bb.label, bb));
+        const ccinv = new MIRInvokeBodyDecl(inv.enclosingDecl, inv.bodyID, ccproc.nname, ccproc.nname, [...inv.attributes], inv.recursive, inv.sinfoStart, inv.sinfoEnd, inv.srcFile, ccproc.nparams, 0, inv.resultType, undefined, undefined, new MIRBody(inv.srcFile, inv.sinfoStart, bmap));
+        rbl.push(ccinv);
+    }
 
-        const ff = processBody(emitter, inv.ikey, masm, inv.body, inv.params);
-        if (ff !== undefined) {
-            wl.push({ nbi: ff, post: undefined })
+    const f1 = processBody(emitter, inv.ikey, masm, inv.body, inv.params, inv.resultType);
+    if(f1 !== undefined) {
+        let wl = [{ nbi: f1, post: inv.postconditions }];
+        while (wl.length !== 0) {
+            const item = wl.shift() as { nbi: NBodyInfo, post: MIRInvokeKey[] | undefined };
+            const bproc = item.nbi;
+
+            const bmap = new Map<string, MIRBasicBlock>();
+            bproc.nblocks.map((bb) => bmap.set(bb.label, bb));
+            const ninv = new MIRInvokeBodyDecl(inv.enclosingDecl, inv.bodyID, bproc.nname, bproc.nname, [...inv.attributes], inv.recursive, inv.sinfoStart, inv.sinfoEnd, inv.srcFile, bproc.nparams, 0, inv.resultType, undefined, item.post, new MIRBody(inv.srcFile, inv.sinfoStart, bmap));
+            rbl.push(ninv);
+
+            const ff = processBody(emitter, inv.ikey, masm, inv.body, inv.params, inv.resultType);
+            if (ff !== undefined) {
+                wl.push({ nbi: ff, post: undefined })
+            }
         }
     }
 

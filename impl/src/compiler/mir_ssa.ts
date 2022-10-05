@@ -487,9 +487,9 @@ function convertBodyToSSA(body: MIRBody, booltype: MIRType, args: Map<string, MI
         const block = torder[j];
 
         if (block.label === "entry") {
-            args.forEach((arg, name) => ssastate.remap.set(name, new MIRRegisterArgument(name)));
-            ssastate.remap.set("$__ir_ret__", new MIRRegisterArgument("$__ir_ret__"));
-            ssastate.remap.set("$$return", new MIRRegisterArgument("$$return"));
+            args.forEach((arg, name) => {
+                convertToSSA(new MIRRegisterArgument(name), arg.typeID, ssastate);
+            });
 
             for (let i = 0; i < block.ops.length; ++i) {
                 block.ops[i] = assignSSA(block.ops[i], ssastate);

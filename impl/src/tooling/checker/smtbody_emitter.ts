@@ -2849,15 +2849,16 @@ class SMTBodyEmitter {
             case "s_list_index": {
                 //TODO: would special Seq constructor support improve this (see also fill)
 
-                assert(false, "TODO: Change this to use a reduce and error to force the order -- no forall in there. See fill as well.");
-                const genlist = new SMTCallSimple("@@SortedIntSeq@@Create", args.map((arg) => new SMTVar(arg.vname)));
-                const chklist = SMTCallSimple.makeAndOf(
-                    new SMTCallSimple("@@CheckIntSeqLen", [new SMTVar("seq"), new SMTVar(args[2].vname)]),
-                    new SMTCallSimple("@@CheckIntSeqSorted", [new SMTVar("seq"), new SMTVar(args[0].vname), new SMTVar(args[2].vname)])
-                );
+                const genseq = new SMTCallSimple("@@CreateSortedSeq", [new SMTVar(args[0].vname), new SMTVar(args[1].vname)]);
+                const checkidxs = new SMTCallSimple("seq.foldli", [
+                    new SMTConst(`(lambda ((@@idx Int) (@@acc Bool) (@@xx Int)) ${SMTCallSimple.makeAndOf(SMTCallSimple.makeEq(new SMTVar("@@idx"), new SMTVar("@@xx")), new SMTVar("@@acc")).emitSMT2(undefined)})`),
+                    new SMTVar(args[0].vname),
+                    new SMTConst("true"),
+                    genseq
+                ]);
 
-                const cbody = new SMTLet("seq", genlist, 
-                    new SMTIf(chklist,
+                const cbody = new SMTLet("seq", genseq, 
+                    new SMTIf(checkidxs,
                         this.typegen.generateResultTypeConstructorSuccess(mirrestype, this.typegen.generateSeqListTypeConstructorSeq(mirrestype, new SMTVar("seq"))),
                         this.typegen.generateErrorResultAssert(mirrestype)
                     )
@@ -2874,23 +2875,29 @@ class SMTBodyEmitter {
                 //TODO: would special Seq constructor support improve this (see also index)
 
                 const vtype = this.typegen.getSMTTypeFor(this.typegen.getMIRType(idecl.params[1].type));
-                const fillfun = `@@fill_${vtype.smttypename}`;
+                const fillfun = `@@Fill@@${vtype.smttypename}`;
                 const newfillop = `(declare-fun ${fillfun} (${vtype.smttypename}) (Seq ${vtype.smttypename}))`;
 
                 if(!this.requiredUFOps.includes(newfillop)) {
                     this.requiredUFOps.push(newfillop);
                 }
 
-                assert(false, "TODO: Change this to use a reduce and error to force the order -- no forall in there");
-                const cbody = new SMTLet("seq", new SMTCallSimple(fillfun, [new SMTVar(args[1].vname)]), 
-                    new SMTIf(SMTCallSimple.makeAndOf(
-                            SMTCallSimple.makeEq(new SMTCallSimple("seq.len", [new SMTVar("seq")]), new SMTVar(args[0].vname)),
-                            new SMTConst(`(forall ((ii Int)) (=> (and (<= 0 ii) (< ii ${args[0].vname})) (= (seq.nth seq ii) ${args[1].vname})))`)
-                        ),
+                const genseq = new SMTCallSimple(fillfun, [new SMTVar(args[0].vname)]);
+                const checklen = SMTCallSimple.makeEq(new SMTCallSimple("seq.len", [genseq]) , new SMTVar(args[0].vname));
+                const checkidxs = new SMTCallSimple("seq.foldl", [
+                    new SMTConst(`(lambda ((@@acc Bool) (@@xx ${vtype.smttypename})) ${SMTCallSimple.makeAndOf(SMTCallSimple.makeEq(new SMTVar(args[1].vname), new SMTVar("@@xx")), new SMTVar("@@acc")).emitSMT2(undefined)})`),
+                    new SMTConst("true"),
+                    genseq
+                ]);
+
+                const cbody = new SMTLet("seq", genseq, 
+                    new SMTIf(SMTCallSimple.makeAndOf(checklen, checkidxs),
                         this.typegen.generateResultTypeConstructorSuccess(mirrestype, this.typegen.generateSeqListTypeConstructorSeq(mirrestype, new SMTVar("seq"))),
                         this.typegen.generateErrorResultAssert(mirrestype)
                     )
                 );
+
+                return SMTFunction.create(ideclname, args, chkrestype, cbody);
 
                 return SMTFunction.create(ideclname, args, chkrestype, cbody);
             }
