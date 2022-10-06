@@ -56,21 +56,21 @@ class BSQType;
 #define BSQ_INTERNAL_ASSERT(C) if(!(C)) { assert(false); }
 
 #ifdef BSQ_DEBUG_BUILD
-#define HANDLE_BSQ_ABORT(MSG, F, L, C) { printf("\"%s\" in %s on line %i\n", MSG, F, (int)L); fflush(stdout); longjmp(Evaluator::g_entrybuff, C); }
+#define HANDLE_BSQ_ABORT(MSG, F, M, L, C) { printf("\"%s\" in %s on line %i\n", MSG, F, (int)L); fflush(stdout); longjmp(Evaluator::g_entrybuff, C); }
 #else
 #define HANDLE_BSQ_ABORT() { printf("ABORT\n"); longjmp(Evaluator::g_entrybuff, 5); }
 #endif
 
 #ifdef BSQ_DEBUG_BUILD
-#define BSQ_LANGUAGE_ASSERT(C, F, L, MSG) if(!(C)) HANDLE_BSQ_ABORT(MSG, (F)->c_str(), L, 2);
+#define BSQ_LANGUAGE_ASSERT(C, F, M, L, MSG) if(!(C)) HANDLE_BSQ_ABORT(MSG, (F)->c_str(), (M)->c_str(), L, 2);
 #else
-#define BSQ_LANGUAGE_ASSERT(C, F, L, MSG) if(!(C)) HANDLE_BSQ_ABORT();
+#define BSQ_LANGUAGE_ASSERT(C, F, M, L, MSG) if(!(C)) HANDLE_BSQ_ABORT();
 #endif
 
 #ifdef BSQ_DEBUG_BUILD
-#define BSQ_LANGUAGE_ABORT(MSG, F, L) HANDLE_BSQ_ABORT(MSG, (F)->c_str(), L, 3)
+#define BSQ_LANGUAGE_ABORT(MSG, F, M, L) HANDLE_BSQ_ABORT(MSG, (F)->c_str(), (M)->c_str(), L, 3)
 #else
-#define BSQ_LANGUAGE_ABORT(MSG, F, L) HANDLE_BSQ_ABORT()
+#define BSQ_LANGUAGE_ABORT(MSG, F, M, L) HANDLE_BSQ_ABORT()
 #endif
 
 ////////////////////////////////

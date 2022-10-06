@@ -197,8 +197,8 @@ ParameterInfo jsonParse_ParameterInfo(json j);
 
 struct SourceInfo
 {
-    uint32_t line;
-    uint32_t column;
+    int32_t line;
+    int32_t column;
 };
 SourceInfo jsonParse_SourceInfo(json j);
 

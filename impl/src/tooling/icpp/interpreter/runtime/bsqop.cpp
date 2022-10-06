@@ -151,7 +151,7 @@ ParameterInfo jsonParse_ParameterInfo(json j)
 
 SourceInfo jsonParse_SourceInfo(json j)
 {
-    return SourceInfo{ j["line"].get<uint32_t>(), j["column"].get<uint32_t>() };
+    return SourceInfo{ j["line"].get<int32_t>(), j["column"].get<int32_t>() };
 }
 
 BSQGuard jsonParse_BSQGuard(json j)

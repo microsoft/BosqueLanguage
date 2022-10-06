@@ -240,26 +240,9 @@ void dbg_printHelp()
 
 void dbg_printOp(Evaluator* vv)
 {
-    xxxx;
     auto cframe = vv->dbg_getCFrame();
-    std::string contents = MarshalEnvironment::g_srcMap.find(cframe->invoke->srcFile)->second;
-    
-    auto lines = splitString(contents);
-    std::string line = trimWS(lines[cframe->dbg_currentline - 1]);
 
-    printf("%i: %s\n", (int)cframe->dbg_currentline, line.c_str());
-    fflush(stdout);
-}
-
-void dbg_printLine(Evaluator* vv)
-{
-    auto cframe = vv->dbg_getCFrame();
-    std::string contents = MarshalEnvironment::g_srcMap.find(cframe->invoke->srcFile)->second;
-    
-    auto lines = splitString(contents);
-    std::string line = trimWS(lines[cframe->dbg_currentline - 1]);
-
-    printf("%i: %s\n", (int)cframe->dbg_currentline, line.c_str());
+    printf("> %s\n", cframe->dbg_currentbp.op->ssrc.c_str());
     fflush(stdout);
 }
 
@@ -270,8 +253,13 @@ void dbg_printFunction(Evaluator* vv)
     
     auto lines = splitString(contents);
     for(int64_t i = cframe->invoke->sinfoStart.line; i <= cframe->invoke->sinfoEnd.line; ++i)
-    { 
-        printf("%3i: %s\n", (int)i, lines[i - 1].c_str());
+    {
+        if(cframe->dbg_srcline != i) {
+            printf("%3i: %s\n", (int)i, lines[i - 1].c_str());
+        }
+        else {
+            printf("%3i >> : %s\n", (int)i, lines[i - 1].c_str());
+        }
     }
 
     fflush(stdout);
@@ -377,384 +365,44 @@ void dbg_displayLocals(Evaluator* vv)
     fflush(stdout);
 }
 
-std::optional<std::pair<int64_t, std::string>> dbg_extract_accessor_numeric(std::string vexp)
-{
-    size_t spos = 0;
-    while(spos != vexp.size() && vexp[spos] != '.' && vexp[spos] != '[' && vexp[spos] != ']')
-    {
-        spos++;
-    }
-
-    auto nstr = vexp.substr(0, spos);
-    std::regex nre("^[0-9]+$");
-    bool nok = std::regex_match(nstr, nre);
-    if(!nok)
-    {
-        return std::nullopt;
-    }
-
-    return std::make_optional(std::make_pair(std::strtol(&nstr[0], nullptr, 10), vexp.substr(spos)));
-}
-
-std::optional<std::pair<std::string, std::string>> dbg_extract_accessor_qstring(std::string vexp)
-{
-    size_t spos = 1;
-    while(spos != vexp.size() && vexp[spos] != '"')
-    {
-        spos++;
-    }
-
-    if(vexp[0] != '"' || vexp[spos] != '"')
-    {
-        return std::nullopt;
-    }
-
-    return std::make_optional(std::make_pair(vexp.substr(1, spos), vexp.substr(spos + 2)));
-}
-
-std::optional<std::pair<std::string, std::string>> dbg_extract_accessor_name(std::string vexp)
-{
-    size_t spos = 0;
-    while(spos != vexp.size() && vexp[spos] != '.' && vexp[spos] != '[')
-    {
-        spos++;
-    }
-
-    auto nstr = vexp.substr(0, spos);
-    std::regex nre("^[$]?[_a-zA-Z0-9]+$");
-    bool nok = std::regex_match(nstr, nre);
-    if(!nok)
-    {
-        return std::nullopt;
-    }
-
-    return std::make_optional(std::make_pair(nstr, vexp.substr(spos)));
-}
-
-bool dbg_processTupleAccess(Evaluator* vv, const BSQType*& btype, StorageLocationPtr& cpos, int64_t idx)
-{
-    if(btype->isUnion())
-    {
-        auto utype = dynamic_cast<const BSQUnionType*>(btype);
-
-        btype = utype->getVType(cpos);
-        cpos = utype->getVData_StorageLocation(cpos);
-    }
-    
-    const BSQTupleInfo* tinfo = dynamic_cast<const BSQTupleInfo*>(btype);
-    if(tinfo == nullptr || idx >= tinfo->maxIndex)
-    {
-        return false;
-    }
-
-    cpos = btype->indexStorageLocationOffset(cpos, tinfo->idxoffsets[idx]);
-    btype = BSQType::g_typetable[tinfo->ttypes[idx]];
-
-    return true;
-}
-
-bool dbg_processNameAccess(Evaluator* vv, const BSQType*& btype, StorageLocationPtr& cpos, std::string name)
-{
-    if(btype->isUnion())
-    {
-        auto utype = dynamic_cast<const BSQUnionType*>(btype);
-
-        btype = utype->getVType(cpos);
-        cpos = utype->getVData_StorageLocation(cpos);
-    }
-
-    const BSQRecordInfo* rinfo = dynamic_cast<const BSQRecordInfo*>(btype);
-    if(rinfo != nullptr)
-    {
-        auto pidii = MarshalEnvironment::g_propertyToIdMap.find(name);
-        if(pidii == MarshalEnvironment::g_propertyToIdMap.cend())
-        {
-            return false;
-        }
-
-        auto pidxii = std::find(rinfo->properties.cbegin(), rinfo->properties.cend(), pidii->second);
-        if(pidxii == rinfo->properties.cend())
-        {
-            return false;
-        }
-
-        auto idx = std::distance(rinfo->properties.cbegin(), pidxii);
-        cpos = btype->indexStorageLocationOffset(cpos, rinfo->propertyoffsets[idx]);
-        btype = BSQType::g_typetable[rinfo->rtypes[idx]];
-    }
-    else
-    {
-        const BSQEntityInfo* einfo = dynamic_cast<const BSQEntityInfo*>(btype);
-        if(einfo == nullptr)
-        {
-            return false;
-        }
-
-        auto pidxii = std::find_if(einfo->fields.cbegin(), einfo->fields.cend(), [&name](BSQFieldID fid) {
-            const BSQField* ff = BSQField::g_fieldtable[fid];
-            return ff->fname == name;
-        });
-
-        if(pidxii == einfo->fields.cend())
-        {
-            return false;
-        }
-
-        auto idx = std::distance(einfo->fields.cbegin(), pidxii);
-        cpos = btype->indexStorageLocationOffset(cpos, einfo->fieldoffsets[idx]);
-        btype = BSQType::g_typetable[einfo->ftypes[idx]];
-    }
-
-    return true;
-}
-
-bool dbg_processNumberKey(Evaluator* vv, const BSQType*& btype, StorageLocationPtr& cpos, int64_t idx)
-{
-    if(btype->isUnion())
-    {
-        auto utype = dynamic_cast<const BSQUnionType*>(btype);
-
-        btype = utype->getVType(cpos);
-        cpos = utype->getVData_StorageLocation(cpos);
-    }
-
-    const BSQListType* ltype = dynamic_cast<const BSQListType*>(btype);
-    if(ltype != nullptr)
-    {
-        if(LIST_LOAD_DATA(cpos) == nullptr)
-        {
-            return false;
-        }
-
-        auto count = (int64_t)LIST_LOAD_REPR_TYPE(cpos)->getCount(LIST_LOAD_DATA(cpos));
-        if(idx >= count)
-        {
-            return false;
-        }
-
-        btype = BSQType::g_typetable[ltype->etype];
-        BSQListOps::s_safe_get(LIST_LOAD_DATA(cpos), LIST_LOAD_REPR_TYPE(cpos), idx, btype, cpos);
-    }
-    else
-    {
-        const BSQMapType* mtype = dynamic_cast<const BSQMapType*>(btype);
-        if(mtype == nullptr)
-        {
-            return false;
-        }
-
-        if(MAP_LOAD_DATA(cpos) == nullptr)
-        {
-            return false;
-        }
-
-        auto reprtype = MAP_LOAD_REPR_TYPE(cpos);
-        auto ktype = BSQType::g_typetable[mtype->ktype];
-        if(ktype->tid != BSQ_TYPE_ID_INT && ktype->tid != BSQ_TYPE_ID_NAT)
-        {
-            return false;
-        }
-
-        auto res = BSQMapOps::s_lookup_ne(MAP_LOAD_DATA(cpos), reprtype, &idx, ktype);
-        if(res == nullptr)
-        {
-            return false;
-        }
-
-        btype = BSQType::g_typetable[mtype->vtype];
-        ktype->storeValue(cpos, reprtype->getValueLocation(res));
-    }
-
-    return true;
-}
-
-bool dbg_processStringKey(Evaluator* vv, const BSQType*& btype, StorageLocationPtr& cpos, std::string key)
-{
-    const BSQMapType* mtype = dynamic_cast<const BSQMapType*>(btype);
-    if(mtype == nullptr)
-    {
-        return false;
-    }
-
-    if(MAP_LOAD_DATA(cpos) == nullptr)
-    {
-        return false;
-    }
-
-    auto reprtype = MAP_LOAD_REPR_TYPE(cpos);
-    auto ktype = BSQType::g_typetable[mtype->ktype];
-    if(ktype->tid != BSQ_TYPE_ID_STRING)
-    {
-        return false;
-    }
-
-    if(key.size() > 15)
-    {
-        //small strings only for now
-        return false;
-    }
-
-    BSQString kstr;
-    kstr.u_inlineString = BSQInlineString::create((const uint8_t*)key.c_str(), key.size());
-    auto res = BSQMapOps::s_lookup_ne(MAP_LOAD_DATA(cpos), reprtype, &kstr, ktype);
-    if(res == nullptr)
-    {
-        return false;
-    }
-
-    btype = BSQType::g_typetable[mtype->vtype];
-    ktype->storeValue(cpos, reprtype->getValueLocation(res));
-
-    return true;
-}
-
 void dbg_displayExp(Evaluator* vv, std::string vexp)
 {
-    const BSQType* btype = nullptr;
-    StorageLocationPtr cpos = nullptr;
-    if(vexp.starts_with("*"))
+    const std::vector<BSQFunctionParameter>& params = vv->dbg_getCFrame()->invoke->params;
+    auto ppos = std::find_if(params.cbegin(), params.cend(), [&vexp](const BSQFunctionParameter& param) {
+        return param.name == vexp;
+    });
+        
+    const std::map<std::string, VariableHomeLocationInfo>& vhomeinfo = vv->dbg_getCFrame()->dbg_locals;
+    auto lpos = std::find_if(vhomeinfo.cbegin(), vhomeinfo.cend(), [&vexp](const std::pair<std::string, VariableHomeLocationInfo>& vinfo) {
+        return vinfo.first == vexp;
+    });
+
+    if(ppos == params.cend() && lpos == vhomeinfo.cend())
     {
-        printf("Object ID support not implemented\n");
+        printf("Unknown variable: %s\n", vexp.c_str());
         fflush(stdout);
-        return;
     }
     else
-    {   
-        auto np = dbg_extract_accessor_name(vexp);
-        if(!np.has_value())
-        {
-            printf("Bad value name format\n");
-            fflush(stdout);
-            return;
-        }
-
-        auto name = np.value().first;
-
-        const std::vector<BSQFunctionParameter>& params = vv->dbg_getCFrame()->invoke->params;
-        auto ppos = std::find_if(params.cbegin(), params.cend(), [&name](const BSQFunctionParameter& param) {
-            return param.name == name;
-        });
-        
-        const std::map<std::string, VariableHomeLocationInfo>& vhomeinfo = vv->dbg_getCFrame()->dbg_locals;
-        auto lpos = std::find_if(vhomeinfo.cbegin(), vhomeinfo.cend(), [&name](const std::pair<std::string, VariableHomeLocationInfo>& vinfo) {
-            return vinfo.first == name;
-        });
-
-        if(ppos == params.cend() && lpos == vhomeinfo.cend())
-        {
-            printf("Unknown variable: %s\n", np.value().first.c_str());
-            fflush(stdout);
-            return;
-        }
-        else if(ppos != params.cend())
+    { 
+        const BSQType* btype = nullptr;
+        StorageLocationPtr sl = nullptr;
+        if(ppos != params.cend())
         {
             auto binvoke = dynamic_cast<const BSQInvokeBodyDecl*>(vv->dbg_getCFrame()->invoke);
             auto pdist = std::distance(params.cbegin(), ppos);
             btype = ppos->ptype;
-            cpos = Evaluator::evalParameterInfo(binvoke->paraminfo[pdist], vv->dbg_getCFrame()->frameptr);
+            sl = Evaluator::evalParameterInfo(binvoke->paraminfo[pdist], vv->dbg_getCFrame()->frameptr);
         }
         else
         {
             btype = lpos->second.vtype;
-            cpos = vv->evalTargetVar(lpos->second.location);
+            sl = vv->evalTargetVar(lpos->second.location);
         }
 
-        vexp = np.value().second;
+        auto eval = btype->fpDisplay(btype, sl, DisplayMode::CmdDebug);
+        printf("%s\n", eval.c_str());
+        fflush(stdout);
     }
-
-    while(!vexp.empty())
-    {
-        if(vexp[0] == '.')
-        {
-            vexp = vexp.substr(1);
-
-            auto idxopt = dbg_extract_accessor_numeric(vexp);
-            auto nameopt = dbg_extract_accessor_name(vexp);
-
-            if(idxopt.has_value())
-            {
-                bool accessok = dbg_processTupleAccess(vv, btype, cpos, idxopt.value().first);
-                if(!accessok)
-                {
-                    printf("Bad value access path\n");
-                    fflush(stdout);
-                    return;
-                }
-                vexp = idxopt.value().second;
-            }
-            else if(nameopt.has_value())
-            {
-                bool accessok = dbg_processNameAccess(vv, btype, cpos, nameopt.value().first);
-                if(!accessok)
-                {
-                    printf("Bad value access path\n");
-                    fflush(stdout);
-                    return;
-                }
-                vexp = nameopt.value().second;
-            }
-            else
-            {
-                printf("Bad value access path\n");
-                fflush(stdout);
-                return;
-            }
-        }
-        else if(vexp[0] == '[')
-        {
-            vexp = vexp.substr(1);
-
-            auto idxopt = dbg_extract_accessor_numeric(vexp);
-            auto qstropt = dbg_extract_accessor_qstring(vexp);
-
-            if(idxopt.has_value())
-            {
-                bool accessok = dbg_processNumberKey(vv, btype, cpos, idxopt.value().first);
-                if(!accessok)
-                {
-                    printf("Bad value access path\n");
-                    fflush(stdout);
-                    return;
-                }
-                vexp = idxopt.value().second;
-            }
-            else if(qstropt.has_value())
-            {
-                bool accessok = dbg_processStringKey(vv, btype, cpos, qstropt.value().first);
-                if(!accessok)
-                {
-                    printf("Bad value access path\n");
-                    fflush(stdout);
-                    return;
-                }
-                vexp = qstropt.value().second;
-            }
-            else
-            {
-                printf("Bad value access path\n");
-                fflush(stdout);
-                return;
-            }
-
-            if(vexp.empty() || vexp[0] != ']')
-            {
-                printf("Bad value access path\n");
-                fflush(stdout);
-                return;
-            }
-            vexp = vexp.substr(1);
-        }
-        else
-        {
-            printf("Bad value access path\n");
-            fflush(stdout);
-            return;
-        }
-    }
-
-    std::string disp = btype->fpDisplay(btype, cpos, DisplayMode::CmdDebug);
-    printf("%s\n", disp.c_str());
-    fflush(stdout);
 }
 
 void dbg_bpList(Evaluator* vv)
@@ -762,7 +410,7 @@ void dbg_bpList(Evaluator* vv)
     std::string bps("**breakpoints**\n");
     for(size_t i = 0; i < vv->breakpoints.size(); ++i)
     {
-        bps += vv->breakpoints[i].invk->srcFile + ":" + std::to_string(vv->breakpoints[i].line) + "\n";
+        bps += "[" + std::to_string(vv->breakpoints[i].bpid) + "] " + vv->breakpoints[i].invk->srcFile + ":" + std::to_string(vv->breakpoints[i].iline) + "\n";
     }
 
     printf("%s\n", bps.c_str());
@@ -780,7 +428,7 @@ void dbg_bpAdd(Evaluator* vv, std::string bpstr)
 
     std::vector<const BSQInvokeDecl*> candfuncs;
     std::copy_if(BSQInvokeDecl::g_invokes.cbegin(), BSQInvokeDecl::g_invokes.cend(), std::back_inserter(candfuncs), [&file, ll](const BSQInvokeDecl* iid) {
-        return iid->srcFile.ends_with(file) && iid->sinfoStart.line <= ll && ll <= iid->sinfoEnd.line;
+        return iid->srcFile.ends_with(file) && iid->sinfoStart.line == ll;
     });
         
     if(candfuncs.size() == 0)
@@ -798,35 +446,30 @@ void dbg_bpAdd(Evaluator* vv, std::string bpstr)
         const BSQInvokeDecl* iid = candfuncs.front();
 
         auto bpc = std::count_if(vv->breakpoints.begin(), vv->breakpoints.end(), [iid, ll](const BreakPoint& bp) {
-            return bp.invk->srcFile == iid->srcFile && bp.line == ll;
+            return bp.invk->srcFile == iid->srcFile && bp.iline == ll;
         });
 
         if(bpc != 0)
         {
-            printf("Breakpoint already set at position\n");
+            printf("Breakpoint already set at invoke\n");
             fflush(stdout);
         }
         else
         {
-            //TODO: need to get opcode to set here as well
+            auto opii = dynamic_cast<const BSQInvokeBodyDecl*>(iid)->body.cbegin();
 
-            //BreakPoint bp{-1, -1, iid, ll, -1};
-            //vv->breakpoints.push_back(bp);
+            BreakPoint bp{(int64_t)vv->breakpoints.size(), -1, iid, ll, *opii};
+            vv->breakpoints.push_back(bp);
         }
     }
 }
 
 void dbg_bpDelete(Evaluator* vv, std::string bpstr)
 {
-    auto spos = bpstr.find(':');
-    assert(spos != std::string::npos);
-
-    std::string file = bpstr.substr(0, spos);
-    std::string lstr = bpstr.substr(spos + 1);
-    int64_t ll = std::strtol(&lstr[0], nullptr, 10);
+    int64_t ll = std::strtol(&bpstr[0], nullptr, 10);
 
     auto bpc = std::count_if(vv->breakpoints.begin(), vv->breakpoints.end(), [&bpstr, ll](const BreakPoint& bp) {
-        return bp.invk->name.ends_with(bpstr) && bp.line == ll;
+        return bp.bpid == ll;
     });
 
     if(bpc == 0)
@@ -842,7 +485,7 @@ void dbg_bpDelete(Evaluator* vv, std::string bpstr)
     else
     {
         auto ebp = std::remove_if(vv->breakpoints.begin(), vv->breakpoints.end(), [&bpstr, ll](const BreakPoint& bp) {
-            return bp.invk->name.ends_with(bpstr) && bp.line == ll;
+            return bp.bpid == ll;
         });
 
         vv->breakpoints.erase(ebp, vv->breakpoints.end());
@@ -857,7 +500,7 @@ void dbg_quit(Evaluator* vv)
 
 void debuggerStepAction(Evaluator* vv)
 {
-    dbg_printLine(vv);
+    dbg_printOp(vv);
 
     while(true)
     {
