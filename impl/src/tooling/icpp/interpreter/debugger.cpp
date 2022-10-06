@@ -81,19 +81,7 @@ std::pair<DebuggerCmd, std::string> dbg_parseDebuggerCmd(Evaluator* vv)
     do
     {    
         cc = std::getchar();
-        if(opstr.empty() && cc == '.')
-        {
-            if(vv->dbg_history.size() != 0)
-            {
-                return vv->dbg_history.front();
-            }
-            else
-            {
-                printf("No debug action history...\n");
-                fflush(stdout);
-            }
-        }
-        else if(cc == 127)
+        if(cc == 127)
         {
             if(!opstr.empty())
             {
@@ -163,18 +151,6 @@ std::pair<DebuggerCmd, std::string> dbg_parseDebuggerCmd(Evaluator* vv)
         std::regex_search(opstr, matchpfx, pfx);
         
         std::string path = opstr.substr(matchpfx.str(0).size());
-
-        std::regex pathx("^(([*][0-9]+)|([$]?[a-zA-Z]+))(([.][a-zA-Z0-9]+)?([\\[]([0-9]+|[\\\"]([^\\\"])+[\\\"])+[\\]])*)*$");
-        std::smatch matchpath;
-        auto pathok = std::regex_search(path, matchpath, pathx);
-        if(!pathok)
-        {
-            printf("Bad display argument...\n");
-            fflush(stdout);
-
-            return std::make_pair(DebuggerCmd::Invalid, path);
-        }
-
         return std::make_pair(DebuggerCmd::ExpDisplay, path);
     }
     else if(opstr.starts_with("breakpoint ") || opstr.starts_with("b "))
@@ -198,27 +174,38 @@ std::pair<DebuggerCmd, std::string> dbg_parseDebuggerCmd(Evaluator* vv)
 
         std::string bpstr = actionstr.substr(matchaction.str(0).size());
 
-        std::regex bpfx("^[a-zA-Z0-9_/]+:[0-9]+");
-        std::smatch matchbp;
-        bool bpok = std::regex_search(bpstr, matchbp, bpfx);
-        if(!bpok)
-        {
-            printf("Bad breakpoint location...\n");
-            fflush(stdout);
-
-            return std::make_pair(DebuggerCmd::Invalid, bpstr);
-        }
-
         if(opstr.starts_with("list"))
         {
             return std::make_pair(DebuggerCmd::ListBreakPoint, bpstr);
         }
         else if(opstr.starts_with("add"))
         {
+            std::regex bpfx("^[.a-zA-Z0-9_/]+:[0-9]+");
+            std::smatch matchbp;
+            bool bpok = std::regex_search(bpstr, matchbp, bpfx);
+            if(!bpok)
+            {
+                printf("Bad breakpoint location...\n");
+                fflush(stdout);
+
+                return std::make_pair(DebuggerCmd::Invalid, bpstr);
+            }
+
             return std::make_pair(DebuggerCmd::AddBreakPoint, bpstr);
         }
         else
         {
+            std::regex bpfx("^[0-9]+");
+            std::smatch matchbp;
+            bool bpok = std::regex_search(bpstr, matchbp, bpfx);
+            if(!bpok)
+            {
+                printf("Bad breakpoint id...\n");
+                fflush(stdout);
+
+                return std::make_pair(DebuggerCmd::Invalid, bpstr);
+            }
+
             return std::make_pair(DebuggerCmd::DeleteBreakpoint, bpstr);
         }
     }
@@ -244,12 +231,24 @@ void dbg_printHelp()
     printf("----\n");
     printf("  (l)ocals\n");
     printf("  (d)isplay vexp\n");
-    printf("    (var|*id)(.name([literal])*)*\n");
     printf("----\n");
     printf("  (b)reakpoint list\n");
-    printf("  (b)reakpoint add|delete bp\n");
-    printf("    file:line");
+    printf("  (b)reakpoint add file:line\n");
+    printf("  (b)reakpoint delete bpid\n");
     printf("  (q)uit\n");
+}
+
+void dbg_printOp(Evaluator* vv)
+{
+    xxxx;
+    auto cframe = vv->dbg_getCFrame();
+    std::string contents = MarshalEnvironment::g_srcMap.find(cframe->invoke->srcFile)->second;
+    
+    auto lines = splitString(contents);
+    std::string line = trimWS(lines[cframe->dbg_currentline - 1]);
+
+    printf("%i: %s\n", (int)cframe->dbg_currentline, line.c_str());
+    fflush(stdout);
 }
 
 void dbg_printLine(Evaluator* vv)

@@ -179,8 +179,6 @@ public:
     BreakPoint ttdBreakpoint_LastHit = {-1, -1, nullptr, nullptr, 0};
     std::vector<BreakPoint> breakpoints;
 
-    std::vector<std::pair<DebuggerCmd, std::string>> dbg_history;
-
     void reset()
     {
         this->cframe = nullptr;
