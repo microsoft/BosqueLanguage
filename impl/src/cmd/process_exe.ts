@@ -15,7 +15,7 @@ import { PackageConfig, SymbolicActionMode } from "../compiler/mir_assembly";
 import { workflowRunICPPFile } from "../tooling/icpp/transpiler/iccp_workflows";
 import { generateStandardVOpts, workflowEvaluate, workflowInputFuzz } from "../tooling/checker/smt_workflows";
 
-function processRunAction(args: string[]) {
+function processRunAction(args: string[], debug: boolean) {
     if (args.length === 0) {
         args.push("./package.json");
     }
@@ -92,7 +92,7 @@ function processRunAction(args: string[]) {
 
                 process.stdout.write(`Evaluating...\n`);
 
-                workflowRunICPPFile(jargs, userpackage, args[0] === "debug", cfg.buildlevel, false, args[0] === "debug", {}, entrypoint, (result: string | undefined) => {
+                workflowRunICPPFile(jargs, userpackage, debug, cfg.buildlevel, false, debug, {}, entrypoint, (result: string | undefined) => {
                     if (result !== undefined) {
                         process.stdout.write(`${result}\n`);
                     }
@@ -111,7 +111,7 @@ function processRunAction(args: string[]) {
     }
     else {
         // bosque run|debug [package_path.json] [--entrypoint fname] [--config cname] --args "[...]"
-        workflowRunICPPFile(fargs, userpackage, args[0] === "debug", cfg.buildlevel, false, args[0] === "debug", {}, entrypoint, (result: string | undefined) => {
+        workflowRunICPPFile(fargs, userpackage, debug, cfg.buildlevel, false, debug, {}, entrypoint, (result: string | undefined) => {
             process.stdout.write(`${result}\n`);
 
             process.exit(0);

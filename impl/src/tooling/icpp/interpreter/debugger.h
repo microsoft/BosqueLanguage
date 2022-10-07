@@ -9,6 +9,12 @@
 
 #include "op_eval.h"
 
+bool initializeDebuggerIO();
+void closeDebuggerIO();
+
+std::pair<DebuggerCmd, std::string> readDebugCmd();
+void writeDebugResult(std::string data);
+
 void debuggerStepAction(Evaluator* vv);
 
 #endif

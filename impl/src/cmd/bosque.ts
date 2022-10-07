@@ -30,7 +30,7 @@ else {
 }
 
 if (cmdop === "run" || cmdop === "debug") {
-    processRunAction(cmdargs);
+    processRunAction(cmdargs, cmdop === "debug");
 }
 else if (cmdop === "symrun") {
     processRunSymbolicAction(cmdargs);

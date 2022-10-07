@@ -5,72 +5,61 @@
 
 #include "debugger.h"
 
-DebuggerActionFP Evaluator::fpDebuggerAction = debuggerStepAction;
+#ifdef _WIN32
+#else
+#include <sys/socket.h>
+#include <netinet/ip.h>
 
-DebuggerException::DebuggerException(DebuggerExceptionMode abortMode, BreakPoint eTime)
-    : m_abortMode(abortMode), m_eTime(eTime)
+bool debugger_use_std_io = true;
+int debugger_fd = -1;
+struct sockaddr_in debugger_addr;
+struct sockaddr_in data_addr;
+
+int data_socket = -1;
+
+bool initializeDebuggerIO()
 {
-    ;
-}
+    debugger_use_std_io = false;
+    debugger_fd = socket(AF_INET, SOCK_STREAM, 0);
 
-DebuggerException::~DebuggerException()
-{
-    ;
-}
-
-DebuggerException DebuggerException::CreateAbortEndOfLog()
-{
-    return DebuggerException(DebuggerExceptionMode::EndOfReplay, {});
-}
-
-DebuggerException DebuggerException::CreateMoveToBP(BreakPoint eTime)
-{
-    return DebuggerException(DebuggerExceptionMode::MoveToBP, eTime);
-}
-
-DebuggerException DebuggerException::CreateErrorAbortRequest(BreakPoint eTime)
-{
-    return DebuggerException(DebuggerExceptionMode::ErrorPreTime, eTime);
-}
-
-std::string trimWS(const std::string& str)
-{
-    std::string rstr = str;
-
-    std::regex wsfront("^\\s+");
-    std::smatch matchfront;
-    bool foundfront = std::regex_search(rstr, matchfront, wsfront);
-    if(foundfront)
-    {
-        rstr = rstr.substr(matchfront.str(0).size());
+    if(debugger_fd < 0) {
+	    return false;
     }
 
-    std::regex wsback("\\s+$");
-    std::smatch matchback;
-    bool foundback = std::regex_search(rstr, matchback, wsback);
-    if(foundback)
+    memset((char*)&debugger_addr, 0, sizeof(debugger_addr));
+    debugger_addr.sin_family = AF_INET;
+    debugger_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    debugger_addr.sin_port = htons(1337);
+
+    auto bindok = bind(debugger_fd, (struct sockaddr*)&debugger_addr, sizeof(debugger_addr));
+    if (bindok < 0) 
     {
-        rstr = rstr.substr(0, matchback.str(0).size());
-    }  
-
-    return rstr;
-}
-
-std::vector<std::string> splitString(const std::string& str)
-{
-    std::regex rgx("(?:\\r\\n|\\r|\\n)");
-    std::sregex_token_iterator iter(str.begin(), str.end(), rgx, -1);
-
-    std::vector<std::string> result;
-    for (std::sregex_token_iterator end; iter != end; ++iter)
-    {
-        result.push_back(iter->str());
+	    return false;
     }
 
-    return result;
+    auto listenok = listen(debugger_fd, 1);
+    if(listenok < 0) 
+    {
+        return false;
+	}
+
+    socklen_t alen;
+    auto data_socket = accept(debugger_fd, (struct sockaddr*)&data_addr, &alen);
+    if(data_socket < 0)
+    {
+        return false;
+    }
+
+    return true;
 }
 
-std::pair<DebuggerCmd, std::string> dbg_parseDebuggerCmd(Evaluator* vv)
+void closeDebuggerIO()
+{
+    shutdown(data_socket, SHUT_RDWR);
+    shutdown(debugger_fd, SHUT_RDWR);
+}
+
+std::pair<DebuggerCmd, std::string> readDebugCmd()
 {
     std::string opstr;
     int cc = 0;
@@ -80,6 +69,7 @@ std::pair<DebuggerCmd, std::string> dbg_parseDebuggerCmd(Evaluator* vv)
 
     do
     {    
+        xxxx;
         cc = std::getchar();
         if(cc == 127)
         {
@@ -213,6 +203,78 @@ std::pair<DebuggerCmd, std::string> dbg_parseDebuggerCmd(Evaluator* vv)
     {
         return std::make_pair(DebuggerCmd::Help, "");
     }
+}
+
+void writeDebugResult(std::string data)
+{
+    xxxx;
+}
+
+#endif
+
+DebuggerActionFP Evaluator::fpDebuggerAction = debuggerStepAction;
+
+DebuggerException::DebuggerException(DebuggerExceptionMode abortMode, BreakPoint eTime)
+    : m_abortMode(abortMode), m_eTime(eTime)
+{
+    ;
+}
+
+DebuggerException::~DebuggerException()
+{
+    ;
+}
+
+DebuggerException DebuggerException::CreateAbortEndOfLog()
+{
+    return DebuggerException(DebuggerExceptionMode::EndOfReplay, {});
+}
+
+DebuggerException DebuggerException::CreateMoveToBP(BreakPoint eTime)
+{
+    return DebuggerException(DebuggerExceptionMode::MoveToBP, eTime);
+}
+
+DebuggerException DebuggerException::CreateErrorAbortRequest(BreakPoint eTime)
+{
+    return DebuggerException(DebuggerExceptionMode::ErrorPreTime, eTime);
+}
+
+std::string trimWS(const std::string& str)
+{
+    std::string rstr = str;
+
+    std::regex wsfront("^\\s+");
+    std::smatch matchfront;
+    bool foundfront = std::regex_search(rstr, matchfront, wsfront);
+    if(foundfront)
+    {
+        rstr = rstr.substr(matchfront.str(0).size());
+    }
+
+    std::regex wsback("\\s+$");
+    std::smatch matchback;
+    bool foundback = std::regex_search(rstr, matchback, wsback);
+    if(foundback)
+    {
+        rstr = rstr.substr(0, matchback.str(0).size());
+    }  
+
+    return rstr;
+}
+
+std::vector<std::string> splitString(const std::string& str)
+{
+    std::regex rgx("(?:\\r\\n|\\r|\\n)");
+    std::sregex_token_iterator iter(str.begin(), str.end(), rgx, -1);
+
+    std::vector<std::string> result;
+    for (std::sregex_token_iterator end; iter != end; ++iter)
+    {
+        result.push_back(iter->str());
+    }
+
+    return result;
 }
 
 void dbg_printHelp()
@@ -504,6 +566,7 @@ void debuggerStepAction(Evaluator* vv)
 
     while(true)
     {
+        printf(">"); xxx;
         auto cmd = dbg_parseDebuggerCmd(vv);
 
         if(cmd.first == DebuggerCmd::Help)
