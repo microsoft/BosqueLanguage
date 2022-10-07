@@ -8,6 +8,8 @@
 #ifdef BSQ_DEBUG_BUILD
 
 #include "op_eval.h"
+#include <iostream>
+#include <strstream>
 
 bool initializeDebuggerIO();
 void closeDebuggerIO();

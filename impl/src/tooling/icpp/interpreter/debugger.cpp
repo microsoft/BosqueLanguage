@@ -5,25 +5,89 @@
 
 #include "debugger.h"
 
+bool debugger_use_std_io = true;
+
+uint8_t debugger_in_buf[1024];
+uint8_t debugger_out_buf[1024];
+
 #ifdef _WIN32
+bool initializeDebuggerIO()
+{
+    memset(debugger_in_buf, 0, sizeof(debugger_in_buf));
+    memset(debugger_out_buf, 0, sizeof(debugger_out_buf));
+
+    if(debugger_use_std_io)
+    {
+        return true;
+    }
+
+    assert(false); //no network debugging yet
+    return false;
+}
+
+void closeDebuggerIO()
+{
+    if(debugger_use_std_io)
+    {
+        return;
+    }
+
+    assert(false); //no network debugging yet
+}
+
+std::string readDebuggerCmd()
+{
+    std::string opstr;
+
+    if(debugger_use_std_io)
+    {
+        int cc = 0;
+
+        do
+        {    
+            cc = std::getchar();
+            if(cc != '\n')
+            {
+                opstr.push_back(cc);
+            }
+        } while (cc != '\n');
+    }
+    else
+    {
+        assert(false);
+    }
+
+    return opstr;
+}
+
+void writeDebuggerOutput(std::string data)
+{
+    if(debugger_use_std_io)
+    {
+        std::cout << data;
+    }
+    else
+    {
+        assert(false);
+    }
+}
 #else
+#include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/ip.h>
 
-bool debugger_use_std_io = true;
-int debugger_fd = -1;
+struct hostent *hp;
 struct sockaddr_in debugger_addr;
-struct sockaddr_in data_addr;
-
-int data_socket = -1;
+int debugger_socket = -1;
 
 bool initializeDebuggerIO()
 {
-    debugger_use_std_io = false;
-    debugger_fd = socket(AF_INET, SOCK_STREAM, 0);
+    memset(debugger_in_buf, 0, sizeof(debugger_in_buf));
+    memset(debugger_out_buf, 0, sizeof(debugger_out_buf));
 
-    if(debugger_fd < 0) {
-	    return false;
+    if(debugger_use_std_io)
+    {
+        return true;
     }
 
     memset((char*)&debugger_addr, 0, sizeof(debugger_addr));
@@ -31,21 +95,14 @@ bool initializeDebuggerIO()
     debugger_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     debugger_addr.sin_port = htons(1337);
 
-    auto bindok = bind(debugger_fd, (struct sockaddr*)&debugger_addr, sizeof(debugger_addr));
-    if (bindok < 0) 
-    {
-	    return false;
-    }
-
-    auto listenok = listen(debugger_fd, 1);
-    if(listenok < 0) 
+    debugger_socket = socket(AF_INET, SOCK_STREAM, 0);
+    if(debugger_socket < 0)
     {
         return false;
-	}
+    }
 
-    socklen_t alen;
-    auto data_socket = accept(debugger_fd, (struct sockaddr*)&data_addr, &alen);
-    if(data_socket < 0)
+    auto connectok = connect(debugger_socket, (struct sockaddr*)&debugger_addr, sizeof(debugger_addr));
+    if(connectok < 0)
     {
         return false;
     }
@@ -55,40 +112,104 @@ bool initializeDebuggerIO()
 
 void closeDebuggerIO()
 {
-    shutdown(data_socket, SHUT_RDWR);
-    shutdown(debugger_fd, SHUT_RDWR);
+    if(debugger_use_std_io)
+    {
+        return;
+    }
+
+    shutdown(debugger_socket, SHUT_RDWR);
 }
+
+std::string readDebuggerCmd()
+{
+    std::string opstr;
+
+    if(debugger_use_std_io)
+    {
+        while(true)
+        {
+            memset(debugger_in_buf, 0, sizeof(debugger_in_buf));
+            auto nbytes = read(0, debugger_in_buf, sizeof(debugger_in_buf));
+        
+            auto niter = std::find(debugger_in_buf, debugger_in_buf + nbytes, '\n');
+        
+            opstr.reserve(opstr.size() + nbytes);
+            std::transform(debugger_in_buf, debugger_in_buf + nbytes, std::back_inserter(opstr), [](uint8_t b) {
+                return (char)b;
+            });
+
+            if(niter == debugger_in_buf + (nbytes - 1))
+            {
+                break;
+            }
+        }
+    }
+    else
+    {
+        while(true)
+        {
+            memset(debugger_in_buf, 0, sizeof(debugger_in_buf));
+            auto nbytes = read(debugger_socket, debugger_in_buf, sizeof(debugger_in_buf));
+        
+            auto niter = std::find(debugger_in_buf, debugger_in_buf + nbytes, '\0');
+        
+            opstr.reserve(opstr.size() + nbytes);
+            std::transform(debugger_in_buf, debugger_in_buf + nbytes, std::back_inserter(opstr), [](uint8_t b) {
+                return (char)b;
+            });
+
+            if(niter == debugger_in_buf + (nbytes - 1))
+            {
+                break;
+            }
+        }
+    }
+
+    return opstr;
+}
+
+void writeDebuggerOutput(std::string data)
+{
+    if(debugger_use_std_io)
+    {
+        std::cout << data;
+    }
+    else
+    {
+        data.push_back('\0');
+        auto cpos = data.cbegin();
+
+        while(true)
+        {
+            auto cbytes = std::min((size_t)std::distance(cpos, data.cend()), (size_t)sizeof(debugger_out_buf));
+
+            memset(debugger_out_buf, 0, sizeof(debugger_out_buf));
+            std::transform(cpos, cpos + cbytes, std::back_inserter(debugger_out_buf), [](char c) {
+                return (uint8_t)c;
+            });
+            cpos += cbytes;
+
+            auto nbytes = write(debugger_socket, debugger_out_buf, cbytes);
+            while(nbytes < cbytes)
+            {
+                auto remainbytes = cbytes - nbytes;
+                auto nnbytes = write(debugger_socket, debugger_out_buf + nbytes, remainbytes);
+
+                nbytes += nnbytes;
+            }
+
+            if(cpos == data.end())
+            {
+                break;
+            }
+        }
+    }
+}
+#endif 
 
 std::pair<DebuggerCmd, std::string> readDebugCmd()
 {
-    std::string opstr;
-    int cc = 0;
-
-    printf("> ");
-    fflush(stdout);
-
-    do
-    {    
-        xxxx;
-        cc = std::getchar();
-        if(cc == 127)
-        {
-            if(!opstr.empty())
-            {
-                std::string outstr = std::string("> ") + opstr.substr(0, opstr.size() - 1);
-                printf("\33[2K\r%s", outstr.c_str());
-                fflush(stdout);
-            }
-        }
-        else
-        {
-            if(cc != '\n')
-            {
-                opstr.push_back(cc);
-            }
-        }
-    } while (cc != '\n');
-
+    std::string opstr = readDebuggerCmd();
 
     if(opstr == "help")
     {
@@ -156,9 +277,6 @@ std::pair<DebuggerCmd, std::string> readDebugCmd()
         bool actionok = std::regex_search(actionstr, matchaction, afx);
         if(!actionok)
         {
-            printf("Bad breakpoint action...\n");
-            fflush(stdout);
-
             return std::make_pair(DebuggerCmd::Invalid, opstr);
         }
 
@@ -175,9 +293,6 @@ std::pair<DebuggerCmd, std::string> readDebugCmd()
             bool bpok = std::regex_search(bpstr, matchbp, bpfx);
             if(!bpok)
             {
-                printf("Bad breakpoint location...\n");
-                fflush(stdout);
-
                 return std::make_pair(DebuggerCmd::Invalid, bpstr);
             }
 
@@ -190,9 +305,6 @@ std::pair<DebuggerCmd, std::string> readDebugCmd()
             bool bpok = std::regex_search(bpstr, matchbp, bpfx);
             if(!bpok)
             {
-                printf("Bad breakpoint id...\n");
-                fflush(stdout);
-
                 return std::make_pair(DebuggerCmd::Invalid, bpstr);
             }
 
@@ -204,13 +316,6 @@ std::pair<DebuggerCmd, std::string> readDebugCmd()
         return std::make_pair(DebuggerCmd::Help, "");
     }
 }
-
-void writeDebugResult(std::string data)
-{
-    xxxx;
-}
-
-#endif
 
 DebuggerActionFP Evaluator::fpDebuggerAction = debuggerStepAction;
 
@@ -277,67 +382,72 @@ std::vector<std::string> splitString(const std::string& str)
     return result;
 }
 
-void dbg_printHelp()
+std::string dbg_printHelp()
 {
-    printf("Available commands are:\n");
-    printf("----\n");
-    printf("  (p)rint\n");
-    printf("  stack\n");
-    printf("----\n");
-    printf("  (s)tep\n");
-    printf("  (i)nto\n");
-    printf("  (c)ontinue\n");
-    printf("  (r)everse (s)tep\n");
-    printf("  (r)everse (i)nto\n");
-    printf("  (r)everse (c)ontinue\n");
-    printf("----\n");
-    printf("  (l)ocals\n");
-    printf("  (d)isplay vexp\n");
-    printf("----\n");
-    printf("  (b)reakpoint list\n");
-    printf("  (b)reakpoint add file:line\n");
-    printf("  (b)reakpoint delete bpid\n");
-    printf("  (q)uit\n");
+    return 
+    std::string("Available commands are:\n") +
+    "----\n" +
+    "  (p)rint\n" +
+    "  stack\n" +
+    "----\n" +
+    "  (s)tep\n" +
+    "  (i)nto\n" +
+    "  (c)ontinue\n" +
+    "  (r)everse (s)tep\n" +
+    "  (r)everse (i)nto\n" +
+    "  (r)everse (c)ontinue\n" +
+    "----\n" +
+    "  (l)ocals\n" +
+    "  (d)isplay vexp\n" +
+    "----\n" +
+    "  (b)reakpoint list\n" +
+    "  (b)reakpoint add file:line\n" +
+    "  (b)reakpoint delete bpid\n" +
+    "  (q)uit\n";
 }
 
-void dbg_printOp(Evaluator* vv)
+std::string dbg_printOp(Evaluator* vv)
 {
     auto cframe = vv->dbg_getCFrame();
-
-    printf("> %s\n", cframe->dbg_currentbp.op->ssrc.c_str());
-    fflush(stdout);
+    return cframe->dbg_currentbp.op->ssrc + "\n";
 }
 
-void dbg_printFunction(Evaluator* vv)
+std::string dbg_printFunction(Evaluator* vv)
 {
     auto cframe = vv->dbg_getCFrame();
     std::string contents = MarshalEnvironment::g_srcMap.find(cframe->invoke->srcFile)->second;
     
+    std::stringstream ss;
     auto lines = splitString(contents);
     for(int64_t i = cframe->invoke->sinfoStart.line; i <= cframe->invoke->sinfoEnd.line; ++i)
     {
+        char line[16] = {0};
         if(cframe->dbg_srcline != i) {
-            printf("%3i: %s\n", (int)i, lines[i - 1].c_str());
+            sprintf(line, "%3i: ", (int)i);
+            ss << line << lines[i - 1] << "\n";
         }
         else {
-            printf("%3i >> : %s\n", (int)i, lines[i - 1].c_str());
+            sprintf(line, "%3i >> : ", (int)i);
+            ss << line << lines[i - 1] << "\n";
         }
     }
 
-    fflush(stdout);
+    return ss.str();
 }
 
-void dbg_displayStack(Evaluator* vv)
+std::string dbg_displayStack(Evaluator* vv)
 {
-    printf("++++\n");
+    std::stringstream ss;
+    ss << "++++\n";
 
     for(int32_t i = 0; i <= vv->dbg_getCPos(); ++i)
     {
-        printf("  %s\n", Evaluator::g_callstack[i].invoke->name.c_str());
+        ss << Evaluator::g_callstack[i].invoke->name << "\n";
     }
 
-    printf("----\n");
-    fflush(stdout);
+    ss << "----\n";
+
+    return ss.str();
 }
 
 void dbg_processStep(Evaluator* vv)
@@ -389,25 +499,26 @@ void dbg_processReverseContinue(Evaluator* vv)
     }
 }
 
-void dbg_displayLocals(Evaluator* vv)
+std::string dbg_displayLocals(Evaluator* vv)
 {
-    std::string locals("**params**\n");
-    const std::vector<BSQFunctionParameter>& params = vv->dbg_getCFrame()->invoke->params;
+    std::stringstream ss;
+    ss << "**params**\n";
 
+    const std::vector<BSQFunctionParameter>& params = vv->dbg_getCFrame()->invoke->params;
     for(size_t i = 0; i < params.size(); ++i)
     {
         auto binvoke = dynamic_cast<const BSQInvokeBodyDecl*>(vv->dbg_getCFrame()->invoke);
         auto val = Evaluator::evalParameterInfo(binvoke->paraminfo[i], vv->dbg_getCFrame()->frameptr);
         
-        locals += "  " + params[i].name + ": " + params[i].ptype->fpDisplay(params[i].ptype, val, DisplayMode::CmdDebug) + "\n";
+        ss << "  " << params[i].name << ": " << params[i].ptype->fpDisplay(params[i].ptype, val, DisplayMode::CmdDebug) << "\n";
     }
 
     if(!params.empty())
     {
-        locals += "\n";
+        ss << "\n";
     }
 
-    locals += "**locals**\n";
+    ss << "**locals**\n";
     const std::map<std::string, VariableHomeLocationInfo>& vhomeinfo = vv->dbg_getCFrame()->dbg_locals;
     for(auto iter = vhomeinfo.cbegin(); iter != vhomeinfo.cend(); ++iter)
     {
@@ -419,15 +530,15 @@ void dbg_displayLocals(Evaluator* vv)
         if(!isparam)
         {
             auto val = vv->evalTargetVar(iter->second.location);
-            locals += "  " + iter->first + ": " + iter->second.vtype->fpDisplay(iter->second.vtype, val, DisplayMode::CmdDebug) + "\n";
+            ss << "  " << iter->first << ": " << iter->second.vtype->fpDisplay(iter->second.vtype, val, DisplayMode::CmdDebug) << "\n";
         }
     }
 
-    printf("%s\n", locals.c_str());
-    fflush(stdout);
+    ss << "\n";
+    return ss.str();
 }
 
-void dbg_displayExp(Evaluator* vv, std::string vexp)
+std::string dbg_displayExp(Evaluator* vv, std::string vexp)
 {
     const std::vector<BSQFunctionParameter>& params = vv->dbg_getCFrame()->invoke->params;
     auto ppos = std::find_if(params.cbegin(), params.cend(), [&vexp](const BSQFunctionParameter& param) {
@@ -439,10 +550,10 @@ void dbg_displayExp(Evaluator* vv, std::string vexp)
         return vinfo.first == vexp;
     });
 
+    std::stringstream ss;
     if(ppos == params.cend() && lpos == vhomeinfo.cend())
     {
-        printf("Unknown variable: %s\n", vexp.c_str());
-        fflush(stdout);
+        ss << "Unknown variable: " << vexp << "\n";
     }
     else
     { 
@@ -462,24 +573,26 @@ void dbg_displayExp(Evaluator* vv, std::string vexp)
         }
 
         auto eval = btype->fpDisplay(btype, sl, DisplayMode::CmdDebug);
-        printf("%s\n", eval.c_str());
-        fflush(stdout);
+        ss << eval << "\n";
     }
+
+    return ss.str();
 }
 
-void dbg_bpList(Evaluator* vv)
+std::string dbg_bpList(Evaluator* vv)
 {
-    std::string bps("**breakpoints**\n");
+    std::stringstream ss;
+    ss << "**breakpoints**\n";
     for(size_t i = 0; i < vv->breakpoints.size(); ++i)
     {
-        bps += "[" + std::to_string(vv->breakpoints[i].bpid) + "] " + vv->breakpoints[i].invk->srcFile + ":" + std::to_string(vv->breakpoints[i].iline) + "\n";
+        ss << "[" << std::to_string(vv->breakpoints[i].bpid) << "] " << vv->breakpoints[i].invk->srcFile << ":" << std::to_string(vv->breakpoints[i].iline) << "\n";
     }
 
-    printf("%s\n", bps.c_str());
-    fflush(stdout);
+    ss << "\n";
+    return ss.str();
 }
 
-void dbg_bpAdd(Evaluator* vv, std::string bpstr)
+std::string dbg_bpAdd(Evaluator* vv, std::string bpstr)
 {
     auto spos = bpstr.find(':');
     assert(spos != std::string::npos);
@@ -495,13 +608,11 @@ void dbg_bpAdd(Evaluator* vv, std::string bpstr)
         
     if(candfuncs.size() == 0)
     {
-        printf("No files match the given breakpoint spec\n");
-        fflush(stdout);
+        return std::string("No files match the given breakpoint spec\n");
     }
     else if(candfuncs.size() > 1)
     {
-        printf("Ambigious breakpoint spec -- multiple files match\n");
-        fflush(stdout);
+        return std::string("Ambigious breakpoint spec -- multiple files match\n");
     }
     else
     {
@@ -513,8 +624,7 @@ void dbg_bpAdd(Evaluator* vv, std::string bpstr)
 
         if(bpc != 0)
         {
-            printf("Breakpoint already set at invoke\n");
-            fflush(stdout);
+            return std::string("Breakpoint already set at invoke\n");
         }
         else
         {
@@ -522,11 +632,13 @@ void dbg_bpAdd(Evaluator* vv, std::string bpstr)
 
             BreakPoint bp{(int64_t)vv->breakpoints.size(), -1, iid, ll, *opii};
             vv->breakpoints.push_back(bp);
+
+            return std::string("Added breakpoint [") + std::to_string(bp.bpid) + "]\n";
         }
     }
 }
 
-void dbg_bpDelete(Evaluator* vv, std::string bpstr)
+std::string dbg_bpDelete(Evaluator* vv, std::string bpstr)
 {
     int64_t ll = std::strtol(&bpstr[0], nullptr, 10);
 
@@ -536,13 +648,11 @@ void dbg_bpDelete(Evaluator* vv, std::string bpstr)
 
     if(bpc == 0)
     {
-        printf("No breakpoints match the spec\n");
-        fflush(stdout);
+        return std::string("No breakpoints match the spec\n");
     }
     else if(bpc > 1)
     {
-        printf("Ambigious breakpoint spec -- multiple files match\n");
-        fflush(stdout);
+        return std::string("Ambigious breakpoint spec -- multiple files match\n");
     }
     else
     {
@@ -551,91 +661,98 @@ void dbg_bpDelete(Evaluator* vv, std::string bpstr)
         });
 
         vv->breakpoints.erase(ebp, vv->breakpoints.end());
+        return std::string("Deleted breakpoint [") + bpstr + "]\n";
     }
 }
 
-void dbg_quit(Evaluator* vv)
+std::string dbg_quit()
 {
-    printf("Exiting debugging session...\n");
-    exit(0);
+    closeDebuggerIO();
+    return("Exiting debugging session...\n");
 }
 
 void debuggerStepAction(Evaluator* vv)
 {
-    dbg_printOp(vv);
+    writeDebuggerOutput(dbg_printOp(vv));
 
     while(true)
     {
-        printf(">"); xxx;
-        auto cmd = dbg_parseDebuggerCmd(vv);
+        auto cmd = readDebugCmd();
+        std::string response;
 
         if(cmd.first == DebuggerCmd::Help)
         {
-            dbg_printHelp();
+            writeDebuggerOutput(dbg_printHelp());
         }
         else if(cmd.first == DebuggerCmd::PrintFunction)
         {
-            dbg_printFunction(vv);
+            writeDebuggerOutput(dbg_printFunction(vv));
         }
         else if(cmd.first == DebuggerCmd::CallStack)
         {
-            dbg_displayStack(vv);
+            writeDebuggerOutput(dbg_displayStack(vv));
         }
         else if(cmd.first == DebuggerCmd::LocalDisplay)
         {
-            dbg_displayLocals(vv);
+            writeDebuggerOutput(dbg_displayLocals(vv));
         }
         else if(cmd.first == DebuggerCmd::ExpDisplay)
         {
-            dbg_displayExp(vv, cmd.second);
+            writeDebuggerOutput(dbg_displayExp(vv, cmd.second));
         }
         else if(cmd.first == DebuggerCmd::Step)
         {
+            writeDebuggerOutput("$RESUME$");
             dbg_processStep(vv);
             break;
         }
         else if(cmd.first == DebuggerCmd::StepInto)
         {
+            writeDebuggerOutput("$RESUME$");
             dbg_processStepInto(vv);
             break;
         }
         else if(cmd.first == DebuggerCmd::Continue)
         {
+            writeDebuggerOutput("$RESUME$");
             dbg_processContinue(vv);
             break;
         }
         else if(cmd.first == DebuggerCmd::ReverseStep)
         {
+            writeDebuggerOutput("$RESUME$");
             dbg_processReverseStep(vv);
         }
         else if(cmd.first == DebuggerCmd::ReverseStepInto)
         {
+            writeDebuggerOutput("$RESUME$");
             dbg_processReverseStepInto(vv);
         }
         else if(cmd.first == DebuggerCmd::ReverseContinue)
         {
+            writeDebuggerOutput("$RESUME$");
             dbg_processReverseContinue(vv);
         }
         else if(cmd.first == DebuggerCmd::ListBreakPoint)
         {
-            dbg_bpList(vv);
+            writeDebuggerOutput(dbg_bpList(vv));
         }
         else if(cmd.first == DebuggerCmd::AddBreakPoint)
         {
-            dbg_bpAdd(vv, cmd.second);
+            writeDebuggerOutput(dbg_bpAdd(vv, cmd.second));
         }
         else if(cmd.first == DebuggerCmd::DeleteBreakpoint)
         {
-            dbg_bpDelete(vv, cmd.second);
+            writeDebuggerOutput(dbg_bpDelete(vv, cmd.second));
         }
         else if(cmd.first == DebuggerCmd::Quit)
         {
-            dbg_quit(vv);
+            writeDebuggerOutput("$QUIT$");
+            dbg_quit();
         }
         else
         {
-            printf("Unknown command\n");
-            fflush(stdout);
+            writeDebuggerOutput("$UNKNOWN$");
         }
     }
 }
