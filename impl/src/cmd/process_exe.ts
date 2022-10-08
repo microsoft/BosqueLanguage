@@ -5,6 +5,7 @@
 
 import * as fs from "fs";
 import * as path from "path";
+import * as net from "net";
 import * as readline from "readline";
 
 import * as chalk from "chalk";
@@ -117,6 +118,32 @@ function processRunAction(args: string[], debug: boolean) {
             process.exit(0);
         });
     }
+}
+
+function processAttachAction() {
+    let dbgserver = net.createServer((socket) => {
+        socket.on("data", (data) => {
+            let residx = data.indexOf(0);
+            let rstr = "";
+            try {
+                rstr = data.slice(0, residx).toString();
+                
+                if(!rstr.startsWith("$")) {
+                    process.stdout.write(rstr);
+                }
+            }
+            catch(ex) {
+                console.log(`DEBUGGER FAILURE -- ${ex}`);
+            }
+        });
+
+        process.stdin.on("data", (data) => {
+            let buff = Buffer.from(data + "\0");
+            socket.write(buff);
+        });
+    }).listen(1337, "127.0.0.1");
+
+    dbgserver.close();
 }
 
 function processRunSymbolicAction(args: string[]) {
@@ -342,5 +369,5 @@ function processFuzzAction(args: string[]) {
 }
 
 export {
-    processRunAction, processRunSymbolicAction, processFuzzAction
+    processRunAction, processAttachAction, processRunSymbolicAction, processFuzzAction
 };

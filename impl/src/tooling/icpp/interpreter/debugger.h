@@ -9,7 +9,7 @@
 
 #include "op_eval.h"
 #include <iostream>
-#include <strstream>
+#include <sstream>
 
 bool initializeDebuggerIO();
 void closeDebuggerIO();

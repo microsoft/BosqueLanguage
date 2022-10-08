@@ -5,6 +5,7 @@
 
 import * as FS from "fs";
 import * as Path from "path";
+import * as net from "net";
 import { exec } from "child_process";
 
 import { MIRAssembly, PackageConfig } from "../../../compiler/mir_assembly";
@@ -99,7 +100,37 @@ function runICPPFile(icppjson: {code: object, args: any[], main: string}, debug:
     try {
         const cmd = `${exepath} ${debug ? "--debug " : ""}--stream`;
 
+        let dbgserver: net.Server | undefined = undefined;
+        if(debug) {
+            dbgserver = net.createServer((socket) => {
+                socket.on("data", (data) => {
+                    let residx = data.indexOf(0);
+                    let rstr = "";
+                    try {
+                        rstr = data.slice(0, residx).toString().trimEnd();
+                        
+                        if(!rstr.startsWith("$")) {
+                            process.stdout.write(rstr);
+                            process.stdout.write("\n");
+                        }
+                    }
+                    catch(ex) {
+                        console.log(`DEBUGGER FAILURE -- ${ex}`);
+                    }
+                });
+
+                process.stdin.on("data", (data) => {
+                    let buff = Buffer.from(data.toString().trim() + "\0");
+                    socket.write(buff);
+                });
+            }).listen(1337, "127.0.0.1");
+        }
+
         const proc = exec(cmd, (err, stdout) => {
+            if(dbgserver !== undefined) {
+                dbgserver.close();
+            }
+
            cb(stdout.toString().trim());
         });
 

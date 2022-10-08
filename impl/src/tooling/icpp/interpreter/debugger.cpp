@@ -5,8 +5,6 @@
 
 #include "debugger.h"
 
-bool debugger_use_std_io = true;
-
 uint8_t debugger_in_buf[1024];
 uint8_t debugger_out_buf[1024];
 
@@ -16,22 +14,12 @@ bool initializeDebuggerIO()
     memset(debugger_in_buf, 0, sizeof(debugger_in_buf));
     memset(debugger_out_buf, 0, sizeof(debugger_out_buf));
 
-    if(debugger_use_std_io)
-    {
-        return true;
-    }
-
     assert(false); //no network debugging yet
     return false;
 }
 
 void closeDebuggerIO()
 {
-    if(debugger_use_std_io)
-    {
-        return;
-    }
-
     assert(false); //no network debugging yet
 }
 
@@ -39,37 +27,14 @@ std::string readDebuggerCmd()
 {
     std::string opstr;
 
-    if(debugger_use_std_io)
-    {
-        int cc = 0;
-
-        do
-        {    
-            cc = std::getchar();
-            if(cc != '\n')
-            {
-                opstr.push_back(cc);
-            }
-        } while (cc != '\n');
-    }
-    else
-    {
-        assert(false);
-    }
+    assert(false);
 
     return opstr;
 }
 
 void writeDebuggerOutput(std::string data)
 {
-    if(debugger_use_std_io)
-    {
-        std::cout << data;
-    }
-    else
-    {
-        assert(false);
-    }
+    assert(false);
 }
 #else
 #include <sys/types.h>
@@ -85,11 +50,6 @@ bool initializeDebuggerIO()
     memset(debugger_in_buf, 0, sizeof(debugger_in_buf));
     memset(debugger_out_buf, 0, sizeof(debugger_out_buf));
 
-    if(debugger_use_std_io)
-    {
-        return true;
-    }
-
     memset((char*)&debugger_addr, 0, sizeof(debugger_addr));
     debugger_addr.sin_family = AF_INET;
     debugger_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
@@ -101,22 +61,23 @@ bool initializeDebuggerIO()
         return false;
     }
 
-    auto connectok = connect(debugger_socket, (struct sockaddr*)&debugger_addr, sizeof(debugger_addr));
-    if(connectok < 0)
+    auto connectok = false;
+    auto sleepct = 0;
+    while(!connectok && sleepct < 10)
     {
-        return false;
+        connectok = connect(debugger_socket, (struct sockaddr*)&debugger_addr, sizeof(debugger_addr));
+        if(!connectok)
+        {
+            sleep(3);
+            sleepct++;
+        }
     }
 
-    return true;
+    return connectok;
 }
 
 void closeDebuggerIO()
 {
-    if(debugger_use_std_io)
-    {
-        return;
-    }
-
     shutdown(debugger_socket, SHUT_RDWR);
 }
 
@@ -124,44 +85,21 @@ std::string readDebuggerCmd()
 {
     std::string opstr;
 
-    if(debugger_use_std_io)
+    while(true)
     {
-        while(true)
-        {
-            memset(debugger_in_buf, 0, sizeof(debugger_in_buf));
-            auto nbytes = read(0, debugger_in_buf, sizeof(debugger_in_buf));
+        memset(debugger_in_buf, 0, sizeof(debugger_in_buf));
+        auto nbytes = read(debugger_socket, debugger_in_buf, sizeof(debugger_in_buf));
         
-            auto niter = std::find(debugger_in_buf, debugger_in_buf + nbytes, '\n');
+        auto niter = std::find(debugger_in_buf, debugger_in_buf + nbytes, '\0');
         
-            opstr.reserve(opstr.size() + nbytes);
-            std::transform(debugger_in_buf, debugger_in_buf + nbytes, std::back_inserter(opstr), [](uint8_t b) {
-                return (char)b;
-            });
+        opstr.reserve(opstr.size() + nbytes);
+        std::transform(debugger_in_buf, debugger_in_buf + nbytes, std::back_inserter(opstr), [](uint8_t b) {
+            return (char)b;
+        });
 
-            if(niter == debugger_in_buf + (nbytes - 1))
-            {
-                break;
-            }
-        }
-    }
-    else
-    {
-        while(true)
+        if(niter == debugger_in_buf + (nbytes - 1))
         {
-            memset(debugger_in_buf, 0, sizeof(debugger_in_buf));
-            auto nbytes = read(debugger_socket, debugger_in_buf, sizeof(debugger_in_buf));
-        
-            auto niter = std::find(debugger_in_buf, debugger_in_buf + nbytes, '\0');
-        
-            opstr.reserve(opstr.size() + nbytes);
-            std::transform(debugger_in_buf, debugger_in_buf + nbytes, std::back_inserter(opstr), [](uint8_t b) {
-                return (char)b;
-            });
-
-            if(niter == debugger_in_buf + (nbytes - 1))
-            {
-                break;
-            }
+            break;
         }
     }
 
@@ -170,38 +108,31 @@ std::string readDebuggerCmd()
 
 void writeDebuggerOutput(std::string data)
 {
-    if(debugger_use_std_io)
-    {
-        std::cout << data;
-    }
-    else
-    {
-        data.push_back('\0');
-        auto cpos = data.cbegin();
+    data.push_back('\0');
+    auto cpos = data.cbegin();
 
-        while(true)
+    while(true)
+    {
+        int64_t cbytes = (int64_t)std::min((size_t)std::distance(cpos, data.cend()), (size_t)sizeof(debugger_out_buf));
+
+        memset(debugger_out_buf, 0, sizeof(debugger_out_buf));
+        std::transform(cpos, cpos + cbytes, debugger_out_buf, [](char c) {
+            return (uint8_t)c;
+        });
+        cpos += cbytes;
+
+        int64_t nbytes = (int64_t)write(debugger_socket, debugger_out_buf, cbytes);
+        while(nbytes < cbytes)
         {
-            auto cbytes = std::min((size_t)std::distance(cpos, data.cend()), (size_t)sizeof(debugger_out_buf));
+            auto remainbytes = cbytes - nbytes;
+            auto nnbytes = write(debugger_socket, debugger_out_buf + nbytes, remainbytes);
 
-            memset(debugger_out_buf, 0, sizeof(debugger_out_buf));
-            std::transform(cpos, cpos + cbytes, std::back_inserter(debugger_out_buf), [](char c) {
-                return (uint8_t)c;
-            });
-            cpos += cbytes;
+            nbytes += nnbytes;
+        }
 
-            auto nbytes = write(debugger_socket, debugger_out_buf, cbytes);
-            while(nbytes < cbytes)
-            {
-                auto remainbytes = cbytes - nbytes;
-                auto nnbytes = write(debugger_socket, debugger_out_buf + nbytes, remainbytes);
-
-                nbytes += nnbytes;
-            }
-
-            if(cpos == data.end())
-            {
-                break;
-            }
+        if(cpos == data.end())
+        {
+            break;
         }
     }
 }
@@ -673,10 +604,17 @@ std::string dbg_quit()
 
 void debuggerStepAction(Evaluator* vv)
 {
+    if(debugger_socket == -1)
+    {
+        return;
+    }
+
     writeDebuggerOutput(dbg_printOp(vv));
 
     while(true)
     {
+        writeDebuggerOutput("> ");
+        
         auto cmd = readDebugCmd();
         std::string response;
 
