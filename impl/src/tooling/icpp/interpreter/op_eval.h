@@ -225,7 +225,7 @@ private:
             return true;
         }
 
-        auto fbp = std::find_if(breakpoints.cbegin(), breakpoints.cend(), [this, op](const BreakPoint& bp) {
+        auto fbp = std::find_if(breakpoints.cbegin(), breakpoints.cend(), [op](const BreakPoint& bp) {
             return bp.op == op;
         });
 

@@ -573,7 +573,7 @@ std::string dbg_bpDelete(Evaluator* vv, std::string bpstr)
 {
     int64_t ll = std::strtol(&bpstr[0], nullptr, 10);
 
-    auto bpc = std::count_if(vv->breakpoints.begin(), vv->breakpoints.end(), [&bpstr, ll](const BreakPoint& bp) {
+    auto bpc = std::count_if(vv->breakpoints.begin(), vv->breakpoints.end(), [ll](const BreakPoint& bp) {
         return bp.bpid == ll;
     });
 
@@ -587,7 +587,7 @@ std::string dbg_bpDelete(Evaluator* vv, std::string bpstr)
     }
     else
     {
-        auto ebp = std::remove_if(vv->breakpoints.begin(), vv->breakpoints.end(), [&bpstr, ll](const BreakPoint& bp) {
+        auto ebp = std::remove_if(vv->breakpoints.begin(), vv->breakpoints.end(), [ll](const BreakPoint& bp) {
             return bp.bpid == ll;
         });
 
