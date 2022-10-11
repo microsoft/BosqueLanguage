@@ -11,15 +11,26 @@ import * as chalk from "chalk";
 import { Config, ConfigAppTest, ConfigBuild, ConfigFuzz, ConfigRun, ConfigTest, Package, parsePackage, parseURIPath, URIPath, URIPathGlob } from "./package_load";
 import { cleanCommentsStringsFromFileContents } from "../ast/parser";
 
-type CmdTag = "run" | "symrun" | "build" | "test" | "apptest" | "fuzz";
+type CmdTag = "run" | "debug" | "attach" | "symrun" | "build" | "test" | "apptest" | "fuzz";
 
 const DEFAULT_SMALL_MODEL_ONLY = false;
 
 function help(cmd: CmdTag | undefined) {
     if(cmd === "run" || cmd === undefined) {
         process.stdout.write("Run Application:\n");
-        process.stdout.write("bosque run|debug [package_path.json] [--entrypoint fname] [--config cname]\n");
-        process.stdout.write("bosque run|debug [package_path.json] [--entrypoint fname] [--config cname] --args \"[...]\"\n\n");
+        process.stdout.write("bosque run [package_path.json] [--entrypoint fname] [--config cname]\n");
+        process.stdout.write("bosque run [package_path.json] [--entrypoint fname] [--config cname] --args \"[...]\"\n\n");
+    }
+
+    if(cmd === "debug" || cmd === undefined) {
+        process.stdout.write("Debug Application:\n");
+        process.stdout.write("bosque debug [package_path.json] [--entrypoint fname] [--config cname]\n");
+        process.stdout.write("bosque debug [package_path.json] [--entrypoint fname] [--config cname] --args \"[...]\"\n\n");
+    }
+
+    if(cmd === "attach" || cmd === undefined) {
+        process.stdout.write("Attach Debugger to Application:\n");
+        process.stdout.write("bosque attach\n");
     }
 
     if(cmd === "symrun" || cmd === undefined) {

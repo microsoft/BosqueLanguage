@@ -5,6 +5,7 @@
 
 #include "op_eval.h"
 #include "asm_load.h"
+#include "debugger.h"
 
 #include <chrono>
 #include <iostream>
@@ -96,6 +97,13 @@ std::pair<bool, json> run(Evaluator& runner, const APIModule* api, const std::st
 #ifdef BSQ_DEBUG_BUILD
         if(runner.debuggerattached)
         {
+            auto dbg_attachok = initializeDebuggerIO();
+            if(!dbg_attachok)
+            {
+                printf("!ERROR! -- Failed to initilize debugger...\n");
+                exit(1);
+            }
+
             auto result = (StorageLocationPtr)GCStack::allocFrame(call->resultType->allocinfo.inlinedatasize);
             std::optional<json> res = std::nullopt;
 
@@ -129,6 +137,8 @@ std::pair<bool, json> run(Evaluator& runner, const APIModule* api, const std::st
                     runner.reset();
                 }
             }
+
+            closeDebuggerIO();
 
             if(res == std::nullopt)
             {

@@ -5,6 +5,7 @@
 
 import * as fs from "fs";
 import * as path from "path";
+import * as net from "net";
 import * as readline from "readline";
 
 import * as chalk from "chalk";
@@ -15,7 +16,7 @@ import { PackageConfig, SymbolicActionMode } from "../compiler/mir_assembly";
 import { workflowRunICPPFile } from "../tooling/icpp/transpiler/iccp_workflows";
 import { generateStandardVOpts, workflowEvaluate, workflowInputFuzz } from "../tooling/checker/smt_workflows";
 
-function processRunAction(args: string[]) {
+function processRunAction(args: string[], debug: boolean) {
     if (args.length === 0) {
         args.push("./package.json");
     }
@@ -92,7 +93,7 @@ function processRunAction(args: string[]) {
 
                 process.stdout.write(`Evaluating...\n`);
 
-                workflowRunICPPFile(jargs, userpackage, args[0] === "debug", cfg.buildlevel, false, args[0] === "debug", {}, entrypoint, (result: string | undefined) => {
+                workflowRunICPPFile(jargs, userpackage, debug, cfg.buildlevel, false, debug, {}, entrypoint, (result: string | undefined) => {
                     if (result !== undefined) {
                         process.stdout.write(`${result}\n`);
                     }
@@ -111,12 +112,38 @@ function processRunAction(args: string[]) {
     }
     else {
         // bosque run|debug [package_path.json] [--entrypoint fname] [--config cname] --args "[...]"
-        workflowRunICPPFile(fargs, userpackage, args[0] === "debug", cfg.buildlevel, false, args[0] === "debug", {}, entrypoint, (result: string | undefined) => {
+        workflowRunICPPFile(fargs, userpackage, debug, cfg.buildlevel, false, debug, {}, entrypoint, (result: string | undefined) => {
             process.stdout.write(`${result}\n`);
 
             process.exit(0);
         });
     }
+}
+
+function processAttachAction() {
+    let dbgserver = net.createServer((socket) => {
+        socket.on("data", (data) => {
+            let residx = data.indexOf(0);
+            let rstr = "";
+            try {
+                rstr = data.slice(0, residx).toString();
+                
+                if(!rstr.startsWith("$")) {
+                    process.stdout.write(rstr);
+                }
+            }
+            catch(ex) {
+                console.log(`DEBUGGER FAILURE -- ${ex}`);
+            }
+        });
+
+        process.stdin.on("data", (data) => {
+            let buff = Buffer.from(data + "\0");
+            socket.write(buff);
+        });
+    }).listen(1337, "127.0.0.1");
+
+    dbgserver.close();
 }
 
 function processRunSymbolicAction(args: string[]) {
@@ -342,5 +369,5 @@ function processFuzzAction(args: string[]) {
 }
 
 export {
-    processRunAction, processRunSymbolicAction, processFuzzAction
+    processRunAction, processAttachAction, processRunSymbolicAction, processFuzzAction
 };
