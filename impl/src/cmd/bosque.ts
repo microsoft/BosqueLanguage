@@ -8,7 +8,7 @@
 import { help } from "./args_load";
 import { processBuildAction } from "./process_build";
 import { processAppTestAction, processTestAction } from "./process_chk";
-import { processRunAction, processFuzzAction, processRunSymbolicAction } from "./process_exe";
+import { processRunAction, processFuzzAction, processRunSymbolicAction, processAttachAction } from "./process_exe";
 
 const fullargs = process.argv;
 
@@ -29,8 +29,14 @@ else {
     cmdargs = fullargs.slice(2);
 }
 
-if (cmdop === "run" || cmdop === "debug") {
-    processRunAction(cmdargs);
+if (cmdop === "run") {
+    processRunAction(cmdargs, false);
+}
+else if (cmdop === "debug") {
+    processRunAction(cmdargs, true);
+}
+else if (cmdop === "attach") {
+    processAttachAction();
 }
 else if (cmdop === "symrun") {
     processRunSymbolicAction(cmdargs);
