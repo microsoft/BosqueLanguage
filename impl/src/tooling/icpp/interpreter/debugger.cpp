@@ -23,6 +23,12 @@ void closeDebuggerIO()
     assert(false); //no network debugging yet
 }
 
+bool isDebuggerConnected()
+{
+    assert(false); //no network debugging yet
+    return false;
+}
+
 std::string readDebuggerCmd()
 {
     std::string opstr;
@@ -79,6 +85,11 @@ bool initializeDebuggerIO()
 void closeDebuggerIO()
 {
     shutdown(debugger_socket, SHUT_RDWR);
+}
+
+bool isDebuggerConnected()
+{
+    return debugger_socket != -1;
 }
 
 std::string readDebuggerCmd()
@@ -604,7 +615,7 @@ std::string dbg_quit()
 
 void debuggerStepAction(Evaluator* vv)
 {
-    if(debugger_socket == -1)
+    if(!isDebuggerConnected())
     {
         return;
     }
