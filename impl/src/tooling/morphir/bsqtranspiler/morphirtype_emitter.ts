@@ -396,6 +396,8 @@ class MorphirTypeEmitter {
                 }
                 else {
                     assert(this.isUniqueEntityType(from));
+                    assert(false, "I don't think there should be any keys of this type????");
+                    
                     oftypetag = smtfrom.morphirtypetag;
                     objval = new MorphirCallSimple(this.getMorphirConstructorName(from).box, [exp]);
                 }

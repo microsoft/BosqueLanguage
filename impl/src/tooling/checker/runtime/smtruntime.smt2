@@ -204,6 +204,9 @@
       (bsqkey_shacontenthash@box (bsqkey_shacontenthash_value BSHAContentHash))
       ;;KEY_BOX_OPS;;
     )
+    ;;
+    ;;TODO: Do we actually need the second TypeTag? Can we just do a _ is on the construtor of the value? See also the Morphir version of this.
+    ;;
     ( (BKey@box (BKey_type TypeTag) (BKey_oftype TypeTag) (BKey_value bsq_keyobject)) )
 ))
 

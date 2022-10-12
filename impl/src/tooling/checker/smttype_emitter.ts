@@ -388,6 +388,8 @@ class SMTTypeEmitter {
                 }
                 else {
                     assert(this.isUniqueEntityType(from));
+                    assert(false, "I don't think there should be any keys of this type????");
+
                     oftypetag = smtfrom.smttypetag;
                     objval = new SMTCallSimple(this.getSMTConstructorName(from).box, [exp]);
                 }

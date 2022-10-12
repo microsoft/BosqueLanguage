@@ -574,15 +574,15 @@ unbox_BKeyBSHAContentHash k =
 --KEY_DEFAULT_OPS--
 
 type BKey = 
-    BKey TypeTag BKeyObject
+    BKey TypeTag TypeTag BKeyObject
 
 bkey_extract_value : BKey -> BKeyObject
 bkey_extract_value k = 
-    let (BKey _ obj) = k in obj
+    let (BKey _ _ obj) = k in obj
 
 bkey_none : BKey
 bkey_none = 
-    BKey TypeTag_None BKeyNone_box
+    BKey TypeTag_None TypeTag_None BKeyNone_box
 
 bsqbkey_default : BKey
 bsqbkey_default = 
@@ -590,8 +590,8 @@ bsqbkey_default =
         
 bkey_less : BKey -> BKey -> Bool
 bkey_less k1 k2 = 
-    let (BKey tag1 obj1) = k1 in
-    let (BKey tag2 obj2) = k2 in
+    let (BKey tag1 _ obj1) = k1 in
+    let (BKey tag2 _ obj2) = k2 in
     if tag1 /= tag2 then
         (ordinalOf tag1) < (ordinalOf tag2) else
         case obj1 of
@@ -779,7 +779,7 @@ bsqbterm_default =
 
 getTypeTag_BKey : BKey -> TypeTag
 getTypeTag_BKey t =
-    let (BKey tag _) = t in tag
+    let (BKey tag _ _) = t in tag
 
 getTypeTag_BTerm : BTerm -> TypeTag
 getTypeTag_BTerm t = 
