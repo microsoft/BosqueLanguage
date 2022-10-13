@@ -57,6 +57,8 @@ public:
     virtual bool parseSHAContentHashImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, z3::expr value, z3::solver& ctx) override final;
     virtual bool parseLatLongCoordinateImpl(const APIModule* apimodule, const IType* itype, float latitude, float longitude, z3::expr value, z3::solver& ctx) override final;
     
+    virtual bool parseEnumImpl(const APIModule* apimodule, const IType* itype, uint64_t n, z3::expr value, z3::solver& ctx) override final;
+
     virtual void prepareParseTuple(const APIModule* apimodule, const IType* itype, z3::solver& ctx) override final;
     virtual z3::expr getValueForTupleIndex(const APIModule* apimodule, const IType* itype, z3::expr value, size_t i, z3::solver& ctx) override final;
     virtual void completeParseTuple(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
@@ -99,6 +101,8 @@ public:
     virtual std::optional<std::vector<uint8_t>> extractUUID7Impl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
     virtual std::optional<std::vector<uint8_t>> extractSHAContentHashImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
     virtual std::optional<std::pair<float, float>> extractLatLongCoordinateImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
+
+    virtual std::optional<uint64_t> extractEnumImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
 
     virtual z3::expr extractValueForTupleIndex(const APIModule* apimodule, const IType* itype, z3::expr value, size_t i, z3::solver& ctx) override final;
     virtual z3::expr extractValueForRecordProperty(const APIModule* apimodule, const IType* itype, z3::expr value, std::string pname, z3::solver& ctx) override final;

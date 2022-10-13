@@ -190,6 +190,8 @@ public:
     virtual bool parseSHAContentHashImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, ValueRepr value, State& ctx) = 0;
     virtual bool parseLatLongCoordinateImpl(const APIModule* apimodule, const IType* itype, float latitude, float longitude, ValueRepr value, State& ctx) = 0;
 
+    virtual bool parseEnumImpl(const APIModule* apimodule, const IType* itype, uint64_t n, ValueRepr value, State& ctx) = 0;
+
     virtual void prepareParseTuple(const APIModule* apimodule, const IType* itype, State& ctx) = 0;
     virtual ValueRepr getValueForTupleIndex(const APIModule* apimodule, const IType* itype, ValueRepr value, size_t i, State& ctx) = 0;
     virtual void completeParseTuple(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
@@ -233,6 +235,8 @@ public:
     virtual std::optional<std::vector<uint8_t>> extractSHAContentHashImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
     virtual std::optional<std::pair<float, float>> extractLatLongCoordinateImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
     
+    virtual std::optional<uint64_t> extractEnumImpl(const APIModule* apimodule, const IType* itype, ValueRepr value, State& ctx) = 0;
+
     virtual ValueRepr extractValueForTupleIndex(const APIModule* apimodule, const IType* itype, ValueRepr value, size_t i, State& ctx) = 0;
     virtual ValueRepr extractValueForRecordProperty(const APIModule* apimodule, const IType* itype, ValueRepr value, std::string pname, State& ctx) = 0;
     virtual ValueRepr extractValueForEntityField(const APIModule* apimodule, const IType* itype, ValueRepr value, std::pair<std::string, std::string> fnamefkey, State& ctx) = 0;
@@ -1937,13 +1941,13 @@ public:
             return false;
         }
         
-        return apimgr.parseNatImpl(apimodule, this, (uint64_t)std::distance(this->enums.cbegin(), pos), value, ctx);
+        return apimgr.parseEnumImpl(apimodule, this, (uint64_t)std::distance(this->enums.cbegin(), pos), value, ctx);
     }
 
     template <typename ValueRepr, typename State>
     std::optional<json> extract(ApiManagerJSON<ValueRepr, State>& apimgr, const APIModule* apimodule, ValueRepr value, State& ctx) const
     {
-        auto nval = apimgr.extractNatImpl(apimodule, this, value, ctx);
+        auto nval = apimgr.extractEnumImpl(apimodule, this, value, ctx);
         if(!nval.has_value())
         {
             return std::nullopt;

@@ -3158,6 +3158,12 @@ bool ICPPParseJSON::parseLatLongCoordinateImpl(const APIModule* apimodule, const
     return true;
 }
 
+bool ICPPParseJSON::parseEnumImpl(const APIModule* apimodule, const IType* itype, uint64_t n, StorageLocationPtr value, Evaluator& ctx)
+{
+    SLPTR_STORE_CONTENTS_AS(BSQNat, value, (BSQNat)n);
+    return true;
+}
+
 void ICPPParseJSON::prepareParseTuple(const APIModule* apimodule, const IType* itype, Evaluator& ctx)
 {
     BSQTypeID tupid = MarshalEnvironment::g_typenameToIdMap.at(itype->name);
@@ -3733,6 +3739,11 @@ std::optional<std::pair<float, float>> ICPPParseJSON::extractLatLongCoordinateIm
     auto llcoord = SLPTR_LOAD_CONTENTS_AS(BSQLatLongCoordinate, value);
 
     return std::make_optional(std::make_pair(llcoord.latitude, llcoord.longitude));
+}
+
+std::optional<uint64_t> ICPPParseJSON::extractEnumImpl(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, Evaluator& ctx)
+{
+    return std::make_optional((uint64_t)SLPTR_LOAD_CONTENTS_AS(BSQNat, value));
 }
 
 StorageLocationPtr ICPPParseJSON::extractValueForTupleIndex(const APIModule* apimodule, const IType* itype, StorageLocationPtr value, size_t i, Evaluator& ctx)

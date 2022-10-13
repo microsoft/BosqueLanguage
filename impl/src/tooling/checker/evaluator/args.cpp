@@ -835,20 +835,26 @@ bool SMTParseJSON::parseSHAContentHashImpl(const APIModule* apimodule, const ITy
     
 bool SMTParseJSON::parseLatLongCoordinateImpl(const APIModule* apimodule, const IType* itype, float latitude, float longitude, z3::expr value, z3::solver& ctx)
 {
-    auto bbf = getArgContextConstructor(ctx.ctx(), "BFloat@UFCons_API", ctx.ctx().real_sort());
-
-    auto latctx = extendContext(ctx.ctx(), value, 0);
     char latstr[16] = {0};
     auto lenlat = sprintf(latstr, "%1.9f", latitude);
     std::string latres(latstr, latstr + lenlat);
-    ctx.add(bbf(latctx) == ctx.ctx().real_const(latres.c_str()));
+    auto blat = getArgContextConstructor(ctx.ctx(), "BLatitude@UFCons_API", ctx.ctx().real_sort());
+    ctx.add(blat(value) == ctx.ctx().real_const(latres.c_str()));
 
-    auto longctx = extendContext(ctx.ctx(), value, 1);
     char longstr[16] = {0};
     auto lenlong = sprintf(longstr, "%1.9f", longitude);
     std::string longres(longstr, longstr + lenlong);
-    ctx.add(bbf(value) == ctx.ctx().real_const(longres.c_str()));
+    auto blong = getArgContextConstructor(ctx.ctx(), "BLongitude@UFCons_API", ctx.ctx().real_sort());
+    ctx.add(blong(value) == ctx.ctx().real_const(longres.c_str()));
     
+    return true;
+}
+
+bool SMTParseJSON::parseEnumImpl(const APIModule* apimodule, const IType* itype, uint64_t n, z3::expr value, z3::solver& ctx)
+{
+    auto bef = getArgContextConstructor(ctx.ctx(), "BEnum@UFCons_API", ctx.ctx().int_sort());
+    ctx.add(bef(value) == ctx.ctx().int_val(n));
+
     return true;
 }
 
@@ -1284,13 +1290,11 @@ std::optional<std::vector<uint8_t>> SMTParseJSON::extractSHAContentHashImpl(cons
 
 std::optional<std::pair<float, float>> SMTParseJSON::extractLatLongCoordinateImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
 {
-    auto bbf = getArgContextConstructor(ctx.ctx(), "BFloat@UFCons_API", ctx.ctx().real_sort());
+    auto blat = getArgContextConstructor(ctx.ctx(), "BLatitude@UFCons_API", ctx.ctx().real_sort());
+    auto vlat = expFloatAsFloat(ctx, blat(value));
 
-    auto latctx = extendContext(ctx.ctx(), value, 0);
-    auto vlat = expFloatAsFloat(ctx, bbf(latctx));
-
-    auto longctx = extendContext(ctx.ctx(), value, 1);
-    auto vlong = expFloatAsFloat(ctx, bbf(longctx));
+    auto blong = getArgContextConstructor(ctx.ctx(), "BLongitude@UFCons_API", ctx.ctx().real_sort());
+    auto vlong = expFloatAsFloat(ctx, blong(value));
 
     if(!vlat.has_value() || !vlong.has_value())
     {
@@ -1298,6 +1302,12 @@ std::optional<std::pair<float, float>> SMTParseJSON::extractLatLongCoordinateImp
     }
 
     return std::make_pair(std::stof(vlat.value()), std::stof(vlong.value()));
+}
+
+std::optional<uint64_t> SMTParseJSON::extractEnumImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
+{
+    auto bef = getArgContextConstructor(ctx.ctx(), "BEnum@UFCons_API", ctx.ctx().int_sort());
+    return expIntAsUIntSmall(ctx, bef(value));
 }
 
 z3::expr SMTParseJSON::extractValueForTupleIndex(const APIModule* apimodule, const IType* itype, z3::expr value, size_t i, z3::solver& ctx)

@@ -202,7 +202,7 @@ class SMTEmitter {
         const tdecl = this.bemitter.assembly.entityDecls.get(tt.typeID) as MIREnumEntityTypeDecl;
 
         havocfuncs.add(this.temitter.generateHavocConstructorName(tt));
-        const bcreate = new SMTCallSimple("BNat@UFCons_API", [new SMTVar("path")]);
+        const bcreate = new SMTCallSimple("BEnum@UFCons_API", [new SMTVar("path")]);
         
         const emax = tdecl.enums.length.toString();
         const fexp = new SMTLet("vv", bcreate, 
