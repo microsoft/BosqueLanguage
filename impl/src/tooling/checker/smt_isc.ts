@@ -596,7 +596,7 @@ class ISCGenerator {
     static generateInputConstraintOptions(inv: MIRInvokeDecl, assembly: MIRAssembly, temitter: SMTTypeEmitter): string[] {
         const gen = new ISCGenerator(assembly, temitter);
 
-        const popts = inv.params.map((p) => gen.generateISCOptions(temitter.getMIRType(p.type)).map((opt) => opt.extend(0)));
+        const popts = inv.params.map((p, i) => gen.generateISCOptions(temitter.getMIRType(p.type)).map((opt) => opt.extend(i).extend(0)));
         const allopts = ISCTestOption.join(...popts);
 
         return allopts.map((opt) => {

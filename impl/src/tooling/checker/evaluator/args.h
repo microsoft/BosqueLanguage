@@ -7,15 +7,40 @@
 
 #include "common.h"
 
+#include <random>
+typedef std::default_random_engine RandGenerator;
+
 class SMTParseJSON : public ApiManagerJSON<z3::expr, z3::solver>
 {
 private:
     std::vector<std::vector<uint8_t>> hashhash;
 
+    RandGenerator rand;
+    bool randEnabled;
+
+    std::optional<uint64_t> intBinSearchUnsigned(z3::solver& s, const z3::expr& e, uint64_t min, uint64_t max, const std::vector<uint64_t>& topts);
+    std::optional<int64_t> intBinSearchSigned(z3::solver& s, const z3::expr& e, int64_t min, int64_t max, const std::vector<int64_t>& topts);
+
+    std::optional<std::string> expIntAsUInt(z3::solver& s, const z3::expr& e);
+    std::optional<uint64_t> expIntAsUIntSmall(z3::solver& s, const z3::expr& e);
+    std::optional<std::string> expIntAsInt(z3::solver& s, const z3::expr& e);
+    std::optional<int64_t> expIntAsIntSmall(z3::solver& s, const z3::expr& e);
+
+    std::optional<std::string> evalStringAsString(z3::solver& s, const z3::expr& e);
 public:
     SMTParseJSON(): 
         ApiManagerJSON(), hashhash()
-    {;}
+    {
+        const char* SMT_SEED = std::getenv("SMT_RAND_SEED");
+        
+        //this->randEnabled = SMT_SEED != nullptr;
+        //unsigned int vv = (randEnabled ? std::atoi(SMT_SEED) : 0);
+
+        this->randEnabled = true;
+        unsigned int vv = 0;
+
+        this->rand.seed(vv);
+    }
 
     static z3::expr generateInitialArgContext(z3::context& c, size_t i)
     {
