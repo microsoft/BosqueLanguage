@@ -7,15 +7,40 @@
 
 #include "common.h"
 
+#include <random>
+typedef std::default_random_engine RandGenerator;
+
 class SMTParseJSON : public ApiManagerJSON<z3::expr, z3::solver>
 {
 private:
     std::vector<std::vector<uint8_t>> hashhash;
 
+    RandGenerator rand;
+    bool randEnabled;
+
+    std::optional<uint64_t> intBinSearchUnsigned(z3::solver& s, const z3::expr& e, uint64_t min, uint64_t max, const std::vector<uint64_t>& topts);
+    std::optional<int64_t> intBinSearchSigned(z3::solver& s, const z3::expr& e, int64_t min, int64_t max, const std::vector<int64_t>& topts);
+    std::optional<char> stringBinSearchCharASCII(z3::solver& s, const z3::expr& e, const std::string& str, size_t cidx);
+    std::optional<std::string> stringBinSearchContentsASCII(z3::solver& s, const z3::expr& e, size_t slen);
+
+    std::optional<std::string> expIntAsUInt(z3::solver& s, const z3::expr& e);
+    std::optional<uint64_t> expIntAsUIntSmall(z3::solver& s, const z3::expr& e);
+    std::optional<std::string> expIntAsInt(z3::solver& s, const z3::expr& e);
+    std::optional<int64_t> expIntAsIntSmall(z3::solver& s, const z3::expr& e);
+    std::optional<bool> expBoolAsBool(z3::solver& s, const z3::expr& e);
+
+    std::optional<std::string> evalStringAsString(z3::solver& s, const z3::expr& e);
 public:
     SMTParseJSON(): 
         ApiManagerJSON(), hashhash()
-    {;}
+    {
+        const char* SMT_SEED = std::getenv("SMT_TEST_GEN_RAND_SEED");
+        
+        this->randEnabled = SMT_SEED != nullptr;
+        unsigned int vv = (randEnabled ? std::atoi(SMT_SEED) : 0);
+
+        this->rand.seed(vv);
+    }
 
     static z3::expr generateInitialArgContext(z3::context& c, size_t i)
     {
@@ -57,6 +82,8 @@ public:
     virtual bool parseSHAContentHashImpl(const APIModule* apimodule, const IType* itype, std::vector<uint8_t> v, z3::expr value, z3::solver& ctx) override final;
     virtual bool parseLatLongCoordinateImpl(const APIModule* apimodule, const IType* itype, float latitude, float longitude, z3::expr value, z3::solver& ctx) override final;
     
+    virtual bool parseEnumImpl(const APIModule* apimodule, const IType* itype, uint64_t n, z3::expr value, z3::solver& ctx) override final;
+
     virtual void prepareParseTuple(const APIModule* apimodule, const IType* itype, z3::solver& ctx) override final;
     virtual z3::expr getValueForTupleIndex(const APIModule* apimodule, const IType* itype, z3::expr value, size_t i, z3::solver& ctx) override final;
     virtual void completeParseTuple(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
@@ -99,6 +126,8 @@ public:
     virtual std::optional<std::vector<uint8_t>> extractUUID7Impl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
     virtual std::optional<std::vector<uint8_t>> extractSHAContentHashImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
     virtual std::optional<std::pair<float, float>> extractLatLongCoordinateImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
+
+    virtual std::optional<uint64_t> extractEnumImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx) override final;
 
     virtual z3::expr extractValueForTupleIndex(const APIModule* apimodule, const IType* itype, z3::expr value, size_t i, z3::solver& ctx) override final;
     virtual z3::expr extractValueForRecordProperty(const APIModule* apimodule, const IType* itype, z3::expr value, std::string pname, z3::solver& ctx) override final;

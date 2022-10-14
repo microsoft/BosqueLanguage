@@ -343,19 +343,18 @@ function processFuzzAction(args: string[]) {
     }
 
     if(cfg.params.flavors.includes("solver")) {
-        workflowInputFuzz(userpackage, "debug", false, timeout, sym_opts, entrypoint, (res: string) => {
+        const start = Date.now();
+        workflowInputFuzz(userpackage, "debug", false, timeout, sym_opts, entrypoint, (info: string) => process.stdout.write(info + "\n"), (res: string) => {
             try {
                 const jres = JSON.parse(res);
 
-                if (jres["status"] === "input") {
-                    process.stdout.write(`Generated input in ${jres["time"]} millis!\n`);
-                    process.stdout.write(JSON.stringify(jres["value"], undefined, 2) + "\n");
-                }
-                else if (jres["status"] === "unknown") {
-                    process.stdout.write(`Solver unknown -- ${jres["info"]} -- :(\n`);
+                if (jres["result"] === "input") {
+                    const end = Date.now();
+                    process.stdout.write(`Generated input in ${end - start} millis!\n`);
+                    process.stdout.write(JSON.stringify(jres["info"], undefined, 2) + "\n");
                 }
                 else {
-                    process.stdout.write(`Failed with -- ${JSON.stringify(jres)}`);
+                    process.stdout.write(`Failed with -- ${jres["info"]}` + "\n");
                 }
 
                 process.exit(0);
