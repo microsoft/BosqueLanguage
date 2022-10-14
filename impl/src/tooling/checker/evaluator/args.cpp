@@ -12,6 +12,7 @@ static std::regex re_numberino_negf("^[(]- ([0-9]+\\.[0-9]+)([eE][-+]?[0-9]+)?[)
 
 std::optional<uint64_t> intBinSearchUnsigned_CompleteModel(z3::solver& s, const z3::expr& e)
 {
+    s.check();
     auto bbval = s.get_model().eval(e, true);
     auto strval = bbval.to_string();
 
@@ -51,7 +52,7 @@ std::optional<uint64_t> SMTParseJSON::intBinSearchUnsigned(z3::solver& s, const 
     std::vector<uint64_t> copts(topts);
     if(this->randEnabled)
     {
-        //std::shuffle(copts.begin(), copts.end(), this->rand);
+        std::shuffle(copts.begin(), copts.end(), this->rand);
 
         auto isearch = intBinSearchUnsigned_SearchOpts(s, e, copts);
         if(isearch.has_value())
@@ -114,6 +115,7 @@ std::optional<uint64_t> SMTParseJSON::intBinSearchUnsigned(z3::solver& s, const 
 
 std::optional<int64_t> intBinSearchSigned_CompleteModel(z3::solver& s, const z3::expr& e)
 {
+    s.check();
     auto bbval = s.get_model().eval(e, true);
     auto strval = bbval.to_string();
 
@@ -154,7 +156,7 @@ std::optional<int64_t> SMTParseJSON::intBinSearchSigned(z3::solver& s, const z3:
     std::vector<int64_t> copts(topts);
     if(this->randEnabled)
     {
-        //std::shuffle(copts.begin(), copts.end(), this->rand);
+        std::shuffle(copts.begin(), copts.end(), this->rand);
 
         auto isearch = intBinSearchSigned_SearchOpts(s, e, copts);
         if(isearch.has_value())
@@ -397,6 +399,7 @@ std::optional<std::string> stringBinSearchContentsASCII(z3::solver& s, const z3:
 
 std::optional<bool> expBoolAsBool(z3::solver& s, const z3::expr& e)
 {
+    s.check();
     auto bbval = s.get_model().eval(e, true);
     auto strval = bbval.to_string();
 
@@ -509,6 +512,7 @@ std::optional<std::string> SMTParseJSON::expIntAsInt(z3::solver& s, const z3::ex
 
 std::optional<std::string> expFloatAsFloat(z3::solver& s, const z3::expr& e)
 {
+    s.check();
     auto bbval = s.get_model().eval(e, true);
     auto strval = bbval.to_string();
 
@@ -523,9 +527,6 @@ std::optional<std::string> expFloatAsFloat(z3::solver& s, const z3::expr& e)
     }
     else
     {
-        //We seem to have a bug here where asserting == on the real values is not coming back unsat when the formula is unsat
-        assert(false);
-
         auto ival = realBinSearch(s, e, {0.0, 1.0, 3.0, -1.0, -3.0});
         if(!ival.has_value())
         {
@@ -588,6 +589,7 @@ std::optional<std::string> SMTParseJSON::evalStringAsString(z3::solver& s, const
     }
     */
 
+    s.check();
     auto nexp = s.get_model().eval(e, true);
     auto sstr = nexp.to_string();
 

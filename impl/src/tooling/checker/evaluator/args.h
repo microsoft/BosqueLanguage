@@ -33,11 +33,8 @@ public:
     {
         const char* SMT_SEED = std::getenv("SMT_RAND_SEED");
         
-        //this->randEnabled = SMT_SEED != nullptr;
-        //unsigned int vv = (randEnabled ? std::atoi(SMT_SEED) : 0);
-
-        this->randEnabled = true;
-        unsigned int vv = 0;
+        this->randEnabled = SMT_SEED != nullptr;
+        unsigned int vv = (randEnabled ? std::atoi(SMT_SEED) : 0);
 
         this->rand.seed(vv);
     }
