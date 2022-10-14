@@ -307,7 +307,7 @@ function workflowInputFuzz(usercode: PackageConfig, buildlevel: BuildLevel, iste
                     //cbinfo(`No valid input for Payload ${i} -- ${jres.info}`);
                 }
 
-                testopts.push(jres);
+                testopts.push(jres.value);
             }
 
             cb(JSON.stringify({result: "input", info: testopts}));
