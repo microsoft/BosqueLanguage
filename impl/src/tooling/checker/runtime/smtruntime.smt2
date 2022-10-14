@@ -204,6 +204,9 @@
       (bsqkey_shacontenthash@box (bsqkey_shacontenthash_value BSHAContentHash))
       ;;KEY_BOX_OPS;;
     )
+    ;;
+    ;;TODO: Do we actually need the second TypeTag? Can we just do a _ is on the construtor of the value? See also the Morphir version of this.
+    ;;
     ( (BKey@box (BKey_type TypeTag) (BKey_oftype TypeTag) (BKey_value bsq_keyobject)) )
 ))
 
@@ -468,6 +471,7 @@
 (declare-fun BLatitude@UFCons_API (HavocSequence) BFloat)
 (declare-fun BLongitude@UFCons_API (HavocSequence) BFloat)
 (declare-fun ContainerSize@UFCons_API (HavocSequence) BNat)
+(declare-fun BEnum@UFCons_API (HavocSequence) BNat)
 (declare-fun UnionChoice@UFCons_API (HavocSequence) BNat)
 
 (define-fun _@@cons_None_entrypoint ((ctx HavocSequence)) $Result_bsq_none
@@ -648,7 +652,7 @@
 )
 
 (define-fun _@@cons_LatLongCoordinate_entrypoint ((ctx HavocSequence)) $Result_BLatLongCoordinate
-  (let ((lat (BFloat@UFCons_API (seq.++ ctx (seq.unit 0)))) (long (BFloat@UFCons_API (seq.++ ctx (seq.unit 1)))))
+  (let ((lat (BLatitude@UFCons_API ctx)) (long (BLongitude@UFCons_API ctx)))
     (ite (and (<= -90.0 lat) (<= lat 90.0) (< -180.0 long) (<= long 180.0))
       ($Result_BLatLongCoordinate@success (BLatLongCoordinate@cons lat long))
       ($Result_BLatLongCoordinate@error ErrorID_AssumeCheck) 

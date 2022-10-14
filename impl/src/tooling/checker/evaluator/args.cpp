@@ -10,14 +10,29 @@ static std::regex re_numberino_i("^[-+]?(0|[1-9][0-9]*)$");
 static std::regex re_numberino_f("^[-+]?([0-9]+\\.[0-9]+)([eE][-+]?[0-9]+)?$");
 static std::regex re_numberino_negf("^[(]- ([0-9]+\\.[0-9]+)([eE][-+]?[0-9]+)?[)]$");
 
-std::optional<uint64_t> intBinSearchUnsigned(z3::solver& s, const z3::expr& e, uint64_t min, uint64_t max, const std::vector<uint64_t>& copts)
+std::optional<uint64_t> intBinSearchUnsigned_CompleteModel(z3::solver& s, const z3::expr& e)
 {
-    for(size_t i = 0; i < copts.size(); ++i)
+    s.check();
+    auto bbval = s.get_model().eval(e, true);
+    auto strval = bbval.to_string();
+
+    std::cmatch match;
+    if(!std::regex_match(strval, re_numberino_n))
+    {
+        return std::nullopt;
+    }
+    
+    return std::make_optional(std::stoull(strval));
+}
+
+std::optional<uint64_t> intBinSearchUnsigned_SearchOpts(z3::solver& s, const z3::expr& e, const std::vector<uint64_t>& topts)
+{
+    for(size_t i = 0; i < topts.size(); ++i)
     {
         s.push();
 
         z3::expr_vector chks(s.ctx());
-        std::string iistr = std::to_string(copts[i]);
+        std::string iistr = std::to_string(topts[i]);
         chks.push_back(e == s.ctx().int_val(iistr.c_str()));
         auto rr = s.check(chks);
 
@@ -25,7 +40,44 @@ std::optional<uint64_t> intBinSearchUnsigned(z3::solver& s, const z3::expr& e, u
 
         if(rr == z3::check_result::sat)
         {
-            return std::make_optional(copts[i]);
+            return std::make_optional(topts[i]);
+        }
+    }
+
+    return std::nullopt;
+}
+
+std::optional<uint64_t> SMTParseJSON::intBinSearchUnsigned(z3::solver& s, const z3::expr& e, uint64_t min, uint64_t max, const std::vector<uint64_t>& topts)
+{
+    std::vector<uint64_t> copts(topts);
+    if(this->randEnabled)
+    {
+        std::shuffle(copts.begin(), copts.end(), this->rand);
+
+        auto isearch = intBinSearchUnsigned_SearchOpts(s, e, copts);
+        if(isearch.has_value())
+        {
+            return isearch;
+        }
+
+        auto icomplete = intBinSearchUnsigned_CompleteModel(s, e);
+        if(icomplete.has_value())
+        {
+            return icomplete;
+        }
+    }
+    else
+    {
+        auto icomplete = intBinSearchUnsigned_CompleteModel(s, e);
+        if(icomplete.has_value())
+        {
+            return icomplete;
+        }
+
+        auto isearch = intBinSearchUnsigned_SearchOpts(s, e, copts);
+        if(isearch.has_value())
+        {
+            return isearch;
         }
     }
 
@@ -61,14 +113,29 @@ std::optional<uint64_t> intBinSearchUnsigned(z3::solver& s, const z3::expr& e, u
     return std::make_optional(imin);
 }
 
-std::optional<int64_t> intBinSearchSigned(z3::solver& s, const z3::expr& e, int64_t min, int64_t max, const std::vector<int64_t>& copts)
+std::optional<int64_t> intBinSearchSigned_CompleteModel(z3::solver& s, const z3::expr& e)
 {
-    for(size_t i = 0; i < copts.size(); ++i)
+    s.check();
+    auto bbval = s.get_model().eval(e, true);
+    auto strval = bbval.to_string();
+
+    std::cmatch match;
+    if(!std::regex_match(strval, re_numberino_i))
+    {
+        return std::nullopt;
+    }
+    
+    return std::make_optional(std::stoll(strval));
+}
+
+std::optional<int64_t> intBinSearchSigned_SearchOpts(z3::solver& s, const z3::expr& e, const std::vector<int64_t>& topts)
+{
+    for(size_t i = 0; i < topts.size(); ++i)
     {
         s.push();
 
         z3::expr_vector chks(s.ctx());
-        std::string iistr = std::to_string(copts[i]);
+        std::string iistr = std::to_string(topts[i]);
         chks.push_back(e == s.ctx().int_val(iistr.c_str()));
         auto rr = s.check(chks);
 
@@ -76,7 +143,45 @@ std::optional<int64_t> intBinSearchSigned(z3::solver& s, const z3::expr& e, int6
 
         if(rr == z3::check_result::sat)
         {
-            return std::make_optional(copts[i]);
+            return std::make_optional(topts[i]);
+        }
+    }
+
+    return std::nullopt;
+}
+
+
+std::optional<int64_t> SMTParseJSON::intBinSearchSigned(z3::solver& s, const z3::expr& e, int64_t min, int64_t max, const std::vector<int64_t>& topts)
+{
+    std::vector<int64_t> copts(topts);
+    if(this->randEnabled)
+    {
+        std::shuffle(copts.begin(), copts.end(), this->rand);
+
+        auto isearch = intBinSearchSigned_SearchOpts(s, e, copts);
+        if(isearch.has_value())
+        {
+            return isearch;
+        }
+
+        auto icomplete = intBinSearchSigned_CompleteModel(s, e);
+        if(icomplete.has_value())
+        {
+            return icomplete;
+        }
+    }
+    else
+    {
+        auto icomplete = intBinSearchSigned_CompleteModel(s, e);
+        if(icomplete.has_value())
+        {
+            return icomplete;
+        }
+
+        auto isearch = intBinSearchSigned_SearchOpts(s, e, copts);
+        if(isearch.has_value())
+        {
+            return isearch;
         }
     }
 
@@ -217,9 +322,13 @@ std::optional<double> realBinSearch(z3::solver& s, const z3::expr& e, const std:
 }
 
 
-std::optional<char> stringBinSearchCharASCII(z3::solver& s, const z3::expr& e, const std::string& str, size_t cidx)
+std::optional<char> SMTParseJSON::stringBinSearchCharASCII(z3::solver& s, const z3::expr& e, const std::string& str, size_t cidx)
 {
-    char copts[] = {'z', 'A', '0', ' ', '3', '!', '\0'};
+    char copts[] = {'z', 'b', 'A', '0', ' ', '3', '!'};
+    if(this->randEnabled)
+    {
+        std::shuffle(std::begin(copts), std::end(copts), this->rand);
+    }
 
     for(size_t i = 0; i < sizeof(copts); ++i)
     {
@@ -271,7 +380,7 @@ std::optional<char> stringBinSearchCharASCII(z3::solver& s, const z3::expr& e, c
     return std::make_optional((char)cmin);
 }
 
-std::optional<std::string> stringBinSearchContentsASCII(z3::solver& s, const z3::expr& e, size_t slen)
+std::optional<std::string> SMTParseJSON::stringBinSearchContentsASCII(z3::solver& s, const z3::expr& e, size_t slen)
 {
     if(slen == 0) {
         return std::make_optional(std::string(""));
@@ -280,7 +389,7 @@ std::optional<std::string> stringBinSearchContentsASCII(z3::solver& s, const z3:
     std::string rstr("");
     for(size_t i = 0; i < slen; ++i)
     {
-        auto nchar = stringBinSearchCharASCII(s, e, rstr, i);
+        auto nchar = this->stringBinSearchCharASCII(s, e, rstr, i);
         if(!nchar.has_value())
         {
             return std::nullopt;
@@ -292,8 +401,34 @@ std::optional<std::string> stringBinSearchContentsASCII(z3::solver& s, const z3:
     return std::make_optional(rstr);
 }
 
-std::optional<bool> expBoolAsBool(z3::solver& s, const z3::expr& e)
+std::optional<bool> SMTParseJSON::expBoolAsBool(z3::solver& s, const z3::expr& e)
 {
+    if(this->randEnabled)
+    {
+        s.push();
+
+        std::uniform_int_distribution<size_t> bgen(0, 1);
+        bool b = bgen(this->rand) == 1;
+
+        z3::expr_vector chks(s.ctx());
+        chks.push_back(b ? e : !e);
+        auto rr = s.check(chks);
+
+        s.pop();
+
+        if(rr == z3::check_result::sat)
+        {
+            s.add(b ? e : !e);
+            return std::make_optional(b);
+        }
+        else
+        {   
+            s.add(b ? !e : e);
+            return std::make_optional(!b);
+        }
+    }
+
+    s.check();
     auto bbval = s.get_model().eval(e, true);
     auto strval = bbval.to_string();
 
@@ -330,51 +465,30 @@ std::optional<bool> expBoolAsBool(z3::solver& s, const z3::expr& e)
             s.add(!e);
         }
 
-        auto refinechk = s.check();
-        if(refinechk != z3::check_result::sat)
-        {
-            return std::nullopt;
-        }
-
+        s.check();
         return res;
     }
 }
 
-std::optional<std::string> expIntAsUInt(z3::solver& s, const z3::expr& e)
+std::optional<std::string> SMTParseJSON::expIntAsUInt(z3::solver& s, const z3::expr& e)
 {
-    auto bbval = s.get_model().eval(e, true);
-    auto strval = bbval.to_string();
-
-    std::cmatch match;
-    if(std::regex_match(strval, re_numberino_n))
+    auto ival = this->intBinSearchUnsigned(s, e, 0, std::numeric_limits<uint64_t>::max(), {0, 1, 3, 10, 17});
+    if(!ival.has_value())
     {
-        return std::make_optional(strval);
+        assert(false);
+        return std::nullopt;
     }
-    else
-    {
-        auto ival = intBinSearchUnsigned(s, e, 0, std::numeric_limits<uint64_t>::max(), {0, 1, 3});
-        if(!ival.has_value())
-        {
-            assert(false);
-            return std::nullopt;
-        }
 
-        auto istr = std::to_string(ival.value());
-        s.add(e == s.ctx().int_val(istr.c_str()));
+    auto istr = std::to_string(ival.value());
+    s.add(e == s.ctx().int_val(istr.c_str()));
 
-        auto refinechk = s.check();
-        if(refinechk != z3::check_result::sat)
-        {
-            return std::nullopt;
-        }
-
-        return std::make_optional(istr);
-    }
+    s.check();
+    return std::make_optional(istr);
 }
 
-std::optional<uint64_t> expIntAsUIntSmall(z3::solver& s, const z3::expr& e)
+std::optional<uint64_t> SMTParseJSON::expIntAsUIntSmall(z3::solver& s, const z3::expr& e)
 {
-    auto pv = expIntAsUInt(s, e);
+    auto pv = this->expIntAsUInt(s, e);
     if(!pv.has_value())
     {
         return std::nullopt;
@@ -394,43 +508,25 @@ std::optional<uint64_t> expIntAsUIntSmall(z3::solver& s, const z3::expr& e)
     }
 }
 
-std::optional<std::string> expIntAsInt(z3::solver& s, const z3::expr& e)
+std::optional<std::string> SMTParseJSON::expIntAsInt(z3::solver& s, const z3::expr& e)
 {
-    auto bbval = s.get_model().eval(e, true);
-    auto strval = bbval.to_string();
-
-    std::cmatch match;
-    if(std::regex_match(strval, re_numberino_i))
+    auto ival = this->intBinSearchSigned(s, e, std::numeric_limits<int64_t>::lowest(), std::numeric_limits<int64_t>::max(), {0, 1, 3, 10, 17, -1, -3, -10, -17});
+    if(!ival.has_value())
     {
-        return std::make_optional(strval);
+        assert(false);
+        return std::nullopt;
     }
-    else
-    {
-        //
-        //TODO: we are limited here to 64 bit ints -- need to extend to a true big int search when we have the library support 
-        //
-        auto ival = intBinSearchSigned(s, e, std::numeric_limits<int64_t>::lowest(), std::numeric_limits<int64_t>::max(), {0, 1, 3, -1, -3});
-        if(!ival.has_value())
-        {
-            assert(false);
-            return std::nullopt;
-        }
 
-        auto istr = std::to_string(ival.value());
-        s.add(e == s.ctx().int_val(istr.c_str()));
+    auto istr = std::to_string(ival.value());
+    s.add(e == s.ctx().int_val(istr.c_str()));
 
-        auto refinechk = s.check();
-        if(refinechk != z3::check_result::sat)
-        {
-            return std::nullopt;
-        }
-
-        return std::make_optional(istr);
-    }
+    s.check();
+    return std::make_optional(istr);
 }
 
 std::optional<std::string> expFloatAsFloat(z3::solver& s, const z3::expr& e)
 {
+    s.check();
     auto bbval = s.get_model().eval(e, true);
     auto strval = bbval.to_string();
 
@@ -445,32 +541,23 @@ std::optional<std::string> expFloatAsFloat(z3::solver& s, const z3::expr& e)
     }
     else
     {
-        //We seem to have a bug here where asserting == on the real values is not coming back unsat when the formula is unsat
-        assert(false);
-
         auto ival = realBinSearch(s, e, {0.0, 1.0, 3.0, -1.0, -3.0});
         if(!ival.has_value())
         {
-            assert(false);
             return std::nullopt;
         }
 
         auto istr = std::to_string(ival.value());
-        s.add(e == s.ctx().int_val(istr.c_str()));
+        s.add(e == s.ctx().real_val(istr.c_str()));
 
-        auto refinechk = s.check();
-        if(refinechk != z3::check_result::sat)
-        {
-            return std::nullopt;
-        }
-
+        s.check();
         return std::make_optional(istr);
     }
 }
 
-std::optional<int64_t> expIntAsIntSmall(z3::solver& s, const z3::expr& e)
+std::optional<int64_t> SMTParseJSON::expIntAsIntSmall(z3::solver& s, const z3::expr& e)
 {
-    auto pv = expIntAsInt(s, e);
+    auto pv = this->expIntAsInt(s, e);
     if(!pv.has_value())
     {
         return std::nullopt;
@@ -490,8 +577,35 @@ std::optional<int64_t> expIntAsIntSmall(z3::solver& s, const z3::expr& e)
     }
 }
 
-std::optional<std::string> evalStringAsString(z3::solver& s, const z3::expr& e)
+std::optional<std::string> SMTParseJSON::evalStringAsString(z3::solver& s, const z3::expr& e)
 {
+    if(this->randEnabled)
+    {
+        std::vector<const char*> sopts = {"", " ", "apple", "v", "...-", "11235", "(x*\\"};
+        
+        for(size_t i = 0; i < sopts.size(); ++i)
+        {
+            s.push();
+
+            z3::expr_vector chks(s.ctx());
+            
+            chks.push_back(e == s.ctx().string_val(sopts[i]));
+            auto rr = s.check(chks);
+
+            s.pop();
+
+            if(rr == z3::check_result::sat)
+            {
+                auto rstr = std::string(sopts[i]);
+                s.add(e == s.ctx().string_val(rstr));
+
+                s.check();
+                return std::make_optional(rstr);
+            }
+        }
+    }
+
+    s.check();
     auto nexp = s.get_model().eval(e, true);
     auto sstr = nexp.to_string();
 
@@ -501,31 +615,24 @@ std::optional<std::string> evalStringAsString(z3::solver& s, const z3::expr& e)
     }
     else
     {
-        auto slenstropt = expIntAsUInt(s, e.length());
+        auto slenstropt = this->expIntAsUInt(s, e.length());
         if(!slenstropt.has_value())
         {
-            assert(false);
             return std::nullopt;
         }
 
         auto slenstr = slenstropt.value();
         auto slen = std::stoull(slenstr);
-        auto rstr = stringBinSearchContentsASCII(s, e, slen);
+        auto rstr = this->stringBinSearchContentsASCII(s, e, slen);
         if(!rstr.has_value())
         {
-            assert(false);
             return std::nullopt;
         }
 
         s.add(e == s.ctx().string_val(rstr.value()));
 
-        auto refinechk = s.check();
-        if(refinechk != z3::check_result::sat)
-        {
-            return std::nullopt;
-        }
-
-        return sstr;
+        s.check();
+        return rstr;
     }
 }
 
@@ -835,20 +942,26 @@ bool SMTParseJSON::parseSHAContentHashImpl(const APIModule* apimodule, const ITy
     
 bool SMTParseJSON::parseLatLongCoordinateImpl(const APIModule* apimodule, const IType* itype, float latitude, float longitude, z3::expr value, z3::solver& ctx)
 {
-    auto bbf = getArgContextConstructor(ctx.ctx(), "BFloat@UFCons_API", ctx.ctx().real_sort());
-
-    auto latctx = extendContext(ctx.ctx(), value, 0);
     char latstr[16] = {0};
     auto lenlat = sprintf(latstr, "%1.9f", latitude);
     std::string latres(latstr, latstr + lenlat);
-    ctx.add(bbf(latctx) == ctx.ctx().real_const(latres.c_str()));
+    auto blat = getArgContextConstructor(ctx.ctx(), "BLatitude@UFCons_API", ctx.ctx().real_sort());
+    ctx.add(blat(value) == ctx.ctx().real_const(latres.c_str()));
 
-    auto longctx = extendContext(ctx.ctx(), value, 1);
     char longstr[16] = {0};
     auto lenlong = sprintf(longstr, "%1.9f", longitude);
     std::string longres(longstr, longstr + lenlong);
-    ctx.add(bbf(value) == ctx.ctx().real_const(longres.c_str()));
+    auto blong = getArgContextConstructor(ctx.ctx(), "BLongitude@UFCons_API", ctx.ctx().real_sort());
+    ctx.add(blong(value) == ctx.ctx().real_const(longres.c_str()));
     
+    return true;
+}
+
+bool SMTParseJSON::parseEnumImpl(const APIModule* apimodule, const IType* itype, uint64_t n, z3::expr value, z3::solver& ctx)
+{
+    auto bef = getArgContextConstructor(ctx.ctx(), "BEnum@UFCons_API", ctx.ctx().int_sort());
+    ctx.add(bef(value) == ctx.ctx().int_val(n));
+
     return true;
 }
 
@@ -950,31 +1063,31 @@ z3::expr SMTParseJSON::parseUnionChoice(const APIModule* apimodule, const IType*
 std::optional<bool> SMTParseJSON::extractBoolImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
 {
     auto bef = getArgContextConstructor(ctx.ctx(), "BBool@UFCons_API", ctx.ctx().bool_sort());
-    return expBoolAsBool(ctx, bef(value));
+    return this->expBoolAsBool(ctx, bef(value));
 }
 
 std::optional<uint64_t> SMTParseJSON::extractNatImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
 {
     auto bef = getArgContextConstructor(ctx.ctx(), "BNat@UFCons_API", ctx.ctx().int_sort());
-    return expIntAsUIntSmall(ctx, bef(value));
+    return this->expIntAsUIntSmall(ctx, bef(value));
 }
 
 std::optional<int64_t> SMTParseJSON::extractIntImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
 {
     auto bef = getArgContextConstructor(ctx.ctx(), "BInt@UFCons_API", ctx.ctx().int_sort());
-    return expIntAsIntSmall(ctx, bef(value));
+    return this->expIntAsIntSmall(ctx, bef(value));
 }
 
 std::optional<std::string> SMTParseJSON::extractBigNatImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
 {
     auto bef = getArgContextConstructor(ctx.ctx(), "BBigNat@UFCons_API", ctx.ctx().int_sort());
-    return expIntAsUInt(ctx, bef(value));
+    return this->expIntAsUInt(ctx, bef(value));
 }
 
 std::optional<std::string> SMTParseJSON::extractBigIntImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
 {
     auto bef = getArgContextConstructor(ctx.ctx(), "BBigInt@UFCons_API", ctx.ctx().int_sort());
-    return expIntAsInt(ctx, bef(value));
+    return this->expIntAsInt(ctx, bef(value));
 }
 
 std::optional<std::string> SMTParseJSON::extractFloatImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
@@ -1002,7 +1115,7 @@ std::optional<std::pair<std::string, uint64_t>> SMTParseJSON::extractRationalImp
 std::optional<std::string> SMTParseJSON::extractStringImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
 {
     auto bef = getArgContextConstructor(ctx.ctx(), "BString@UFCons_API", ctx.ctx().string_sort());
-    return evalStringAsString(ctx, bef(value));
+    return this->evalStringAsString(ctx, bef(value));
 }
 
 std::optional<std::pair<std::vector<uint8_t>, std::pair<uint8_t, uint8_t>>> SMTParseJSON::extractByteBufferImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
@@ -1013,13 +1126,13 @@ std::optional<std::pair<std::vector<uint8_t>, std::pair<uint8_t, uint8_t>>> SMTP
     auto bbf = getArgContextConstructor(ctx.ctx(), "BByteBuffer@UFCons_API", ctx.ctx().seq_sort(bytesort));
 
     auto ectxcc = extendContext(ctx.ctx(), value, 0);
-    auto compress = expIntAsUIntSmall(ctx, bef(ectxcc));
+    auto compress = this->expIntAsUIntSmall(ctx, bef(ectxcc));
 
     auto ectxff = extendContext(ctx.ctx(), value, 1);
-    auto format = expIntAsUIntSmall(ctx, bef(ectxff));
+    auto format = this->expIntAsUIntSmall(ctx, bef(ectxff));
 
     auto ectxbb = extendContext(ctx.ctx(), value, 2);
-    auto size = expIntAsUIntSmall(ctx, bbf(ectxbb).length());
+    auto size = this->expIntAsUIntSmall(ctx, bbf(ectxbb).length());
 
     if(!compress.has_value() || !format.has_value() || !size.has_value())
     {
@@ -1033,7 +1146,7 @@ std::optional<std::pair<std::vector<uint8_t>, std::pair<uint8_t, uint8_t>>> SMTP
 
     for(size_t i = 0; i < size.value(); ++i)
     {
-        auto vv = expIntAsUIntSmall(ctx, bbf(ectxbb).at(ctx.ctx().int_val((uint64_t)i)));
+        auto vv = this->expIntAsUIntSmall(ctx, bbf(ectxbb).at(ctx.ctx().int_val((uint64_t)i)));
         if(!vv.has_value())
         {
             return std::nullopt;
@@ -1050,19 +1163,19 @@ std::optional<APIDateTime> SMTParseJSON::extractDateTimeImpl(const APIModule* ap
     APIDateTime dt;
 
     auto byearf = getArgContextConstructor(ctx.ctx(), "BDateYear@UFCons_API", ctx.ctx().int_sort());
-    auto y = expIntAsUIntSmall(ctx, byearf(value));
+    auto y = this->expIntAsUIntSmall(ctx, byearf(value));
 
     auto bmonthf = getArgContextConstructor(ctx.ctx(), "BDateMonth@UFCons_API", ctx.ctx().int_sort());
-    auto m = expIntAsUIntSmall(ctx, bmonthf(value));
+    auto m = this->expIntAsUIntSmall(ctx, bmonthf(value));
 
     auto bdayf = getArgContextConstructor(ctx.ctx(), "BDateDay@UFCons_API", ctx.ctx().int_sort());
-    auto d = expIntAsUIntSmall(ctx, bdayf(value));
+    auto d = this->expIntAsUIntSmall(ctx, bdayf(value));
 
     auto bhourf = getArgContextConstructor(ctx.ctx(), "BDateHour@UFCons_API", ctx.ctx().int_sort());
-    auto h = expIntAsUIntSmall(ctx, bhourf(value));
+    auto h = this->expIntAsUIntSmall(ctx, bhourf(value));
 
     auto bminutef = getArgContextConstructor(ctx.ctx(), "BDateMinute@UFCons_API", ctx.ctx().int_sort());
-    auto mm = expIntAsUIntSmall(ctx, bminutef(value));
+    auto mm = this->expIntAsUIntSmall(ctx, bminutef(value));
         
     if(!y.has_value() || !m.has_value() || !d.has_value() || !h.has_value() || !mm.has_value())
     {
@@ -1076,7 +1189,7 @@ std::optional<APIDateTime> SMTParseJSON::extractDateTimeImpl(const APIModule* ap
     dt.min = (uint8_t)mm.value();
 
     auto btzf = getArgContextConstructor(ctx.ctx(), "BDateTZName@UFCons_API", ctx.ctx().string_sort());
-    auto tzo = evalStringAsString(ctx, btzf(value));
+    auto tzo = this->evalStringAsString(ctx, btzf(value));
     
     if(!tzo.has_value())
     {
@@ -1094,19 +1207,19 @@ std::optional<APIUTCDateTime> SMTParseJSON::extractUTCDateTimeImpl(const APIModu
     APIUTCDateTime dt;
 
     auto byearf = getArgContextConstructor(ctx.ctx(), "BDateYear@UFCons_API", ctx.ctx().int_sort());
-    auto y = expIntAsUIntSmall(ctx, byearf(value));
+    auto y = this->expIntAsUIntSmall(ctx, byearf(value));
 
     auto bmonthf = getArgContextConstructor(ctx.ctx(), "BDateMonth@UFCons_API", ctx.ctx().int_sort());
-    auto m = expIntAsUIntSmall(ctx, bmonthf(value));
+    auto m = this->expIntAsUIntSmall(ctx, bmonthf(value));
 
     auto bdayf = getArgContextConstructor(ctx.ctx(), "BDateDay@UFCons_API", ctx.ctx().int_sort());
-    auto d = expIntAsUIntSmall(ctx, bdayf(value));
+    auto d = this->expIntAsUIntSmall(ctx, bdayf(value));
 
     auto bhourf = getArgContextConstructor(ctx.ctx(), "BDateHour@UFCons_API", ctx.ctx().int_sort());
-    auto h = expIntAsUIntSmall(ctx, bhourf(value));
+    auto h = this->expIntAsUIntSmall(ctx, bhourf(value));
 
     auto bminutef = getArgContextConstructor(ctx.ctx(), "BDateMinute@UFCons_API", ctx.ctx().int_sort());
-    auto mm = expIntAsUIntSmall(ctx, bminutef(value));
+    auto mm = this->expIntAsUIntSmall(ctx, bminutef(value));
         
     if(!y.has_value() || !m.has_value() || !d.has_value() || !h.has_value() || !mm.has_value())
     {
@@ -1127,13 +1240,13 @@ std::optional<APICalendarDate> SMTParseJSON::extractCalendarDateImpl(const APIMo
     APICalendarDate dt;
 
     auto byearf = getArgContextConstructor(ctx.ctx(), "BDateYear@UFCons_API", ctx.ctx().int_sort());
-    auto y = expIntAsUIntSmall(ctx, byearf(value));
+    auto y = this->expIntAsUIntSmall(ctx, byearf(value));
 
     auto bmonthf = getArgContextConstructor(ctx.ctx(), "BDateMonth@UFCons_API", ctx.ctx().int_sort());
-    auto m = expIntAsUIntSmall(ctx, bmonthf(value));
+    auto m = this->expIntAsUIntSmall(ctx, bmonthf(value));
 
     auto bdayf = getArgContextConstructor(ctx.ctx(), "BDateDay@UFCons_API", ctx.ctx().int_sort());
-    auto d = expIntAsUIntSmall(ctx, bdayf(value));
+    auto d = this->expIntAsUIntSmall(ctx, bdayf(value));
         
     if(!y.has_value() || !m.has_value() || !d.has_value())
     {
@@ -1151,13 +1264,13 @@ std::optional<APICalendarDate> SMTParseJSON::extractCalendarDateImpl(const APIMo
 std::optional<uint64_t> SMTParseJSON::extractTickTimeImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
 {
     auto bef = getArgContextConstructor(ctx.ctx(), "BTickTime@UFCons_API", ctx.ctx().int_sort());
-    return expIntAsUIntSmall(ctx, bef(value));
+    return this->expIntAsUIntSmall(ctx, bef(value));
 }
 
 std::optional<uint64_t> SMTParseJSON::extractLogicalTimeImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
 {
     auto bef = getArgContextConstructor(ctx.ctx(), "BLogicalTime@UFCons_API", ctx.ctx().int_sort());
-    return expIntAsUIntSmall(ctx, bef(value));
+    return this->expIntAsUIntSmall(ctx, bef(value));
 }
 
 
@@ -1166,25 +1279,25 @@ std::optional<APIISOTimeStamp> SMTParseJSON::extractISOTimeStampImpl(const APIMo
     APIISOTimeStamp dt;
 
     auto byearf = getArgContextConstructor(ctx.ctx(), "BDateYear@UFCons_API", ctx.ctx().int_sort());
-    auto y = expIntAsUIntSmall(ctx, byearf(value));
+    auto y = this->expIntAsUIntSmall(ctx, byearf(value));
 
     auto bmonthf = getArgContextConstructor(ctx.ctx(), "BDateMonth@UFCons_API", ctx.ctx().int_sort());
-    auto m = expIntAsUIntSmall(ctx, bmonthf(value));
+    auto m = this->expIntAsUIntSmall(ctx, bmonthf(value));
 
     auto bdayf = getArgContextConstructor(ctx.ctx(), "BDateDay@UFCons_API", ctx.ctx().int_sort());
-    auto d = expIntAsUIntSmall(ctx, bdayf(value));
+    auto d = this->expIntAsUIntSmall(ctx, bdayf(value));
 
     auto bhourf = getArgContextConstructor(ctx.ctx(), "BDateHour@UFCons_API", ctx.ctx().int_sort());
-    auto h = expIntAsUIntSmall(ctx, bhourf(value));
+    auto h = this->expIntAsUIntSmall(ctx, bhourf(value));
 
     auto bminutef = getArgContextConstructor(ctx.ctx(), "BDateMinute@UFCons_API", ctx.ctx().int_sort());
-    auto mm = expIntAsUIntSmall(ctx, bminutef(value));
+    auto mm = this->expIntAsUIntSmall(ctx, bminutef(value));
 
     auto bsecf = getArgContextConstructor(ctx.ctx(), "BDateSecond@UFCons_API", ctx.ctx().int_sort());
-    auto ss = expIntAsUIntSmall(ctx, bsecf(value));
+    auto ss = this->expIntAsUIntSmall(ctx, bsecf(value));
 
     auto bmillisf = getArgContextConstructor(ctx.ctx(), "BDateMillis@UFCons_API", ctx.ctx().int_sort());
-    auto millis = expIntAsUIntSmall(ctx, bmillisf(value));
+    auto millis = this->expIntAsUIntSmall(ctx, bmillisf(value));
         
     if(!y.has_value() || !m.has_value() || !d.has_value() || !h.has_value() || !mm.has_value() || !ss.has_value() || !millis.has_value())
     {
@@ -1205,7 +1318,7 @@ std::optional<APIISOTimeStamp> SMTParseJSON::extractISOTimeStampImpl(const APIMo
 std::optional<std::vector<uint8_t>> SMTParseJSON::extractUUID4Impl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
 {
     auto bbf = getArgContextConstructor(ctx.ctx(), "BUUID@UFCons_API", ctx.ctx().string_sort());
-    auto strval = evalStringAsString(ctx, bbf(value));
+    auto strval = this->evalStringAsString(ctx, bbf(value));
 
     if(!strval.has_value())
     {
@@ -1231,7 +1344,7 @@ std::optional<std::vector<uint8_t>> SMTParseJSON::extractUUID4Impl(const APIModu
 std::optional<std::vector<uint8_t>> SMTParseJSON::extractUUID7Impl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
 {
     auto bbf = getArgContextConstructor(ctx.ctx(), "BUUID@UFCons_API", ctx.ctx().string_sort());
-    auto strval = evalStringAsString(ctx, bbf(value));
+    auto strval = this->evalStringAsString(ctx, bbf(value));
 
     if(!strval.has_value())
     {
@@ -1284,13 +1397,11 @@ std::optional<std::vector<uint8_t>> SMTParseJSON::extractSHAContentHashImpl(cons
 
 std::optional<std::pair<float, float>> SMTParseJSON::extractLatLongCoordinateImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
 {
-    auto bbf = getArgContextConstructor(ctx.ctx(), "BFloat@UFCons_API", ctx.ctx().real_sort());
+    auto blat = getArgContextConstructor(ctx.ctx(), "BLatitude@UFCons_API", ctx.ctx().real_sort());
+    auto vlat = expFloatAsFloat(ctx, blat(value));
 
-    auto latctx = extendContext(ctx.ctx(), value, 0);
-    auto vlat = expFloatAsFloat(ctx, bbf(latctx));
-
-    auto longctx = extendContext(ctx.ctx(), value, 1);
-    auto vlong = expFloatAsFloat(ctx, bbf(longctx));
+    auto blong = getArgContextConstructor(ctx.ctx(), "BLongitude@UFCons_API", ctx.ctx().real_sort());
+    auto vlong = expFloatAsFloat(ctx, blong(value));
 
     if(!vlat.has_value() || !vlong.has_value())
     {
@@ -1298,6 +1409,12 @@ std::optional<std::pair<float, float>> SMTParseJSON::extractLatLongCoordinateImp
     }
 
     return std::make_pair(std::stof(vlat.value()), std::stof(vlong.value()));
+}
+
+std::optional<uint64_t> SMTParseJSON::extractEnumImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
+{
+    auto bef = getArgContextConstructor(ctx.ctx(), "BEnum@UFCons_API", ctx.ctx().int_sort());
+    return this->expIntAsUIntSmall(ctx, bef(value));
 }
 
 z3::expr SMTParseJSON::extractValueForTupleIndex(const APIModule* apimodule, const IType* itype, z3::expr value, size_t i, z3::solver& ctx)
@@ -1329,7 +1446,7 @@ void SMTParseJSON::prepareExtractContainer(const APIModule* apimodule, const ITy
 std::optional<size_t> SMTParseJSON::extractLengthForContainer(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
 {
     auto bef = getArgContextConstructor(ctx.ctx(), "ContainerSize@UFCons_API", ctx.ctx().int_sort());
-    return expIntAsUIntSmall(ctx, bef(value));
+    return this->expIntAsUIntSmall(ctx, bef(value));
 }
 
 z3::expr SMTParseJSON::extractValueForContainer_T(const APIModule* apimodule, const IType* itype, z3::expr value, size_t i, z3::solver& ctx)
@@ -1354,7 +1471,7 @@ void SMTParseJSON::completeExtractContainer(const APIModule* apimodule, const IT
 std::optional<size_t> SMTParseJSON::extractUnionChoice(const APIModule* apimodule, const IType* itype, const std::vector<const IType*>& opttypes, z3::expr value, z3::solver& ctx)
 {
     auto bef = getArgContextConstructor(ctx.ctx(), "UnionChoice@UFCons_API", ctx.ctx().int_sort());
-    return expIntAsUIntSmall(ctx, bef(value));
+    return this->expIntAsUIntSmall(ctx, bef(value));
 }
 
 z3::expr SMTParseJSON::extractUnionValue(const APIModule* apimodule, const IType* itype, z3::expr value, size_t uchoice, z3::solver& ctx)
