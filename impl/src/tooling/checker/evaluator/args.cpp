@@ -322,9 +322,13 @@ std::optional<double> realBinSearch(z3::solver& s, const z3::expr& e, const std:
 }
 
 
-std::optional<char> stringBinSearchCharASCII(z3::solver& s, const z3::expr& e, const std::string& str, size_t cidx)
+std::optional<char> SMTParseJSON::stringBinSearchCharASCII(z3::solver& s, const z3::expr& e, const std::string& str, size_t cidx)
 {
-    char copts[] = {'z', 'A', '0', ' ', '3', '!'};
+    char copts[] = {'z', 'b', 'A', '0', ' ', '3', '!'};
+    if(this->randEnabled)
+    {
+        std::shuffle(std::begin(copts), std::end(copts), this->rand);
+    }
 
     for(size_t i = 0; i < sizeof(copts); ++i)
     {
@@ -376,7 +380,7 @@ std::optional<char> stringBinSearchCharASCII(z3::solver& s, const z3::expr& e, c
     return std::make_optional((char)cmin);
 }
 
-std::optional<std::string> stringBinSearchContentsASCII(z3::solver& s, const z3::expr& e, size_t slen)
+std::optional<std::string> SMTParseJSON::stringBinSearchContentsASCII(z3::solver& s, const z3::expr& e, size_t slen)
 {
     if(slen == 0) {
         return std::make_optional(std::string(""));
@@ -385,7 +389,7 @@ std::optional<std::string> stringBinSearchContentsASCII(z3::solver& s, const z3:
     std::string rstr("");
     for(size_t i = 0; i < slen; ++i)
     {
-        auto nchar = stringBinSearchCharASCII(s, e, rstr, i);
+        auto nchar = this->stringBinSearchCharASCII(s, e, rstr, i);
         if(!nchar.has_value())
         {
             return std::nullopt;
@@ -397,8 +401,33 @@ std::optional<std::string> stringBinSearchContentsASCII(z3::solver& s, const z3:
     return std::make_optional(rstr);
 }
 
-std::optional<bool> expBoolAsBool(z3::solver& s, const z3::expr& e)
+std::optional<bool> SMTParseJSON::expBoolAsBool(z3::solver& s, const z3::expr& e)
 {
+    if(this->randEnabled)
+    {
+        s.push();
+
+        std::uniform_int_distribution<size_t> bgen(0, 1);
+        bool b = bgen(this->rand) == 1;
+
+        z3::expr_vector chks(s.ctx());
+        chks.push_back(b ? e : !e);
+        auto rr = s.check(chks);
+
+        s.pop();
+
+        if(rr == z3::check_result::sat)
+        {
+            s.add(b ? e : !e);
+            return std::make_optional(b);
+        }
+        else
+        {   
+            s.add(b ? !e : e);
+            return std::make_optional(!b);
+        }
+    }
+
     s.check();
     auto bbval = s.get_model().eval(e, true);
     auto strval = bbval.to_string();
@@ -436,12 +465,7 @@ std::optional<bool> expBoolAsBool(z3::solver& s, const z3::expr& e)
             s.add(!e);
         }
 
-        auto refinechk = s.check();
-        if(refinechk != z3::check_result::sat)
-        {
-            return std::nullopt;
-        }
-
+        s.check();
         return res;
     }
 }
@@ -458,12 +482,7 @@ std::optional<std::string> SMTParseJSON::expIntAsUInt(z3::solver& s, const z3::e
     auto istr = std::to_string(ival.value());
     s.add(e == s.ctx().int_val(istr.c_str()));
 
-    auto refinechk = s.check();
-    if(refinechk != z3::check_result::sat)
-    {
-        return std::nullopt;
-    }
-
+    s.check();
     return std::make_optional(istr);
 }
 
@@ -501,12 +520,7 @@ std::optional<std::string> SMTParseJSON::expIntAsInt(z3::solver& s, const z3::ex
     auto istr = std::to_string(ival.value());
     s.add(e == s.ctx().int_val(istr.c_str()));
 
-    auto refinechk = s.check();
-    if(refinechk != z3::check_result::sat)
-    {
-        return std::nullopt;
-    }
-
+    s.check();
     return std::make_optional(istr);
 }
 
@@ -530,19 +544,13 @@ std::optional<std::string> expFloatAsFloat(z3::solver& s, const z3::expr& e)
         auto ival = realBinSearch(s, e, {0.0, 1.0, 3.0, -1.0, -3.0});
         if(!ival.has_value())
         {
-            assert(false);
             return std::nullopt;
         }
 
         auto istr = std::to_string(ival.value());
-        s.add(e == s.ctx().int_val(istr.c_str()));
+        s.add(e == s.ctx().real_val(istr.c_str()));
 
-        auto refinechk = s.check();
-        if(refinechk != z3::check_result::sat)
-        {
-            return std::nullopt;
-        }
-
+        s.check();
         return std::make_optional(istr);
     }
 }
@@ -571,23 +579,31 @@ std::optional<int64_t> SMTParseJSON::expIntAsIntSmall(z3::solver& s, const z3::e
 
 std::optional<std::string> SMTParseJSON::evalStringAsString(z3::solver& s, const z3::expr& e)
 {
-    //xxxx; //if rand is enabled then we want to try and sample from randomized string options -- DONT FORGET THE REFINE CHECK!!!
-    /*
     if(this->randEnabled)
     {
-        auto ostr = xxxx;
-
-        s.add(e == s.ctx().string_val(ostr.value()));
-
-        auto refinechk = s.check();
-        if(refinechk != z3::check_result::sat)
+        std::vector<const char*> sopts = {"", " ", "apple", "v", "...-", "11235", "(x*\\"};
+        
+        for(size_t i = 0; i < sopts.size(); ++i)
         {
-            return std::nullopt;
-        }
+            s.push();
 
-        return rstr;
+            z3::expr_vector chks(s.ctx());
+            
+            chks.push_back(e == s.ctx().string_val(sopts[i]));
+            auto rr = s.check(chks);
+
+            s.pop();
+
+            if(rr == z3::check_result::sat)
+            {
+                auto rstr = std::string(sopts[i]);
+                s.add(e == s.ctx().string_val(rstr));
+
+                s.check();
+                return std::make_optional(rstr);
+            }
+        }
     }
-    */
 
     s.check();
     auto nexp = s.get_model().eval(e, true);
@@ -602,28 +618,21 @@ std::optional<std::string> SMTParseJSON::evalStringAsString(z3::solver& s, const
         auto slenstropt = this->expIntAsUInt(s, e.length());
         if(!slenstropt.has_value())
         {
-            assert(false);
             return std::nullopt;
         }
 
         auto slenstr = slenstropt.value();
         auto slen = std::stoull(slenstr);
-        auto rstr = stringBinSearchContentsASCII(s, e, slen);
+        auto rstr = this->stringBinSearchContentsASCII(s, e, slen);
         if(!rstr.has_value())
         {
-            assert(false);
             return std::nullopt;
         }
 
         s.add(e == s.ctx().string_val(rstr.value()));
 
-        auto refinechk = s.check();
-        if(refinechk != z3::check_result::sat)
-        {
-            return std::nullopt;
-        }
-
-        return rstr.value();
+        s.check();
+        return rstr;
     }
 }
 
@@ -1054,7 +1063,7 @@ z3::expr SMTParseJSON::parseUnionChoice(const APIModule* apimodule, const IType*
 std::optional<bool> SMTParseJSON::extractBoolImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)
 {
     auto bef = getArgContextConstructor(ctx.ctx(), "BBool@UFCons_API", ctx.ctx().bool_sort());
-    return expBoolAsBool(ctx, bef(value));
+    return this->expBoolAsBool(ctx, bef(value));
 }
 
 std::optional<uint64_t> SMTParseJSON::extractNatImpl(const APIModule* apimodule, const IType* itype, z3::expr value, z3::solver& ctx)

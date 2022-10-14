@@ -343,7 +343,7 @@ function processFuzzAction(args: string[]) {
     }
 
     if(cfg.params.flavors.includes("solver")) {
-        workflowInputFuzz(userpackage, "debug", false, timeout, sym_opts, entrypoint, (res: string) => {
+        workflowInputFuzz(userpackage, "debug", false, timeout, sym_opts, entrypoint, (info: string) => process.stdout.write(info + "\n"), (res: string) => {
             try {
                 const jres = JSON.parse(res);
 

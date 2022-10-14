@@ -20,18 +20,21 @@ private:
 
     std::optional<uint64_t> intBinSearchUnsigned(z3::solver& s, const z3::expr& e, uint64_t min, uint64_t max, const std::vector<uint64_t>& topts);
     std::optional<int64_t> intBinSearchSigned(z3::solver& s, const z3::expr& e, int64_t min, int64_t max, const std::vector<int64_t>& topts);
+    std::optional<char> stringBinSearchCharASCII(z3::solver& s, const z3::expr& e, const std::string& str, size_t cidx);
+    std::optional<std::string> stringBinSearchContentsASCII(z3::solver& s, const z3::expr& e, size_t slen);
 
     std::optional<std::string> expIntAsUInt(z3::solver& s, const z3::expr& e);
     std::optional<uint64_t> expIntAsUIntSmall(z3::solver& s, const z3::expr& e);
     std::optional<std::string> expIntAsInt(z3::solver& s, const z3::expr& e);
     std::optional<int64_t> expIntAsIntSmall(z3::solver& s, const z3::expr& e);
+    std::optional<bool> expBoolAsBool(z3::solver& s, const z3::expr& e);
 
     std::optional<std::string> evalStringAsString(z3::solver& s, const z3::expr& e);
 public:
     SMTParseJSON(): 
         ApiManagerJSON(), hashhash()
     {
-        const char* SMT_SEED = std::getenv("SMT_RAND_SEED");
+        const char* SMT_SEED = std::getenv("SMT_TEST_GEN_RAND_SEED");
         
         this->randEnabled = SMT_SEED != nullptr;
         unsigned int vv = (randEnabled ? std::atoi(SMT_SEED) : 0);

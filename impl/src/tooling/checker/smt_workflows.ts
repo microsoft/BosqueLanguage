@@ -5,7 +5,7 @@
 
 import * as FS from "fs";
 import * as Path from "path";
-import { exec } from "child_process";
+import { exec, execSync } from "child_process";
 
 import * as chalk from "chalk";
 
@@ -94,6 +94,15 @@ function generateSMTPayload(masm: MIRAssembly, istestbuild: boolean, vopts: Veri
     }
 }
 
+function generateSMTPayloadForISCFuzzing(masm: MIRAssembly, istestbuild: boolean, vopts: VerifierOptions, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey): [string | undefined, string[]] {
+    try {
+        return SMTEmitter.generateSMTPayloadForISCFuzzing(masm, istestbuild, smtruntime, vopts, errorTrgtPos, entrypoint);
+    } catch(e) {
+        process.stderr.write(chalk.red(`SMT generate error -- ${e}\n`));
+        return [undefined, []];
+    }
+}
+
 function generateCheckerPayload(masm: MIRAssembly, istestbuild: boolean, smtasm: string, timeout: number, entrypoint: MIRInvokeKey): any {
     return {smt2decl: smtasm, timeout: timeout, apimodule: masm.emitAPIInfo([entrypoint], istestbuild), "mainfunc": entrypoint};
 }
@@ -139,6 +148,22 @@ function runVEvaluatorAsync(cpayload: object, mode: SymbolicActionMode, cb: (res
     }
     catch(ex) {
         cb(JSON.stringify({result: "error", info: `${ex}`}));
+    }
+}
+
+function runVEvaluatorRandFuzz(cpayload: object, seed: number): any | undefined{
+    try {
+        const cmd = `${exepath} --fuzz`;
+        const env = {...process.env, SMT_TEST_GEN_RAND_SEED: seed.toString()};
+        const fval = execSync(cmd, {input: JSON.stringify(cpayload, undefined, 2), encoding: "utf-8", env: env}).toString();
+            
+        return JSON.parse(fval);
+    }
+    catch(ex) {
+        //const ff = (cpayload as any).smt2decl;
+        //FS.writeFileSync("c:\\Users\\marron\\Desktop\\scratch.smt2", ff);
+        process.stdout.write(chalk.red(`SMT generate error -- ${ex}\n`));
+        return undefined;
     }
 }
 
@@ -248,21 +273,44 @@ function workflowEvaluate(usercode: PackageConfig, buildlevel: BuildLevel, istes
     }
 }
 
-function workflowInputFuzz(usercode: PackageConfig, buildlevel: BuildLevel, istestbuild: boolean, timeout: number, vopts: VerifierOptions, entrypoint: {filename: string, name: string, fkey: MIRResolvedTypeKey}, cb: (result: string) => void) {
+function workflowInputFuzz(usercode: PackageConfig, buildlevel: BuildLevel, istestbuild: boolean, timeout: number, vopts: VerifierOptions, entrypoint: {filename: string, name: string, fkey: MIRResolvedTypeKey}, cbinfo: (sstr: string) => void, cb: (result: string) => void) {
     try {
         const { masm } = generateMASM(usercode, buildlevel, istestbuild, false, entrypoint.fkey, {filename: entrypoint.filename, names: [entrypoint.name]});
         if(masm === undefined) {
             cb(JSON.stringify({result: "error", info: "compile errors"}));
         }
         else {
-            const smtcode = generateSMTPayload(masm, istestbuild, vopts, { file: "[NO TARGET]", line: -1, pos: -1 }, entrypoint.fkey)
+            const [smtcode, iscopts] = generateSMTPayloadForISCFuzzing(masm, istestbuild, vopts, { file: "[NO TARGET]", line: -1, pos: -1 }, entrypoint.fkey)
             if(smtcode === undefined) {
                 cb(JSON.stringify({result: "error", info: "payload generation error"}));
                 return;
             }
 
-            const payload = generateCheckerPayload(masm, istestbuild, smtcode, timeout, entrypoint.fkey);
-            runVEvaluatorAsync(payload, SymbolicActionMode.InputFuzzSymbolic, cb);
+            cbinfo(`Generating ${iscopts.length} input fuzzing options...`);
+
+            let testopts: any[] = [];
+            for(let i = 0; i < iscopts.length; ++i) {
+                const payload = generateCheckerPayload(masm, istestbuild, smtcode + iscopts[i], timeout, entrypoint.fkey);
+
+                const jres = runVEvaluatorRandFuzz(payload, i);
+                if(jres == undefined) {
+                    cbinfo(`Payload ${i} generation error`);
+                }
+
+                if(jres.status === "input") {
+                    cbinfo(`Test generated for payload ${i} in ${jres.time}ms`);
+                }
+                else if(jres.status === "unknown") {
+                    cbinfo(`Payload ${i} has unknown satisfiability -- ${jres.info}`);
+                }
+                else {
+                    //cbinfo(`No valid input for Payload ${i} -- ${jres.info}`);
+                }
+
+                testopts.push(jres);
+            }
+
+            cb(JSON.stringify({result: "input", info: testopts}));
         }
     } catch(e) {
         cb(JSON.stringify({result: "error", info: `${e}`}));

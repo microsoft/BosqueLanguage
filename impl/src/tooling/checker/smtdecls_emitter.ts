@@ -13,6 +13,7 @@ import { RecFunGas, SMTBodyEmitter } from "./smtbody_emitter";
 import { SMTTypeEmitter } from "./smttype_emitter";
 import { SMTAssembly, SMTConstantDecl, SMTEntityCollectionSeqListTypeDecl, SMTEntityCollectionSeqMapEntryTypeDecl, SMTEntityCollectionSeqMapTypeDecl, SMTEntityCollectionTypeDecl, SMTEntityInternalOfTypeDecl, SMTEntityOfTypeDecl, SMTEntityStdDecl, SMTEphemeralListDecl, SMTFunction, SMTFunctionUninterpreted, SMTModelState, SMTRecordDecl, SMTTupleDecl } from "./smt_assembly";
 import { SMTCallGeneral, SMTCallGeneralWOptMask, SMTCallSimple, SMTConst, SMTExp, SMTIf, SMTLet, SMTLetMulti, SMTMaskConstruct, SMTTypeInfo, SMTVar, VerifierOptions } from "./smt_exp";
+import { ISCGenerator } from "./smt_isc";
 
 class SMTEmitter {
     readonly temitter: SMTTypeEmitter;
@@ -1250,6 +1251,36 @@ class SMTEmitter {
         const smtinfo = smtemit.assembly.buildSMT2file(runtime);
 
         return smtinfo;
+    }
+
+    static generateSMTPayloadForISCFuzzing(assembly: MIRAssembly, istestbuild: boolean, runtime: string, vopts: VerifierOptions, errorTrgtPos: { file: string, line: number, pos: number }, entrypoint: MIRInvokeKey): [string, string[]] {
+        const callsafety = markSafeCalls([entrypoint], assembly, istestbuild, errorTrgtPos);
+
+        const temitter = new SMTTypeEmitter(assembly, vopts);
+        assembly.typeMap.forEach((tt) => {
+            temitter.internTypeName(tt.typeID);
+        });
+        assembly.invokeDecls.forEach((idcl) => {
+            temitter.internFunctionName(idcl.ikey, idcl.shortname);
+        });
+        assembly.primitiveInvokeDecls.forEach((idcl) => {
+            temitter.internFunctionName(idcl.ikey, idcl.shortname);
+        });
+        assembly.constantDecls.forEach((cdecl) => {
+            temitter.internGlobalName(cdecl.gkey, cdecl.shortname);
+        });
+
+        const bemitter = new SMTBodyEmitter(assembly, temitter, vopts, callsafety, errorTrgtPos);
+        const smtassembly = new SMTAssembly(vopts, temitter.lookupFunctionMangledName(entrypoint));
+
+        let smtemit = new SMTEmitter(temitter, bemitter, smtassembly, vopts, callsafety);
+        smtemit.initializeSMTAssembly(assembly, istestbuild, entrypoint);
+
+        ////////////
+        const smtinfo = smtemit.assembly.buildSMT2file(runtime);
+        const inconstraints = ISCGenerator.generateInputConstraintOptions(assembly.invokeDecls.get(entrypoint) as MIRInvokeDecl, assembly, temitter);
+
+        return [smtinfo, inconstraints];
     }
 
     static generateSMTAssemblyAllErrors(assembly: MIRAssembly, istestbuild: boolean, vopts: VerifierOptions, entrypoint: MIRInvokeKey): { file: string, line: number, pos: number, msg: string }[] {

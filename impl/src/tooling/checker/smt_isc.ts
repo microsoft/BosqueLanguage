@@ -131,100 +131,100 @@ class ISCGenerator {
             new ISCTestOption([ISCConstraint.create("(= (BString@UFCons_API ;;PATH;;) \"3\")")]),
             new ISCTestOption([ISCConstraint.create("(= (BString@UFCons_API ;;PATH;;) \"#\")")]),
             new ISCTestOption([ISCConstraint.create("(= (BString@UFCons_API ;;PATH;;) \".\")")]),
-            new ISCTestOption([ISCConstraint.create("(> (len (BString@UFCons_API ;;PATH;;)) 0)")])
+            new ISCTestOption([ISCConstraint.create("(> (str.len (BString@UFCons_API ;;PATH;;)) 0)")])
         ];
     }
 
     private generateISCOptions_ByteBuffer(): ISCTestOption[] {
         return [
-            new ISCTestOption([ISCConstraint.create("(= (len (BByteBuffer@UFCons_API ;;PATH;;)) 0)")]),
-            new ISCTestOption([ISCConstraint.create("(> (len (BByteBuffer@UFCons_API ;;PATH;;)) 0)")])
+            new ISCTestOption([ISCConstraint.create("(= (seq.len (BByteBuffer@UFCons_API ;;PATH;;)) 0)")]),
+            new ISCTestOption([ISCConstraint.create("(> (seq.len (BByteBuffer@UFCons_API ;;PATH;;)) 0)")])
         ];
     }
 
     private generateISCOptions_DateTime(): ISCTestOption[] {
         return [
-            new ISCTestOption([ISCConstraint.create("(= (len (BDateYear@UFCons_API ;;PATH;;)) 1909)")]),
-            new ISCTestOption([ISCConstraint.create("(= (len (BDateYear@UFCons_API ;;PATH;;)) 1999)")]),
-            new ISCTestOption([ISCConstraint.create("(= (len (BDateYear@UFCons_API ;;PATH;;)) 2014)")]),
-            new ISCTestOption([ISCConstraint.create("(= (len (BDateYear@UFCons_API ;;PATH;;)) 2105)")]),
+            new ISCTestOption([ISCConstraint.create("(= (BDateYear@UFCons_API ;;PATH;;) 1909)")]),
+            new ISCTestOption([ISCConstraint.create("(= (BDateYear@UFCons_API ;;PATH;;) 1999)")]),
+            new ISCTestOption([ISCConstraint.create("(= (BDateYear@UFCons_API ;;PATH;;) 2014)")]),
+            new ISCTestOption([ISCConstraint.create("(= (BDateYear@UFCons_API ;;PATH;;) 2105)")]),
             new ISCTestOption([
-                ISCConstraint.create("(= (len (BDateYear@UFCons_API ;;PATH;;)) 2012)"),
-                ISCConstraint.create("(= (len (BDateMonth@UFCons_API ;;PATH;;)) 2)"),
-                ISCConstraint.create("(= (len (BDateDay@UFCons_API ;;PATH;;)) 28)")
+                ISCConstraint.create("(= (BDateYear@UFCons_API ;;PATH;;) 2012)"),
+                ISCConstraint.create("(= (BDateMonth@UFCons_API ;;PATH;;) 2)"),
+                ISCConstraint.create("(= (BDateDay@UFCons_API ;;PATH;;) 28)")
             ]),
             new ISCTestOption([
-                ISCConstraint.create("(= (len (BDateYear@UFCons_API ;;PATH;;)) 2011)"),
-                ISCConstraint.create("(= (len (BDateMonth@UFCons_API ;;PATH;;)) 2)"),
-                ISCConstraint.create("(= (len (BDateDay@UFCons_API ;;PATH;;)) 27)")
+                ISCConstraint.create("(= (BDateYear@UFCons_API ;;PATH;;) 2011)"),
+                ISCConstraint.create("(= (BDateMonth@UFCons_API ;;PATH;;) 2)"),
+                ISCConstraint.create("(= (BDateDay@UFCons_API ;;PATH;;) 27)")
             ]),
             new ISCTestOption([
-                ISCConstraint.create("(= (len (BDateYear@UFCons_API ;;PATH;;)) 1999)"),
-                ISCConstraint.create("(= (len (BDateMonth@UFCons_API ;;PATH;;)) 11)"),
-                ISCConstraint.create("(= (len (BDateDay@UFCons_API ;;PATH;;)) 31)"),
-                ISCConstraint.create("(= (len (BDateDay@UFCons_API ;;PATH;;)) 23)"),
-                ISCConstraint.create("(= (len (BDateDay@UFCons_API ;;PATH;;)) 59)")
+                ISCConstraint.create("(= (BDateYear@UFCons_API ;;PATH;;) 1999)"),
+                ISCConstraint.create("(= (BDateMonth@UFCons_API ;;PATH;;) 11)"),
+                ISCConstraint.create("(= (BDateDay@UFCons_API ;;PATH;;) 31)"),
+                ISCConstraint.create("(= (BDateDay@UFCons_API ;;PATH;;) 23)"),
+                ISCConstraint.create("(= (BDateDay@UFCons_API ;;PATH;;) 59)")
             ]),
             new ISCTestOption([
-                ISCConstraint.create("(= (len (BDateYear@UFCons_API ;;PATH;;)) 2019)"),
-                ISCConstraint.create("(= (len (BDateMonth@UFCons_API ;;PATH;;)) 10)"),
-                ISCConstraint.create("(= (len (BDateDay@UFCons_API ;;PATH;;)) 3)"),
-                ISCConstraint.create("(= (len (BDateDay@UFCons_API ;;PATH;;)) 1)"),
-                ISCConstraint.create("(= (len (BDateDay@UFCons_API ;;PATH;;)) 59)"),
-                ISCConstraint.create("(= (len (BDateDay@UFCons_API ;;PATH;;)) \"PST\")")
+                ISCConstraint.create("(= (BDateYear@UFCons_API ;;PATH;;) 2019)"),
+                ISCConstraint.create("(= (BDateMonth@UFCons_API ;;PATH;;) 10)"),
+                ISCConstraint.create("(= (BDateDay@UFCons_API ;;PATH;;) 3)"),
+                ISCConstraint.create("(= (BDateDay@UFCons_API ;;PATH;;) 1)"),
+                ISCConstraint.create("(= (BDateDay@UFCons_API ;;PATH;;) 59)"),
+                ISCConstraint.create("(= (BDateDay@UFCons_API ;;PATH;;) \"PST\")")
             ]),
             new ISCTestOption([
-                ISCConstraint.create("(= (len (BDateYear@UFCons_API ;;PATH;;)) 2019)"),
-                ISCConstraint.create("(= (len (BDateMonth@UFCons_API ;;PATH;;)) 10)"),
-                ISCConstraint.create("(= (len (BDateDay@UFCons_API ;;PATH;;)) 3)"),
-                ISCConstraint.create("(= (len (BDateDay@UFCons_API ;;PATH;;)) 1)"),
-                ISCConstraint.create("(= (len (BDateDay@UFCons_API ;;PATH;;)) 0)"),
-                ISCConstraint.create("(= (len (BDateDay@UFCons_API ;;PATH;;)) \"PDT\")")
+                ISCConstraint.create("(= (BDateYear@UFCons_API ;;PATH;;) 2019)"),
+                ISCConstraint.create("(= (BDateMonth@UFCons_API ;;PATH;;) 10)"),
+                ISCConstraint.create("(= (BDateDay@UFCons_API ;;PATH;;) 3)"),
+                ISCConstraint.create("(= (BDateDay@UFCons_API ;;PATH;;) 1)"),
+                ISCConstraint.create("(= (BDateDay@UFCons_API ;;PATH;;) 0)"),
+                ISCConstraint.create("(= (BDateDay@UFCons_API ;;PATH;;) \"PDT\")")
             ])
         ];
     }
   
     private generateISCOptions_UTCDateTime(): ISCTestOption[] {
         return [
-            new ISCTestOption([ISCConstraint.create("(= (len (BDateYear@UFCons_API ;;PATH;;)) 1909)")]),
-            new ISCTestOption([ISCConstraint.create("(= (len (BDateYear@UFCons_API ;;PATH;;)) 1999)")]),
-            new ISCTestOption([ISCConstraint.create("(= (len (BDateYear@UFCons_API ;;PATH;;)) 2014)")]),
-            new ISCTestOption([ISCConstraint.create("(= (len (BDateYear@UFCons_API ;;PATH;;)) 2105)")]),
+            new ISCTestOption([ISCConstraint.create("(= (BDateYear@UFCons_API ;;PATH;;) 1909)")]),
+            new ISCTestOption([ISCConstraint.create("(= (BDateYear@UFCons_API ;;PATH;;) 1999)")]),
+            new ISCTestOption([ISCConstraint.create("(= (BDateYear@UFCons_API ;;PATH;;) 2014)")]),
+            new ISCTestOption([ISCConstraint.create("(= (BDateYear@UFCons_API ;;PATH;;) 2105)")]),
             new ISCTestOption([
-                ISCConstraint.create("(= (len (BDateYear@UFCons_API ;;PATH;;)) 2012)"),
-                ISCConstraint.create("(= (len (BDateMonth@UFCons_API ;;PATH;;)) 2)"),
-                ISCConstraint.create("(= (len (BDateDay@UFCons_API ;;PATH;;)) 28)")
+                ISCConstraint.create("(= (BDateYear@UFCons_API ;;PATH;;) 2012)"),
+                ISCConstraint.create("(= (BDateMonth@UFCons_API ;;PATH;;) 2)"),
+                ISCConstraint.create("(= (BDateDay@UFCons_API ;;PATH;;) 28)")
             ]),
             new ISCTestOption([
-                ISCConstraint.create("(= (len (BDateYear@UFCons_API ;;PATH;;)) 2011)"),
-                ISCConstraint.create("(= (len (BDateMonth@UFCons_API ;;PATH;;)) 2)"),
-                ISCConstraint.create("(= (len (BDateDay@UFCons_API ;;PATH;;)) 27)")
+                ISCConstraint.create("(= (BDateYear@UFCons_API ;;PATH;;) 2011)"),
+                ISCConstraint.create("(= (BDateMonth@UFCons_API ;;PATH;;) 2)"),
+                ISCConstraint.create("(= (BDateDay@UFCons_API ;;PATH;;) 27)")
             ]),
             new ISCTestOption([
-                ISCConstraint.create("(= (len (BDateYear@UFCons_API ;;PATH;;)) 1999)"),
-                ISCConstraint.create("(= (len (BDateMonth@UFCons_API ;;PATH;;)) 11)"),
-                ISCConstraint.create("(= (len (BDateDay@UFCons_API ;;PATH;;)) 31)"),
-                ISCConstraint.create("(= (len (BDateDay@UFCons_API ;;PATH;;)) 23)"),
-                ISCConstraint.create("(= (len (BDateDay@UFCons_API ;;PATH;;)) 59)")
+                ISCConstraint.create("(= (BDateYear@UFCons_API ;;PATH;;) 1999)"),
+                ISCConstraint.create("(= (BDateMonth@UFCons_API ;;PATH;;) 11)"),
+                ISCConstraint.create("(= (BDateDay@UFCons_API ;;PATH;;) 31)"),
+                ISCConstraint.create("(= (BDateDay@UFCons_API ;;PATH;;) 23)"),
+                ISCConstraint.create("(= (BDateDay@UFCons_API ;;PATH;;) 59)")
             ])
         ];
     }
   
   private generateISCOptions_CalendarDate(): ISCTestOption[] {
         return [
-            new ISCTestOption([ISCConstraint.create("(= (len (BDateYear@UFCons_API ;;PATH;;)) 1909)")]),
-            new ISCTestOption([ISCConstraint.create("(= (len (BDateYear@UFCons_API ;;PATH;;)) 1999)")]),
-            new ISCTestOption([ISCConstraint.create("(= (len (BDateYear@UFCons_API ;;PATH;;)) 2014)")]),
-            new ISCTestOption([ISCConstraint.create("(= (len (BDateYear@UFCons_API ;;PATH;;)) 2105)")]),
+            new ISCTestOption([ISCConstraint.create("(= (BDateYear@UFCons_API ;;PATH;;) 1909)")]),
+            new ISCTestOption([ISCConstraint.create("(= (BDateYear@UFCons_API ;;PATH;;) 1999)")]),
+            new ISCTestOption([ISCConstraint.create("(= (BDateYear@UFCons_API ;;PATH;;) 2014)")]),
+            new ISCTestOption([ISCConstraint.create("(= (BDateYear@UFCons_API ;;PATH;;) 2105)")]),
             new ISCTestOption([
-                ISCConstraint.create("(= (len (BDateYear@UFCons_API ;;PATH;;)) 2012)"),
-                ISCConstraint.create("(= (len (BDateMonth@UFCons_API ;;PATH;;)) 2)"),
-                ISCConstraint.create("(= (len (BDateDay@UFCons_API ;;PATH;;)) 28)")
+                ISCConstraint.create("(= (BDateYear@UFCons_API ;;PATH;;) 2012)"),
+                ISCConstraint.create("(= (BDateMonth@UFCons_API ;;PATH;;) 2)"),
+                ISCConstraint.create("(= (BDateDay@UFCons_API ;;PATH;;) 28)")
             ]),
             new ISCTestOption([
-                ISCConstraint.create("(= (len (BDateYear@UFCons_API ;;PATH;;)) 2011)"),
-                ISCConstraint.create("(= (len (BDateMonth@UFCons_API ;;PATH;;)) 2)"),
-                ISCConstraint.create("(= (len (BDateDay@UFCons_API ;;PATH;;)) 27)")
+                ISCConstraint.create("(= (BDateYear@UFCons_API ;;PATH;;) 2011)"),
+                ISCConstraint.create("(= (BDateMonth@UFCons_API ;;PATH;;) 2)"),
+                ISCConstraint.create("(= (BDateDay@UFCons_API ;;PATH;;) 27)")
             ])
         ];
     }
@@ -318,7 +318,7 @@ class ISCGenerator {
 
         let topts: ISCTestOption[] = [];
         for(let i = 0; i < emax; ++i) {
-            topts.push(new ISCTestOption([ISCConstraint.create(`(= (BEnum@UFCons_API ;;PATH;;) ${i}")`)]));
+            topts.push(new ISCTestOption([ISCConstraint.create(`(= (BEnum@UFCons_API ;;PATH;;) ${i})`)]));
         }
         
         return topts;
