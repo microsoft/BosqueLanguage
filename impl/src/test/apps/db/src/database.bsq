@@ -105,9 +105,13 @@ entity Database provides APIType
     function set_index_default(ref db: Database, curr: Int) {
         var nindex = List<DBIndexEntry>{};
         if(!db.entries.empty()) {
-            nindex = List<Nat>::rangeNat(0, db.entries.lastIndex());
+            nindex = List<Nat>::rangeNat(0, db.entries.size());
         }
         
+        _debug(db.entries.size());
+        _debug(nindex);
+        _debug(db);
+
         db = db.{
             index = nindex, 
             current_record = curr, 
@@ -269,7 +273,7 @@ entity Database provides APIType
         }
 
         if(db.fnum != fidx || db.idxStatus !== DBIndexStatus::sorted) {
-            let nindx = List<Nat>::rangeNat(0, db.entities.lastIndex()).sort(pred(i, j) => {
+            let nindx = List<Nat>::rangeNat(0, db.entities.size()).sort(pred(i, j) => {
                 return KeyType::less<String>(db.entries.get(i).get(fidx), db.entries.get(j).get(fidx));
             });
 
@@ -306,7 +310,7 @@ entity Database provides APIType
         }
 
         if(db.fnum != fidx || db.idxStatus !== DBIndexStatus::filtered) {
-            let nindx = List<Nat>::rangeNat(0, db.entities.lastIndex()).filter(pred(i) => {
+            let nindx = List<Nat>::rangeNat(0, db.entities.size()).filter(pred(i) => {
                 return KeyType::equal<String>(db.entries.get(i).get(fidx), fvalue);
             });
 

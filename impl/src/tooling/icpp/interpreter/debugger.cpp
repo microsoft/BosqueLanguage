@@ -114,7 +114,11 @@ std::string readDebuggerCmd()
         }
     }
 
-    return opstr;
+    auto bend = std::find_if(opstr.cbegin(), opstr.cend(), [](char cc) {
+        return cc == '\0';
+    });
+
+    return std::string(opstr.cbegin(), bend);
 }
 
 void writeDebuggerOutput(std::string data)
