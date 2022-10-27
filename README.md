@@ -1,5 +1,7 @@
 # Bosque Programming Language
 
+**This repository is archived and active development of the Bosque Language is moving to an external open-source repository under @BosqueLanguage ([github repo is here](https://github.com/BosqueLanguage/BosqueCore))!**
+
 [![Licensed under the MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/Microsoft/BosqueLanguage/blob/master/LICENSE.txt)
 [![PR's Welcome](https://img.shields.io/badge/PRs%20-welcome-brightgreen.svg)](#contribute)
 [![Build Health](https://img.shields.io/github/workflow/status/microsoft/BosqueLanguage/nodeci)](https://github.com/microsoft/BosqueLanguage/actions) 
